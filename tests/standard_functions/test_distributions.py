@@ -8,6 +8,8 @@ from snowfakery.data_gen_exceptions import DataGenError
 
 write_row_path = "snowfakery.output_streams.DebugOutputStream.write_single_row"
 
+pytest.importorskip("numpy")
+
 
 class TestStatisticalDistributions:
     @mock.patch(write_row_path)
