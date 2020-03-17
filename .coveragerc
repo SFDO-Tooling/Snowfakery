@@ -1,0 +1,5 @@
+[run]
+    source=snowfakery
+
+[report]
+show_missing = True
