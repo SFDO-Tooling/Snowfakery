@@ -271,8 +271,11 @@ class StructuredValue(FieldDefinition):
                     self.filename,
                     self.line_num,
                 )
-
-            func = getattr(obj, method)
+            try:
+                func = getattr(obj, method)
+            except AttributeError:
+                # clean up the error message a bit
+                raise AttributeError(f"'{objname}' plugin exposes no attribute '{method}")
             if not func:
                 raise DataGenNameError(
                     f"Cannot find definition for: {method} on {objname}",
