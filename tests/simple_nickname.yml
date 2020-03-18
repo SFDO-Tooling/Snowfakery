@@ -1,0 +1,10 @@
+- include_file: child.yml
+- object: Contact
+  nickname: TheContact
+  just_once: True
+
+- object: Account
+  include: AccountDefaults1, AccountDefaults2
+  fields:
+    contact:
+      reference: TheContact

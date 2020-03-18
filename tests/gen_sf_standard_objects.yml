@@ -1,0 +1,24 @@
+- include_file: sf_standard_object_macros.yml
+- object: Account
+  include: SFStandardAccount
+  friends:
+    - object: Contact
+      include: SFStandardContact
+      fields:
+        AccountId:
+          reference: Account
+      friends:
+        - object: Opportunity
+          include: SFStandardOpportunity
+          fields:
+            Name: Opportunity relating to <<Account.Name>>
+            AccountId:
+              reference: Account
+
+- object: Contact
+  include: SFStandardContact
+  fields:
+    AccountId:
+      object: Account
+      fields:
+        Name: <<Contact.LastName>> incorporated

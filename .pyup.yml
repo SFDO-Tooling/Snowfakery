@@ -1,0 +1,4 @@
+# see https://pyup.io/docs/configuration/ for all available options
+update: all
+schedule: every week
+label_prs: update
