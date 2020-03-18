@@ -6,17 +6,13 @@ from snowfakery.plugins import SnowfakeryPlugin
 
 
 def wrap(distribution):
-    def _do_distribution(self, **params):
+    "Wrap a numpy function to make it 1-dimensional and seedable"
+    def _distribution_wrapper(self, **params):
         random_seed = params.pop("seed", None)
         seed(random_seed)
         return float(distribution(**params, size=1).astype(float)[0])
-        # except (TypeError, DataGenValueError, DataGenError):
-        #     raise DataGenError(
-        #         f"Incorrect parameters {params} for {distribution.__name__} distribution.",
-        #         None, None,
-        #     )
 
-    return _do_distribution
+    return _distribution_wrapper
 
 
 class StatisticalDistributions(SnowfakeryPlugin):
