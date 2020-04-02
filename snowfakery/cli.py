@@ -255,5 +255,9 @@ def validate_options(
         raise click.ClickException("Mapping file can only be used with --dburl")
 
 
-if __name__ == "__main__":  # pragma: no cover
+def main():
     generate_cli.main(prog_name="snowfakery")
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()
