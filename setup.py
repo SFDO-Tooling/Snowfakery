@@ -26,6 +26,7 @@ setuptools.setup(
         "relations between tables. Every row is faked data, but also "
         "unique and random, like a snowflake."
     ),
+    entry_points={"console_scripts": ["snowfakery=snowfakery.cli:main"]},
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/SalesforceFoundation/Snowfakery",
