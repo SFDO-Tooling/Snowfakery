@@ -172,6 +172,12 @@ def reference(context: RuntimeContext, x: Union[ObjectRow, str]):
     return target
 
 
+def i18n_fake(context: RuntimeContext, locale: str, fake: str):
+    faker = Faker(locale)
+    func = getattr(faker, fake)
+    return func()
+
+
 def render_boolean(context: RuntimeContext, value: FieldDefinition) -> bool:
     val = value.render(context)
     if isinstance(val, str):
@@ -226,4 +232,5 @@ template_funcs = {
     "date": date_,
     "datetime": datetime_,
     "if": if_,
+    "i18n_fake": i18n_fake,
 }

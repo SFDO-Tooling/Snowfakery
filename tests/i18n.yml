@@ -1,0 +1,7 @@
+- object: foo
+  count: 10
+  fields:
+    japanese_name:
+        i18n_fake:
+            locale: ja_JP
+            fake: name

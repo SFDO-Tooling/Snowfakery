@@ -239,7 +239,6 @@ class RuntimeContext:
             "this": self.obj,
             "today": self.today,
             "fake": self.faker_template_library,
-            "fake_i18n": lambda locale: FakerTemplateLibrary(locale),
             "number": self.counter,
             **self.options,
             **self.globals.object_names,
