@@ -24,6 +24,42 @@ class StoppingCriteria(NamedTuple):
     count: int
 
 
+class FinishedChecker:
+    """Check whether the process is finished"""
+    target_table_name: str = None
+    target_id: int = None
+    target_progress_id: int = 0
+
+    def __init__(self, start_ids, stopping_criteria):
+        """Ensure that the stopping criteria accounts for the start_ids"""
+        if stopping_criteria:
+            self.target_table_name, target_count = stopping_criteria
+            if start_ids:
+                start = start_ids.get(self.target_table_name, 1)
+            else:
+                start = 1
+            self.target_id = start + target_count - 1
+
+    def finished(self, id_manager):
+        """Check whether we've finished making as many objects as we promised"""
+        # if nobody told us how much to make, finish after first run
+        if not self.target_table_name:
+            return True
+
+        last_used_id = id_manager[self.target_table_name]
+
+        if last_used_id == self.target_progress_id:
+            raise RuntimeError(
+                f"{self.target_table_name} max ID was {self.target_progress_id} "
+                f"before evaluating factory and is {last_used_id} after. "
+                f"At this rate we will never hit our target of {self.target_id}!"
+            )
+
+        self.target_progress_id = last_used_id
+
+        return last_used_id >= self.target_id
+
+
 class IdManager(yaml.YAMLObject):
     """Keep track of the most recent ID per Object type"""
 
@@ -151,13 +187,12 @@ class RuntimeContext:
     ):
         self.globals = globaldata
         self.current_table_name = current_table_name
-        self.stopping_criteria = self.update_stopping_criteria(
-            start_ids, stopping_criteria
-        )
         self.options = options or {}
         self.field_values: Dict[str, Any] = {}
         self.output_stream = output_stream
         self.faker_template_library = faker_template_library
+
+        self.finished_checker = FinishedChecker(start_ids, stopping_criteria)
 
         self.snowfakery_plugins = snowfakery_plugins or {}
         # todo: some caching of these could speed things up a bit
@@ -166,40 +201,8 @@ class RuntimeContext:
             for name, plugin in self.snowfakery_plugins.items()
         }
 
-    # todo: can this be moved onto the StoppingCriteria object?
-    def update_stopping_criteria(self, start_ids, stopping_criteria):
-        """Ensure that the stopping criteria accounts for the start_ids"""
-        if not stopping_criteria:
-            return None
-        target_table_name, target_count = stopping_criteria
-        if start_ids:
-            start = start_ids.get(target_table_name, 1)
-        else:
-            start = 1
-        target_id = start + target_count - 1
-
-        self.target_progress_id = 0
-
-        return StoppingCriteria(target_table_name, target_id)
-
-    # todo: can this be moved onto the StoppingCriteria object?
     def finished(self):
-        if not self.stopping_criteria:  # if no target, just do it once
-            return True
-        target_table, max_id = self.stopping_criteria
-
-        last_used_id = self.globals.id_manager[target_table]
-
-        if last_used_id == self.target_progress_id:
-            raise RuntimeError(
-                f"{target_table} max ID was {self.target_progress_id} "
-                f"before evaluating factory and is {last_used_id} after. "
-                f"At this rate we will never hit our target of {max_id}!"
-            )
-
-        self.target_progress_id = last_used_id
-
-        return last_used_id >= max_id
+        return self.finished_checker.finished(self.globals.id_manager)
 
     def generate_id(self):
         return self.globals.id_manager.generate_id(self.current_table_name)
