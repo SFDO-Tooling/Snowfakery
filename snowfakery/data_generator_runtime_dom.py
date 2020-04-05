@@ -123,7 +123,6 @@ class ObjectTemplate:
 
     def _generate_row(self, storage, context: RuntimeContext) -> ObjectRow:
         """Generate an individual row"""
-        context.incr()
         row = {"id": context.generate_id()}
         sobj = ObjectRow(self.tablename, row)
 

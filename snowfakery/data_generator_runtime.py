@@ -73,11 +73,12 @@ class Globals(yaml.YAMLObject):
     yaml_dumper = yaml.SafeDumper
     yaml_tag = "!snowfakery_globals"
 
-    def __init__(self, start_ids: Optional[Dict[str, id]] = None):
+    def __init__(self, start_ids: Optional[Dict[str, id]] = None, today: date = None):
         self.named_objects = {}
         self.id_manager = IdManager(start_ids)
         self.last_seen_obj_of_type = {}
         self.intertable_dependencies = set()
+        self.today = today or date.today()
 
     def register_object(self, obj, nickname: str = None):
         """Register an object for lookup by object type and (optionally) Nickname"""
@@ -131,13 +132,11 @@ class JinjaTemplateEvaluatorFactory:
 
 
 class RuntimeContext:
-    """Current context object. RuntimeContext objects form a linked list-based stack"""
+    """State of the interpreter. RuntimeContexts live on the Python stack."""
 
     current_id = None
     obj: Optional["ObjectRow"] = None
-    today = date.today()
     template_evaluator_factory = JinjaTemplateEvaluatorFactory()
-    counter = 0
 
     def __init__(
         self,
@@ -155,7 +154,7 @@ class RuntimeContext:
         self.stopping_criteria = self.update_stopping_criteria(
             start_ids, stopping_criteria
         )
-        options = options or {}
+        self.options = options or {}
         self.field_values: Dict[str, Any] = {}
         self.output_stream = output_stream
         self.faker_template_library = faker_template_library
@@ -166,12 +165,8 @@ class RuntimeContext:
             name: plugin().custom_functions(self)
             for name, plugin in self.snowfakery_plugins.items()
         }
-        self.options = {**options}
 
-    def incr(self):
-        """Increments the local counter for an object type"""
-        self.counter += 1
-
+    # todo: can this be moved onto the StoppingCriteria object?
     def update_stopping_criteria(self, start_ids, stopping_criteria):
         """Ensure that the stopping criteria accounts for the start_ids"""
         if not stopping_criteria:
@@ -187,6 +182,7 @@ class RuntimeContext:
 
         return StoppingCriteria(target_table_name, target_id)
 
+    # todo: can this be moved onto the StoppingCriteria object?
     def finished(self):
         if not self.stopping_criteria:  # if no target, just do it once
             return True
@@ -206,8 +202,7 @@ class RuntimeContext:
         return last_used_id >= max_id
 
     def generate_id(self):
-        self.current_id = self.globals.id_manager.generate_id(self.current_table_name)
-        return self.current_id
+        return self.globals.id_manager.generate_id(self.current_table_name)
 
     def register_object(self, obj, name=None):
         self.obj = obj
@@ -235,12 +230,11 @@ class RuntimeContext:
 
     def field_vars(self):
         return {
-            "id": self.current_id,
+            "id": self.obj.id if self.obj else None,
             "this": self.obj,
-            "today": self.today,
+            "today": self.globals.today,
             "fake": self.faker_template_library,
             "fake_i18n": lambda locale: FakerTemplateLibrary(locale),
-            "number": self.counter,
             **self.options,
             **self.globals.object_names,
             **self.field_values,
