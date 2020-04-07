@@ -1,8 +1,9 @@
 from collections import defaultdict
 from functools import partial
 from datetime import date
+from contextlib import contextmanager
 
-from typing import Optional, Dict, List, Sequence, Mapping, Any, NamedTuple
+from typing import Optional, Dict, List, Sequence, Mapping, NamedTuple
 
 import jinja2
 import yaml
@@ -20,44 +21,54 @@ OutputStream = "snowfakery.output_streams.OutputStream"
 
 
 class StoppingCriteria(NamedTuple):
+    """When have we iterated over the Snowfakery script enough times?"""
     tablename: str
     count: int
 
 
 class FinishedChecker:
-    """Check whether the process is finished"""
-    target_table_name: str = None
-    target_id: int = None
-    target_progress_id: int = 0
+    """Checks whether the Stopping Criteria have been met"""
+
+    stopping_criteria: StoppingCriteria
 
     def __init__(self, start_ids, stopping_criteria):
-        """Ensure that the stopping criteria accounts for the start_ids"""
-        if stopping_criteria:
-            self.target_table_name, target_count = stopping_criteria
-            if start_ids:
-                start = start_ids.get(self.target_table_name, 1)
-            else:
-                start = 1
-            self.target_id = start + target_count - 1
+        self.start_ids = start_ids
+        self.stopping_criteria = stopping_criteria
+        self.target_progress_id = 0
 
-    def finished(self, id_manager):
-        """Check whether we've finished making as many objects as we promised"""
+    def check_if_finished(self, id_manager):
+        "Check whether we've finished making as many objects as we promised"
         # if nobody told us how much to make, finish after first run
-        if not self.target_table_name:
+        if not self.stopping_criteria:
             return True
 
-        last_used_id = id_manager[self.target_table_name]
+        target_table, count = self.stopping_criteria
 
+        # Snowfakery processes can be restarted. We would need
+        # to keep track of where we restarted to know whether
+        # we are truly finished
+        if self.start_ids:
+            start = self.start_ids.get(target_table, 1)
+        else:
+            start = 1
+        target_id = start + count - 1
+
+        last_used_id = id_manager[target_table]
+
+        self.ensure_progress_was_made(last_used_id, target_id)
+
+        return last_used_id >= target_id
+
+    def ensure_progress_was_made(self, last_used_id, target_id):
+        """Check that we are actually making progress towards our goal"""
         if last_used_id == self.target_progress_id:
             raise RuntimeError(
-                f"{self.target_table_name} max ID was {self.target_progress_id} "
+                f"{self.stopping_criteria.tablename} max ID was {self.target_progress_id} "
                 f"before evaluating factory and is {last_used_id} after. "
-                f"At this rate we will never hit our target of {self.target_id}!"
+                f"At this rate we will never hit our target of {target_id}!"
             )
 
         self.target_progress_id = last_used_id
-
-        return last_used_id >= self.target_id
 
 
 class IdManager(yaml.YAMLObject):
@@ -103,7 +114,12 @@ yaml.SafeDumper.add_representer(
 
 
 class Globals(yaml.YAMLObject):
-    """Globally named objects and other aspects of global scope"""
+    """Globally named objects and other aspects of global scope
+
+     This object is designed to be persisted to allow long-running
+     Snowfakery executions to stop and restart. Other Interpreter internals
+     do not persist. For example, it isn't possible to persist a database
+     handle in an output_stream."""
 
     yaml_loader = yaml.SafeLoader
     yaml_dumper = yaml.SafeDumper
@@ -167,86 +183,140 @@ class JinjaTemplateEvaluatorFactory:
             return lambda context: definition
 
 
-class RuntimeContext:
-    """State of the interpreter. RuntimeContexts live on the Python stack."""
+class Interpreter:
+    """Snowfakery runtime interpreter state."""
+    current_context: "RuntimeContext" = None
 
-    current_id = None
+    def __init__(
+        self,
+        output_stream: OutputStream,
+        globals: Globals = None,
+        options: Mapping = None,
+        snowfakery_plugins: Optional[Mapping[str, callable]] = None,
+        stopping_criteria: Optional[StoppingCriteria] = None,
+        start_ids: Optional[Mapping[str, int]] = None,
+        faker_providers: Sequence[object] = (),
+    ):
+        self.output_stream = output_stream
+        self.options = options or {}
+        snowfakery_plugins = snowfakery_plugins or {}
+        # todo: some caching of these could speed things up a bit
+        self.plugin_function_libraries = {
+            name: plugin(self).custom_functions()
+            for name, plugin in snowfakery_plugins.items()
+        }
+        self.finished_checker = FinishedChecker(start_ids, stopping_criteria)
+        self.faker_template_library = FakerTemplateLibrary(faker_providers)
+        self.globals = globals or Globals()
+
+
+class RuntimeContext:
+    """Local "stack frame" type object. RuntimeContexts live on the Python stack.
+
+    There are many proxy methods for other objects which helps keep the
+    internals of the runtime hidden from outside code to make maintenance
+    easier. From the point of view of other modules this is "the interpreter"
+    but internally its mostly just proxying to other classes."""
+
     obj: Optional["ObjectRow"] = None
     template_evaluator_factory = JinjaTemplateEvaluatorFactory()
 
     def __init__(
-        self,
-        globaldata: Globals,
-        current_table_name: Optional[str],
-        faker_template_library: FakerTemplateLibrary,
-        output_stream: OutputStream = None,
-        options: Mapping = None,
-        start_ids: Optional[Mapping[str, int]] = None,
-        stopping_criteria: Optional[StoppingCriteria] = None,
-        snowfakery_plugins: Optional[Mapping[str, callable]] = None,
+        self, interpreter: Interpreter, current_table_name: Optional[str] = None, parent_context: "RuntimeContext" = None
     ):
-        self.globals = globaldata
         self.current_table_name = current_table_name
-        self.options = options or {}
-        self.field_values: Dict[str, Any] = {}
-        self.output_stream = output_stream
-        self.faker_template_library = faker_template_library
+        self.interpreter = interpreter
+        self.interpreter.current_context = self
+        self.parent = parent_context
+        if self.parent:
+            self._context_vars = {**self.parent._context_vars}  # implements variable inheritance
+        else:
+            self._context_vars = {}
 
-        self.finished_checker = FinishedChecker(start_ids, stopping_criteria)
-
-        self.snowfakery_plugins = snowfakery_plugins or {}
-        # todo: some caching of these could speed things up a bit
-        self.plugin_function_libraries = {
-            name: plugin().custom_functions(self)
-            for name, plugin in self.snowfakery_plugins.items()
-        }
-
-    def finished(self):
-        return self.finished_checker.finished(self.globals.id_manager)
+    def check_if_finished(self):
+        "Have we iterated over the script enough times?"
+        return self.interpreter.finished_checker.check_if_finished(
+            self.interpreter.globals.id_manager
+        )
 
     def generate_id(self):
-        return self.globals.id_manager.generate_id(self.current_table_name)
+        "Generate a unique ID for this object"
+        return self.interpreter.globals.id_manager.generate_id(self.current_table_name)
 
     def register_object(self, obj, name=None):
+        "Keep track of this object in case its children refer to it."
         self.obj = obj
-        self.globals.register_object(obj, name)
+        self.interpreter.globals.register_object(obj, name)
 
     def register_intertable_reference(self, table_name_from, table_name_to, fieldname):
-        self.globals.register_intertable_reference(
+        "Keep track of a dependency between two tables. e.g. for mapping file generation"
+        self.interpreter.globals.register_intertable_reference(
             table_name_from, table_name_to, fieldname
         )
 
-    def register_field(self, field_name, field_value):
-        """Register each field value to be ready to inject them into template"""
-        self.field_values[field_name] = field_value
-
+    @contextmanager
     def child_context(self, tablename):
-        "Create a nested context (analogous to a 'stack frame')."
-        return self.__class__(
-            self.globals,
-            tablename,
-            self.faker_template_library,
-            output_stream=self.output_stream,
-            options=self.options,
-            snowfakery_plugins=self.snowfakery_plugins,
-        )
+        "Create a nested RuntimeContext (analogous to a 'stack frame')."
+        jr = self.__class__(current_table_name=tablename, interpreter=self.interpreter, parent_context=self)
+        # jr will register itself with the interpreter
+        try:
+            yield jr
+        finally:
+            # Goodbye junior, its been nice
+            # Hope you find your paradise
+            self.interpreter.current_context = self
+
+    @property
+    def output_stream(self):
+        return self.interpreter.output_stream
+
+    def get_evaluator(self, definition: str):
+        return self.template_evaluator_factory.get_evaluator(definition)
+
+    @property
+    def evaluation_namespace(self):
+        return EvaluationNamespace(self)
+
+    def executable_blocks(self):
+        return self.evaluation_namespace.executable_blocks()
 
     def field_vars(self):
+        return self.evaluation_namespace.field_vars()
+
+    def context_vars(self, plugin_namespace):
+        return self._context_vars.setdefault(plugin_namespace, {})
+
+
+# NamedTuple because it is immutable, efficient and auto-generates init
+class EvaluationNamespace(NamedTuple):
+    """Supplies names for evaluation of YAML trees and Jinja expressions."""
+
+    runtime_context: RuntimeContext
+
+    def field_vars(self):
+        "Variables that can be inserted into templates"
+        # obj=None in some contexts, e.g. evaluating count
+        obj = self.runtime_context.obj
+        interpreter = self.runtime_context.interpreter
         return {
-            "id": self.obj.id if self.obj else None,
-            "this": self.obj,
-            "today": self.globals.today,
-            "fake": self.faker_template_library,
+            "id": obj.id if obj else None,
+            "count": obj.id if obj else None,
+            "this": obj,
+            "today": interpreter.globals.today,
+            "fake": interpreter.faker_template_library,
             "fake_i18n": lambda locale: FakerTemplateLibrary(locale),
-            **self.options,
-            **self.globals.object_names,
-            **self.field_values,
-            **self.plugin_function_libraries,
+            **interpreter.options,
+            **interpreter.globals.object_names,
+            **(obj._values if obj else {}),
+            **interpreter.plugin_function_libraries,
         }
 
+    # todo: should be replaced with the plugin architecture
     def field_funcs(self):
+        "Injects context into functions from template_funcs module."
+
         def curry(func):
-            rc = partial(func, self)
+            rc = partial(func, self.runtime_context)
             if hasattr(func, "lazy"):
                 rc.lazy = func.lazy
             return rc
@@ -255,13 +325,14 @@ class RuntimeContext:
         return {**funcs}
 
     def executable_blocks(self):
+        "Return mapping of functions that can be used in YAML block functions"
         return {**self.field_funcs(), "fake": self.fake}
 
+    # todo: remove this special case
     def fake(self, name):
-        return str(getattr(self.faker_template_library, name))
-
-    def get_evaluator(self, definition: str):
-        return self.template_evaluator_factory.get_evaluator(definition)
+        return str(
+            getattr(self.runtime_context.interpreter.faker_template_library, name)
+        )
 
 
 class DynamicEvaluator:
@@ -269,7 +340,10 @@ class DynamicEvaluator:
         self.template = template
 
     def __call__(self, context):
-        return self.template.render(**context.field_vars(), **context.field_funcs())
+        namelookup = context.evaluation_namespace
+        return self.template.render(
+            {**namelookup.field_vars(), **namelookup.field_funcs()}
+        )
 
 
 def evaluate_function(func, args: Sequence, kwargs: Mapping, context):
@@ -328,9 +402,9 @@ def output_batches(
     options: Dict,
     stopping_criteria: Optional[StoppingCriteria] = None,
     continuation_data: Globals = None,
-    tables=List[str],
-    snowfakery_plugins=Mapping[str, snowfakery.SnowfakeryPlugin],
-    faker_providers=List[object],
+    tables: Mapping[str, int] = None,
+    snowfakery_plugins: Mapping[str, snowfakery.SnowfakeryPlugin] = None,
+    faker_providers: List[object] = None,
 ) -> Globals:
     """Generate 'count' batches to 'output_stream' """
     # check the stopping_criteria against the factories available
@@ -353,19 +427,20 @@ def output_batches(
         # be inferred from the continuation_file.
         start_ids = {}
 
-    runtimecontext = RuntimeContext(
-        globaldata=globals,
-        current_table_name=None,
+    interpreter = Interpreter(
         output_stream=output_stream,
+        globals=globals,
         options=options,
-        start_ids=start_ids,
-        stopping_criteria=stopping_criteria,
-        faker_template_library=FakerTemplateLibrary(faker_providers),
         snowfakery_plugins=snowfakery_plugins,
+        stopping_criteria=stopping_criteria,
+        start_ids=start_ids,
+        faker_providers=faker_providers,
     )
+
+    runtimecontext = RuntimeContext(interpreter=interpreter)
     continuing = bool(continuation_data)
     loop_over_factories(factories, runtimecontext, output_stream, continuing)
-    return runtimecontext.globals
+    return interpreter.globals
 
 
 def loop_over_factories(factories, runtimecontext, output_stream, continuing):
@@ -375,6 +450,6 @@ def loop_over_factories(factories, runtimecontext, output_stream, continuing):
             should_skip = factory.just_once and continuing is True
             if not should_skip:
                 factory.generate_rows(output_stream, runtimecontext)
-        finished = runtimecontext.finished()
+        finished = runtimecontext.check_if_finished()
 
         continuing = True

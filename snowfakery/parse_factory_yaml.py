@@ -3,7 +3,7 @@ from datetime import date
 from contextlib import contextmanager
 from collections import namedtuple
 from pathlib import Path
-from typing import IO, List, Dict, Union, Tuple, Any, Iterable, Sequence
+from typing import IO, List, Dict, Union, Tuple, Any, Iterable, Sequence, Mapping
 
 import yaml
 from yaml.composer import Composer
@@ -30,7 +30,7 @@ LineTracker = namedtuple("LineTracker", ["filename", "line_num"])
 
 
 class ParseResult:
-    def __init__(self, options, tables, templates, plugins: Sequence[str] = ()):
+    def __init__(self, options, tables: Mapping, templates, plugins: Sequence[str] = ()):
         self.options = options
         self.tables = tables
         self.templates = templates
