@@ -22,6 +22,7 @@ OutputStream = "snowfakery.output_streams.OutputStream"
 
 class StoppingCriteria(NamedTuple):
     """When have we iterated over the Snowfakery script enough times?"""
+
     tablename: str
     count: int
 
@@ -176,7 +177,7 @@ class JinjaTemplateEvaluatorFactory:
         if "<<" in definition or "<%" in definition:
             try:
                 template = self.template_compiler.from_string(definition)
-                return DynamicEvaluator(template)
+                return lambda context: template.render(context.field_vars())
             except jinja2.exceptions.TemplateSyntaxError as e:
                 raise DataGenSyntaxError(str(e), None, None) from e
         else:
@@ -185,6 +186,7 @@ class JinjaTemplateEvaluatorFactory:
 
 class Interpreter:
     """Snowfakery runtime interpreter state."""
+
     current_context: "RuntimeContext" = None
 
     def __init__(
@@ -222,14 +224,19 @@ class RuntimeContext:
     template_evaluator_factory = JinjaTemplateEvaluatorFactory()
 
     def __init__(
-        self, interpreter: Interpreter, current_table_name: Optional[str] = None, parent_context: "RuntimeContext" = None
+        self,
+        interpreter: Interpreter,
+        current_table_name: Optional[str] = None,
+        parent_context: "RuntimeContext" = None,
     ):
         self.current_table_name = current_table_name
         self.interpreter = interpreter
         self.interpreter.current_context = self
         self.parent = parent_context
         if self.parent:
-            self._context_vars = {**self.parent._context_vars}  # implements variable inheritance
+            self._context_vars = {
+                **self.parent._context_vars
+            }  # implements variable inheritance
         else:
             self._context_vars = {}
 
@@ -257,7 +264,11 @@ class RuntimeContext:
     @contextmanager
     def child_context(self, tablename):
         "Create a nested RuntimeContext (analogous to a 'stack frame')."
-        jr = self.__class__(current_table_name=tablename, interpreter=self.interpreter, parent_context=self)
+        jr = self.__class__(
+            current_table_name=tablename,
+            interpreter=self.interpreter,
+            parent_context=self,
+        )
         # jr will register itself with the interpreter
         try:
             yield jr
@@ -293,7 +304,7 @@ class EvaluationNamespace(NamedTuple):
 
     runtime_context: RuntimeContext
 
-    def field_vars(self):
+    def simple_field_vars(self):
         "Variables that can be inserted into templates"
         # obj=None in some contexts, e.g. evaluating count
         obj = self.runtime_context.obj
@@ -334,16 +345,8 @@ class EvaluationNamespace(NamedTuple):
             getattr(self.runtime_context.interpreter.faker_template_library, name)
         )
 
-
-class DynamicEvaluator:
-    def __init__(self, template):
-        self.template = template
-
-    def __call__(self, context):
-        namelookup = context.evaluation_namespace
-        return self.template.render(
-            {**namelookup.field_vars(), **namelookup.field_funcs()}
-        )
+    def field_vars(self):
+        return {**self.simple_field_vars(), **self.field_funcs()}
 
 
 def evaluate_function(func, args: Sequence, kwargs: Mapping, context):
