@@ -113,8 +113,6 @@ Finally, head to the Release object that was autocreated in the GitHub repositor
 Configuring Your Environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To release Snowfakery, you'll need twine, which is installed with the development requirements. You'll also need to configure your `pypirc`_ file with your PyPI credentials. The ``release-homebrew`` build step depends on the `jq`_ command line utility and is available via Homebrew or your package manager.
+To release Snowfakery, you'll need twine, which is installed with the development requirements. You'll also need to configure your `pypirc`_ file with your PyPI credentials.
 
 .. _pypirc: https://docs.python.org/distutils/packageindex.html#the-pypirc-file
-.. _Homebrew Tap: https://github.com/SFDO-Tooling/homebrew-sfdo
-.. _jq: https://stedolan.github.io/jq/
