@@ -7,7 +7,7 @@ from snowfakery.data_generator_runtime_dom import (
     DataGenError,
 )
 
-from snowfakery.data_generator_runtime import RuntimeContext, Globals
+from snowfakery.data_generator_runtime import RuntimeContext, Interpreter
 
 from snowfakery.output_streams import DebugOutputStream
 
@@ -15,8 +15,15 @@ from snowfakery.utils.template_utils import FakerTemplateLibrary
 
 ftl = FakerTemplateLibrary([])
 
-x = RuntimeContext(Globals(), "Foo", ftl)
 line = {"filename": "abc.yml", "line_num": 42}
+
+
+def standard_runtime():
+    output_stream = DebugOutputStream()
+    return RuntimeContext(Interpreter(output_stream=output_stream), "Foo")
+
+
+x = standard_runtime()
 
 
 class TestDataGeneratorRuntimeDom(unittest.TestCase):
@@ -25,7 +32,7 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
         repr(definition)
         f = FieldFactory("field", definition, "abc.yml", 10)
         repr(f)
-        x = f.generate_value(RuntimeContext(Globals(), "Foo", ftl))
+        x = f.generate_value(standard_runtime())
         assert x == "abc"
 
     def test_field_factory_int(self):
@@ -33,7 +40,7 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
         repr(definition)
         f = FieldFactory("field", definition, "abc.yml", 10)
         repr(f)
-        x = f.generate_value(RuntimeContext(Globals(), "Foo", ftl))
+        x = f.generate_value(standard_runtime())
         assert x == 5
 
     def test_field_factory_calculation(self):
@@ -41,7 +48,7 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
         repr(definition)
         f = FieldFactory("field", definition, "abc.yml", 10)
         repr(f)
-        x = f.generate_value(RuntimeContext(Globals(), "foo", ftl))
+        x = f.generate_value(standard_runtime())
         assert x == 15
 
     def test_structured_value(self):
@@ -53,17 +60,17 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
         )
         repr(definition)
         f = FieldFactory("field", definition, "abc.yml", 10)
-        x = f.generate_value(RuntimeContext(Globals(), "Foo", ftl))
+        x = f.generate_value(standard_runtime())
         assert x in ["abc", "def"]
 
     def test_render_empty_object_template(self):
         o = ObjectTemplate("abcd", filename="abc.yml", line_num=10)
-        o.generate_rows(DebugOutputStream(), RuntimeContext(Globals(), "Foo", ftl))
+        o.generate_rows(DebugOutputStream(), standard_runtime())
 
     def test_fail_render_object_template(self):
         o = ObjectTemplate("abcd", filename="abc.yml", line_num=10)
         with self.assertRaises(DataGenError):
-            o.generate_rows(None, RuntimeContext(Globals(), "Foo", ftl))
+            o.generate_rows(None, standard_runtime())
 
     def test_fail_render_weird_type(self):
         with self.assertRaises((DataGenError, TypeError)):
@@ -79,7 +86,7 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
                     )
                 ],
             )
-            o.generate_rows(DebugOutputStream(), RuntimeContext(None, "Foo"))
+            o.generate_rows(DebugOutputStream(), standard_runtime())
 
     def test_fail_render_weird_template(self):
         with self.assertRaises(DataGenError):
@@ -95,32 +102,24 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
                     )
                 ],
             )
-            o.generate_rows(DebugOutputStream(), RuntimeContext(Globals(), "Foo", ftl))
+            o.generate_rows(DebugOutputStream(), standard_runtime())
 
     def test_structured_value_errors(self):
         with self.assertRaises(DataGenError) as e:
-            StructuredValue("this.that.foo", [], **line).render(
-                RuntimeContext(Globals(), "Foo", ftl)
-            )
+            StructuredValue("this.that.foo", [], **line).render(standard_runtime())
         assert "only one" in str(e.exception)
 
         with self.assertRaises(DataGenError) as e:
-            StructuredValue("bar", [], **line).render(
-                RuntimeContext(Globals(), "Foo", ftl)
-            )
+            StructuredValue("bar", [], **line).render(standard_runtime())
         assert "Cannot find func" in str(e.exception)
         assert "bar" in str(e.exception)
 
         with self.assertRaises(DataGenError) as e:
-            StructuredValue("xyzzy.abc", [], **line).render(
-                RuntimeContext(Globals(), "Foo", ftl)
-            )
+            StructuredValue("xyzzy.abc", [], **line).render(standard_runtime())
         assert "Cannot find defini" in str(e.exception)
         assert "xyzzy" in str(e.exception)
 
         with self.assertRaises(DataGenError) as e:
-            StructuredValue("this.abc", [], **line).render(
-                RuntimeContext(Globals(), "Foo", ftl)
-            )
+            StructuredValue("this.abc", [], **line).render(standard_runtime())
         assert "Cannot find defini" in str(e.exception)
         assert "abc" in str(e.exception)

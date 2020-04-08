@@ -83,11 +83,11 @@ class ObjectTemplate:
     ) -> Optional[ObjectRow]:
         """Generate several rows"""
         rc = None
-        context = parent_context.child_context(self.tablename)
-        count = self._evaluate_count(context)
-        with self.exception_handling(f"Cannot generate {self.name}"):
-            for i in range(count):
-                rc = self._generate_row(storage, context)
+        with parent_context.child_context(self.tablename) as context:
+            count = self._evaluate_count(context)
+            with self.exception_handling(f"Cannot generate {self.name}"):
+                for i in range(count):
+                    rc = self._generate_row(storage, context)
 
         return rc  # return last row
 
@@ -123,13 +123,10 @@ class ObjectTemplate:
 
     def _generate_row(self, storage, context: RuntimeContext) -> ObjectRow:
         """Generate an individual row"""
-        context.incr()
         row = {"id": context.generate_id()}
         sobj = ObjectRow(self.tablename, row)
 
         context.register_object(sobj, self.nickname)
-
-        context.obj = sobj
 
         self._generate_fields(context, row)
 
@@ -153,7 +150,6 @@ class ObjectTemplate:
             with self.exception_handling(f"Problem rendering value"):
                 row[field.name] = field.generate_value(context)
                 self._check_type(field, row[field.name], context)
-                context.register_field(field.name, row[field.name])
 
     def _check_type(self, field, generated_value, context: RuntimeContext):
         """Check the type of a field value"""

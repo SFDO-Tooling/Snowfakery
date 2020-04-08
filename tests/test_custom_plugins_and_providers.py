@@ -105,3 +105,36 @@ class TestCustomPlugin:
         """
         generate(StringIO(yaml), {})
         assert row_values(write_row_mock, 0, "twelve") == 12
+
+
+class PluginThatNeedsState(SnowfakeryPlugin):
+    class Functions:
+        def object_path(self):
+            context = self.context
+            context_vars = context.context_vars()
+            current_value = context_vars.setdefault("object_path", "ROOT")
+            field_vars = context.field_vars()
+            new_value = current_value + "." + field_vars["this"].name
+            context_vars["object_path"] = new_value
+            return new_value
+
+
+class TestContextVars:
+    @mock.patch(write_row_path)
+    def test_context_vars(self, write_row):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.PluginThatNeedsState
+        - object: OBJ
+          fields:
+            name: OBJ1
+            path: <<PluginThatNeedsState.object_path()>>
+            child:
+                - object: OBJ
+                  fields:
+                    name: OBJ2
+                    path: <<PluginThatNeedsState.object_path()>>
+        """
+        generate(StringIO(yaml), {})
+
+        assert row_values(write_row, 0, "path") == "ROOT.OBJ1.OBJ2"
+        assert row_values(write_row, 1, "path") == "ROOT.OBJ1"

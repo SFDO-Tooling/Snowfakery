@@ -16,12 +16,12 @@
       CO1_textarea__c: Long text
       CO1_url__c: http://www.url.com/
       CO1_Currency2__c: 200
-      CO1_Text__c: BDI Text<<number>>
-      CO1_text2__c: BDI Text<<number>>
+      CO1_Text__c: BDI Text<<id>>
+      CO1_text2__c: BDI Text<<id>>
 
 - macro: ReusableCustomObject3_DIFields
   fields:
-      CO3_Text__c: BDI Text<<number>>
+      CO3_Text__c: BDI Text<<id>>
       CO3_Currency__c: 100
       CO3_Number__c: 1
       CO3_Phone__c: 123
@@ -50,13 +50,13 @@
   include: ReusableDIFields, ReusableCustomObject1_DIFields, ReusableCustomObject3_DIFields
   fields:
       Donation_Donor__c: Account1
-      Account1_Name__c: Alan Alda BDITEST <<batchnum>> <<number>>
+      Account1_Name__c: Alan Alda BDITEST <<batchnum>> <<id>>
       ASC_Role__c: match
       ASC_Amount__c: 100
-      CO1_Text__c: BDI Text <<number>>  # override with extra space
+      CO1_Text__c: BDI Text <<id>>  # override with extra space
       CO2_currency__c: 300
       CO2_currency_2__c: 400
-      Donation_Amount__c: <<number * 100>>
+      Donation_Amount__c: <<id * 100>>
       GAU_Allocation_1_GAU__c:
         reference: the_gau
       Opp_Do_Not_Automatically_Create_Payment__c: 0
@@ -74,12 +74,12 @@
   include: ReusableDIFields, ReusableCustomObject1_DIFields, ReusableCustomObject3_DIFields
   fields:
       Donation_Donor__c: Account1
-      Account1_Name__c: Boris Becker BDITEST <<batchnum>> <<number>>
+      Account1_Name__c: Boris Becker BDITEST <<batchnum>> <<id>>
       ASC_Role__c: match
       ASC_Amount__c: 100
       CO2_currency__c: 300
       CO2_currency_2__c: 400
-      Donation_Amount__c: <<number * 100>>
+      Donation_Amount__c: <<id * 100>>
       GAU_Allocation_1_GAU__c: <<reference(the_gau)>>
       Opp_Do_Not_Automatically_Create_Payment__c: 0
 
@@ -88,8 +88,8 @@
   include: ReusableDIFields, ReusableCustomObject1_DIFields, ReusableCustomObject3_DIFields
   fields:
       Donation_Donor__c: Contact1
-      Contact1_Lastname__c: Charisma Carpenter BDITEST <<batchnum>> <<number>>
-      Donation_Amount__c: <<number * 100>>
+      Contact1_Lastname__c: Charisma Carpenter BDITEST <<batchnum>> <<id>>
+      Donation_Amount__c: <<id * 100>>
       GAU_Allocation_1_GAU__c:
         reference:
           - the_gau
@@ -107,8 +107,8 @@
   include: ReusableDIFields, ReusableCustomObject1_DIFields, ReusableCustomObject3_DIFields
   fields:
       Donation_Donor__c: Contact1
-      Contact1_Lastname__c: Danny Devito BDITEST <<batchnum>> <<number>>
-      Donation_Amount__c: <<number * 100>>
+      Contact1_Lastname__c: Danny Devito BDITEST <<batchnum>> <<id>>
+      Donation_Amount__c: <<id * 100>>
       GAU_Allocation_1_GAU__c: <<reference(the_gau)>>
       Donation_Donor__c: Contact1
       Opp_Do_Not_Automatically_Create_Payment__c: 0
