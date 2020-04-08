@@ -1,7 +1,7 @@
 -r requirements.txt
 black==19.10b0
 coverage==4.5.4
-coveralls==1.9.2
+coveralls==2.0.0
 flake8==3.7.9
 pre-commit==1.20.0
 pytest==5.3.2
