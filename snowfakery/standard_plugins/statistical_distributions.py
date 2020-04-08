@@ -7,6 +7,7 @@ from snowfakery.plugins import SnowfakeryPlugin
 
 def wrap(distribution):
     "Wrap a numpy function to make it 1-dimensional and seedable"
+
     def _distribution_wrapper(self, **params):
         random_seed = params.pop("seed", None)
         seed(random_seed)
