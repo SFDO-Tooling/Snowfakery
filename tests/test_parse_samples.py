@@ -27,7 +27,10 @@ class TestParseAndOutput(unittest.TestCase):
     @mock.patch(write_row_path)
     def test_d_and_d(self, write_row):
         with open(dnd_test) as open_yaml_file:
-            generate(open_yaml_file=open_yaml_file, user_options={"num_fighters": 1, "num_druids": 2})
+            generate(
+                open_yaml_file=open_yaml_file,
+                user_options={"num_fighters": 1, "num_druids": 2},
+            )
         calls = write_row.mock_calls
         assert find_row("Equipment", {"id": 1}, calls)
         assert find_row("Druid", {"id": 1, "Hit Points": mock.ANY}, calls)

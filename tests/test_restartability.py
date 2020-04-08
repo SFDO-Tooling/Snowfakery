@@ -2,9 +2,7 @@ import unittest
 from unittest import mock
 from io import StringIO
 
-from snowfakery.data_generator import (
-    generate,
-)
+from snowfakery.data_generator import generate
 
 
 class TestRestart(unittest.TestCase):
@@ -19,10 +17,10 @@ class TestRestart(unittest.TestCase):
                     reference: Foo
             """
         continuation_file = StringIO()
-        generate(StringIO(yaml), 
-                 generate_continuation_file=continuation_file)
-        generate(StringIO(yaml), 
-                 continuation_file=StringIO(continuation_file.getvalue()))
+        generate(StringIO(yaml), generate_continuation_file=continuation_file)
+        generate(
+            StringIO(yaml), continuation_file=StringIO(continuation_file.getvalue())
+        )
 
         assert write_row.mock_calls[1][1][1]["foo_reference"].id == 1
         assert write_row.mock_calls[3][1][1]["foo_reference"].id == 2
@@ -35,10 +33,9 @@ class TestRestart(unittest.TestCase):
               nickname: Foo
             """
         continuation_file = StringIO()
-        generate(StringIO(yaml),
-                 generate_continuation_file=continuation_file)
-        generate(StringIO(yaml),
-                 continuation_file=StringIO(continuation_file.getvalue()))
+        generate(StringIO(yaml), generate_continuation_file=continuation_file)
+        generate(
+            StringIO(yaml), continuation_file=StringIO(continuation_file.getvalue())
+        )
 
         assert write_row.mock_calls[-1][1][1]["id"] == 10
-

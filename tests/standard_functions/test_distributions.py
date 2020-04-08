@@ -26,7 +26,7 @@ class TestStatisticalDistributions:
         """
         generate(StringIO(yaml), {}, None)
         assert len(write_row.mock_calls) == 1
-        assert write_row.mock_calls == [mock.call("A", {'id': 1, "b": 3})]
+        assert write_row.mock_calls == [mock.call("A", {"id": 1, "b": 3})]
 
     @mock.patch(write_row_path)
     def test_random_distribution_param_errors(self, write_row):
