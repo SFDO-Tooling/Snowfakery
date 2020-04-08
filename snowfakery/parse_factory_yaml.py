@@ -30,7 +30,9 @@ LineTracker = namedtuple("LineTracker", ["filename", "line_num"])
 
 
 class ParseResult:
-    def __init__(self, options, tables: Mapping, templates, plugins: Sequence[str] = ()):
+    def __init__(
+        self, options, tables: Mapping, templates, plugins: Sequence[str] = ()
+    ):
         self.options = options
         self.tables = tables
         self.templates = templates

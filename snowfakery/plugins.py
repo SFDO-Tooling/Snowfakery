@@ -32,15 +32,12 @@ class SnowfakeryPlugin:
     Plugins can also keep internal state for global data, like any other
     Python object.
     """
+
     def __init__(self, interpreter):
         self.interpreter = interpreter
         self.context = PluginContext(self)
 
-    def custom_functions(
-        self,
-        *args,
-        **kwargs
-    ):
+    def custom_functions(self, *args, **kwargs):
         """Instantiate, contextualize and return a function library
 
         Default behaviour is to return self.Function()."""
@@ -60,4 +57,6 @@ class PluginContext:
         return self.interpreter.current_context.field_vars()
 
     def context_vars(self):
-        return self.interpreter.current_context.context_vars(self.plugin.__class__.__name__)
+        return self.interpreter.current_context.context_vars(
+            self.plugin.__class__.__name__
+        )
