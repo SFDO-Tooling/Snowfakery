@@ -39,3 +39,18 @@ class TestRestart(unittest.TestCase):
         )
 
         assert write_row.mock_calls[-1][1][1]["id"] == 10
+
+    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
+    def test_faker_dates_work(self, write_row):
+        yaml = """
+            - object: foo
+              count: 50
+              fields:
+                a_date:
+                    date_between:
+                        start_date: -30d
+                        end_date: +180d
+            """
+        continuation_file = StringIO()
+        generate(StringIO(yaml), generate_continuation_file=continuation_file)
+        assert "a_date" in continuation_file.getvalue()
