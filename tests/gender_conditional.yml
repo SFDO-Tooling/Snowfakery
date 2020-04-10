@@ -1,0 +1,28 @@
+- object: Person
+  fields:
+    gender:
+      random_choice:
+        - choice:
+            probability: 40%
+            pick: Male
+        - choice:
+            probability: 40%
+            pick: Female
+        - choice:
+            probability: 20%
+            pick: Other
+    name:
+      if:
+        - choice:
+            when: <<gender=='Male'>>
+            pick:
+              fake: first_name_male
+
+        - choice:
+            when: <<gender=='Female'>>
+            pick:
+              fake: first_name_female
+
+        - choice:
+            pick:
+              fake: first_name
