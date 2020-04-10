@@ -106,7 +106,7 @@ class ParseContext:
         finally:
             self.current_parent_object = _old_parsed_template
 
-    def register_object(self, template: ObjectTemplate) -> None:
+    def register_template(self, template: ObjectTemplate) -> None:
         """Register templates for later use.
 
         We register templates so we can get a list of all fields that can
@@ -293,7 +293,7 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
         if count_expr is not None:
             parse_count_expression(yaml_sobj, sobj_def, context)
         new_template = ObjectTemplate(**sobj_def)
-        context.register_object(new_template)
+        context.register_template(new_template)
         return new_template
 
 
