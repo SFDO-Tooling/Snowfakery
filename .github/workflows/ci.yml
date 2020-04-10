@@ -3,27 +3,28 @@ name: CI
 on: [push]
 
 jobs:
+  tox:
+    name: "Python ${{ matrix.python-version }}"
+    runs-on: "ubuntu-latest"
+    env:
+      USING_COVERAGE: '3.8'
 
-  test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.6", "3.7", "3.8"]
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v1"
         with:
-          fetch-depth: 1
-
-      - name: Set up Python 3.7
-        uses: actions/setup-python@v1
-        with:
-          python-version: 3.7
-
-      - name: Setup Dependencies
+          python-version: "${{ matrix.python-version }}"
+      - name: "Install dependencies"
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements_dev.txt
-
-      - name: Code Quality
-        run: black --check --diff .
+          set -xe
+          python -VV
+          python -m site
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install --upgrade coverage[toml] virtualenv tox tox-gh-actions
 
       - name: pytest
         run: pytest --cov
