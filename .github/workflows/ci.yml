@@ -3,7 +3,7 @@ name: CI
 on: [push]
 
 jobs:
-  tox:
+  test:
     name: "Python ${{ matrix.python-version }}"
     runs-on: "ubuntu-latest"
     env:
