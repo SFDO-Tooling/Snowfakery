@@ -1,9 +1,11 @@
-import unittest
+import pytest
 from unittest import mock
 from pathlib import Path
-from tempfile import NamedTemporaryFile, TemporaryDirectory
+from tempfile import TemporaryDirectory
 from io import StringIO
 import json
+import re
+from tests.utils import named_temporary_file_path
 
 import yaml
 from click.exceptions import ClickException
@@ -18,7 +20,7 @@ sample_accounts_yaml = Path(__file__).parent / "gen_sf_standard_objects.yml"
 write_row_path = "snowfakery.output_streams.DebugOutputStream.write_single_row"
 
 
-class TestGenerateFromCLI(unittest.TestCase):
+class TestGenerateFromCLI:
     @mock.patch(write_row_path)
     def test_simple(self, write_row):
         generate_cli.callback(
@@ -60,7 +62,7 @@ class TestGenerateFromCLI(unittest.TestCase):
 
     @mock.patch(write_row_path)
     def test_with_option(self, write_row):
-        with self.assertWarns(UserWarning):
+        with pytest.warns(UserWarning):
             generate_cli.callback(
                 yaml_file=sample_yaml,
                 option={"xyzzy": "abcd"},
@@ -70,7 +72,7 @@ class TestGenerateFromCLI(unittest.TestCase):
 
     @mock.patch(write_row_path)
     def test_with_bad_dburl(self, write_row):
-        with self.assertRaises(Exception):
+        with pytest.raises(Exception):
             generate_cli.callback(
                 yaml_file=sample_yaml,
                 option={},
@@ -87,27 +89,27 @@ class TestGenerateFromCLI(unittest.TestCase):
 
     @mock.patch(write_row_path)
     def test_exception_with_debug_flags_on(self, write_row):
-        with NamedTemporaryFile(suffix=".yml") as t:
-            with self.assertRaises(DataGenError):
+        with named_temporary_file_path(suffix=".yml") as t:
+            with pytest.raises(DataGenError):
                 generate_cli.callback(
                     yaml_file=bad_sample_yaml,
                     option={},
                     debug_internals=True,
-                    generate_cci_mapping_file=t.name,
+                    generate_cci_mapping_file=t,
                 )
-                assert yaml.safe_load(t.name)
+                assert yaml.safe_load(t)
 
     @mock.patch(write_row_path)
     def test_exception_with_debug_flags_off(self, write_row):
-        with NamedTemporaryFile(suffix=".yml") as t:
-            with self.assertRaises(ClickException):
+        with named_temporary_file_path(suffix=".yml") as t:
+            with pytest.raises(ClickException):
                 generate_cli.callback(
                     yaml_file=bad_sample_yaml,
                     option={},
                     debug_internals=False,
-                    generate_cci_mapping_file=t.name,
+                    generate_cci_mapping_file=t,
                 )
-                assert yaml.safe_load(t.name)
+                assert yaml.safe_load(t)
 
     def test_json(self):
         with mock.patch("snowfakery.cli.sys.stdout", new=StringIO(),) as fake_out:
@@ -139,6 +141,57 @@ class TestGenerateFromCLI(unittest.TestCase):
                     "json",
                     "--output-file",
                     Path(t) / "foo.json",
+                ],
+                standalone_mode=False,
+            )
+
+    def test_from_cli__target_number(self, capsys):
+        generate_cli.main(
+            [str(sample_yaml), "--target-number", "Account", "5"],
+            standalone_mode=False,
+        )
+        stdout = capsys.readouterr().out
+
+        assert len(re.findall(r"Account\(", stdout)) == 5
+
+    # def test_from_cli__explicit_format_txt(self, capsys):
+    #     with named_temporary_file_path() as t:
+    #         generate_cli.main(
+    #             [str(sample_yaml), "--target-number", "Account", "5", "--output-format", "txt", "--output-file", str(t)],
+    #             standalone_mode=False,
+    #         )
+    #         with t.open() as f:
+    #             output = f.read()
+    #         assert len(re.findall(r"Account\(", output)) == 5
+
+    def test_from_cli__generate_mapping_file(self, capsys):
+        with TemporaryDirectory() as t:
+            mapping_file_path = Path(t) / "mapping.yml"
+            database_path = f"sqlite:///{t}/foo.db"
+            continuation_file = Path(t) / "continuation.yml"
+            assert not mapping_file_path.exists()
+            generate_cli.main(
+                [
+                    str(sample_yaml),
+                    "--generate-cci-mapping-file",
+                    mapping_file_path,
+                    "--dburl",
+                    database_path,
+                    "--generate-continuation-file",
+                    continuation_file,
+                ],
+                standalone_mode=False,
+            )
+            assert mapping_file_path.exists()
+            generate_cli.main(
+                [
+                    str(sample_yaml),
+                    "--cci-mapping-file",
+                    mapping_file_path,
+                    "--dburl",
+                    database_path,
+                    "--continuation-file",
+                    continuation_file,
                 ],
                 standalone_mode=False,
             )

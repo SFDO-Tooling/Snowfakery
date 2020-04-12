@@ -12,7 +12,6 @@ from snowfakery.data_gen_exceptions import DataGenError
 from snowfakery.data_generator import generate, StoppingCriteria
 import sys
 from pathlib import Path
-from typing import Tuple
 
 import yaml
 import click
@@ -45,7 +44,9 @@ def eval_arg(arg):
         return arg
 
 
-def string_int_tuple(ctx, param, value: Tuple[str, str] = None):
+# don't add a type signature to this function.
+# typeguard and click will interfer with each other.
+def string_int_tuple(ctx, param, value=None):
     """Works around Click bug
 
     https://github.com/pallets/click/issues/789#issuecomment-535121714"""
@@ -90,14 +91,6 @@ def string_int_tuple(ctx, param, value: Tuple[str, str] = None):
     type=click.Path(exists=False),
 )
 @click.option(
-    "--start-id",
-    "start_ids",
-    nargs=2,
-    type=eval_arg,
-    multiple=True,
-    help="A pair that represents a table name and a number of rows to generate",
-)
-@click.option(
     "--generate-continuation-file",
     type=click.File("w"),
     help="A file that captures information about how to continue a "
@@ -119,7 +112,6 @@ def generate_cli(
     generate_cci_mapping_file=None,
     output_format=None,
     output_files=None,
-    start_ids=None,
     nickname_ids=None,
     continuation_file=None,
     generate_continuation_file=None,
@@ -138,7 +130,6 @@ def generate_cli(
     Diagram output depends on the installation of pygraphviz ("pip install pygraphviz")
     """
     output_files = list(output_files) if output_files else []
-    start_ids = list(start_ids) if start_ids else []
     stopping_criteria = StoppingCriteria(*target_number) if target_number else None
     output_format = output_format.lower() if output_format else None
     validate_options(
