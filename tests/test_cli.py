@@ -10,7 +10,7 @@ from tests.utils import named_temporary_file_path
 import yaml
 from click.exceptions import ClickException
 
-from snowfakery.cli import generate_cli, eval_arg
+from snowfakery.cli import generate_cli, eval_arg, main
 from snowfakery.data_gen_exceptions import DataGenError
 
 sample_yaml = Path(__file__).parent / "include_parent.yml"
@@ -154,15 +154,24 @@ class TestGenerateFromCLI:
 
         assert len(re.findall(r"Account\(", stdout)) == 5
 
-    # def test_from_cli__explicit_format_txt(self, capsys):
-    #     with named_temporary_file_path() as t:
-    #         generate_cli.main(
-    #             [str(sample_yaml), "--target-number", "Account", "5", "--output-format", "txt", "--output-file", str(t)],
-    #             standalone_mode=False,
-    #         )
-    #         with t.open() as f:
-    #             output = f.read()
-    #         assert len(re.findall(r"Account\(", output)) == 5
+    def test_from_cli__explicit_format_txt(self, capsys):
+        with named_temporary_file_path() as t:
+            generate_cli.main(
+                [
+                    str(sample_yaml),
+                    "--target-number",
+                    "Account",
+                    "5",
+                    "--output-format",
+                    "txt",
+                    "--output-file",
+                    str(t),
+                ],
+                standalone_mode=False,
+            )
+            with t.open() as f:
+                output = f.read()
+            assert len(re.findall(r"Account\(", output)) == 5
 
     def test_from_cli__generate_mapping_file(self, capsys):
         with TemporaryDirectory() as t:
@@ -195,3 +204,65 @@ class TestGenerateFromCLI:
                 ],
                 standalone_mode=False,
             )
+
+    def test_from_cli__many_outputs(self):
+        with TemporaryDirectory() as t:
+            png = Path(t) / "out.png"
+            svg = Path(t) / "out.svg"
+            txt = Path(t) / "out.txt"
+            generate_cli.main(
+                [
+                    str(sample_yaml),
+                    "--output-file",
+                    png,
+                    "--output-file",
+                    svg,
+                    "--output-file",
+                    txt,
+                ],
+                standalone_mode=False,
+            )
+            assert png.exists()
+            assert svg.exists()
+            assert txt.exists()
+
+    def test_cli_errors__mutex(self):
+        with pytest.raises(ClickException) as e:
+            generate_cli.main(
+                [
+                    str(sample_yaml),
+                    "--dburl",
+                    "sqlite:////tmp/foo.db",
+                    "--output-file",
+                    "/tmp/foo.svg",
+                ],
+                standalone_mode=False,
+            )
+        assert "output-file" in str(e.value)
+
+    def test_cli_errors__mutex2(self):
+        with pytest.raises(ClickException) as e:
+            generate_cli.main(
+                [
+                    str(sample_yaml),
+                    "--dburl",
+                    "sqlite:////tmp/foo.db",
+                    "--output-format",
+                    "svg",
+                ],
+                standalone_mode=False,
+            )
+        assert "output-format" in str(e.value)
+
+    def test_cli_errors__mutex3(self):
+        with pytest.raises(ClickException) as e:
+            generate_cli.main(
+                [str(sample_yaml), "--cci-mapping-file", "-"], standalone_mode=False,
+            )
+        assert "--cci-mapping-file" in str(e.value)
+
+    def test_module_main(self, capsys):
+        with pytest.raises(SystemExit):
+            main()
+
+        assert "Usage:" in capsys.readouterr().err

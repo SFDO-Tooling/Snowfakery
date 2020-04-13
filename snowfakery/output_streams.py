@@ -1,4 +1,5 @@
 import os
+import sys
 from abc import abstractmethod, ABC
 import json
 import csv
@@ -125,10 +126,31 @@ class OutputStream(ABC):
         pass
 
 
-class DebugOutputStream(OutputStream):
+class FileOutputStream(OutputStream):
+    mode = "wt"
+
+    def __init__(self, stream_or_path=None):
+        if hasattr(stream_or_path, "write"):
+            self.owns_stream = False
+            self.stream = stream_or_path
+        elif stream_or_path:
+            self.stream = open(stream_or_path, self.mode)
+            self.owns_stream = True
+        elif stream_or_path is None:
+            self.owns_stream = False
+            self.stream = None  # sys.stdout
+        else:  # noqa
+            assert False, f"stream_or_path is {stream_or_path}"
+
+    def close(self):
+        if self.owns_stream:
+            self.stream.close()
+
+
+class DebugOutputStream(FileOutputStream):
     def write_single_row(self, tablename: str, row: Dict) -> None:
         values = ", ".join([f"{key}={value}" for key, value in row.items()])
-        print(f"{tablename}({values})")
+        print(f"{tablename}({values})", file=self.stream)
 
     def flatten(
         self,
@@ -183,7 +205,7 @@ class CSVOutputStream(OutputStream):
             json.dump(csv_metadata, f, indent=2)
 
 
-class JSONOutputStream(OutputStream):
+class JSONOutputStream(FileOutputStream):
     encoders: Mapping[type, Callable] = {
         **OutputStream.encoders,
         datetime.date: str,
@@ -194,50 +216,42 @@ class JSONOutputStream(OutputStream):
 
     def __init__(self, file):
         assert file
-        self.file = file
+        super().__init__(file)
         self.first_row = True
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
         if self.first_row:
-            self.file.write("[")
+            self.stream.write("[")
             self.first_row = False
         else:
-            self.file.write(",\n")
+            self.stream.write(",\n")
         values = {"_table": tablename, **row}
-        self.file.write(json.dumps(values))
+        self.stream.write(json.dumps(values))
 
     def close(self) -> None:
-        self.file.write("]\n")
+        self.stream.write("]\n")
+        sys.stderr.write("CLOSING")
+        super().close()
 
 
 class SqlOutputStream(OutputStream):
     mappings = None
+    should_close_session = False
 
     def __init__(self, engine: Engine, mappings: Optional[Dict]):
         self.buffered_rows = defaultdict(list)
-        self.engine = None
         self.table_info = {}
         self.mappings = mappings
         self.engine = engine
-        self._init_db()
+        self.session = create_session(bind=self.engine, autocommit=False)
+        self.metadata = MetaData(bind=self.engine)
+        self.base = automap_base(bind=engine, metadata=self.metadata)
 
     @classmethod
     def from_url(cls, db_url: str, mappings: Optional[Dict] = None):
-        self = cls(create_engine(db_url), mappings)
-        return self
-
-    @classmethod
-    def from_connection(
-        cls, session, engine: Engine, base, mappings: Optional[Dict] = None
-    ):
+        engine = create_engine(db_url)
         self = cls(engine, mappings)
-        self.session = session
-        self.base = base
         return self
-
-    def _init_db(self):
-        self.metadata = MetaData()
-        self.metadata.bind = self.engine
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
         # cache the value for later insert
@@ -276,20 +290,17 @@ class SqlOutputStream(OutputStream):
     def create_or_validate_tables(self, inferred_tables: Dict[str, TableInfo]) -> None:
         if self.mappings:
             _validate_fields(self.mappings, inferred_tables)
-            connection = self.engine.connect()
-
-            for mapping in self.mappings.values():
-                # caller may have already created the tables
-                if not self.engine.dialect.has_table(connection, mapping["table"]):
-                    create_table_from_mapping(mapping, self.metadata)
+            with self.engine.connect() as connection:
+                for mapping in self.mappings.values():
+                    # caller may have already created the tables
+                    if not self.engine.dialect.has_table(connection, mapping["table"]):
+                        create_table_from_mapping(mapping, self.metadata)
         else:
             create_tables_from_inferred_fields(
                 inferred_tables, self.engine, self.metadata
             )
         self.metadata.create_all()
-        self.base = automap_base(bind=self.engine, metadata=self.metadata)
         self.base.prepare(self.engine, reflect=True)
-        self.session = create_session(bind=self.engine, autocommit=False)
 
         # Setup table info used by the write-buffering infrastructure
         TableTuple = namedtuple("TableTuple", ["insert_statement", "fallback_dict"])
@@ -327,9 +338,9 @@ def create_tables_from_inferred_fields(tables, engine, metadata):
             )
 
 
-class GraphvizOutputStream(OutputStream):
-    def __init__(self, file):
-        super().__init__()
+class GraphvizOutputStream(FileOutputStream):
+    def __init__(self, path):
+        super().__init__(path)
         import pygraphviz
 
         self.G = pygraphviz.AGraph(strict=False, directed=True)
@@ -340,8 +351,6 @@ class GraphvizOutputStream(OutputStream):
         self.G.node_attr["height"] = "0.75"
         self.G.node_attr["width"] = "0.75"
         self.G.node_attr["widshapeth"] = "circle"
-
-        self.file = file
 
     def flatten(
         self,
@@ -375,16 +384,24 @@ class GraphvizOutputStream(OutputStream):
         self.G.add_node(node_name)
 
     def close(self) -> None:
-        self.file.write(self.G.string())
+        self.stream.write(self.G.string())
+        super().close()
 
 
 class ImageOutputStream(GraphvizOutputStream):
-    def __init__(self, file, format="png"):
+    """Output an Image file in a graphviz supported format."""
+
+    mode = "wb"
+
+    def __init__(self, path, format):
+        self.path = path
         self.format = format
-        super().__init__(file)
+        super().__init__(path)
 
     def close(self) -> None:
-        self.G.draw(path=self.file, prog="dot", format=self.format)
+        if isinstance(self.path, Path):
+            self.path = str()
+        self.G.draw(path=self.stream, prog="dot", format=self.format)
 
 
 class MultiplexOutputStream(OutputStream):
