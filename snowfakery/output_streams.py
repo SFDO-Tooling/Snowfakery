@@ -1,5 +1,4 @@
 import os
-import sys
 from abc import abstractmethod, ABC
 import json
 import csv
@@ -230,7 +229,6 @@ class JSONOutputStream(FileOutputStream):
 
     def close(self) -> None:
         self.stream.write("]\n")
-        sys.stderr.write("CLOSING")
         super().close()
 
 
