@@ -205,7 +205,8 @@ class TestGenerateFromCLI:
                 standalone_mode=False,
             )
 
-    def test_from_cli__many_outputs(self):
+    @pytest.mark.importorskip("pygraphviz")
+    def test_image_outputs(self):
         with TemporaryDirectory() as t:
             png = Path(t) / "out.png"
             svg = Path(t) / "out.svg"
@@ -255,11 +256,16 @@ class TestGenerateFromCLI:
         assert "output-format" in str(e.value)
 
     def test_cli_errors__mutex3(self):
-        with pytest.raises(ClickException) as e:
-            generate_cli.main(
-                [str(sample_yaml), "--cci-mapping-file", "-"], standalone_mode=False,
-            )
-        assert "--cci-mapping-file" in str(e.value)
+        with named_temporary_file_path() as tempfile:
+            with open(tempfile, "w") as t:
+                t.write("")
+
+            with pytest.raises(ClickException) as e:
+                generate_cli.main(
+                    [str(sample_yaml), "--cci-mapping-file", tempfile],
+                    standalone_mode=False,
+                )
+            assert "--cci-mapping-file" in str(e.value)
 
     def test_module_main(self, capsys):
         with pytest.raises(SystemExit):
