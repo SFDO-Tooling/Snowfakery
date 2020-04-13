@@ -4,6 +4,7 @@ coverage==5.0.4
 coveralls==2.0.0
 flake8==3.7.9
 pre-commit==2.2.0
+pygraphviz==1.5
 pytest==5.4.1
 pytest-cov==2.8.1
 typeguard==2.7.1
