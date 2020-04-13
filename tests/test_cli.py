@@ -205,8 +205,8 @@ class TestGenerateFromCLI:
                 standalone_mode=False,
             )
 
-    @pytest.mark.importorskip("pygraphviz")
     def test_image_outputs(self):
+        pytest.importorskip("pygraphviz")
         with TemporaryDirectory() as t:
             png = Path(t) / "out.png"
             svg = Path(t) / "out.svg"
