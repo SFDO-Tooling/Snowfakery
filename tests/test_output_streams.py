@@ -234,7 +234,10 @@ class TestCSVOutputStream(unittest.TestCase, OutputCommonTests):
         with TemporaryDirectory() as t:
             output_stream = CSVOutputStream(Path(t) / "csvoutput")
             generate(StringIO(yaml), {}, output_stream)
-            output_stream.close()
+            messages = output_stream.close()
+            assert "foo.csv" in messages[0]
+            assert "bar.csv" in messages[1]
+            assert "csvw" in messages[2]
             assert (Path(t) / "csvoutput" / "foo.csv").exists()
             with open(Path(t) / "csvoutput" / "csvw_metadata.json") as f:
                 metadata = json.load(f)
