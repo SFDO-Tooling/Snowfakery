@@ -34,7 +34,7 @@ class Test_CLI_CCI(unittest.TestCase):
             )
 
             engine = create_engine(url)
-            connection = engine.connect()
-            result = list(connection.execute("select * from Account"))
-            assert result[0]["id"] == 1
-            assert result[0]["BillingCountry"] == "Canada"
+            with engine.connect() as connection:
+                result = list(connection.execute("select * from Account"))
+                assert result[0]["id"] == 1
+                assert result[0]["BillingCountry"] == "Canada"
