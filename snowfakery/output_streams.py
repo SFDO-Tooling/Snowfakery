@@ -1,12 +1,10 @@
-import os
 from abc import abstractmethod, ABC
 import json
 import csv
 import datetime
-from urllib.parse import urlparse
 from pathlib import Path
 from collections import namedtuple, defaultdict
-from typing import Dict, Union, Optional, Mapping, Callable
+from typing import Dict, Union, Optional, Mapping, Callable, Sequence
 
 from sqlalchemy import create_engine, MetaData, Column, Integer, Table, Unicode
 from sqlalchemy.ext.automap import automap_base
@@ -165,13 +163,11 @@ CSVContext = namedtuple("CSVContext", ["dictwriter", "file"])
 
 
 class CSVOutputStream(OutputStream):
-    def __init__(self, url):
+    def __init__(self, output_folder):
         super().__init__()
-
-        parts = urlparse(url)
-        self.target_path = Path(parts.path)
-        if not os.path.exists(self.target_path):
-            os.makedirs(self.target_path)
+        self.target_path = Path(output_folder)
+        if not Path.exists(self.target_path):
+            Path.mkdir(self.target_path, exist_ok=True)
 
     def open_writer(self, table_name, table):
         file = open(self.target_path / f"{table_name}.csv", "w")
@@ -188,9 +184,11 @@ class CSVOutputStream(OutputStream):
     def write_single_row(self, tablename: str, row: Dict) -> None:
         self.writers[tablename].dictwriter.writerow(row)
 
-    def close(self) -> None:
+    def close(self) -> Sequence[str]:
+        messages = []
         for context in self.writers.values():
             context.file.close()
+            messages.append(f"Created {context.file.name}")
 
         table_metadata = [
             {"url": f"{table_name}.csv"} for table_name, writer in self.writers.items()
@@ -202,6 +200,8 @@ class CSVOutputStream(OutputStream):
         csvw_filename = self.target_path / "csvw_metadata.json"
         with open(csvw_filename, "w") as f:
             json.dump(csv_metadata, f, indent=2)
+        messages.append(f"Created {csvw_filename}")
+        return messages
 
 
 class JSONOutputStream(FileOutputStream):

@@ -273,6 +273,48 @@ class TestGenerateFromCLI:
 
         assert "Usage:" in capsys.readouterr().err
 
+    def test_output_folder(self):
+        with TemporaryDirectory() as tempdir:
+            generate_cli.main(
+                [
+                    str(sample_yaml),
+                    "--output-folder",
+                    tempdir,
+                    "--output-file",
+                    "foo.json",
+                ],
+                standalone_mode=False,
+            )
+            assert isinstance(json.load(Path(tempdir, "foo.json").open()), list)
+
+    def test_output_folder__csv(self):
+        with TemporaryDirectory() as tempdir:
+            generate_cli.main(
+                [
+                    str(sample_yaml),
+                    "--output-folder",
+                    tempdir,
+                    "--output-format",
+                    "csv",
+                ],
+                standalone_mode=False,
+            )
+            assert Path(tempdir, "Account.csv").exists()
+
+    def test_output_folder__csv_new_folder(self):
+        with TemporaryDirectory() as tempdir:
+            generate_cli.main(
+                [
+                    str(sample_yaml),
+                    "--output-folder",
+                    Path(tempdir, "foo"),
+                    "--output-format",
+                    "csv",
+                ],
+                standalone_mode=False,
+            )
+            assert Path(tempdir, "foo", "Account.csv").exists()
+
 
 class TestCLIOptionChecking:
     def test_mapping_file_no_dburl(self):
