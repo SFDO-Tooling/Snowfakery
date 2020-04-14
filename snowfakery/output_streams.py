@@ -397,8 +397,6 @@ class ImageOutputStream(GraphvizOutputStream):
         super().__init__(path)
 
     def close(self) -> None:
-        if isinstance(self.path, Path):
-            self.path = str()
         self.G.draw(path=self.stream, prog="dot", format=self.format)
 
 
