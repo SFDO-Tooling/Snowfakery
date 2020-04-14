@@ -129,7 +129,7 @@ def generate_cli(
         * JSON file (--output_format=json --output-file=foo.json)
         * diagram file (--output_format=png --output-file=foo.png)
         * a database identified by --dburl (e.g. --dburl sqlite:////tmp/foo.db)
-        * or to a directory as a set of CSV files (--dburl csvfile:///directory/)
+        * or to a directory as a set of CSV files (--output-format=csv --output-folder=csvfiles)
 
     Diagram output depends on the installation of pygraphviz ("pip install pygraphviz")
     """
