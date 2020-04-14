@@ -35,6 +35,7 @@ file_extensions = [
     "ps",
     "dot",
     "txt",
+    "csv",
 ]
 
 
@@ -68,6 +69,7 @@ def string_int_tuple(ctx, param, value=None):
     "Use sqlite:///foo.db if you don't have one set up.",
 )
 @click.option("--output-format", "output_format", type=click.Choice(file_extensions))
+@click.option("--output-folder", "output_folder", type=click.Path(), default=".")
 @click.option("--output-file", "-o", "output_files", type=click.Path(), multiple=True)
 @click.option(
     "--option",
@@ -113,6 +115,7 @@ def generate_cli(
     generate_cci_mapping_file=None,
     output_format=None,
     output_files=None,
+    output_folder=None,
     nickname_ids=None,
     continuation_file=None,
     generate_continuation_file=None,
@@ -142,9 +145,10 @@ def generate_cli(
         generate_cci_mapping_file,
         output_format,
         output_files,
+        output_folder,
     )
     with configure_output_stream(
-        dburls, mapping_file, output_format, output_files
+        dburls, mapping_file, output_format, output_files, output_folder
     ) as output_stream:
         try:
             with click.open_file(yaml_file) as f:
@@ -179,7 +183,9 @@ def generate_cli(
 
 
 @contextmanager
-def configure_output_stream(dburls, mapping_file, output_format, output_files):
+def configure_output_stream(
+    dburls, mapping_file, output_format, output_files, output_folder
+):
     assert isinstance(output_files, (list, type(None)))
     output_streams = []  # we allow multiple output streams
 
@@ -189,17 +195,20 @@ def configure_output_stream(dburls, mapping_file, output_format, output_files):
                 mappings = yaml.safe_load(f)
         else:
             mappings = None
-        if dburl.startswith("csvfile:/"):
-            output_streams.append(CSVOutputStream(dburl))
-        else:
-            output_streams.append(SqlOutputStream.from_url(dburl, mappings))
+
+        output_streams.append(SqlOutputStream.from_url(dburl, mappings))
 
     # JSON is the only output format (other than debug) that can go on stdout
     if output_format == "json" and not output_files:
         output_streams.append(JSONOutputStream(sys.stdout))
 
+    if output_format == "csv":
+        output_streams.append(CSVOutputStream(output_folder))
+
     if output_files:
         for path in output_files:
+            if output_folder:
+                path = Path(output_folder, path)  # put the file in the output folder
             format = output_format or Path(path).suffix[1:]
 
             if format == "json":
@@ -219,7 +228,13 @@ def configure_output_stream(dburls, mapping_file, output_format, output_files):
         yield output_stream
     finally:
         for output_stream in output_streams:
-            output_stream.close()
+            try:
+                messages = output_stream.close()
+            except Exception as e:
+                click.echo(f"Could not close {output_stream}: {str(e)}", err=True)
+            if messages:
+                for message in messages:
+                    click.echo(message)
 
 
 def validate_options(
@@ -231,6 +246,7 @@ def validate_options(
     generate_cci_mapping_file,
     output_format,
     output_files,
+    output_folder,
 ):
     if dburl and output_format:
         raise click.ClickException(
@@ -244,6 +260,14 @@ def validate_options(
         )
     if not dburl and mapping_file:
         raise click.ClickException("--cci-mapping-file can only be used with --dburl")
+    if (
+        output_folder
+        and str(output_folder) != "."
+        and not (output_files or output_format == "csv")
+    ):
+        raise click.ClickException(
+            "--output-folder can only be used if files are going to be output"
+        )
 
 
 def main():

@@ -204,7 +204,7 @@ class TestJSONOutputStream(unittest.TestCase, OutputCommonTests):
 class TestCSVOutputStream(unittest.TestCase, OutputCommonTests):
     def do_output(self, yaml):
         with TemporaryDirectory() as t:
-            output_stream = CSVOutputStream(f"csv://{t}/csvoutput")
+            output_stream = CSVOutputStream(Path(t) / "csvoutput")
             results = generate(StringIO(yaml), {}, output_stream)
             output_stream.close()
             table_names = results.tables.keys()
@@ -232,7 +232,7 @@ class TestCSVOutputStream(unittest.TestCase, OutputCommonTests):
             bard: 4
         """
         with TemporaryDirectory() as t:
-            output_stream = CSVOutputStream(f"csv://{t}/csvoutput")
+            output_stream = CSVOutputStream(Path(t) / "csvoutput")
             generate(StringIO(yaml), {}, output_stream)
             output_stream.close()
             assert (Path(t) / "csvoutput" / "foo.csv").exists()
@@ -242,14 +242,3 @@ class TestCSVOutputStream(unittest.TestCase, OutputCommonTests):
                     "foo.csv",
                     "bar.csv",
                 }
-
-    def test_from_cli(self):
-        with TemporaryDirectory() as t:
-            generate_cli.main(
-                [str(sample_yaml), "--dburl", f"csvfile://{t}/csvoutput"],
-                standalone_mode=False,
-            )
-            assert (Path(t) / "csvoutput" / "Account.csv").exists()
-            with open(Path(t) / "csvoutput" / "csvw_metadata.json") as f:
-                metadata = json.load(f)
-                assert {table["url"] for table in metadata["tables"]} == {"Account.csv"}
