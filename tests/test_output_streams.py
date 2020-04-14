@@ -5,8 +5,9 @@ import json
 import datetime
 import csv
 from pathlib import Path
-from tempfile import NamedTemporaryFile, TemporaryDirectory
+from tempfile import TemporaryDirectory
 from contextlib import redirect_stdout
+from tests.utils import named_temporary_file_path
 
 from sqlalchemy import create_engine
 
@@ -124,19 +125,19 @@ class OutputCommonTests(ABC):
 
 class TestSqlOutputStream(unittest.TestCase, OutputCommonTests):
     def do_output(self, yaml):
-        with NamedTemporaryFile() as f:
-            url = f"sqlite:///{f.name}"
+        with named_temporary_file_path() as f:
+            url = f"sqlite:///{f}"
             output_stream = SqlOutputStream.from_url(url, None)
             results = generate(StringIO(yaml), {}, output_stream)
             table_names = results.tables.keys()
             output_stream.close()
             engine = create_engine(url)
-            connection = engine.connect()
-            tables = {
-                table_name: list(connection.execute(f"select * from {table_name}"))
-                for table_name in table_names
-            }
-            return tables
+            with engine.connect() as connection:
+                tables = {
+                    table_name: list(connection.execute(f"select * from {table_name}"))
+                    for table_name in table_names
+                }
+                return tables
 
 
 class JSONTables:

@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Sequence, Mapping
+from typing import Sequence
 import string
 
 from faker import Faker
@@ -49,14 +49,6 @@ class FakerTemplateLibrary:
 
 
 Template = lru_cache(512)(Template)
-
-
-def format_str(value, variables: Mapping, fake: Faker):
-    variables = variables or {}
-    if isinstance(value, str) and "{" in value:
-        value = Template(value).render(fake=fake, **variables)
-
-    return value
 
 
 number_chars = set(string.digits + ".")

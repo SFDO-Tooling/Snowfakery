@@ -12,7 +12,7 @@ from snowfakery.data_gen_exceptions import DataGenError
 from snowfakery.data_generator import generate, StoppingCriteria
 import sys
 from pathlib import Path
-from typing import Tuple
+from contextlib import contextmanager
 
 import yaml
 import click
@@ -45,7 +45,9 @@ def eval_arg(arg):
         return arg
 
 
-def string_int_tuple(ctx, param, value: Tuple[str, str] = None):
+# don't add a type signature to this function.
+# typeguard and click will interfer with each other.
+def string_int_tuple(ctx, param, value=None):
     """Works around Click bug
 
     https://github.com/pallets/click/issues/789#issuecomment-535121714"""
@@ -90,14 +92,6 @@ def string_int_tuple(ctx, param, value: Tuple[str, str] = None):
     type=click.Path(exists=False),
 )
 @click.option(
-    "--start-id",
-    "start_ids",
-    nargs=2,
-    type=eval_arg,
-    multiple=True,
-    help="A pair that represents a table name and a number of rows to generate",
-)
-@click.option(
     "--generate-continuation-file",
     type=click.File("w"),
     help="A file that captures information about how to continue a "
@@ -119,7 +113,6 @@ def generate_cli(
     generate_cci_mapping_file=None,
     output_format=None,
     output_files=None,
-    start_ids=None,
     nickname_ids=None,
     continuation_file=None,
     generate_continuation_file=None,
@@ -138,7 +131,6 @@ def generate_cli(
     Diagram output depends on the installation of pygraphviz ("pip install pygraphviz")
     """
     output_files = list(output_files) if output_files else []
-    start_ids = list(start_ids) if start_ids else []
     stopping_criteria = StoppingCriteria(*target_number) if target_number else None
     output_format = output_format.lower() if output_format else None
     validate_options(
@@ -151,45 +143,42 @@ def generate_cli(
         output_format,
         output_files,
     )
-    output_stream = configure_output_stream(
+    with configure_output_stream(
         dburls, mapping_file, output_format, output_files
-    )
-
-    try:
-        assert output_stream
-        with click.open_file(yaml_file) as f:
-            summary = generate(
-                open_yaml_file=f,
-                user_options=dict(option),
-                output_stream=output_stream,
-                stopping_criteria=stopping_criteria,
-                generate_continuation_file=generate_continuation_file,
-                continuation_file=continuation_file,
-            )
-        output_stream.close()
-        if debug_internals:
-            debuginfo = yaml.dump(summary.summarize_for_debugging(), sort_keys=False)
-            sys.stdout.write(debuginfo)
-        if generate_cci_mapping_file:
-            with click.open_file(generate_cci_mapping_file, "w") as f:
-                yaml.safe_dump(
-                    mapping_from_factory_templates(summary), f, sort_keys=False
+    ) as output_stream:
+        try:
+            with click.open_file(yaml_file) as f:
+                summary = generate(
+                    open_yaml_file=f,
+                    user_options=dict(option),
+                    output_stream=output_stream,
+                    stopping_criteria=stopping_criteria,
+                    generate_continuation_file=generate_continuation_file,
+                    continuation_file=continuation_file,
                 )
-    except DataGenError as e:
-        if debug_internals:
-            raise e
-        else:
-            click.echo("")
-            click.echo(
-                "An error occurred. If you would like to see a Python traceback, "
-                "use the --debug-internals option."
-            )
-            raise click.ClickException(str(e)) from e
-    finally:
-        ...
-        # TODO: close output streams
+            if debug_internals:
+                debuginfo = yaml.dump(
+                    summary.summarize_for_debugging(), sort_keys=False
+                )
+                sys.stderr.write(debuginfo)
+            if generate_cci_mapping_file:
+                with click.open_file(generate_cci_mapping_file, "w") as f:
+                    yaml.safe_dump(
+                        mapping_from_factory_templates(summary), f, sort_keys=False
+                    )
+        except DataGenError as e:
+            if debug_internals:
+                raise e
+            else:
+                click.echo("")
+                click.echo(
+                    "An error occurred. If you would like to see a Python traceback, "
+                    "use the --debug-internals option."
+                )
+                raise click.ClickException(str(e)) from e
 
 
+@contextmanager
 def configure_output_stream(dburls, mapping_file, output_format, output_files):
     assert isinstance(output_files, (list, type(None)))
     output_streams = []  # we allow multiple output streams
@@ -207,20 +196,18 @@ def configure_output_stream(dburls, mapping_file, output_format, output_files):
 
     # JSON is the only output format (other than debug) that can go on stdout
     if output_format == "json" and not output_files:
-        output_streams.append(JSONOutputStream(click.open_file("-", "w")))
+        output_streams.append(JSONOutputStream(sys.stdout))
 
     if output_files:
         for path in output_files:
             format = output_format or Path(path).suffix[1:]
 
             if format == "json":
-                output_streams.append(JSONOutputStream(click.open_file(path, "w")))
+                output_streams.append(JSONOutputStream(path))
             elif format == "txt":
-                output_streams.append(DebugOutputStream(click.open_file(path, "w")))
+                output_streams.append(DebugOutputStream(path))
             else:
-                output_streams.append(
-                    ImageOutputStream(click.open_file(path, "wb"), format)
-                )
+                output_streams.append(ImageOutputStream(path, format))
 
     if len(output_streams) == 0:
         output_stream = DebugOutputStream()
@@ -228,7 +215,11 @@ def configure_output_stream(dburls, mapping_file, output_format, output_files):
         output_stream = output_streams[0]
     else:
         output_stream = MultiplexOutputStream(output_streams)
-    return output_stream
+    try:
+        yield output_stream
+    finally:
+        for output_stream in output_streams:
+            output_stream.close()
 
 
 def validate_options(
@@ -252,7 +243,7 @@ def validate_options(
             "because they are mutually exclusive."
         )
     if not dburl and mapping_file:
-        raise click.ClickException("Mapping file can only be used with --dburl")
+        raise click.ClickException("--cci-mapping-file can only be used with --dburl")
 
 
 def main():
