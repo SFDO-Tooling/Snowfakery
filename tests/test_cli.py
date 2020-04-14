@@ -272,3 +272,40 @@ class TestGenerateFromCLI:
             main()
 
         assert "Usage:" in capsys.readouterr().err
+
+
+class TestCLIOptionChecking:
+    def test_mapping_file_no_dburl(self):
+        with pytest.raises(ClickException):
+            generate_cli.main(
+                ["--mapping_file", str(str(sample_yaml)), str(sample_yaml)],
+                standalone_mode=False,
+            )
+
+    def test_mutually_exclusive(self):
+        with pytest.raises(ClickException) as e:
+            with TemporaryDirectory() as t:
+                generate_cli.main(
+                    [
+                        str(sample_yaml),
+                        "--dburl",
+                        f"sqlite:///{t}/foo.db",
+                        "--output-format",
+                        "JSON",
+                    ],
+                    standalone_mode=False,
+                )
+        assert "mutually exclusive" in str(e.value)
+
+        with pytest.raises(ClickException) as e:
+            generate_cli.main(
+                [
+                    str(sample_yaml),
+                    "--cci-mapping-file",
+                    str(sample_yaml),
+                    "--output-format",
+                    "JSON",
+                ],
+                standalone_mode=False,
+            )
+        assert "apping-file" in str(e.value)
