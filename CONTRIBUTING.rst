@@ -107,8 +107,14 @@ Make the necessary changes to prepare the new release:
 
 Commit the changes, open a Pull Request on GitHub and request approval from another committer.
 
-Once your PR has been merged, the rest of the release process should be triggered automatically
-by Github Actions!
+Once your PR has been merged, PyPI release process should be triggered automatically
+by Github Actions.
+
+You can finish up the process by updating the release object that was auto-created in Github:
+
+Just paste in the changelog notes and hit publish. 
+
+Tada! You've published a new version of Snowfakery.
 
 Configuring Your Environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
