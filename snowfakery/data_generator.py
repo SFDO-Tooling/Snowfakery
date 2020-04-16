@@ -1,6 +1,7 @@
 import warnings
-from typing import IO, Tuple, Mapping, List, Dict, TextIO
+from typing import IO, Tuple, Mapping, List, Dict, TextIO, Union
 from importlib import import_module
+from click.utils import LazyFile
 
 from yaml import safe_dump, safe_load
 from faker.providers import BaseProvider as FakerProvider
@@ -120,7 +121,7 @@ def generate(
     user_options: dict = None,
     output_stream: OutputStream = None,
     stopping_criteria: StoppingCriteria = None,
-    generate_continuation_file: TextIO = None,
+    generate_continuation_file: Union[TextIO, LazyFile] = None,
     continuation_file: TextIO = None,
 ) -> ExecutionSummary:
     """The main entry point to the package for Python applications."""
