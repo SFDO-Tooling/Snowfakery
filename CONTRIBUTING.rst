@@ -72,7 +72,10 @@ Ready to contribute? Here's how to set up Snowfakery for local development.
 
    $ pytest --cov
 
-7. Push your changes to GitHub and submit a pull request. The base branch should be a new feature branch that we create to receive the changes (contact us to create the branch). This allows us to test the changes using our build system before merging to master.
+7. Push your changes to GitHub and submit a pull request. The base branch should 
+be a new feature branch that we create to receive the changes (contact us to create 
+the branch). This allows us to test the changes using our build system before 
+merging to master.
 
 Note that we enable typeguard with pytest so if you add type declarations to your 
 code, those declarations will be treated as runtime assertions in your python
@@ -92,7 +95,8 @@ Before you submit a pull request, check that it meets these guidelines:
 Releasing Snowfakery
 -------------------
 
-It's easy to release a version of Snowfakery to GitHub and PyPI! First, create a new branch for your version::
+It's easy for maintainers to release a version of Snowfakery to GitHub and PyPI! First, 
+create a new branch for your version::
 
     $ git checkout -b feature/newversion
 
@@ -102,13 +106,15 @@ Make the necessary changes to prepare the new release:
     2. Update the release notes in ``HISTORY.rst``
 
 Commit the changes, open a Pull Request on GitHub and request approval from another committer.
-Once your PR has been merged, you can create the release tag and then push the artifacts to PyPI with twine::
 
-    $ git checkout master
-    $ git pull
-    $ make tag release
+Once your PR has been merged, PyPI release process should be triggered automatically
+by Github Actions.
 
-Finally, head to the Release object that was autocreated in the GitHub repository, paste in the changelog notes and hit publish. Tada! You've published a new version of Snowfakery.
+You can finish up the process by updating the release object that was auto-created in Github:
+
+Just paste in the changelog notes and hit publish. 
+
+Tada! You've published a new version of Snowfakery.
 
 Configuring Your Environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
