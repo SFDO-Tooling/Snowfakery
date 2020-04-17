@@ -25,7 +25,6 @@ jobs:
 
       - name: "Install dependencies"
         run: |
-          set -xe
           python -VV
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install --upgrade coverage[toml] coveralls virtualenv tox tox-gh-actions
