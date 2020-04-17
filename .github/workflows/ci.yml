@@ -30,9 +30,6 @@ jobs:
       - name: "Run tox targets for ${{ matrix.python-version }}"
         run: python -m tox
 
-      - name: pytest
-        run: pytest --cov
-
       - name: Report Coverage
         run: coveralls
         env:
