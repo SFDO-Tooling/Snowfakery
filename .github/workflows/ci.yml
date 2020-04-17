@@ -8,15 +8,11 @@ env:
 
 jobs:
   test:
-    name: "Python ${{ matrix.python-version }} (${{ matrix.os }})"
+    name: "Python ${{ matrix.python-version }}"
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.6", "3.7", "3.8"]
-        os: [ubuntu-latest]
-        include:
-        - os: windows-latest
-          python-version: "3.8"
-    runs-on: ${{ matrix.os }}
     steps:
       - uses: "actions/checkout@v2"
       - uses: "actions/setup-python@v1"
@@ -29,11 +25,29 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install --upgrade coverage[toml] coveralls virtualenv tox tox-gh-actions
 
-      - name: "Run tox targets for ${{ matrix.python-version }} on ${{ matrix.os }}"
+      - name: "Run tox targets for ${{ matrix.python-version }}"
         run: python -m tox
 
       - name: Report Coverage
         run: coveralls
+
+  windows:
+    name: "Windows"
+    runs-on: windows-latest
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v1"
+        with:
+          python-version: "3.8"
+
+      - name: "Install dependencies"
+        run: |
+          python -VV
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -r requirements_dev.txt
+
+      - name: Run Tests
+        run: pytest
 
   coveralls_done:
     name: Finalize coveralls
