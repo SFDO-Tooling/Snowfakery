@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 with open("requirements.txt") as requirements_file:
-    requirements = [req.split("#")[0].strip() for req in requirements_file]
+    requirements = [req.replace("==", ">=").strip() for req in requirements_file]
 
 with open("requirements_dev.txt") as dev_requirements_file:
     test_requirements = [
