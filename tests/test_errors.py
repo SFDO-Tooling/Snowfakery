@@ -86,8 +86,8 @@ class TestErrors(unittest.TestCase):
         """
         with self.assertRaises(DataGenError) as e:
             generate(StringIO(yaml))
-        assert "name" in str(e.exception)
-        assert "Field" in str(e.exception)
+        assert "definition" in str(e.exception)
+        assert "None" in str(e.exception)
 
     def test_missing_param(self):
         yaml = """
@@ -100,4 +100,4 @@ class TestErrors(unittest.TestCase):
         """
         with self.assertRaises(DataGenError) as e:
             generate(StringIO(yaml))
-        assert "Field" in str(e.exception)
+        assert "None" in str(e.exception)

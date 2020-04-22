@@ -27,7 +27,7 @@ class StringGenerator:
         self.func = func
 
     def __str__(self):
-        return self.func()
+        return str(self.func())
 
     def __call__(self, *args, **kwargs):
         return self.func(*args, **kwargs)

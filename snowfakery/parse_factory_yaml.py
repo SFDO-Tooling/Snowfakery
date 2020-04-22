@@ -52,7 +52,13 @@ class TableInfo:
         self._templates = []
 
     def register(self, template: ObjectTemplate) -> None:
-        self.fields.update({field.name: field for field in template.fields})
+        self.fields.update(
+            {
+                field.name: field
+                for field in template.fields
+                if not field.name.startswith("__")
+            }
+        )
         self.friends.update({friend.tablename: friend for friend in template.friends})
         self._templates.append(template)
 
@@ -172,11 +178,7 @@ def parse_structured_value(
 def parse_field_value(
     name: str, field, context: ParseContext, allow_structured_values=True
 ) -> Union[SimpleValue, StructuredValue, ObjectTemplate]:
-    if field is None:
-        raise DataGenSyntaxError(
-            f"Field should not be empty: {name}", **context.line_num(field)
-        )
-    if isinstance(field, (str, Number, date)):
+    if isinstance(field, (str, Number, date, type(None))):
         return SimpleValue(field, **(context.line_num(field) or context.line_num()))
     elif isinstance(field, dict) and field.get("object"):
         with context.change_current_parent_object(field):
@@ -196,10 +198,6 @@ def parse_field_value(
 
 def parse_field(name: str, definition, context: ParseContext) -> FieldFactory:
     assert name, name
-    if definition is None:
-        raise DataGenSyntaxError(
-            f"Field should have a definition: {name}", **context.line_num(name)
-        )
     return FieldFactory(
         name,
         parse_field_value(name, definition, context),
