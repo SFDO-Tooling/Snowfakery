@@ -1,0 +1,30 @@
+- object: Account
+  fields:
+     name: Bluth Family
+     RecordType: Household
+     primary_contact:
+        - object: Contact
+          nickname: Michael
+          fields:
+            name: Michael Bluth
+- object: Account
+  fields:
+     name: Bluth Corporation
+     primary_contact:
+        reference: Michael
+     RecordType: Organization
+- object: Account
+  fields:
+     name: The Windors
+     primary_contact:
+      - object: Contact
+        nickname: Liz
+        fields: 
+          name: The Queen
+     RecordType: Household
+- object: Account
+  fields:
+     name: The Firm
+     primary_contact:
+        reference: Liz
+     RecordType: Organization

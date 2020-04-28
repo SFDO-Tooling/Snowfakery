@@ -46,7 +46,8 @@ class TableInfo:
     unifies what we know about it.
     """
 
-    def __init__(self):
+    def __init__(self, name):
+        self.name = name
         self.fields = {}
         self.friends = {}
         self._templates = []
@@ -68,7 +69,7 @@ class ParseContext:
         self.plugins = []
         self.line_numbers = {}
         self.options = []
-        self.object_infos = {}
+        self.table_infos = {}
 
     def line_num(self, obj=None) -> Dict:
         if not obj:
@@ -112,8 +113,10 @@ class ParseContext:
         We register templates so we can get a list of all fields that can
         be generated. This can be used to create a dynamic schema.
         """
-        table_info = self.object_infos.get(template.tablename, None) or TableInfo()
-        self.object_infos[template.tablename] = table_info
+        table_info = self.table_infos.get(template.tablename, None) or TableInfo(
+            template.tablename
+        )
+        self.table_infos[template.tablename] = table_info
         table_info.register(template)
 
 
@@ -492,10 +495,10 @@ def parse_factory(stream: IO[str]) -> ParseResult:
     context = ParseContext()
     objects = parse_file(stream, context)
     templates = parse_object_template_list(objects, context)
-    tables = context.object_infos
+    tables = context.table_infos
     tables = {
         name: value
-        for name, value in context.object_infos.items()
+        for name, value in context.table_infos.items()
         if not name.startswith("__")
     }
 
