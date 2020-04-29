@@ -161,6 +161,7 @@ class TestSqlOutputStream(unittest.TestCase, OutputCommonTests):
 
 class JSONTables:
     def __init__(self, json_data, table_names):
+        self.raw = json_data
         self.data = json.loads(json_data)
         self.tables = {table_name: [] for table_name in table_names}
         for row in self.data:
@@ -233,8 +234,9 @@ class TestJSONOutputStream(unittest.TestCase, OutputCommonTests):
           fields:
             is_null:
             """
-        values = self.do_output(yaml)["foo"][0]
-        print(values)
+        output = self.do_output(yaml)
+        assert "null" in output.raw
+        values = output["foo"][0]
         assert values["is_null"] is None
 
 
