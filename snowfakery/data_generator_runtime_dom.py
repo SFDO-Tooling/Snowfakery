@@ -18,7 +18,7 @@ from .data_gen_exceptions import (
 
 # objects that represent the hierarchy of a data generator.
 # roughly similar to the YAML structure but with domain-specific objects
-Scalar = Union[str, Number, date, datetime]
+Scalar = Union[str, Number, date, datetime, None]
 FieldValue = Union[None, Scalar, ObjectRow, tuple]
 Definition = Union["ObjectTemplate", "SimpleValue", "StructuredValue"]
 
