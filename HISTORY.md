@@ -4,6 +4,11 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 0.8.0
+
+Snowfakery now specifies its install requirements with minimum versions rather than specific versions,
+for improved compatibility with CumulusCI.
+
 ## Snowfakery 0.7
 
 Windows compatibility improved, especially in test cases.
