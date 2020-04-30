@@ -8,7 +8,7 @@ And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” an
 
 Snowfakery includes support for Python RecordTypes.
 
-Snowfakery can output SQL/JSON NULL using Yaml blank fields or the YAML literal 'null'
+Snowfakery can output SQL/JSON NULL using YAML blank fields or the YAML literal 'null'
 
 Various performance and reliability improvements.
 
@@ -36,4 +36,3 @@ Snowfakery 0.6 is open source!
 ## Snowfakery 0.5
 
 The first version of Snowfakery was [Salesforce.org](http://salesforce.org/) internal-only.
-
