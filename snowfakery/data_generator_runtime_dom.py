@@ -131,9 +131,6 @@ class ObjectTemplate:
         self._generate_fields(context, row)
 
         try:
-            # both of these lines loop over the fields so they could maybe
-            # be combined but it kind of messes with the modularity of the
-            # code.
             self.register_row_intertable_references(row, context)
             if not self.tablename.startswith("__"):
                 storage.write_row(self.tablename, row)
