@@ -1,4 +1,5 @@
 import random
+from functools import lru_cache
 from datetime import date, datetime
 import dateutil.parser
 from ast import literal_eval
@@ -108,6 +109,7 @@ def choice_wrapper(
     return probability or when, pick
 
 
+@lru_cache(maxsize=512)
 def parse_date(d: Union[str, datetime, date]) -> Optional[Union[datetime, date]]:
     if isinstance(d, (datetime, date)):
         return d
