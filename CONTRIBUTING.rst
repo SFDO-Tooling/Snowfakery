@@ -115,10 +115,3 @@ You can finish up the process by updating the release object that was auto-creat
 Just paste in the changelog notes and hit publish. 
 
 Tada! You've published a new version of Snowfakery.
-
-Configuring Your Environment
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-To release Snowfakery, you'll need twine, which is installed with the development requirements. You'll also need to configure your `pypirc`_ file with your PyPI credentials.
-
-.. _pypirc: https://docs.python.org/distutils/packageindex.html#the-pypirc-file
