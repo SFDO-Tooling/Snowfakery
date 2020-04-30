@@ -66,7 +66,7 @@ def generate_record_type_pseudo_tables(summary):
                     Dependency(record_type_name, *dependency[1:])
                 )
 
-        # the record type field isn't halpful for the TableInfo of the real table anymore
+        # the record type field isn't helpful for the TableInfo of the real table anymore
         # need a conditional here to ensure its only deleted once
         if real_table.fields.get("RecordType"):
             del real_table.fields["RecordType"]
