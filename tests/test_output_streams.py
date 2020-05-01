@@ -64,6 +64,16 @@ class OutputCommonTests(ABC):
         values = self.do_output(yaml)["foo"][0]
         assert str(values["is_true"]) == "1"
 
+    def test_null(self):
+        yaml = """
+        - object: foo
+          fields:
+            is_null:
+            """
+        values = self.do_output(yaml)["foo"][0]
+        print(values)
+        assert values["is_null"] is None
+
     def test_flushes(self):
         yaml = """
         - object: foo
@@ -139,9 +149,19 @@ class TestSqlOutputStream(unittest.TestCase, OutputCommonTests):
                 }
                 return tables
 
+    def test_null(self):
+        yaml = """
+        - object: foo
+          fields:
+            is_null:
+            """
+        values = self.do_output(yaml)["foo"][0]
+        assert values["is_null"] is None
+
 
 class JSONTables:
     def __init__(self, json_data, table_names):
+        self.raw = json_data
         self.data = json.loads(json_data)
         self.tables = {table_name: [] for table_name in table_names}
         for row in self.data:
@@ -196,9 +216,28 @@ class TestJSONOutputStream(unittest.TestCase, OutputCommonTests):
         x = StringIO()
         with redirect_stdout(x):
             generate_cli.callback(
-                yaml_file=sample_yaml, output_format="json", output_files=["-"]
+                yaml_file=sample_yaml, output_format="json",
             )
-        # TODO: more validation!
+        data = json.loads(x.getvalue())
+        assert data == [
+            {
+                "_table": "Account",
+                "id": 1,
+                "name": "Default Company Name",
+                "ShippingCountry": "Canada",
+            }
+        ]
+
+    def test_null(self):
+        yaml = """
+        - object: foo
+          fields:
+            is_null:
+            """
+        output = self.do_output(yaml)
+        assert "null" in output.raw
+        values = output["foo"][0]
+        assert values["is_null"] is None
 
 
 class TestCSVOutputStream(unittest.TestCase, OutputCommonTests):
@@ -245,3 +284,15 @@ class TestCSVOutputStream(unittest.TestCase, OutputCommonTests):
                     "foo.csv",
                     "bar.csv",
                 }
+
+    def test_null(self):
+        yaml = """
+        - object: foo
+          fields:
+            is_null:
+            """
+        values = self.do_output(yaml)["foo"][0]
+        print(values)
+        assert (
+            values["is_null"] == ""
+        )  # CSV is no way of distingushing null from empty str

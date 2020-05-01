@@ -18,7 +18,7 @@ from .data_gen_exceptions import (
 
 # objects that represent the hierarchy of a data generator.
 # roughly similar to the YAML structure but with domain-specific objects
-Scalar = Union[str, Number, date, datetime]
+Scalar = Union[str, Number, date, datetime, None]
 FieldValue = Union[None, Scalar, ObjectRow, tuple]
 Definition = Union["ObjectTemplate", "SimpleValue", "StructuredValue"]
 
@@ -131,9 +131,6 @@ class ObjectTemplate:
         self._generate_fields(context, row)
 
         try:
-            # both of these lines loop over the fields so they could maybe
-            # be combined but it kind of messes with the modularity of the
-            # code.
             self.register_row_intertable_references(row, context)
             if not self.tablename.startswith("__"):
                 storage.write_row(self.tablename, row)
