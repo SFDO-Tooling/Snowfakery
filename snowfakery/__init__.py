@@ -1,1 +1,1 @@
-from .plugins import SnowfakeryPlugin  # noqa
+from .plugins import SnowfakeryPlugin, lazy  # noqa
