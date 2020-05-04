@@ -1,5 +1,4 @@
 from collections import defaultdict
-from functools import partial
 from datetime import date
 from contextlib import contextmanager
 
@@ -11,7 +10,7 @@ import yaml
 
 from .utils.template_utils import FakerTemplateLibrary
 
-from .template_funcs import template_funcs
+from .template_funcs import StandardFuncs
 from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError
 import snowfakery  # noqa
 
@@ -217,6 +216,14 @@ class Interpreter:
         self.faker_template_library = FakerTemplateLibrary(faker_providers)
         self.globals = globals or Globals()
 
+        # inject context into the standard functions
+        standard_funcs_obj = StandardFuncs(self).custom_functions()
+        self.standard_funcs = {
+            name: getattr(standard_funcs_obj, name)
+            for name in dir(standard_funcs_obj)
+            if not name.startswith("_") and name != "context"
+        }
+
 
 class RuntimeContext:
     """Local "stack frame" type object. RuntimeContexts live on the Python stack.
@@ -328,18 +335,10 @@ class EvaluationNamespace(NamedTuple):
             **interpreter.plugin_function_libraries,
         }
 
-    # todo: should be replaced with the plugin architecture
     def field_funcs(self):
         "Injects context into functions from template_funcs module."
 
-        def curry(func):
-            rc = partial(func, self.runtime_context)
-            if hasattr(func, "lazy"):
-                rc.lazy = func.lazy
-            return rc
-
-        funcs = {name: curry(func) for name, func in template_funcs.items()}
-        return {**funcs}
+        return self.runtime_context.interpreter.standard_funcs
 
     def executable_blocks(self):
         "Return mapping of functions that can be used in YAML block functions"
