@@ -2,7 +2,7 @@ from io import StringIO
 import math
 
 from snowfakery.data_generator import generate
-from snowfakery import SnowfakeryPlugin
+from snowfakery import SnowfakeryPlugin, lazy
 
 from unittest import mock
 import pytest
@@ -18,6 +18,16 @@ class SimpleTestPlugin(SnowfakeryPlugin):
     class Functions:
         def double(self, value):
             return value * 2
+
+
+class DoubleVisionPlugin(SnowfakeryPlugin):
+    class Functions:
+        @lazy
+        def do_it_twice(self, value):
+            "Evaluates its argument twice into a string"
+            rc = f"{self.context.evaluate(value)} : {self.context.evaluate(value)}"
+
+            return rc
 
 
 class TestCustomFakerProvider:
@@ -118,6 +128,12 @@ class PluginThatNeedsState(SnowfakeryPlugin):
             context_vars["object_path"] = new_value
             return new_value
 
+        def count(self):
+            context_vars = self.context.context_vars()
+            context_vars.setdefault("count", 0)
+            context_vars["count"] += 1
+            return context_vars["count"]
+
 
 class TestContextVars:
     @mock.patch(write_row_path)
@@ -138,3 +154,22 @@ class TestContextVars:
 
         assert row_values(write_row, 0, "path") == "ROOT.OBJ1.OBJ2"
         assert row_values(write_row, 1, "path") == "ROOT.OBJ1"
+
+    @mock.patch(write_row_path)
+    def test_lazy_with_context(self, write_row):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.DoubleVisionPlugin
+        - plugin: tests.test_custom_plugins_and_providers.PluginThatNeedsState
+        - object: OBJ
+          fields:
+            some_value:
+                - DoubleVisionPlugin.do_it_twice:
+                    - abc
+            some_value_2:
+                - DoubleVisionPlugin.do_it_twice:
+                    - <<PluginThatNeedsState.count()>>
+        """
+        generate(StringIO(yaml), {})
+
+        assert row_values(write_row, 0, "some_value") == "abc : abc"
+        assert row_values(write_row, 0, "some_value_2") == "1 : 2"

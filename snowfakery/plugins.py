@@ -1,3 +1,6 @@
+from typing import Any, Callable
+
+
 class SnowfakeryPlugin:
     """Base class for all plugins.
 
@@ -60,3 +63,12 @@ class PluginContext:
         return self.interpreter.current_context.context_vars(
             self.plugin.__class__.__name__
         )
+
+    def evaluate(self, field_definition):
+        return field_definition.render(self.interpreter.current_context)
+
+
+def lazy(func: Any) -> Callable:
+    """A lazy function is one that expects its arguments to be unparsed"""
+    func.lazy = True
+    return func
