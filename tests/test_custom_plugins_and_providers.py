@@ -149,11 +149,22 @@ class TestContextVars:
                   fields:
                     name: OBJ2
                     path: <<PluginThatNeedsState.object_path()>>
+        - object: OBJ
+          fields:
+            name: OBJ3
+            path: <<PluginThatNeedsState.object_path()>>
+            child:
+                - object: OBJ
+                  fields:
+                    name: OBJ4
+                    path: <<PluginThatNeedsState.object_path()>>
         """
         generate(StringIO(yaml), {})
 
         assert row_values(write_row, 0, "path") == "ROOT.OBJ1.OBJ2"
         assert row_values(write_row, 1, "path") == "ROOT.OBJ1"
+        assert row_values(write_row, 2, "path") == "ROOT.OBJ3.OBJ4"
+        assert row_values(write_row, 3, "path") == "ROOT.OBJ3"
 
     @mock.patch(write_row_path)
     def test_lazy_with_context(self, write_row):
