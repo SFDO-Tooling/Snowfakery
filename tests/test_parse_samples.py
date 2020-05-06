@@ -8,6 +8,9 @@ dnd_test = pathlib.Path(__file__).parent / "CharacterGenTest.yml"
 data_imports = pathlib.Path(__file__).parent / "BDI_generator.yml"
 standard_objects = pathlib.Path(__file__).parent / "gen_sf_standard_objects.yml"
 npsp_standard_objects = pathlib.Path(__file__).parent / "gen_npsp_standard_objects.yml"
+simple_salesforce = (
+    pathlib.Path(__file__).parent / ".." / "examples" / "simple-salesforce.yml"
+)
 
 
 def find_row(row_type, compare, calls):
@@ -78,6 +81,17 @@ class TestParseAndOutput(unittest.TestCase):
     @mock.patch(write_row_path)
     def test_gen_npsp_standard_objects(self, write_row):
         with open(npsp_standard_objects) as open_yaml_file:
+            generate(open_yaml_file, {}, None)
+
+        calls = write_row.mock_calls
+
+        assert find_row("Account", {}, calls)
+        assert find_row("Contact", {}, calls)
+        assert find_row("Opportunity", {}, calls)
+
+    @mock.patch(write_row_path)
+    def test_simple_salesforce(self, write_row):
+        with open(simple_salesforce) as open_yaml_file:
             generate(open_yaml_file, {}, None)
 
         calls = write_row.mock_calls
