@@ -18,7 +18,7 @@ from .data_gen_exceptions import (
 
 # objects that represent the hierarchy of a data generator.
 # roughly similar to the YAML structure but with domain-specific objects
-Scalar = Union[str, Number, date, datetime]
+Scalar = Union[str, Number, date, datetime, None]
 FieldValue = Union[None, Scalar, ObjectRow, tuple]
 Definition = Union["ObjectTemplate", "SimpleValue", "StructuredValue"]
 
@@ -83,11 +83,11 @@ class ObjectTemplate:
     ) -> Optional[ObjectRow]:
         """Generate several rows"""
         rc = None
-        context = parent_context.child_context(self.tablename)
-        count = self._evaluate_count(context)
-        with self.exception_handling(f"Cannot generate {self.name}"):
-            for i in range(count):
-                rc = self._generate_row(storage, context)
+        with parent_context.child_context(self.tablename) as context:
+            count = self._evaluate_count(context)
+            with self.exception_handling(f"Cannot generate {self.name}"):
+                for i in range(count):
+                    rc = self._generate_row(storage, context)
 
         return rc  # return last row
 
@@ -123,20 +123,14 @@ class ObjectTemplate:
 
     def _generate_row(self, storage, context: RuntimeContext) -> ObjectRow:
         """Generate an individual row"""
-        context.incr()
         row = {"id": context.generate_id()}
         sobj = ObjectRow(self.tablename, row)
 
         context.register_object(sobj, self.nickname)
 
-        context.obj = sobj
-
         self._generate_fields(context, row)
 
         try:
-            # both of these lines loop over the fields so they could maybe
-            # be combined but it kind of messes with the modularity of the
-            # code.
             self.register_row_intertable_references(row, context)
             if not self.tablename.startswith("__"):
                 storage.write_row(self.tablename, row)
@@ -153,7 +147,6 @@ class ObjectTemplate:
             with self.exception_handling(f"Problem rendering value"):
                 row[field.name] = field.generate_value(context)
                 self._check_type(field, row[field.name], context)
-                context.register_field(field.name, row[field.name])
 
     def _check_type(self, field, generated_value, context: RuntimeContext):
         """Check the type of a field value"""
@@ -275,7 +268,9 @@ class StructuredValue(FieldDefinition):
                 func = getattr(obj, method)
             except AttributeError:
                 # clean up the error message a bit
-                raise AttributeError(f"'{objname}' plugin exposes no attribute '{method}")
+                raise AttributeError(
+                    f"'{objname}' plugin exposes no attribute '{method}"
+                )
             if not func:
                 raise DataGenNameError(
                     f"Cannot find definition for: {method} on {objname}",

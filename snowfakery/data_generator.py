@@ -1,6 +1,7 @@
 import warnings
-from typing import IO, Tuple, Mapping, List, Dict, TextIO
+from typing import IO, Tuple, Mapping, List, Dict, TextIO, Union
 from importlib import import_module
+from click.utils import LazyFile
 
 from yaml import safe_dump, safe_load
 from faker.providers import BaseProvider as FakerProvider
@@ -34,11 +35,11 @@ class ExecutionSummary:
 
     def __init__(self, parse_results, runtime_results):
         self.tables = parse_results.tables
-        self.dom = parse_results.templates
+        self.templates = parse_results.templates
         self.intertable_dependencies = runtime_results.intertable_dependencies
 
     def summarize_for_debugging(self):
-        return self.intertable_dependencies, self.dom
+        return self.intertable_dependencies, self.templates
 
 
 def merge_options(option_definitions: List, user_options: Mapping) -> Tuple[Dict, set]:
@@ -120,7 +121,7 @@ def generate(
     user_options: dict = None,
     output_stream: OutputStream = None,
     stopping_criteria: StoppingCriteria = None,
-    generate_continuation_file: TextIO = None,
+    generate_continuation_file: Union[TextIO, LazyFile] = None,
     continuation_file: TextIO = None,
 ) -> ExecutionSummary:
     """The main entry point to the package for Python applications."""

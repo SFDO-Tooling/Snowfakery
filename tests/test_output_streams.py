@@ -5,8 +5,9 @@ import json
 import datetime
 import csv
 from pathlib import Path
-from tempfile import NamedTemporaryFile, TemporaryDirectory
+from tempfile import TemporaryDirectory
 from contextlib import redirect_stdout
+from tests.utils import named_temporary_file_path
 
 from sqlalchemy import create_engine
 
@@ -62,6 +63,16 @@ class OutputCommonTests(ABC):
             """
         values = self.do_output(yaml)["foo"][0]
         assert str(values["is_true"]) == "1"
+
+    def test_null(self):
+        yaml = """
+        - object: foo
+          fields:
+            is_null:
+            """
+        values = self.do_output(yaml)["foo"][0]
+        print(values)
+        assert values["is_null"] is None
 
     def test_flushes(self):
         yaml = """
@@ -124,23 +135,33 @@ class OutputCommonTests(ABC):
 
 class TestSqlOutputStream(unittest.TestCase, OutputCommonTests):
     def do_output(self, yaml):
-        with NamedTemporaryFile() as f:
-            url = f"sqlite:///{f.name}"
+        with named_temporary_file_path() as f:
+            url = f"sqlite:///{f}"
             output_stream = SqlOutputStream.from_url(url, None)
             results = generate(StringIO(yaml), {}, output_stream)
             table_names = results.tables.keys()
             output_stream.close()
             engine = create_engine(url)
-            connection = engine.connect()
-            tables = {
-                table_name: list(connection.execute(f"select * from {table_name}"))
-                for table_name in table_names
-            }
-            return tables
+            with engine.connect() as connection:
+                tables = {
+                    table_name: list(connection.execute(f"select * from {table_name}"))
+                    for table_name in table_names
+                }
+                return tables
+
+    def test_null(self):
+        yaml = """
+        - object: foo
+          fields:
+            is_null:
+            """
+        values = self.do_output(yaml)["foo"][0]
+        assert values["is_null"] is None
 
 
 class JSONTables:
     def __init__(self, json_data, table_names):
+        self.raw = json_data
         self.data = json.loads(json_data)
         self.tables = {table_name: [] for table_name in table_names}
         for row in self.data:
@@ -195,15 +216,34 @@ class TestJSONOutputStream(unittest.TestCase, OutputCommonTests):
         x = StringIO()
         with redirect_stdout(x):
             generate_cli.callback(
-                yaml_file=sample_yaml, output_format="json", output_files=["-"]
+                yaml_file=sample_yaml, output_format="json",
             )
-        # TODO: more validation!
+        data = json.loads(x.getvalue())
+        assert data == [
+            {
+                "_table": "Account",
+                "id": 1,
+                "name": "Default Company Name",
+                "ShippingCountry": "Canada",
+            }
+        ]
+
+    def test_null(self):
+        yaml = """
+        - object: foo
+          fields:
+            is_null:
+            """
+        output = self.do_output(yaml)
+        assert "null" in output.raw
+        values = output["foo"][0]
+        assert values["is_null"] is None
 
 
 class TestCSVOutputStream(unittest.TestCase, OutputCommonTests):
     def do_output(self, yaml):
         with TemporaryDirectory() as t:
-            output_stream = CSVOutputStream(f"csv://{t}/csvoutput")
+            output_stream = CSVOutputStream(Path(t) / "csvoutput")
             results = generate(StringIO(yaml), {}, output_stream)
             output_stream.close()
             table_names = results.tables.keys()
@@ -231,9 +271,12 @@ class TestCSVOutputStream(unittest.TestCase, OutputCommonTests):
             bard: 4
         """
         with TemporaryDirectory() as t:
-            output_stream = CSVOutputStream(f"csv://{t}/csvoutput")
+            output_stream = CSVOutputStream(Path(t) / "csvoutput")
             generate(StringIO(yaml), {}, output_stream)
-            output_stream.close()
+            messages = output_stream.close()
+            assert "foo.csv" in messages[0]
+            assert "bar.csv" in messages[1]
+            assert "csvw" in messages[2]
             assert (Path(t) / "csvoutput" / "foo.csv").exists()
             with open(Path(t) / "csvoutput" / "csvw_metadata.json") as f:
                 metadata = json.load(f)
@@ -242,13 +285,14 @@ class TestCSVOutputStream(unittest.TestCase, OutputCommonTests):
                     "bar.csv",
                 }
 
-    def test_from_cli(self):
-        with TemporaryDirectory() as t:
-            generate_cli.main(
-                [str(sample_yaml), "--dburl", f"csvfile://{t}/csvoutput"],
-                standalone_mode=False,
-            )
-            assert (Path(t) / "csvoutput" / "Account.csv").exists()
-            with open(Path(t) / "csvoutput" / "csvw_metadata.json") as f:
-                metadata = json.load(f)
-                assert {table["url"] for table in metadata["tables"]} == {"Account.csv"}
+    def test_null(self):
+        yaml = """
+        - object: foo
+          fields:
+            is_null:
+            """
+        values = self.do_output(yaml)["foo"][0]
+        print(values)
+        assert (
+            values["is_null"] == ""
+        )  # CSV is no way of distingushing null from empty str

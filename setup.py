@@ -5,15 +5,11 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 with open("requirements.txt") as requirements_file:
-    requirements = [
-        req.split("#")[0].strip() for req in requirements_file
-    ]
+    requirements = [req.replace("==", ">=").strip() for req in requirements_file]
 
 with open("requirements_dev.txt") as dev_requirements_file:
     test_requirements = [
-        req
-        for req in dev_requirements_file
-        if not req.startswith("-")
+        req for req in dev_requirements_file if not req.startswith("-")
     ]
 
 setuptools.setup(
@@ -26,6 +22,7 @@ setuptools.setup(
         "relations between tables. Every row is faked data, but also "
         "unique and random, like a snowflake."
     ),
+    entry_points={"console_scripts": ["snowfakery=snowfakery.cli:main"]},
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/SalesforceFoundation/Snowfakery",

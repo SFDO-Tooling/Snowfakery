@@ -71,6 +71,22 @@ class TestTemplateFuncs(unittest.TestCase):
         # TODO CHECK MORE
 
     @mock.patch(write_row_path)
+    def test_conditional_is_lazy(self, write_row):
+        yaml = """
+        - object : A
+          fields:
+            a:
+                if:
+                    - choice:
+                        when: False
+                        pick: <<should_not_be_evaluated>>
+                    - choice:
+                        pick: BBB
+        """
+        generate(StringIO(yaml), {}, None)
+        assert write_row.mock_calls == [mock.call("A", {"id": 1, "a": "BBB"})]
+
+    @mock.patch(write_row_path)
     def test_conditional(self, write_row):
         yaml = """
         - object : A

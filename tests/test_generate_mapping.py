@@ -141,7 +141,7 @@ class TestGenerateMapping(unittest.TestCase):
         assert mapping["Insert PetFood"]["sf_object"] == "PetFood"
         assert mapping["Insert PetFood"]["table"] == "PetFood"
         assert mapping["Insert PetFood"]["fields"] == {}
-        assert mapping["Insert PetFood"]["lookups"] == {}
+        assert not mapping["Insert PetFood"].get("lookups")
         assert mapping["Insert Animal"]["sf_object"] == "Animal"
         assert mapping["Insert Animal"]["table"] == "Animal"
         assert mapping["Insert Animal"]["fields"] == {}
@@ -226,3 +226,49 @@ class TestTableIsFree(unittest.TestCase):
             },
             ["Grandparent", "Parent"],
         )
+
+
+class TestRecordTypes:
+    def test_basic_recordtypes(self):
+        yaml = """
+            - object: Obj
+              fields:
+                RecordType: Bar
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_factory_templates(summary)
+
+        assert mapping["Insert Bar"]["filters"][0] == "RecordType = 'Bar'"
+        assert mapping["Insert Obj"]["filters"][0] == "RecordType is NULL"
+
+    def test_recordtype_errors_on_wrong_capitalization(self):
+        yaml = """
+            - object: Obj
+              fields:
+                recordtype: Bar
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        with pytest.raises(DataGenError):
+            mapping_from_factory_templates(summary)
+
+        yaml = """
+            - object: Obj
+              fields:
+                record_type: Bar
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        with pytest.raises(DataGenError):
+            mapping_from_factory_templates(summary)
+
+    def test_recordtypes_and_lookups(self):
+        yaml = """
+            - object: Obj
+              fields:
+                RecordType: Bar
+                child:
+                - object: Child
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_factory_templates(summary)
+
+        assert mapping["Insert Bar"]["lookups"]["child"]["key_field"] == "child"
