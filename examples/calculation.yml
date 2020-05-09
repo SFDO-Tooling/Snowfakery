@@ -1,0 +1,20 @@
+- plugin: examples.sum_totals.SummationPlugin
+
+- object: ParentObject__c
+  count: 10
+  fields:
+    MinimumChildObjectAmount__c: 10
+    MinimumStep: 5
+    TotalAmount__c: 
+      SummationPlugin.new_total: 
+        total:
+          SummationPlugin.randrange:
+            start: 20
+            stop: 100
+            step: 10
+        step: 10
+  friends:
+    - object: ChildObject__c
+      count: <<SummationPlugin.count()>>
+      fields:
+        Amount__c: <<SummationPlugin.amount()>>
