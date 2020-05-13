@@ -6,7 +6,10 @@
 - object: Druid
   count: <<num_druids>>
   fields:
-    Name: <<fake_i18n('de_DE').first_name()>>
+    Name:
+      i18n_fake:
+        locale: no_NO
+        fake: first_name
     Level: <<random_number(1,10)>>
     Strength:
       random_number:
@@ -88,7 +91,10 @@
 - object: Fighter
   count: <<num_fighters>>
   fields:
-    Name: <<fake_i18n('no_NO').first_name()>>
+    Name:
+      i18n_fake:
+        locale: ja_JP
+        fake: first_name
     Level: <<random_number(1,10)>>
     Strength:
       random_number:
@@ -172,7 +178,10 @@
 
 - object: Paladin
   fields:
-    Name: <<fake_i18n('nl_NL').first_name()>>
+    Name:
+      i18n_fake:
+        locale: nl_NL
+        fake: first_name
     Level: 10 # fixme
     Strength:
       random_number:

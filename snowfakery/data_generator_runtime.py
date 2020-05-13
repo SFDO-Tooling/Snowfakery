@@ -328,7 +328,6 @@ class EvaluationNamespace(NamedTuple):
             "this": obj,
             "today": interpreter.globals.today,
             "fake": interpreter.faker_template_library,
-            "fake_i18n": lambda locale: FakerTemplateLibrary(locale),
             **interpreter.options,
             **interpreter.globals.object_names,
             **(obj._values if obj else {}),
