@@ -1,4 +1,4 @@
-- plugin: examples.sum_totals.SummationPlugin
+- plugin: sum_totals.SummationPlugin
 
 - object: ParentObject__c
   count: 10
