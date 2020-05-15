@@ -60,7 +60,7 @@ def generate_record_type_pseudo_tables(summary):
         record_type_pseudo_table.record_type = record_type_name
 
         # copy over the dependencies from the real table
-        for dependency in summary.intertable_dependencies.copy():
+        for dependency in sorted(summary.intertable_dependencies.copy()):
             if dependency.table_name_from == real_table_name:
                 summary.intertable_dependencies.add(
                     Dependency(record_type_name, *dependency[1:])
