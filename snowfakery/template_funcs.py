@@ -101,6 +101,11 @@ class StandardFuncs(SnowfakeryPlugin):
                     raise
             # swallow empty range errors per Python conventions
 
+        def i18n_fake(self, locale: str, fake: str):
+            faker = Faker(locale)
+            func = getattr(faker, fake)
+            return func()
+
         def random_number(self, min: int, max: int) -> int:
             """Pick a random number between min and max like Python's randint."""
             return random.randint(min, max)
