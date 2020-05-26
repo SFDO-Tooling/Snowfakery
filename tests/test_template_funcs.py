@@ -170,45 +170,22 @@ class TestTemplateFuncs(unittest.TestCase):
         generate(StringIO(yaml), {}, None)
         assert write_row.mock_calls[0][1][1]["x"] == "CCC"
 
-    # @mock.patch(write_row_path)
-    # def test_weighted_random_choice_objects(self, write_row):
-    #     yaml = """
-    #     - object : A
-    #       fields:
-    #         b:
-    #             random_choice:
-    #                 -
-    #                   - 50%
-    #                   - object: C
-    #                 -
-    #                   - 40%:
-    #                   - object: D
-    #                 -
-    #                   - 30%:
-    #                   - object: E
-    #     """
-    #     generate(StringIO(yaml), {}, None)
-    #     assert len(write_row.mock_calls) == 2, write_row.mock_calls
-    #     # TODO CHECK MORE
+    @mock.patch(write_row_path)
+    def test_parse_date_from_datetime_string(self, write_row):
+        yaml = """
+        - object : A
+          fields:
+            a: <<date("2012-01-01T00:01")>>
+        """
+        generate(StringIO(yaml), {}, None)
+        assert write_row.mock_calls[0][1][1]["a"] == "2012-01-01"
 
-
-#
-#     @mock.patch(write_row_path)
-#     def test_counter(self, write_row_mock):
-#         yaml = """
-#         - object: Person
-#           count: 3
-#           fields:
-#             unique_number:
-#                 counter: Person
-#         - object: Person
-#           count: 2
-#           fields:
-#             unique_number:
-#                 counter: Person
-#         """
-#         generate(StringIO(yaml), {}, None)
-#         unique_numbers = [
-#             call[1]["unique_number"] for call in write_row_mock.mock_calls
-#         ]
-#         assert unique_numbers == (1, 2, 3, 4, 5)
+    @mock.patch(write_row_path)
+    def test_parse_date_from_date_string(self, write_row):
+        yaml = """
+        - object : A
+          fields:
+            a: <<date("2012-01-01")>>
+        """
+        generate(StringIO(yaml), {}, None)
+        assert write_row.mock_calls[0][1][1]["a"] == "2012-01-01"
