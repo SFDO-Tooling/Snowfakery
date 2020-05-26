@@ -287,7 +287,13 @@ class StructuredValue(FieldDefinition):
                     self.filename,
                     self.line_num,
                 )
-            value = evaluate_function(func, self.args, self.kwargs, context)
+
+            try:
+                value = evaluate_function(func, self.args, self.kwargs, context)
+            except DataGenError:
+                raise
+            except Exception as e:
+                raise DataGenError(str(e), self.filename, self.line_num)
 
         return value
 
