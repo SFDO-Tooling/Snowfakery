@@ -84,7 +84,7 @@ class TestGenerateFromCLI:
     @mock.patch(write_row_path)
     def test_with_debug_flags_on(self, write_row):
         generate_cli.callback(
-            yaml_file=sample_yaml, option={}, debug_internals=True, mapping_file=None,
+            yaml_file=sample_yaml, option={}, debug_internals=True, mapping_file=None
         )
 
     @mock.patch(write_row_path)
@@ -112,7 +112,7 @@ class TestGenerateFromCLI:
                 assert yaml.safe_load(t)
 
     def test_json(self):
-        with mock.patch("snowfakery.cli.sys.stdout", new=StringIO(),) as fake_out:
+        with mock.patch("snowfakery.cli.sys.stdout", new=StringIO()) as fake_out:
             generate_cli.main(
                 ["--output-format", "json", str(sample_yaml)], standalone_mode=False
             )
@@ -147,8 +147,7 @@ class TestGenerateFromCLI:
 
     def test_from_cli__target_number(self, capsys):
         generate_cli.main(
-            [str(sample_yaml), "--target-number", "Account", "5"],
-            standalone_mode=False,
+            [str(sample_yaml), "--target-number", "Account", "5"], standalone_mode=False
         )
         stdout = capsys.readouterr().out
 
