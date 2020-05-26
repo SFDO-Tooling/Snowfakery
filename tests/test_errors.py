@@ -87,4 +87,5 @@ class TestErrors(unittest.TestCase):
         """
         with self.assertRaises(DataGenError) as e:
             generate(StringIO(yaml))
-        assert "Problem rendering field" in str(e.exception)
+        assert "Cannot evaluate function" in str(e.exception)
+        assert ":6" in str(e.exception)
