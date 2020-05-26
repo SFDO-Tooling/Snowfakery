@@ -7,10 +7,7 @@ from yaml import safe_dump, safe_load
 from faker.providers import BaseProvider as FakerProvider
 
 from .data_gen_exceptions import DataGenNameError
-from .output_streams import (
-    DebugOutputStream,
-    OutputStream,
-)
+from .output_streams import DebugOutputStream, OutputStream
 from .parse_factory_yaml import parse_factory
 from .data_generator_runtime import output_batches, StoppingCriteria, Globals
 from . import SnowfakeryPlugin

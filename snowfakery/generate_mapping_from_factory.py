@@ -13,7 +13,7 @@ def mapping_from_factory_templates(summary: ExecutionSummary):
     dependencies, reference_fields = build_dependencies(summary.intertable_dependencies)
     tables = {**summary.tables, **record_types}
     table_order = sort_dependencies(dependencies, tables)
-    mappings = mappings_from_sorted_tables(tables, table_order, reference_fields,)
+    mappings = mappings_from_sorted_tables(tables, table_order, reference_fields)
     return mappings
 
 
@@ -168,11 +168,7 @@ def mappings_from_sorted_tables(
                 else []
             )
 
-        mapping = {
-            "sf_object": table.name,
-            "table": table.name,
-            "fields": fields,
-        }
+        mapping = {"sf_object": table.name, "table": table.name, "fields": fields}
         if record_type:
             mapping["record_type"] = record_type
         if filters:

@@ -11,11 +11,7 @@ from tests.utils import named_temporary_file_path
 
 from sqlalchemy import create_engine
 
-from snowfakery.output_streams import (
-    SqlOutputStream,
-    JSONOutputStream,
-    CSVOutputStream,
-)
+from snowfakery.output_streams import SqlOutputStream, JSONOutputStream, CSVOutputStream
 
 from snowfakery.data_generator import generate
 from snowfakery.cli import generate_cli
@@ -215,9 +211,7 @@ class TestJSONOutputStream(unittest.TestCase, OutputCommonTests):
     def test_from_cli(self):
         x = StringIO()
         with redirect_stdout(x):
-            generate_cli.callback(
-                yaml_file=sample_yaml, output_format="json",
-            )
+            generate_cli.callback(yaml_file=sample_yaml, output_format="json")
         data = json.loads(x.getvalue())
         assert data == [
             {
