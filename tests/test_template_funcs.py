@@ -211,3 +211,15 @@ class TestTemplateFuncs(unittest.TestCase):
         generate(StringIO(yaml), {}, None)
         assert "2012" in write_row.mock_calls[0][1][1]["wedding"]
         assert "1" in write_row.mock_calls[0][1][1]["number"]
+
+    def test_child_count(self, write_row):
+        yaml = """
+        - object: A
+          friends:
+            - object: B
+              count: 3
+              fields:
+                    num: <<child_count>>
+        """
+        generate(StringIO(yaml), {}, None)
+        assert write_row.mock_calls[3][1][1]["num"] == 2
