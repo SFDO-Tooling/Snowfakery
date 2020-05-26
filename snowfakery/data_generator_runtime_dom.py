@@ -42,6 +42,17 @@ class FieldDefinition(ABC):
     def render(self, context: RuntimeContext) -> FieldValue:
         pass
 
+    @contextmanager
+    def exception_handling(self, message: str, *args, **kwargs):
+        try:
+            yield
+        except DataGenError as e:
+            raise fix_exception(message, self, e)
+        except Exception as e:
+            message = message.format(*args, **kwargs)
+            print(f"{message} : {str(e)}", self.filename, self.line_num)
+            raise DataGenError(f"{message} : {str(e)}", self.filename, self.line_num)
+
 
 class ObjectTemplate:
     """A factory that generates rows.
@@ -130,13 +141,11 @@ class ObjectTemplate:
 
         self._generate_fields(context, row)
 
-        try:
+        with self.exception_handling("Cannot write row"):
             self.register_row_intertable_references(row, context)
             if not self.tablename.startswith("__"):
                 storage.write_row(self.tablename, row)
 
-        except Exception as e:
-            raise DataGenError(str(e), self.filename, self.line_num) from e
         for i, childobj in enumerate(self.friends):
             childobj.generate_rows(storage, context)
         return sobj
@@ -191,10 +200,8 @@ class SimpleValue(FieldDefinition):
         """Populate the evaluator property once."""
         if self._evaluator is None:
             if isinstance(self.definition, str):
-                try:
+                with self.exception_handling("Cannot parse value {}", self.definition):
                     self._evaluator = context.get_evaluator(self.definition)
-                except Exception as e:
-                    fix_exception(f"Cannot parse value {self.definition}", self, e)
             else:
                 self._evaluator = False
         return self._evaluator
@@ -288,12 +295,10 @@ class StructuredValue(FieldDefinition):
                     self.line_num,
                 )
 
-            try:
+            with self.exception_handling(
+                "Cannot evaluate function {}", self.function_name
+            ):
                 value = evaluate_function(func, self.args, self.kwargs, context)
-            except DataGenError:
-                raise
-            except Exception as e:
-                raise DataGenError(str(e), self.filename, self.line_num)
 
         return value
 
