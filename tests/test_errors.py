@@ -10,14 +10,14 @@ from snowfakery.data_gen_exceptions import (
 
 yaml1 = """                             #1
 - object: A                             #2
-  count: <<abcd()>>                     #3
+  count: ${{abcd()}}                     #3
   fields:                               #4
     A: What a wonderful life            #5
     X: Y                                #6
     """
 
 yaml2 = """- object: B                  #1
-  count: <<expr)>                       #2
+  count: ${{expr)>                       #2
   fields:                               #3
     A: What a wonderful life            #4
     X: Y                                #5

@@ -175,7 +175,7 @@ class SimpleValue(FieldDefinition):
     - object: abc
       fields:
          fieldname: XXXXX
-         fieldname2: <<XXXXX>>
+         fieldname2: ${{XXXXX}}
          fieldname3: 42
     """
 

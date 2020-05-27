@@ -22,8 +22,8 @@ class TestTemplateFuncs(unittest.TestCase):
         - object: Person
           count: 1
           fields:
-            parent: <<reference(daddy).id>>
-            parent2: <<reference(daddy)>>
+            parent: ${{reference(daddy).id}}
+            parent2: ${{reference(daddy)}}
         """
         generate(StringIO(yaml), {}, None)
         assert write_row_mock.mock_calls == [
@@ -79,7 +79,7 @@ class TestTemplateFuncs(unittest.TestCase):
                 if:
                     - choice:
                         when: False
-                        pick: <<should_not_be_evaluated>>
+                        pick: ${{should_not_be_evaluated}}
                     - choice:
                         pick: BBB
         """
@@ -97,13 +97,13 @@ class TestTemplateFuncs(unittest.TestCase):
             d:
                 if:
                     - choice:
-                        when: <<a>>
+                        when: ${{a}}
                         pick: AAA
                     - choice:
-                        when: <<b>>
+                        when: ${{b}}
                         pick: BBB
                     - choice:
-                        when: <<c>>
+                        when: ${{c}}
                         pick: CCC
         """
         generate(StringIO(yaml), {}, None)
@@ -121,7 +121,7 @@ class TestTemplateFuncs(unittest.TestCase):
                     - choice:
                         pick: AAA
                     - choice:
-                        when: <<b>>
+                        when: ${{b}}
                         pick: BBB
         """
         with self.assertRaises(DataGenError) as e:
@@ -155,14 +155,14 @@ class TestTemplateFuncs(unittest.TestCase):
             x:
                 if:
                     - choice:
-                        when: <<a>>
+                        when: ${{a}}
                         pick:
                           if:
                             - choice:
-                                when: <<b>>
+                                when: ${{b}}
                                 pick: BBB
                             - choice:
-                                when: <<c>>
+                                when: ${{c}}
                                 pick: CCC
                     - choice:
                         pick: DDD
@@ -170,45 +170,12 @@ class TestTemplateFuncs(unittest.TestCase):
         generate(StringIO(yaml), {}, None)
         assert write_row.mock_calls[0][1][1]["x"] == "CCC"
 
-    # @mock.patch(write_row_path)
-    # def test_weighted_random_choice_objects(self, write_row):
-    #     yaml = """
-    #     - object : A
-    #       fields:
-    #         b:
-    #             random_choice:
-    #                 -
-    #                   - 50%
-    #                   - object: C
-    #                 -
-    #                   - 40%:
-    #                   - object: D
-    #                 -
-    #                   - 30%:
-    #                   - object: E
-    #     """
-    #     generate(StringIO(yaml), {}, None)
-    #     assert len(write_row.mock_calls) == 2, write_row.mock_calls
-    #     # TODO CHECK MORE
-
-
-#
-#     @mock.patch(write_row_path)
-#     def test_counter(self, write_row_mock):
-#         yaml = """
-#         - object: Person
-#           count: 3
-#           fields:
-#             unique_number:
-#                 counter: Person
-#         - object: Person
-#           count: 2
-#           fields:
-#             unique_number:
-#                 counter: Person
-#         """
-#         generate(StringIO(yaml), {}, None)
-#         unique_numbers = [
-#             call[1]["unique_number"] for call in write_row_mock.mock_calls
-#         ]
-#         assert unique_numbers == (1, 2, 3, 4, 5)
+    @mock.patch(write_row_path)
+    def test_old_synta(self, write_row):
+        yaml = """
+        - object : A
+          fields:
+            a: <<5 + 3>>
+        """
+        generate(StringIO(yaml), {}, None)
+        assert write_row.mock_calls[0][1][1]["a"] == 8

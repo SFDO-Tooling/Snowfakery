@@ -33,8 +33,8 @@ class OutputCommonTests(ABC):
         yaml = """
         - object: foo
           fields:
-            y2k: <<date(year=2000, month=1, day=1)>>
-            party: <<datetime(year=1999, month=12, day=31, hour=23, minute=59, second=59)>>
+            y2k: ${{date(year=2000, month=1, day=1)}}
+            party: ${{datetime(year=1999, month=12, day=31, hour=23, minute=59, second=59)}}
             randodate:
                 date_between:
                     start_date: 2000-02-02

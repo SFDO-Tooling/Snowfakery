@@ -4,13 +4,13 @@
   default: 2
 
 - object: Druid
-  count: <<num_druids>>
+  count: ${{num_druids}}
   fields:
     Name:
       i18n_fake:
         locale: no_NO
         fake: first_name
-    Level: <<random_number(1,10)>>
+    Level: ${{random_number(1,10)}}
     Strength:
       random_number:
         min: 5
@@ -41,7 +41,7 @@
         min: 8
         max: 16
 
-    Hit Points: <<8 + this.Constitution + (random_number(1,8) + this.Constitution) * (int(this.Level) - 1)>>
+    Hit Points: ${{8 + this.Constitution + (random_number(1,8) + this.Constitution) * (int(this.Level) - 1)}}
 
     Defense:
       object: Equipment
@@ -89,13 +89,13 @@
                 pick: Totem
 
 - object: Fighter
-  count: <<num_fighters>>
+  count: ${{num_fighters}}
   fields:
     Name:
       i18n_fake:
         locale: ja_JP
         fake: first_name
-    Level: <<random_number(1,10)>>
+    Level: ${{random_number(1,10)}}
     Strength:
       random_number:
         min: 10
@@ -126,7 +126,7 @@
         min: 8
         max: 17
 
-    Hit Points: <<10 + this.Constitution + (random_number(1,10) + this.Constitution) * (this.Level - 1)>>
+    Hit Points: ${{10 + this.Constitution + (random_number(1,10) + this.Constitution) * (this.Level - 1)}}
 
     Armor:
       object: Equipment
@@ -213,7 +213,7 @@
         min: 8
         max: 17
 
-    Hit Points: <<10 + this.Constitution + (random_number(1,10) + this.Constitution) * (this.Level - 1)>>
+    Hit Points: ${{10 + this.Constitution + (random_number(1,10) + this.Constitution) * (this.Level - 1)}}
 
     Armor:
       object: Equipment

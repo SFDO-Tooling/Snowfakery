@@ -44,7 +44,7 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
         assert x == 5
 
     def test_field_factory_calculation(self):
-        definition = SimpleValue("<<5*3>>", "abc.yml", 10)
+        definition = SimpleValue("${{5*3}}", "abc.yml", 10)
         repr(definition)
         f = FieldFactory("field", definition, "abc.yml", 10)
         repr(f)
@@ -97,7 +97,7 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
                 fields=[
                     FieldFactory(
                         "x",
-                        SimpleValue("<<5()>>", filename="abc.yml", line_num=42),
+                        SimpleValue("${{5()}}", filename="abc.yml", line_num=42),
                         **line
                     )
                 ],
@@ -123,3 +123,11 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
             StructuredValue("this.abc", [], **line).render(standard_runtime())
         assert "Cannot find defini" in str(e.exception)
         assert "abc" in str(e.exception)
+
+    def test_old_jinja_syntax(self):
+        definition = SimpleValue("<<5*3>>", "abc.yml", 10)
+        repr(definition)
+        f = FieldFactory("field", definition, "abc.yml", 10)
+        repr(f)
+        x = f.generate_value(standard_runtime())
+        assert x == 15

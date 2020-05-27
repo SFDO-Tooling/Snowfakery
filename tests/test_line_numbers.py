@@ -12,7 +12,7 @@ yaml = """                              #1
     A: What a wonderful life            #5
     X: Y                                #6
 - object: B                             #7
-  count: <<expr>>                       #8
+  count: ${{expr}}                       #8
   fields:                               #9
     A: What a wonderful life            #10
     X: Y                                #11
@@ -25,7 +25,7 @@ yaml_with_syntax_error = """            #1
     A: What a wonderful life            #5
     X: Y                                #6
 - object: B                             #7
-  count: <<expr)>                       #8
+  count: ${{expr)>                       #8
   fields:                               #9
     A: What a wonderful life            #10
     X: Y                                #11
