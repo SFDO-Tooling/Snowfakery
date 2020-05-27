@@ -1,10 +1,12 @@
 import unittest
+from unittest import mock
 from snowfakery.data_generator_runtime_dom import (
     FieldFactory,
     SimpleValue,
     StructuredValue,
     ObjectTemplate,
     DataGenError,
+    DataGenValueError,
 )
 
 from snowfakery.data_generator_runtime import RuntimeContext, Interpreter
@@ -123,3 +125,10 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
             StructuredValue("this.abc", [], **line).render(standard_runtime())
         assert "Cannot find defini" in str(e.exception)
         assert "abc" in str(e.exception)
+
+    def test_check_type(self):
+        o = ObjectTemplate("abcd", filename="abc.yml", line_num=10)
+        field = mock.MagicMock()
+        field.name = "foo"
+        with self.assertRaises(DataGenValueError):
+            o._check_type(field, int, standard_runtime())

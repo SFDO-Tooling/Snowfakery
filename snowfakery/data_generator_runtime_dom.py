@@ -33,14 +33,9 @@ class FieldDefinition(ABC):
          fieldname: X
     """
 
-    def __init__(self):
-        self.definition = None
-        self.filename = None
-        self.line_num = None
-
     @abstractmethod
     def render(self, context: RuntimeContext) -> FieldValue:
-        pass
+        pass  # noQA
 
     @contextmanager
     def exception_handling(self, message: str, *args, **kwargs):
