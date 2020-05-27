@@ -50,7 +50,6 @@ class FieldDefinition(ABC):
             raise fix_exception(message, self, e)
         except Exception as e:
             message = message.format(*args, **kwargs)
-            print(f"{message} : {str(e)}", self.filename, self.line_num)
             raise DataGenError(f"{message} : {str(e)}", self.filename, self.line_num)
 
 
