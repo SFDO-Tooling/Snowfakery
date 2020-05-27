@@ -170,32 +170,27 @@ class Globals(yaml.YAMLObject):
 
 class JinjaTemplateEvaluatorFactory:
     def __init__(self):
-        self.angle_template_compiler = jinja2.Environment(
-            block_start_string="<%",
-            block_end_string="%>",
-            variable_start_string="<<",
-            variable_end_string=">>",
-        )
-        self.curly_template_compiler = jinja2.Environment(
-            block_start_string="${%",
-            block_end_string="%}",
-            variable_start_string="${{",
-            variable_end_string="}}",
-        )
+        self.compilers = [
+            jinja2.Environment(
+                block_start_string="<%",
+                block_end_string="%>",
+                variable_start_string="<<",
+                variable_end_string=">>",
+            ),
+            jinja2.Environment(
+                block_start_string="${%",
+                block_end_string="%}",
+                variable_start_string="${{",
+                variable_end_string="}}",
+            ),
+        ]
 
     def compiler_for_string(self, definition: str):
-        if (
-            self.angle_template_compiler.block_start_string in definition
-            or self.angle_template_compiler.variable_start_string in definition
-        ):
-            return self.angle_template_compiler
-        elif (
-            self.curly_template_compiler.block_start_string in definition
-            or self.curly_template_compiler.variable_start_string in definition
-        ):
-            return self.curly_template_compiler
-        else:
-            return None
+        for compiler in self.compilers:
+            for delimiter in ["block_start_string", "variable_start_string"]:
+                if getattr(compiler, delimiter) in definition:
+                    return compiler
+        return None
 
     def get_evaluator(self, definition: str):
         assert isinstance(definition, str), definition
