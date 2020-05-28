@@ -14,12 +14,12 @@
     name:
       if:
         - choice:
-            when: <<gender=='Male'>>
+            when: ${{gender=='Male'}}
             pick:
               fake: first_name_male
 
         - choice:
-            when: <<gender=='Female'>>
+            when: ${{gender=='Female'}}
             pick:
               fake: first_name_female
 

@@ -22,4 +22,3 @@ class Testi18n:
                     fake: name"""
         generate(StringIO(yaml), {})
         assert isinstance(row_values(write_row_mock, 0, "japanese_name"), str)
-

@@ -3,6 +3,7 @@ import math
 
 from snowfakery.data_generator import generate
 from snowfakery import SnowfakeryPlugin, lazy
+from snowfakery.data_gen_exceptions import DataGenError
 
 from unittest import mock
 import pytest
@@ -28,6 +29,13 @@ class DoubleVisionPlugin(SnowfakeryPlugin):
             rc = f"{self.context.evaluate(value)} : {self.context.evaluate(value)}"
 
             return rc
+
+
+class WrongTypePlugin(SnowfakeryPlugin):
+    class Functions:
+        def return_bad_type(self, value):
+            "Evaluates its argument twice into a string"
+            return int  # function
 
 
 class TestCustomFakerProvider:
@@ -76,7 +84,7 @@ class TestCustomPlugin:
           fields:
             four:
                 SimpleTestPlugin.double: 2
-            six: <<SimpleTestPlugin.double(3)>>
+            six: ${{SimpleTestPlugin.double(3)}}
         """
         generate(StringIO(yaml), {})
         assert row_values(write_row_mock, 0, "four") == 4
@@ -88,7 +96,7 @@ class TestCustomPlugin:
         - plugin: snowfakery.standard_plugins.Math
         - object: OBJ
           fields:
-            pi: <<Math.pi>>
+            pi: ${{Math.pi}}
         """
         generate(StringIO(yaml), {})
         assert row_values(write_row_mock, 0, "pi") == math.pi
@@ -99,7 +107,7 @@ class TestCustomPlugin:
         - plugin: snowfakery.standard_plugins.Math
         - object: OBJ
           fields:
-            twelve: <<Math.sqrt(144)>>
+            twelve: ${{Math.sqrt(144)}}
         """
         generate(StringIO(yaml), {})
         assert row_values(write_row_mock, 0, "twelve") == 12
@@ -143,21 +151,21 @@ class TestContextVars:
         - object: OBJ
           fields:
             name: OBJ1
-            path: <<PluginThatNeedsState.object_path()>>
+            path: ${{PluginThatNeedsState.object_path()}}
             child:
                 - object: OBJ
                   fields:
                     name: OBJ2
-                    path: <<PluginThatNeedsState.object_path()>>
+                    path: ${{PluginThatNeedsState.object_path()}}
         - object: OBJ
           fields:
             name: OBJ3
-            path: <<PluginThatNeedsState.object_path()>>
+            path: ${{PluginThatNeedsState.object_path()}}
             child:
                 - object: OBJ
                   fields:
                     name: OBJ4
-                    path: <<PluginThatNeedsState.object_path()>>
+                    path: ${{PluginThatNeedsState.object_path()}}
         """
         generate(StringIO(yaml), {})
 
@@ -178,9 +186,21 @@ class TestContextVars:
                     - abc
             some_value_2:
                 - DoubleVisionPlugin.do_it_twice:
-                    - <<PluginThatNeedsState.count()>>
+                    - ${{PluginThatNeedsState.count()}}
         """
         generate(StringIO(yaml), {})
 
         assert row_values(write_row, 0, "some_value") == "abc : abc"
         assert row_values(write_row, 0, "some_value_2") == "1 : 2"
+
+    def test_weird_types(self):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.WrongTypePlugin  # 2
+        - object: B                             #3
+          fields:                               #4
+            foo:                                #5
+                WrongTypePlugin.return_bad_type: 5  #6
+        """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert 6 > e.value.line_num >= 3

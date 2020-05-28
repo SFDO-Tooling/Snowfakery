@@ -149,7 +149,7 @@ class StandardFuncs(SnowfakeryPlugin):
             random_choice:
                 - a
                 - b
-                - <<c>>
+                - ${{c}}
 
             Or like this:
 
@@ -200,10 +200,10 @@ class StandardFuncs(SnowfakeryPlugin):
 
             if:
                 - choice:
-                    when: <<something>>
+                    when: ${{something}}
                     pick: A
                 - choice:
-                    when: <<something>>
+                    when: ${{something}}
                     pick: B
 
             Pick-items can have arbitrary internal complexity.
