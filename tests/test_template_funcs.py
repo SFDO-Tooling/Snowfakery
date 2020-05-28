@@ -171,7 +171,7 @@ class TestTemplateFuncs(unittest.TestCase):
         assert write_row.mock_calls[0][1][1]["x"] == "CCC"
 
     @mock.patch(write_row_path)
-    def test_old_synta(self, write_row):
+    def test_old_syntax(self, write_row):
         yaml = """
         - object : A
           fields:
