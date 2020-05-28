@@ -35,7 +35,7 @@ class FieldDefinition(ABC):
 
     @abstractmethod
     def render(self, context: RuntimeContext) -> FieldValue:
-        pass  # noQA
+        pass
 
     @contextmanager
     def exception_handling(self, message: str, *args, **kwargs):
