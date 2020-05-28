@@ -3,10 +3,7 @@ import unittest
 
 from snowfakery.parse_factory_yaml import parse_factory
 from snowfakery.data_generator import generate
-from snowfakery.data_gen_exceptions import (
-    DataGenSyntaxError,
-    DataGenValueError,
-)
+from snowfakery.data_gen_exceptions import DataGenSyntaxError, DataGenValueError
 
 yaml = """                              #1
 - object: A                             #2
