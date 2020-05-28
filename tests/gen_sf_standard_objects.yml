@@ -11,7 +11,7 @@
         - object: Opportunity
           include: SFStandardOpportunity
           fields:
-            Name: Opportunity relating to <<Account.Name>>
+            Name: Opportunity relating to ${{Account.Name}}
             AccountId:
               reference: Account
 
@@ -21,4 +21,4 @@
     AccountId:
       object: Account
       fields:
-        Name: <<Contact.LastName>> incorporated
+        Name: ${{Contact.LastName}} incorporated
