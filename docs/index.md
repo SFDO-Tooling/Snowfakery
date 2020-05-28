@@ -29,7 +29,7 @@ snowfakery somefile.yml
 
 ## Central Concepts
 
-YAML is a relatively simple, human-readable format. You can learn more about it at [yaml.org](http://yaml.org/). But you can also just pick up the basics of it by reading along with the examples below. 
+Snowfakery recipes are specified in a YAML format. YAML is a relatively simple, human-readable format. You can learn more about it at [yaml.org](http://yaml.org/). But you can also just pick up the basics of it by reading along with the examples below. 
 
 YAML uses indentation to say which parts of the file are related to each other. Let’s get started with a stupidly simple example recipe:
 
@@ -97,7 +97,7 @@ Person(id=3, name=Katherine Nelson, age=92)
 
 We have created people! Or at least fake personas for people! And every time you run it, you will get a different set of “people”.
 
-So that’s pretty cool, and it’s fake, but it doesn’t use much of Snowfakery’s power. Let's go deeper.
+So that’s pretty cool, but it doesn’t use much of Snowfakery’s power. Let's go deeper.
 
 pet_stories.yml
 
@@ -406,7 +406,7 @@ This function allows you to look up a previously created row (object) and make a
 
 The reference function looks for an ancestor object by table name (`Person`, in this example) or a previously created nicknamed object by `nickname`.
 
-### random_choice
+### `random_choice`
 
 Function to choose an option randomly from a list:
 
@@ -430,7 +430,7 @@ StageName:
 
 You can do more sophisticated randomness with features that will be discussed in the section [Random Weights That Are Not Percentages](#random-weights-that-are-not-percentages).
 
-### Fake
+### `fake`
 
 Generate fake data using functions from the [faker](https://github.com/joke2k/faker) library:
 
@@ -493,7 +493,7 @@ This will generate a “typical” Norwegian first name.
 
 You can infer which Faker providers are internationalizable by looking through the Faker [repository](https://github.com/joke2k/faker/tree/master/faker/providers) and seeing which directories have localizations. For example there are only three localizations of [credit card](https://github.com/joke2k/faker/tree/master/faker/providers) (who knew that credit cards were different in Iran and Russia) and dozens of localizations for [person name](https://github.com/joke2k/faker/tree/master/faker/providers/person).
 
-### Date_between
+### `date_between`
 
 Pick a random date in some date range
 
@@ -528,7 +528,7 @@ Payment_Date:
     end_date: +180d
 ```
 
-### random_number
+### `random_number`
 
 Pick a random number in a range specified by min and max:
 
@@ -539,23 +539,7 @@ age:
     max: 95
 ```
 
-### Counter
-
-Counters let you make unique values. 
-
-Let’s say you want a unique customer number for every Person in a group:
-
-```
-- object: Person
-  count: 3
-  fields:
-    customer_id:
-      counter: Person 
-```
-
-TBD: counters are unfinished in the code
-
-### IF
+### `if`
 
 `If` allows you to make field values conditional on other field values.
 
@@ -969,33 +953,22 @@ To specify a record type for a record, just put the Record Type’s API Name in 
 * Object: When we think about our Rows in the context of each other, we often use the word “Object”. That’s because rows often *represent* real-world entities like houses (or at least their, addresses), organizations and people (in this case its acceptable to objectify people). See also: “Rows”
 * Object Template: These represent instructions on how to create a row, or multiple rows in a database. Each row represents a real-world Object.
 * Rows: Rows (often also called “records”) in a database are a unit of related information. For example in Salesforce (which includes a database) a “Contact” has a first name, last name, phone number, etc. Each Contact is a row. “Contact” is the type of each of those rows. Rows represent real-world Objects. See “Objects” above for more information.
+* Recipe: A Snowfakery YAML file instructing Snowfakery on what to generate.
 * YAML: YAML is a relatively simple, human-readable format. You can learn more about it at [yaml.org](http://yaml.org/). But you can also just pick up the basics of it by reading along.
 
 ## Internal Software Architecture
 
 |Filename	|Purpose	|
 |---	|---	|
-|snowfakery.py	|Click-based CLI.
-
-Uses the Click library to supply a CLI.	|
-|generate_from_yaml.py	|A CCI task interface to the system.
-
-Wraps data_generator.generate in a CCI task.	|
-|data_generator.py	|The API entry point that the above two use.
-
-This may be the best place to start reading. It abstracts away all of the complexity and outlines the core flow.	|
-|parse_factory_yaml.py	|Phase 1: parse YAML into a Runtime DOM
-
-Includes some hacks to the YAML parser for handling line numbers.	|
-|data_generator_runtime_dom.py	|Phase 2: Runtime.
-
-Actually generate the data by walking the template list top-to-bottom, generating rows as appopriate. 	|
-|data_generator_runtime.py	|
+|snowfakery.py	|Click-based Command Line. Uses the Click library to supply a CLI.	|
+|data_generator.py	|The API entry point the CLI and CCI use. <p>This may be the best place to start reading. It abstracts away all of the complexity and outlines the core flow.	|
+|parse_factory_yaml.py	|Phase 1: parse YAML into a Runtime DOM<p>Includes some hacks to the YAML parser for handling line numbers.	|
+|data_generator_runtime.py	|Phase 2: Runtime.<p>Actually generate the data by walking the template list top-to-bottom, generating rows as appopriate. 	
+|data_generator_runtime_dom.py	|An object model used in Phase 2. Roughly similar to the shape of the YAML file.|
 |output_streams.py	|Where the data goes in the output. Used during Phase 2.	|
 |data_gen_exceptions.py	|Exceptions that can be thrown	|
 |generate_mapping_from_factory.py	|In the CCI context, this utility package allows the generation of mapping.yml files.	|
 |template_funcs.py	|Functions that can be invoked using either block syntax or in Jinja templates	|
-|	|	|
 |tests/	|Unit tests	|
 
 <img src='https://quip.com/blob/PJUAAAi0SAB/Gma2-FTvIPtxPmPIU9ww8Q?a=2Y3eDb1gH117w0BGNnazbawlWoVS1FpzTPVOKgLMxCMa' id='PJUACA3lKvf' alt='Architecture Diagram'>
