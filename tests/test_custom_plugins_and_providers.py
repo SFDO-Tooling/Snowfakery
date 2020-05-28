@@ -3,6 +3,7 @@ import math
 
 from snowfakery.data_generator import generate
 from snowfakery import SnowfakeryPlugin, lazy
+from snowfakery.data_gen_exceptions import DataGenError
 
 from unittest import mock
 import pytest
@@ -28,6 +29,13 @@ class DoubleVisionPlugin(SnowfakeryPlugin):
             rc = f"{self.context.evaluate(value)} : {self.context.evaluate(value)}"
 
             return rc
+
+
+class WrongTypePlugin(SnowfakeryPlugin):
+    class Functions:
+        def return_bad_type(self, value):
+            "Evaluates its argument twice into a string"
+            return int  # function
 
 
 class TestCustomFakerProvider:
@@ -184,3 +192,15 @@ class TestContextVars:
 
         assert row_values(write_row, 0, "some_value") == "abc : abc"
         assert row_values(write_row, 0, "some_value_2") == "1 : 2"
+
+    def test_weird_types(self):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.WrongTypePlugin  # 2
+        - object: B                             #3
+          fields:                               #4
+            foo:                                #5
+                WrongTypePlugin.return_bad_type: 5  #6
+        """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert 6 > e.value.line_num >= 3

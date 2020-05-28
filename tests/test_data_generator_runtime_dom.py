@@ -1,10 +1,12 @@
 import unittest
+from unittest import mock
 from snowfakery.data_generator_runtime_dom import (
     FieldFactory,
     SimpleValue,
     StructuredValue,
     ObjectTemplate,
     DataGenError,
+    DataGenValueError,
 )
 
 from snowfakery.data_generator_runtime import RuntimeContext, Interpreter
@@ -131,3 +133,10 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
         repr(f)
         x = f.generate_value(standard_runtime())
         assert x == 15
+
+    def test_check_type(self):
+        o = ObjectTemplate("abcd", filename="abc.yml", line_num=10)
+        field = mock.MagicMock()
+        field.name = "foo"
+        with self.assertRaises(DataGenValueError):
+            o._check_type(field, int, standard_runtime())
