@@ -560,12 +560,12 @@ age:
     name:
       if:
         - choice:
-            when: <<gender=='Male'>>
+            when: ${{gender=='Male'}}
             pick:
               fake: first_name_male
 
         - choice:
-            when: <<gender=='Female'>>
+            when: ${{gender=='Female'}}
             pick:
               fake: first_name_female
 
@@ -670,7 +670,7 @@ Sometimes you would like to include data from another field into the one you are
         random_number:
             min: 10
             max: 20
-    message: Thanks for buying <<num_items>> items @ $<<per_item_price>> each!
+    message: Thanks for buying ${{num_items}} items @ $${{per_item_price}} each!
 ```
 
 ## Formula Language
@@ -681,25 +681,25 @@ You can make your data more dynamic by using formulas. Formulas use the same fun
 - object: Sale
   count: 2
   fields:
-    per_item_price: <<random_number(20, 50)>>
+    per_item_price: ${{random_number(20, 50)}}
     number_of_items: 3
-    total: <<per_item_price * number_of_items>>
-    message: Thank you for buying $<<total>> items!
+    total: ${{per_item_price * number_of_items}}
+    message: Thank you for buying $${{total}} items!
 ```
 
 There is a lot to say about formulas and one day they will all be documented here. In the meantime, here are some general principles:
 
-* use `<<` to start a formula and `>>` to end it
+* use `${{` to start a formula and `}}` to end it
 * use Python expression syntax in the middle
 * field values defined earlier on this object are available as names
-* Use faker values like this: Name: <<fake.first_name>> Johnson
+* Use faker values like this: Name: ${{fake.first_name}} Johnson
 * parent (or ancestor) values are available through the parent’s object name. Like Opportunity.amount
 
-Formulas are based on a similar language called Jinja2, but we use `<<` and `>>` where Jinja2 uses `{{` and `}}` because our characters are more compatible with YAML.
+Formulas are based on a similar language called Jinja2, but we use `${{` and `}}` where Jinja2 uses `{{` and `}}` because our version is more compatible with YAML.
 
 The relevant section of the Jinja document is called  [Expressions](https://jinja.palletsprojects.com/en/2.11.x/templates/#expressions). It includes information about [Literals](https://jinja.palletsprojects.com/en/2.11.x/templates/#literals), [Math](https://jinja.palletsprojects.com/en/2.11.x/templates/#math), [Comparisons](https://jinja.palletsprojects.com/en/2.11.x/templates/#comparisons),  [Logic](https://jinja.palletsprojects.com/en/2.11.x/templates/#logic), [Other Operators](https://jinja.palletsprojects.com/en/2.11.x/templates/#other-operators), [If Expressions](https://jinja.palletsprojects.com/en/2.11.x/templates/#if-expression), [Python Methods](https://jinja.palletsprojects.com/en/2.11.x/templates/#python-methods) and [Builtin Filters](https://jinja.palletsprojects.com/en/2.11.x/templates/#list-of-builtin-filters).
 
-In theory you could use Jinja keywords like `<% if` (as opposed to `{% if`) but it isn’t clear under what circumstances that would be necessary.
+In theory you could use Jinja keywords like `${% if` (as opposed to `{% if`) but it isn’t clear under what circumstances that would be necessary.
 
 ## Template File Options
 
@@ -721,18 +721,18 @@ In your script, you use the value by referring to it in a formula:
 
 ```
 - object: Account
-  count: <<num_accounts>>
+  count: ${{num_accounts}}
 ```
 
 Of course you can do any math you want in the formula:
 
 ```
 - object: Account
-  count: <<num_accounts / 2>>
+  count: ${{num_accounts / 2}}
     field:
         type: A
 - object: Account
-  count: <<num_accounts / 2>>
+  count: ${{num_accounts / 2}}
     field:
         type: B
 ```
@@ -910,7 +910,7 @@ Every second time this is called, it will evaluate its argument twice, and stick
                     - abc
             some_value_2:
                 - DoubleVisionPlugin.do_it_twice:
-                    - <<PluginThatNeedsState.count()>>
+                    - ${{PluginThatNeedsState.count()}}
 ```
 
 This would output an `OBJ` row with values 
@@ -1007,14 +1007,14 @@ To specify a record type for a record, just put the Record Type’s API Name in 
                         count: 7
 - object: stats
   fields:
-    num_narrators: << man.id >>
-    num_men: << man.id >>
-    num_women: << woman.id >>
-    num_sack: << sack.id >>
-    num_cat: << cat.id >>
-    num_kittens: << kit.id >>
-    everyone: <<  num_men + num_narrators + num_women + num_sack + num_cat + num_kittens >>
-    going_to_st_ives: << num_narrators >>
+    num_narrators: ${{ man.id }}
+    num_men: ${{ man.id }}
+    num_women: ${{ woman.id }}
+    num_sack: ${{ sack.id }}
+    num_cat: ${{ cat.id }}
+    num_kittens: ${{ kit.id }}
+    everyone: ${{  num_men + num_narrators + num_women + num_sack + num_cat + num_kittens }}
+    going_to_st_ives: ${{ num_narrators }}
 ```
 
 What does it output as its last row? 
