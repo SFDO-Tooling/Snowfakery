@@ -291,7 +291,13 @@ class SqlOutputStream(OutputStream):
             with self.engine.connect() as connection:
                 for mapping in self.mappings.values():
                     # caller may have already created the tables
-                    if not self.engine.dialect.has_table(connection, mapping["table"]):
+                    # or the table may be defined in two different
+                    # mappings
+                    tablename = mapping["table"]
+                    if (
+                        not self.engine.dialect.has_table(connection, tablename)
+                        and tablename not in self.metadata.tables
+                    ):
                         create_table_from_mapping(mapping, self.metadata)
         else:
             create_tables_from_inferred_fields(
