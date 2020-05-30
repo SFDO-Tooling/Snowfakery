@@ -140,7 +140,7 @@ If you’re lost: don't worry! Those are a lot of new concepts at once, and you 
 
 But in case you’re in a hurry: In this case we're creating 3 Person objects. Each one has a name, age, dog and cat. Each dog or cat is an Animal, so we'll get 2 animals per Person or a total of 6. Each animal has a favorite food, so we'll get 6 PetFood objects as well.
 
-<img src='https://quip.com/blob/PJUAAAi0SAB/UReZ0eb4vVO7ebxjxPgLVQ?a=F4goQUMAQOoinOTXGrHGMKYhgKzTZ4BouVaK76LD29Ea' id='PJUACATPCzI' alt='Relationship diagram' width='800' height='190'>Later, we’ll discuss how we could have just 2 PetFood objects which are shared. We’ll also discuss how we could randomly select a Pet species or Food. 
+<img src='images/img1.png' id='PJUACATPCzI' alt='Relationship diagram' width='800' height='190'>Later, we’ll discuss how we could have just 2 PetFood objects which are shared. We’ll also discuss how we could randomly select a Pet species or Food. 
 
 ## Outputs
 
@@ -247,7 +247,7 @@ Animal(id=5, name=John)
 Animal(id=6, name=Kimberly)
 ```
 
-<img src='https://quip.com/blob/PJUAAAi0SAB/f8nFlSnX_iUoZU_bClTsnQ?a=qjWqtwz7JaVRG0UtR5ab7hHcSczeynKFBAYl8bJweE8a' id='PJUACAveFpc' alt='Relationship diagram' width='800' height='34'>
+<img src='images/img2.png' id='PJUACAveFpc' alt='Relationship diagram' width='800' height='34'>
 
 There is no explicit relationship between the animals and the people in this case, but sometimes you do want such an implicit “relationship” between the number of one object created and the number of the other.
 
@@ -281,7 +281,7 @@ Animal(id=3, name=Thomas, species=Petaurus Breviceps)
 Person(id=3, name=Lisa King, pet=Animal(3))
 ```
 
-<img src='https://quip.com/blob/PJUAAAi0SAB/q4LG3O1W5yrM62iyGP42dw?a=tAHGGY9mpcadpBq1qaH2dixtoanQzfklRim0ad30taIa' id='PJUACAooXkI' alt='Relationship Diagram'>
+<img src='images/img3.png' id='PJUACAooXkI' alt='Relationship Diagram'>
 
 In addition, we can relate pets and owners “bidirectionally”, like this:
 
@@ -315,7 +315,7 @@ Animal(id=3, name=Tammie, owner=Person(3))
 Person(id=3, name=Corey Zamora, pet=Animal(3))
 ```
 
-<img src='https://quip.com/blob/PJUAAAi0SAB/KgaWxNVp7S39gsHlivyNIQ?a=s6xaQbG9fLw7ETnwLsTotJgERsTVAij8J2AnAt17C4oa' id='PJUACAKTd0o' alt='Relationship Diagram'>
+<img src='images/img4.png' id='PJUACAKTd0o' alt='Relationship Diagram'>
 
 The relationship from the `Person` to the `Animal` is called `pet `and it is expressed simply by embedding the template for Animal in the field named `pet`. 
 
@@ -381,7 +381,7 @@ Animal(id=6, owner=Person, name=Veronica, species=feline, nemesis=dog, food=PetF
 Person(id=3, name=Rebecca Williams, dog=Animal(5), cat=Animal(6))
 ```
 
-<img src='https://quip.com/blob/PJUAAAi0SAB/F_xeumpQdEZFsYa2ia8iKw?a=weNPOV0O7gsmFzata1LdPagxptsdrFTzXeJk8z4dLusa' id='PJUACAJFf27' alt='Relationship Diagram' width='800' height='233'>
+<img src='images/img5.png' id='PJUACAJFf27' alt='Relationship Diagram' width='800' height='233'>
 
 Funky!
 
@@ -971,7 +971,7 @@ To specify a record type for a record, just put the Record Type’s API Name in 
 |template_funcs.py	|Functions that can be invoked using either block syntax or in Jinja templates	|
 |tests/	|Unit tests	|
 
-<img src='https://quip.com/blob/PJUAAAi0SAB/Gma2-FTvIPtxPmPIU9ww8Q?a=2Y3eDb1gH117w0BGNnazbawlWoVS1FpzTPVOKgLMxCMa' id='PJUACA3lKvf' alt='Architecture Diagram'>
+<img src='images/img6.png' id='PJUACA3lKvf' alt='Architecture Diagram'>
 
 ## Appendix: The Age Old Puzzle
 
@@ -1021,5 +1021,5 @@ What does it output as its last row?
 
 This (incomplete) picture probably won’t help....
 
-<img src='https://quip.com/blob/PJUAAAi0SAB/erKtG7PB9meplB8yYgj-Nw?a=tB7oa3hKh0EeXNOIH8hYHnzFvXf65Jq8n8PzZf6RFkAa' id='PJUACAyJrGL' alt='Silly diagram'>
+<img src='images/img7.png' id='PJUACAyJrGL' alt='Silly diagram'>
 
