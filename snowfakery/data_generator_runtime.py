@@ -422,7 +422,7 @@ class ObjectRow(yaml.YAMLObject):
 
 def output_batches(
     output_stream,
-    recipes: List,
+    templates: List,
     options: Dict,
     stopping_criteria: Optional[StoppingCriteria] = None,
     continuation_data: Globals = None,
@@ -431,7 +431,7 @@ def output_batches(
     faker_providers: List[object] = None,
 ) -> Globals:
     """Generate 'count' batches to 'output_stream' """
-    # check the stopping_criteria against the recipes available
+    # check the stopping_criteria against the templates available
     if stopping_criteria:
         stop_table_name = stopping_criteria.tablename
         if stop_table_name not in tables:
@@ -463,17 +463,17 @@ def output_batches(
 
     runtimecontext = RuntimeContext(interpreter=interpreter)
     continuing = bool(continuation_data)
-    loop_over_recipes(recipes, runtimecontext, output_stream, continuing)
+    loop_over_templates(templates, runtimecontext, output_stream, continuing)
     return interpreter.globals
 
 
-def loop_over_recipes(recipes, runtimecontext, output_stream, continuing):
+def loop_over_templates(templates, runtimecontext, output_stream, continuing):
     finished = False
     while not finished:
-        for recipe in recipes:
-            should_skip = recipe.just_once and continuing is True
+        for template in templates:
+            should_skip = template.just_once and continuing is True
             if not should_skip:
-                recipe.generate_rows(output_stream, runtimecontext)
+                template.generate_rows(output_stream, runtimecontext)
         finished = runtimecontext.check_if_finished()
 
         continuing = True
