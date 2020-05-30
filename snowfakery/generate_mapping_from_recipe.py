@@ -3,12 +3,12 @@ from warnings import warn
 
 from snowfakery.data_generator import ExecutionSummary
 from snowfakery.data_gen_exceptions import DataGenNameError, DataGenError
-from snowfakery.parse_factory_yaml import TableInfo
+from snowfakery.parse_recipe_yaml import TableInfo
 from snowfakery.data_generator_runtime import Dependency
 
 
-def mapping_from_factory_templates(summary: ExecutionSummary):
-    """Use the outputs of the factory YAML and convert to Mapping.yml format"""
+def mapping_from_recipe_templates(summary: ExecutionSummary):
+    """Use the outputs of the recipe YAML and convert to Mapping.yml format"""
     record_types = generate_record_type_pseudo_tables(summary)
     dependencies, reference_fields = build_dependencies(summary.intertable_dependencies)
     tables = {**summary.tables, **record_types}

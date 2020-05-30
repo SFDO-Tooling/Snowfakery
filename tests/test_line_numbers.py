@@ -1,7 +1,7 @@
 from io import StringIO
 import unittest
 
-from snowfakery.parse_factory_yaml import parse_factory
+from snowfakery.parse_recipe_yaml import parse_recipe
 from snowfakery.data_generator import generate
 from snowfakery.data_gen_exceptions import DataGenSyntaxError, DataGenValueError
 
@@ -34,7 +34,7 @@ yaml_with_syntax_error = """            #1
 
 class TestLineNumbers(unittest.TestCase):
     def test_line_numbers(self):
-        result = parse_factory(StringIO(yaml))
+        result = parse_recipe(StringIO(yaml))
         templates = result.templates
         assert templates[0].line_num == 2
         assert templates[0].fields[0].definition.line_num == 5

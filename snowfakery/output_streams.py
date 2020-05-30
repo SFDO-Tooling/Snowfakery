@@ -27,7 +27,7 @@ except (ImportError, ModuleNotFoundError) as e:
 
 
 from .data_generator_runtime import ObjectRow
-from .parse_factory_yaml import TableInfo
+from .parse_recipe_yaml import TableInfo
 
 
 def noop(x):

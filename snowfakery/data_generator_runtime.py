@@ -65,7 +65,7 @@ class FinishedChecker:
         if last_used_id == self.target_progress_id:
             raise RuntimeError(
                 f"{self.stopping_criteria.tablename} max ID was {self.target_progress_id} "
-                f"before evaluating factory and is {last_used_id} after. "
+                f"before evaluating recipe and is {last_used_id} after. "
                 f"At this rate we will never hit our target of {target_id}!"
             )
 
@@ -251,7 +251,7 @@ class RuntimeContext:
     but internally its mostly just proxying to other classes."""
 
     obj: Optional["ObjectRow"] = None
-    template_evaluator_factory = JinjaTemplateEvaluatorFactory()
+    template_evaluator_recipe = JinjaTemplateEvaluatorFactory()
 
     def __init__(
         self,
@@ -312,7 +312,7 @@ class RuntimeContext:
         return self.interpreter.output_stream
 
     def get_evaluator(self, definition: str):
-        return self.template_evaluator_factory.get_evaluator(definition)
+        return self.template_evaluator_recipe.get_evaluator(definition)
 
     @property
     def evaluation_namespace(self):
@@ -422,7 +422,7 @@ class ObjectRow(yaml.YAMLObject):
 
 def output_batches(
     output_stream,
-    factories: List,
+    recipes: List,
     options: Dict,
     stopping_criteria: Optional[StoppingCriteria] = None,
     continuation_data: Globals = None,
@@ -431,7 +431,7 @@ def output_batches(
     faker_providers: List[object] = None,
 ) -> Globals:
     """Generate 'count' batches to 'output_stream' """
-    # check the stopping_criteria against the factories available
+    # check the stopping_criteria against the recipes available
     if stopping_criteria:
         stop_table_name = stopping_criteria.tablename
         if stop_table_name not in tables:
@@ -463,17 +463,17 @@ def output_batches(
 
     runtimecontext = RuntimeContext(interpreter=interpreter)
     continuing = bool(continuation_data)
-    loop_over_factories(factories, runtimecontext, output_stream, continuing)
+    loop_over_recipes(recipes, runtimecontext, output_stream, continuing)
     return interpreter.globals
 
 
-def loop_over_factories(factories, runtimecontext, output_stream, continuing):
+def loop_over_recipes(recipes, runtimecontext, output_stream, continuing):
     finished = False
     while not finished:
-        for factory in factories:
-            should_skip = factory.just_once and continuing is True
+        for recipe in recipes:
+            should_skip = recipe.just_once and continuing is True
             if not should_skip:
-                factory.generate_rows(output_stream, runtimecontext)
+                recipe.generate_rows(output_stream, runtimecontext)
         finished = runtimecontext.check_if_finished()
 
         continuing = True

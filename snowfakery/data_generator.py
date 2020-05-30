@@ -8,7 +8,7 @@ from faker.providers import BaseProvider as FakerProvider
 
 from .data_gen_exceptions import DataGenNameError
 from .output_streams import DebugOutputStream, OutputStream
-from .parse_factory_yaml import parse_factory
+from .parse_recipe_yaml import parse_recipe
 from .data_generator_runtime import output_batches, StoppingCriteria, Globals
 from . import SnowfakeryPlugin
 
@@ -17,7 +17,7 @@ from . import SnowfakeryPlugin
 #
 # 1. Yaml parsing into Python data structures.
 # 2. Walking the tree, sorting things into groups like macros, file inclusions,
-#    etc., and doing the file inclusions (parse_factory_yaml.parse_factory)
+#    etc., and doing the file inclusions (parse_recipe_yaml.parse_recipe)
 # 2 a) merge options informtion from the parse with options from the
 #      environment
 # 3. Generating the objects top to bottom (including evaluating Jinja) in
@@ -128,7 +128,7 @@ def generate(
     output_stream = output_stream or DebugOutputStream()
 
     # parse the YAML and any it refers to
-    parse_result = parse_factory(open_yaml_file)
+    parse_result = parse_recipe(open_yaml_file)
 
     # figure out how it relates to CLI-supplied generation variables
     options, extra_options = merge_options(parse_result.options, user_options)
