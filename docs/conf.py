@@ -18,7 +18,7 @@
 # -- Project information -----------------------------------------------------
 
 project = "Snowfakery"
-copyright = "2020, Paul Prescod and Salesforce.org Release Engineers"
+copyright = "Salesforce.com"
 author = "Paul Prescod and Salesforce.org Release Engineers"
 
 
