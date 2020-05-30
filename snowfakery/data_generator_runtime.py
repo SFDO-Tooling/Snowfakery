@@ -170,18 +170,35 @@ class Globals(yaml.YAMLObject):
 
 class JinjaTemplateEvaluatorFactory:
     def __init__(self):
-        self.template_compiler = jinja2.Environment(
-            block_start_string="<%",
-            block_end_string="%>",
-            variable_start_string="<<",
-            variable_end_string=">>",
-        )
+        self.compilers = [
+            jinja2.Environment(
+                block_start_string="<%",
+                block_end_string="%>",
+                variable_start_string="<<",
+                variable_end_string=">>",
+            ),
+            jinja2.Environment(
+                block_start_string="${%",
+                block_end_string="%}",
+                variable_start_string="${{",
+                variable_end_string="}}",
+            ),
+        ]
+
+    def compiler_for_string(self, definition: str):
+        for compiler in self.compilers:
+            for delimiter in ["block_start_string", "variable_start_string"]:
+                if getattr(compiler, delimiter) in definition:
+                    return compiler
+        return None
 
     def get_evaluator(self, definition: str):
         assert isinstance(definition, str), definition
-        if "<<" in definition or "<%" in definition:
+        compiler = self.compiler_for_string(definition)
+
+        if compiler:
             try:
-                template = self.template_compiler.from_string(definition)
+                template = compiler.from_string(definition)
                 return lambda context: template.render(context.field_vars())
             except jinja2.exceptions.TemplateSyntaxError as e:
                 raise DataGenSyntaxError(str(e), None, None) from e

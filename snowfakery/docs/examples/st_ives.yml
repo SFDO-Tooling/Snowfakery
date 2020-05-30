@@ -27,11 +27,11 @@
                         count: 7
 - object: stats
   fields:
-    num_narrators: << man.id >>
-    num_men: << man.id >>
-    num_women: << woman.id >>
-    num_sack: << sack.id >>
-    num_cat: << cat.id >>
-    num_kittens: << kit.id >>
-    everyone: <<  num_men + num_narrators + num_women + num_sack + num_cat + num_kittens >>
-    going_to_st_ives: << num_narrators >>
+    num_narrators: ${{ man.id }}
+    num_men: ${{ man.id }}
+    num_women: ${{ woman.id }}
+    num_sack: ${{ sack.id }}
+    num_cat: ${{ cat.id }}
+    num_kittens: ${{ kit.id }}
+    everyone: ${{  num_men + num_narrators + num_women + num_sack + num_cat + num_kittens }}
+    going_to_st_ives: ${{ num_narrators }}

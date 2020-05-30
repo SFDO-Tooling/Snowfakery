@@ -52,7 +52,7 @@ class TestFaker(unittest.TestCase):
         yaml = """
         - object: OBJ
           fields:
-            country: <<fake.country_code(representation='alpha-2')>>
+            country: ${{fake.country_code(representation='alpha-2')}}
         """
         generate(StringIO(yaml), {}, None)
         assert len(row_values(write_row_mock, 0, "country")) == 2
@@ -62,7 +62,7 @@ class TestFaker(unittest.TestCase):
         yaml = """
         - object: OBJ
           fields:
-            date: <<fake.date(pattern="%Y-%m-%d", end_datetime=None)>>
+            date: ${{fake.date(pattern="%Y-%m-%d", end_datetime=None)}}
         """
         generate(StringIO(yaml), {}, None)
         date = row_values(write_row_mock, 0, "date")

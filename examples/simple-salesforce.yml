@@ -84,7 +84,7 @@
       min: 3
       max: 5
   fields:
-    Name: <<fake.word>> Opportunity
+    Name: ${{fake.word}} Opportunity
     CloseDate:
       date_between:
         start_date: -30d

@@ -1,7 +1,7 @@
 - include_file: sf_standard_object_macros.yml
 - macro: Standard General_Accounting_Unit__c
   fields:
-    Name: <<fake.word>> Sponsorship
+    Name: ${{fake.word}} Sponsorship
 - macro: Standard npe01__OppPayment__c
   fields:
     npe01__Check_Reference_Number__c:
@@ -12,10 +12,10 @@
       date_between:
         start_date: -30d
         end_date: +180d
-    npe01__Paid__c: <<False if this.npe01__Payment_Date__c > today else True>>
+    npe01__Paid__c: ${{False if this.npe01__Payment_Date__c > today else True}}
     Payment_Acknowledged_Date__c:
       date_between:
-        start_date: <<this.npe01__Payment_Date__c>>
+        start_date: ${{this.npe01__Payment_Date__c}}
         end_date: today
     Payment_Acknowledgment_Status__c: # should this be dependent on Paid?
       random_choice:
@@ -31,4 +31,4 @@
       date_between:
         start_date: -30d
         end_date: +180d
-    # npe01__Written_Off__c: <<False if this.npe01__Paid__c < today() >>
+    # npe01__Written_Off__c: ${{False if this.npe01__Paid__c < today() }}
