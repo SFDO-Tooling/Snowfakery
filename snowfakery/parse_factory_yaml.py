@@ -9,7 +9,7 @@ import yaml
 from yaml.composer import Composer
 from yaml.constructor import SafeConstructor
 
-from .data_generator_runtime_dom import (
+from .data_generator_runtime_object_model import (
     ObjectTemplate,
     FieldFactory,
     SimpleValue,

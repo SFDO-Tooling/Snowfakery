@@ -1,6 +1,6 @@
 import unittest
 from unittest import mock
-from snowfakery.data_generator_runtime_dom import (
+from snowfakery.data_generator_runtime_object_model import (
     FieldFactory,
     SimpleValue,
     StructuredValue,
