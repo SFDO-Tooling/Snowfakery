@@ -65,3 +65,21 @@ Insert Opportunities:
       table: Account
     ContactId:
       table: Contact
+Insert Opportunities Again:
+  sf_object: Opportunity
+  action: insert
+  table: Opportunity
+  fields:
+    Name: Name
+    StageName: StageName
+    CloseDate: CloseDate
+    ContactId: ContactId
+    AccountId: AccountId
+    Amount: Amount
+  filter:
+    StageName = 'Impossible'
+  lookups:
+    AccountId:
+      table: Account
+    ContactId:
+      table: Contact
