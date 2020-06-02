@@ -958,18 +958,20 @@ To specify a record type for a record, just put the Record Type’s API Name in 
 
 ## Internal Software Architecture
 
-|Filename	|Purpose	|
-|---	|---	|
-|snowfakery.py	|Click-based Command Line. Uses the Click library to supply a CLI.	|
-|data_generator.py	|The API entry point the CLI and CCI use. <p>This may be the best place to start reading. It abstracts away all of the complexity and outlines the core flow.	|
-|parse_factory_yaml.py	|Phase 1: parse YAML into a Runtime DOM<p>Includes some hacks to the YAML parser for handling line numbers.	|
-|data_generator_runtime.py	|Phase 2: Runtime.<p>Actually generate the data by walking the template list top-to-bottom, generating rows as appopriate. 	
-|data_generator_runtime_dom.py	|An object model used in Phase 2. Roughly similar to the shape of the YAML file.|
-|output_streams.py	|Where the data goes in the output. Used during Phase 2.	|
-|data_gen_exceptions.py	|Exceptions that can be thrown	|
-|generate_mapping_from_factory.py	|In the CCI context, this utility package allows the generation of mapping.yml files.	|
-|template_funcs.py	|Functions that can be invoked using either block syntax or in Jinja templates	|
-|tests/	|Unit tests	|
+|Filename	                        |Purpose	|
+|---	                            |---	|
+|cli.py	                  |Click-based Command Line. Uses the Click library to supply a CLI.	|
+|data_generator.py	              |The API entry point the CLI and CCI use. <p>This may be the best place to start reading. It abstracts away all of the complexity and outlines the core flow.	|
+|parse_recipe_yaml.py	            |Phase 1: parse YAML into a Runtime DOM<p>Includes some hacks to the YAML parser for handling line numbers.	|
+|data_generator_runtime.py	      |Phase 2: Runtime.<p>Actually generate the data by walking the template list top-to-bottom, generating rows as appopriate. 	
+|data_generator_runtime_dom.py	  |An object model used in Phase 2. Roughly similar to the shape of the YAML file.|
+|output_streams.py	              |Where the data goes in the output. Used during Phase 2.	|
+|data_gen_exceptions.py	          |Exceptions that can be thrown	|
+|generate_mapping_from_recipe.py	|In the CCI context, this utility package allows the generation of mapping.yml files.	|
+|template_funcs.py	              |Functions that can be invoked using either block syntax or in Jinja templates	|
+|plugins.py                       |Infrastructure for plugins |
+|standard_plugins/                |Plugins that ship with Snowfakery |
+|tests/	                          |Unit tests	|
 
 <img src='images/img6.png' id='PJUACA3lKvf' alt='Architecture Diagram'>
 
