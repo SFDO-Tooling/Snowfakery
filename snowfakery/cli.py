@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from snowfakery.generate_mapping_from_factory import mapping_from_factory_templates
+from snowfakery.generate_mapping_from_recipe import mapping_from_recipe_templates
 from snowfakery.output_streams import (
     DebugOutputStream,
     SqlOutputStream,
@@ -76,12 +76,12 @@ def string_int_tuple(ctx, param, value=None):
     nargs=2,
     type=eval_arg,  # TODO: test this more
     multiple=True,
-    help="Options to send to the factory YAML.",
+    help="Options to send to the recipe YAML.",
 )
 @click.option(
     "--target-number",
     nargs=2,
-    help="Target options for the factory YAML.",
+    help="Target options for the recipe YAML.",
     callback=string_int_tuple,  # noqa  https://github.com/pallets/click/issues/789#issuecomment-535121714
 )
 @click.option(
@@ -168,7 +168,7 @@ def generate_cli(
             if generate_cci_mapping_file:
                 with click.open_file(generate_cci_mapping_file, "w") as f:
                     yaml.safe_dump(
-                        mapping_from_factory_templates(summary), f, sort_keys=False
+                        mapping_from_recipe_templates(summary), f, sort_keys=False
                     )
         except DataGenError as e:
             if debug_internals:

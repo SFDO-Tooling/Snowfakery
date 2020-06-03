@@ -3,7 +3,7 @@ import unittest
 
 from datetime import date
 
-from snowfakery.parse_factory_yaml import parse_factory
+from snowfakery.parse_recipe_yaml import parse_recipe
 
 
 class TestParseGenerator(unittest.TestCase):
@@ -16,7 +16,7 @@ class TestParseGenerator(unittest.TestCase):
                     start_date: today
                     end_date: 2000-01-01
         """
-        ParseResult = parse_factory(StringIO(yamlstr))
+        ParseResult = parse_recipe(StringIO(yamlstr))
         # useful for debugging if the test breaks!
         # print(yaml.dump(ParseResult.templates))
 
