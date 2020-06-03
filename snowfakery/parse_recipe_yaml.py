@@ -9,7 +9,7 @@ import yaml
 from yaml.composer import Composer
 from yaml.constructor import SafeConstructor
 
-from .data_generator_runtime_dom import (
+from .data_generator_runtime_object_model import (
     ObjectTemplate,
     FieldFactory,
     SimpleValue,
@@ -24,7 +24,7 @@ SHARED_OBJECT = "#SHARED_OBJECT"
 TemplateLike = Union[ObjectTemplate, StructuredValue]
 
 ###
-#   The entry point to this is parse_factory
+#   The entry point to this is parse_recipe
 
 LineTracker = namedtuple("LineTracker", ["filename", "line_num"])
 
@@ -489,7 +489,7 @@ def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
     return templates
 
 
-def parse_factory(stream: IO[str]) -> ParseResult:
+def parse_recipe(stream: IO[str]) -> ParseResult:
     context = ParseContext()
     objects = parse_file(stream, context)
     templates = parse_object_template_list(objects, context)

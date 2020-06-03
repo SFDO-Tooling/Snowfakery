@@ -1,6 +1,6 @@
 import unittest
 from unittest import mock
-from snowfakery.data_generator_runtime_dom import (
+from snowfakery.data_generator_runtime_object_model import (
     FieldFactory,
     SimpleValue,
     StructuredValue,
@@ -29,7 +29,7 @@ x = standard_runtime()
 
 
 class TestDataGeneratorRuntimeDom(unittest.TestCase):
-    def test_field_factory_string(self):
+    def test_field_recipe_string(self):
         definition = SimpleValue("abc", "abc.yml", 10)
         repr(definition)
         f = FieldFactory("field", definition, "abc.yml", 10)
@@ -37,7 +37,7 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
         x = f.generate_value(standard_runtime())
         assert x == "abc"
 
-    def test_field_factory_int(self):
+    def test_field_recipe_int(self):
         definition = SimpleValue(5, "abc.yml", 10)
         repr(definition)
         f = FieldFactory("field", definition, "abc.yml", 10)
@@ -45,7 +45,7 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
         x = f.generate_value(standard_runtime())
         assert x == 5
 
-    def test_field_factory_calculation(self):
+    def test_field_recipe_calculation(self):
         definition = SimpleValue("${{5*3}}", "abc.yml", 10)
         repr(definition)
         f = FieldFactory("field", definition, "abc.yml", 10)

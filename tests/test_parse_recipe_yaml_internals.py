@@ -1,5 +1,5 @@
 import unittest
-from snowfakery.parse_factory_yaml import (
+from snowfakery.parse_recipe_yaml import (
     parse_element,
     categorize_top_level_objects,
     ParseContext,

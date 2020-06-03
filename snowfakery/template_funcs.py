@@ -13,7 +13,7 @@ from .data_gen_exceptions import DataGenError
 import snowfakery.data_generator_runtime  # noqa
 from snowfakery.plugins import SnowfakeryPlugin, PluginContext, lazy
 
-FieldDefinition = "snowfakery.data_generator_runtime_dom.FieldDefinition"
+FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
 ObjectRow = "snowfakery.data_generator_runtime.ObjectRow"
 
 fake = Faker()
