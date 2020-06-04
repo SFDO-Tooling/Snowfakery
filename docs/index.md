@@ -546,7 +546,7 @@ Payment_Date:
     end_date: +180d
 ```
 
-`date_between` can also be used as a function in expressions:
+`date_between` can also be used as a function in formulas:
 
 ```
 wedding_date: Our big day is ${{date_between(start_date="2022-01-31", end_date="2022-12-31")}}
@@ -563,7 +563,7 @@ age:
     max: 95
 ```
 
-`random_number` can also be used as a function in expressions:
+`random_number` can also be used as a function in formulas:
 
 ```
 some_number: A number ${{random_number(min=5, max=10)}}
@@ -604,13 +604,19 @@ some_number: A number ${{random_number(min=5, max=10)}}
               fake: first_name
 ```
 
-The `when` clause can be any Python expression and it will be interpreted as a boolean similar to how Python would do it. The first `when` clause that matches is selected. The last `choice` clause should have no `when` clause, and it is a fallback which is selected if the others do not match.
+The `when` clause can be a Python formula and it will be interpreted as a boolean similar to how Python would do it. The first `when` clause that matches is selected. The last `choice` clause should have no `when` clause, and it is a fallback which is selected if the others do not match.
 
-## Other functions
+## Formula functions and variables
 
-The `child_count` function returns a counter of how many objects from this template were generated
+The functions below are designed to be used inside of formulas:
+
+The `child_count` variable returns a counter of how many objects from this template were generated
 during the execution of the nearest parent template. It resets each time the parent template is
 executed again.
+
+  ```
+  child_num: Child number ${{child_count}}
+  ```
 
 The `date` function can either coerce a string into a date object for calculations OR generate
 a new date object from year/month/day parts:
@@ -619,8 +625,6 @@ a new date object from year/month/day parts:
     the_date: ${{date("2018-10-30")}}
     another_date: ${{date(year=2018, month=11, day=30)}}
 ```
-
-
 
 The `relativedelta` [function](https://dateutil.readthedocs.io/en/stable/relativedelta.html) 
 from `dateutil` is available for use in calculations like this:
