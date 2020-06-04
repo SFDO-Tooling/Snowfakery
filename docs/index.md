@@ -476,6 +476,18 @@ https://faker.readthedocs.io/en/master/communityproviders.html
 
 And you could make your own providers as well.
 
+Fake can be called as an inline function in an expression:
+
+```
+FullName: ${{fake.first_name}} Johnson
+```
+
+You can also call these functions with arguments as described in Faker's [documentation](https://faker.readthedocs.io/en/master/providers.html)
+
+```
+country: ${{fake.country_code(representation='alpha-2')}}
+```
+
 ### International Fakes (syntax still under development)
 
 You can specify internationally appropriate fakes for many different kind of names (e.g. person, company) like this:
@@ -492,6 +504,12 @@ You can specify internationally appropriate fakes for many different kind of nam
 This will generate a “typical” Norwegian first name.
 
 You can infer which Faker providers are internationalizable by looking through the Faker [repository](https://github.com/joke2k/faker/tree/master/faker/providers) and seeing which directories have localizations. For example there are only three localizations of [credit card](https://github.com/joke2k/faker/tree/master/faker/providers) (who knew that credit cards were different in Iran and Russia) and dozens of localizations for [person name](https://github.com/joke2k/faker/tree/master/faker/providers/person).
+
+You can also call this as an inline function:
+
+```
+lars_or_alf_or_something: ${{i18n_fake(locale="no_NO", fake='first_name')}}
+```
 
 ### `date_between`
 
@@ -528,6 +546,12 @@ Payment_Date:
     end_date: +180d
 ```
 
+`date_between` can also be used as a function in expressions:
+
+```
+wedding_date: Our big day is ${{date_between(start_date="2022-01-31", end_date="2022-12-31")}}
+```
+
 ### `random_number`
 
 Pick a random number in a range specified by min and max:
@@ -537,6 +561,12 @@ age:
   random_number:
     min: 12
     max: 95
+```
+
+`random_number` can also be used as a function in expressions:
+
+```
+some_number: A number ${{random_number(min=5, max=10)}}
 ```
 
 ### `if`
@@ -575,6 +605,29 @@ age:
 ```
 
 The `when` clause can be any Python expression and it will be interpreted as a boolean similar to how Python would do it. The first `when` clause that matches is selected. The last `choice` clause should have no `when` clause, and it is a fallback which is selected if the others do not match.
+
+## Other functions
+
+The `child_count` function returns a counter of how many objects from this template were generated
+during the execution of the nearest parent template. It resets each time the parent template is
+executed again.
+
+The `date` function can either coerce a string into a date object for calculations OR generate
+a new date object from year/month/day parts:
+
+```
+    the_date: ${{date("2018-10-30")}}
+    another_date: ${{date(year=2018, month=11, day=30)}}
+```
+
+
+
+The `relativedelta` [function](https://dateutil.readthedocs.io/en/stable/relativedelta.html) 
+from `dateutil` is available for use in calculations like this:
+
+```
+${{ date(Date_Established__c) + relativedelta(months=child_count) }}
+```
 
 ## Macros
 
