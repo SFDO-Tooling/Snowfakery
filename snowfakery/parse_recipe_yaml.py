@@ -1,3 +1,4 @@
+from os import fsdecode
 from numbers import Number
 from datetime import date
 from contextlib import contextmanager
@@ -471,7 +472,7 @@ def parse_top_level_elements(path: Path, data: List, context: ParseContext):
 def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
     stream_name = getattr(stream, "name", None)
     if stream_name:
-        path = Path(stream.name).absolute()
+        path = Path(fsdecode(stream.name)).absolute()
     else:
         path = Path("<stream>")
     data, line_numbers = yaml_safe_load_with_line_numbers(stream, str(path))
