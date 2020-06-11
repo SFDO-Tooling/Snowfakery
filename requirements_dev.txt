@@ -5,7 +5,7 @@ coveralls==2.0.0
 flake8==3.8.2
 myst-parser==0.8.1
 pre-commit==2.4.0
-pytest==5.4.2
+pytest==5.4.3
 pytest-cov==2.9.0
 Sphinx==2.3.1
 typeguard==2.7.1
