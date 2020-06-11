@@ -212,6 +212,7 @@ class TestTemplateFuncs(unittest.TestCase):
         assert "2012" in write_row.mock_calls[0][1][1]["wedding"]
         assert "1" in write_row.mock_calls[0][1][1]["number"]
 
+    @mock.patch(write_row_path)
     def test_child_count(self, write_row):
         yaml = """
         - object: A
