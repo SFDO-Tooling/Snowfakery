@@ -171,6 +171,26 @@ class TestTemplateFuncs(unittest.TestCase):
         assert write_row.mock_calls[0][1][1]["x"] == "CCC"
 
     @mock.patch(write_row_path)
+    def test_parse_date_from_datetime_string(self, write_row):
+        yaml = """
+        - object : A
+          fields:
+            a: <<date("2012-01-01T00:01")>>
+        """
+        generate(StringIO(yaml), {}, None)
+        assert write_row.mock_calls[0][1][1]["a"] == "2012-01-01"
+
+    @mock.patch(write_row_path)
+    def test_parse_date_from_date_string(self, write_row):
+        yaml = """
+        - object : A
+          fields:
+            a: ${{date("2012-01-01")}}
+        """
+        generate(StringIO(yaml), {}, None)
+        assert write_row.mock_calls[0][1][1]["a"] == "2012-01-01"
+
+    @mock.patch(write_row_path)
     def test_old_syntax(self, write_row):
         yaml = """
         - object : A
@@ -179,3 +199,15 @@ class TestTemplateFuncs(unittest.TestCase):
         """
         generate(StringIO(yaml), {}, None)
         assert write_row.mock_calls[0][1][1]["a"] == 8
+
+    @mock.patch(write_row_path)
+    def test_functions_inline(self, write_row):
+        yaml = """
+        - object : A
+          fields:
+            wedding: Our wedding date is ${{date_between(start_date="2012-01-31", end_date="2012-12-31")}}
+            number: The number is ${{random_number(min=15, max=19)}}
+        """
+        generate(StringIO(yaml), {}, None)
+        assert "2012" in write_row.mock_calls[0][1][1]["wedding"]
+        assert "1" in write_row.mock_calls[0][1][1]["number"]
