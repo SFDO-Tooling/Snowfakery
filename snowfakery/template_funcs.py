@@ -2,9 +2,10 @@ import random
 from functools import lru_cache
 from datetime import date, datetime
 import dateutil.parser
+from dateutil.relativedelta import relativedelta
 from ast import literal_eval
 
-from typing import Optional, Union, List, Tuple
+from typing import Union, List, Tuple
 
 from faker import Faker
 
@@ -45,13 +46,12 @@ def weighted_choice(choices: List[Tuple[int, object]]):
 
 
 @lru_cache(maxsize=512)
-def parse_date(d: Union[str, datetime, date]) -> Optional[Union[datetime, date]]:
-    if isinstance(d, (datetime, date)):
+def parse_date(d: Union[str, datetime, date]) -> date:
+    if isinstance(d, date):
         return d
-    try:
-        return dateutil.parser.parse(d)
-    except dateutil.parser.ParserError:
-        pass
+    elif isinstance(d, datetime):
+        return d.date()
+    return dateutil.parser.parse(d).date()
 
 
 def render_boolean(context: PluginContext, value: FieldDefinition) -> bool:
@@ -67,10 +67,18 @@ class StandardFuncs(SnowfakeryPlugin):
         int = int
 
         def date(
-            self, *, year: Union[str, int], month: Union[str, int], day: Union[str, int]
+            self,
+            datespec=None,
+            *,
+            year: Union[str, int] = None,
+            month: Union[str, int] = None,
+            day: Union[str, int] = None,
         ):
             """A YAML-embeddable function to construct a date from strings or integers"""
-            return date(year, month, day)
+            if datespec:
+                return parse_date(datespec)
+            else:
+                return date(year, month, day)
 
         def datetime(
             self,
@@ -88,8 +96,16 @@ class StandardFuncs(SnowfakeryPlugin):
 
         def date_between(self, *, start_date, end_date):
             """A YAML-embeddable function to pick a date between two ranges"""
-            start_date = parse_date(start_date) or start_date
-            end_date = parse_date(end_date) or end_date
+            try:
+                start_date = parse_date(start_date)
+            except Exception:  # let's hope its something faker can parse
+                pass
+
+            try:
+                end_date = parse_date(end_date)
+            except Exception:  # let's hope its something faker can parse
+                pass
+
             try:
                 return fake.date_between(start_date, end_date)
             except ValueError as e:
@@ -214,3 +230,4 @@ class StandardFuncs(SnowfakeryPlugin):
             return rc
 
     setattr(Functions, "if", Functions.if_)
+    setattr(Functions, "relativedelta", relativedelta)
