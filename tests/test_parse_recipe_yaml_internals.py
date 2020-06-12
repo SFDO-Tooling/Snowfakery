@@ -1,11 +1,16 @@
 import unittest
+from unittest import mock
+from os import fsencode, path
+
 from snowfakery.parse_recipe_yaml import (
     parse_element,
     categorize_top_level_objects,
     ParseContext,
     LineTracker,
     DataGenError,
+    parse_file,
 )
+from tempfile import TemporaryDirectory
 
 linenum = {"__line__": LineTracker("f", 5)}
 
@@ -64,3 +69,22 @@ class TestCategorizeTopLevelObjects(unittest.TestCase):
         with self.assertRaises(DataGenError):
             objects = [{"unknown": "a", **linenum}]
             categorize_top_level_objects(objects, ParseContext())
+
+
+class TestFilesystem:
+    def test_funny_filenames(self):
+        with TemporaryDirectory() as d:
+            clownface = "🤡"
+            for p, filename in [(d, clownface), (fsencode(d), fsencode(clownface))]:
+                file_with_path = path.join(p, filename)
+                with open(file_with_path, "w") as tempfile:
+
+                    def mock_safe_load(stream, path):
+                        assert clownface in path
+                        return [], {}
+
+                    with mock.patch(
+                        "snowfakery.parse_recipe_yaml.yaml_safe_load_with_line_numbers",
+                        mock_safe_load,
+                    ):
+                        parse_file(tempfile, ParseContext())
