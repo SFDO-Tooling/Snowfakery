@@ -610,12 +610,12 @@ The `when` clause can be a Python formula and it will be interpreted as a boolea
 
 The functions below are designed to be used inside of formulas:
 
-The `child_count` variable returns a counter of how many objects from this template were generated
+The `child_index` variable returns a counter of how many objects from this template were generated
 during the execution of the nearest parent template. It resets each time the parent template is
 executed again.
 
   ```
-  child_num: Child number ${{child_count}}
+  child_num: Child number ${{child_index}}
   ```
 
 The `date` function can either coerce a string into a date object for calculations OR generate
@@ -630,7 +630,7 @@ The `relativedelta` [function](https://dateutil.readthedocs.io/en/stable/relativ
 from `dateutil` is available for use in calculations like this:
 
 ```
-${{ date(Date_Established__c) + relativedelta(months=child_count) }}
+${{ date(Date_Established__c) + relativedelta(months=child_index) }}
 ```
 
 ## Macros

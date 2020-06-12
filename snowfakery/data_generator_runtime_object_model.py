@@ -92,7 +92,7 @@ class ObjectTemplate:
             count = self._evaluate_count(context)
             with self.exception_handling(f"Cannot generate {self.name}"):
                 for i in range(count):
-                    rc = self._generate_row(storage, context)
+                    rc = self._generate_row(storage, context, i)
 
         return rc  # return last row
 
@@ -126,10 +126,10 @@ class ObjectTemplate:
             name += " (self.nickname)"
         return name
 
-    def _generate_row(self, storage, context: RuntimeContext) -> ObjectRow:
+    def _generate_row(self, storage, context: RuntimeContext, index: int) -> ObjectRow:
         """Generate an individual row"""
         row = {"id": context.generate_id()}
-        sobj = ObjectRow(self.tablename, row)
+        sobj = ObjectRow(self.tablename, row, index)
 
         context.register_object(sobj, self.nickname)
 
