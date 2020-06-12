@@ -342,7 +342,7 @@ class EvaluationNamespace(NamedTuple):
         return {
             "id": obj.id if obj else None,
             "count": obj.id if obj else None,
-            "child_count": obj._child_count if obj else None,
+            "child_index": obj._child_index if obj else None,
             "this": obj,
             "today": interpreter.globals.today,
             "fake": interpreter.faker_template_library,
@@ -391,12 +391,12 @@ class ObjectRow(yaml.YAMLObject):
     yaml_dumper = yaml.SafeDumper
     yaml_tag = "!snowfakery_objectrow"
 
-    __slots__ = ["_tablename", "_values", "_child_count"]
+    __slots__ = ["_tablename", "_values", "_child_index"]
 
     def __init__(self, tablename, values=(), index=0):
         self._tablename = tablename
         self._values = values
-        self._child_count = index
+        self._child_index = index
 
     def __getattr__(self, name):
         try:
