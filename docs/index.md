@@ -904,6 +904,29 @@ You include either Plugins or Providers in a Snowfakery file like this:
 
 To write a new Provider, please refer to the documentation for Faker at https://faker.readthedocs.io/en/master/#providers
 
+### Built-in Plugins
+
+#### Advanced Math
+
+Snowfakery has a "Math" plugin which gives you access to all features from Python's
+[math](https://docs.python.org/3/library/math.html) module. For example:
+
+```
+- plugin: snowfakery.standard_plugins.Math
+- object: OBJ
+  fields:
+    twelve:
+        Math.sqrt: 144
+```
+Or:
+```
+- plugin: snowfakery.standard_plugins.Math
+- object: OBJ
+  fields:
+    twelve: ${Math.sqrt}
+
+### Custom Plugins
+
 To write a new Plugin, make a class that inherits from `SnowfakeryPlugin` and implements either the `custom_functions()` method or a `Functions` nested class. The nested class is simple: each method represents a function to expose in the namespace. In this case the function name would be `DoublingPlugin.double`.
 
 ```
@@ -939,7 +962,7 @@ class PluginThatCounts(SnowfakeryPlugin):
             return context_vars["count"]
 ```
 
-In the rare event that a plugin has a function which need its arguments to be passed to it unevaluated, for later (perhaps conditional) evaluation, you can use the `@snowfakery.lazy decorato`r. Then you can evaluate the arguments with `self.context.evaluate()`. 
+In the rare event that a plugin has a function which need its arguments to be passed to it unevaluated, for later (perhaps conditional) evaluation, you can use the `@snowfakery.lazy decorator`. Then you can evaluate the arguments with `self.context.evaluate()`. 
 
 For example:
 
