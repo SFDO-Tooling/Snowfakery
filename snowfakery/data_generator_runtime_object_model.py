@@ -123,7 +123,7 @@ class ObjectTemplate:
     def name(self) -> str:
         name = self.tablename
         if self.nickname:
-            name += f" (self.nickname)"
+            name += " (self.nickname)"
         return name
 
     def _generate_row(self, storage, context: RuntimeContext, index: int) -> ObjectRow:
@@ -147,7 +147,7 @@ class ObjectTemplate:
     def _generate_fields(self, context: RuntimeContext, row: Dict) -> None:
         """Generate all of the fields of a row"""
         for field in self.fields:
-            with self.exception_handling(f"Problem rendering value"):
+            with self.exception_handling("Problem rendering value"):
                 row[field.name] = field.generate_value(context)
                 self._check_type(field, row[field.name], context)
 

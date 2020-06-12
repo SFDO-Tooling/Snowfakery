@@ -163,7 +163,7 @@ def mappings_from_sorted_tables(
             record_type = None
             # add a filter to avoid returning rows associated with record types
             filters = (
-                [f"RecordType is NULL"]
+                ["RecordType is NULL"]
                 if getattr(table, "has_record_types", False)
                 else []
             )
