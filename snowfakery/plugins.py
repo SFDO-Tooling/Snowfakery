@@ -1,4 +1,4 @@
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 
 class SnowfakeryPlugin:
@@ -72,3 +72,14 @@ def lazy(func: Any) -> Callable:
     """A lazy function is one that expects its arguments to be unparsed"""
     func.lazy = True
     return func
+
+
+class PluginResult:
+    def __init__(self, result):
+        self.result = result
+
+    def __getattr__(self, name):
+        if isinstance(self.result, Mapping):
+            return self.result[name]
+        else:
+            return getattr(self.result, name)

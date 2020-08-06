@@ -90,7 +90,7 @@ class ObjectTemplate:
     ) -> Optional[ObjectRow]:
         """Generate several rows"""
         rc = None
-        with parent_context.child_context(self.tablename) as context:
+        with parent_context.child_context(self) as context:
             count = self._evaluate_count(context)
             with self.exception_handling(f"Cannot generate {self.name}"):
                 for i in range(count):
@@ -127,6 +127,10 @@ class ObjectTemplate:
         if self.nickname:
             name += " (self.nickname)"
         return name
+
+    @property
+    def id(self):
+        return id(self)
 
     def _generate_row(self, storage, context: RuntimeContext, index: int) -> ObjectRow:
         """Generate an individual row"""

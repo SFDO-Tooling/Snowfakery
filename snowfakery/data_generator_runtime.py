@@ -372,14 +372,18 @@ class RuntimeContext:
 
     obj: Optional["ObjectRow"] = None
     template_evaluator_recipe = JinjaTemplateEvaluatorFactory()
+    current_template = None
 
     def __init__(
         self,
         interpreter: Interpreter,
-        current_table_name: Optional[str] = None,
+        current_template: ObjectTemplate = None,
         parent_context: "RuntimeContext" = None,
     ):
-        self.current_table_name = current_table_name
+        if current_template:
+            self.current_table_name = current_template.tablename
+            self.current_template = current_template
+
         self.interpreter = interpreter
         self.interpreter.current_context = self
         self.parent = parent_context
@@ -428,10 +432,10 @@ class RuntimeContext:
         )
 
     @contextmanager
-    def child_context(self, tablename):
+    def child_context(self, template):
         "Create a nested RuntimeContext (analogous to a 'stack frame')."
         jr = self.__class__(
-            current_table_name=tablename,
+            current_template=template,
             interpreter=self.interpreter,
             parent_context=self,
         )
@@ -482,6 +486,7 @@ class EvaluationNamespace(NamedTuple):
             "this": obj,
             "today": interpreter.globals.today,
             "fake": interpreter.faker_template_library,
+            "template": self.runtime_context.current_template,
             **interpreter.options,
             **interpreter.globals.object_names,
             **(obj._values if obj else {}),
