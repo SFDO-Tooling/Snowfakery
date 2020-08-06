@@ -1,6 +1,6 @@
 # Snowfakery Documentation
 
-Snowfakery is a tool for generating fake data that has relations between tables. Every row is faked data, but also unique and random, like a snowflake. 
+Snowfakery is a tool for generating fake data that has relations between tables. Every row is faked data, but also unique and random, like a snowflake.
 
 To tell Snowfakery what data you want to generate, you need to write a Recipe file in YAML.
 
@@ -14,28 +14,31 @@ But while you’re at it, why not install CumulusCI too?
 
 Next, you can go to a terminal and install Snowfakery:
 
-```
+```bash
 $ pip3 install pipx
+...
 $ pipx install snowfakery
+...
 ```
 
 If you want to use Snowfakery within CumulusCI, you can find instructions for that in [Using Snowfakery within CumulusCI](#using-snowfakery-within-cumulusci).
 
 After installation, you should be able to invoke Snowfakery like this:
 
-```
-snowfakery somefile.yml
+```bash
+$ snowfakery somefile.yml
+...
 ```
 
 ## Central Concepts
 
-Snowfakery recipes are specified in a YAML format. YAML is a relatively simple, human-readable format. You can learn more about it at [yaml.org](http://yaml.org/). But you can also just pick up the basics of it by reading along with the examples below. 
+Snowfakery recipes are specified in a YAML format. YAML is a relatively simple, human-readable format. You can learn more about it at [yaml.org](http://yaml.org/). But you can also just pick up the basics of it by reading along with the examples below.
 
 YAML uses indentation to say which parts of the file are related to each other. Let’s get started with a stupidly simple example recipe:
 
 simple_static.yml
 
-```
+```yaml
 - object: Person
   fields:
     name: Buster Bluth
@@ -44,23 +47,26 @@ simple_static.yml
 
 We run this example through Snowfakery like this:
 
-`$ snowfakery docs/examples/simple_static.yml`
+```bash
+$ snowfakery docs/examples/simple_static.yml
+...
+```
 
 (this example does not represent the final command line interface nor how to use [Advanced Features](#advanced-features)))
 
 This simple example will generate a single record that looks like this:
 
-```
+```json
 Person(id=1, name=Buster Bluth, age=35)
 ```
 
 In other words, it is a person record with 3 fields:
 
-|Field	|id	|name	|age	|
-|---	|---	|---	|---	|
-|Value	|1	|Buster Bluth	|35	|
+|Field    |id   |name         |age|
+|---      |---  |---          |---|
+|Value    |1    |Buster Bluth |35 |
 
-Two of the fields include data from the YAML file. The ID is auto-generated. 
+Two of the fields include data from the YAML file. The ID is auto-generated.
 
 **Note:** Snowfakery only works for models which are amenable to having an id column on every record. Your tools can use the column, ignore the column, or exchange it for another kind of ID (as CumulusCI does, with Salesforce) but Snowfakery always generates IDs and refers between tables with IDs. Future versions might include a command line option to turn this behaviour on or off.
 
@@ -68,28 +74,29 @@ Let’s make this example more interesting:
 
 persons_of_interest.yml
 
-```
+
+```yaml
 - object: Person
-  count: 3
-  fields:
-    name:
-      fake: name
-    age:
-      random_number:
-        min: 12
-        max: 95
+    count: 3
+    fields:
+      name:
+        fake: name
+      age:
+        random_number:
+          min: 12
+          max: 95
 ```
 
 What did we say here?
 
-* object: Person : This is a template for rows that will go in the Person table representing real-world “Person” objects
-* count: we want 3 records instead of just 1
-* name: fake: name : we want to fake the name instead of hard coding it. The list of things you can “fake” is based on a library called “Faker” which we will discuss later.
-* age: random_number: we want a random number between the min and max
+- object: Person : This is a template for rows that will go in the Person table representing real-world “Person” objects
+- count: we want 3 records instead of just 1
+- name: fake: name : we want to fake the name instead of hard coding it. The list of things you can “fake” is based on a library called “Faker” which we will discuss later.
+- age: random_number: we want a random number between the min and max
 
 Now you should get an output more like this:
 
-```
+```json
 Person(id=1, name=Allison Garcia, age=94)
 Person(id=2, name=Megan Campos, age=67)
 Person(id=3, name=Katherine Nelson, age=92)
@@ -101,7 +108,7 @@ So that’s pretty cool, but it doesn’t use much of Snowfakery’s power. Let'
 
 pet_stories.yml
 
-```
+```yaml
 - object: Person
   count: 3
   fields:
@@ -123,17 +130,17 @@ pet_stories.yml
                 name: Pets Choice
                 cost: $10
 
-    cat:
-      - object: Animal
-        fields:
-          name:
-            fake: first_name
-          species: feline
-          food:
-            - object: PetFood
-              fields:
-                name: Pets Choice
-                cost: $10
+        cat:
+          - object: Animal
+            fields:
+              name:
+                fake: first_name
+              species: feline
+              food:
+                - object: PetFood
+                  fields:
+                    name: Pets Choice
+                    cost: $1
 ```
 
 If you’re lost: don't worry! Those are a lot of new concepts at once, and you don't have to understand everything in this example right now. We'll come back to these concepts one by one.
@@ -166,7 +173,7 @@ The rows which are generated will each have a unique an ID.
 
 person_of_interest.yml
 
-```
+```yaml
 - object: Person
   count: 10
   fields:
@@ -180,15 +187,15 @@ person_of_interest.yml
 
 We can see above 3 of the main properties of Object Templates:
 
-* object type declaration which determines what table or file the row goes in
-* count, which determines how many rows are made. Count can also be randomized or computed using [Function Blocks](#function-blocks) or the [Formula Language](#formula-language)
-* fields, which say what data values to put in the row.
+- object type declaration which determines what table or file the row goes in
+- count, which determines how many rows are made. Count can also be randomized or computed using [Function Blocks](#function-blocks) or the [Formula Language](#formula-language)
+- fields, which say what data values to put in the row.
 
 You can also have more than one object template for any particular Row Type (i.e. relational table, CSV file, Salesforce Object, ...).
 
 persons_of_interest.yml
 
-```
+```yaml
 - object: Person
   count: 3
   fields:
@@ -215,7 +222,7 @@ Sometimes you want to obey a rule like “For every Person I create, I’d like 
 
 You would use the `friends` property to do that.
 
-```
+```yaml
 - object: Person
   count: 3
   fields:
@@ -235,7 +242,7 @@ You would use the `friends` property to do that.
 
 This will output two animals per person:
 
-```
+```yaml
 Person(id=1, name=Sierra Ortega, age=91)
 Animal(id=1, name=Sarah)
 Animal(id=2, name=Brian)
@@ -255,7 +262,7 @@ There is no explicit relationship between the animals and the people in this cas
 
 Relationships are a big part of what makes Snowfakery different than the dozens(!) of tools for data generation out there. For example, we can relate pets to their owners like this:
 
-```
+```yaml
 - object: Person
   count: 3
   fields:
@@ -287,7 +294,7 @@ In addition, we can relate pets and owners “bidirectionally”, like this:
 
 secret_life_of_pets.yml
 
-```
+```yaml
 - object: Person
   count: 3
   fields:
@@ -306,7 +313,7 @@ Now person has a field called `pet` which refers to `Animal` rows and those anim
 
 Let’s look at the output:
 
-```
+```json
 Animal(id=1, name=Nicole, owner=Person(1))
 Person(id=1, name=Steven Ellis, pet=Animal(1))
 Animal(id=2, name=Richard, owner=Person(2))
@@ -325,13 +332,13 @@ Sometimes you need to express a relationship between two rows that are not direc
 
 pet_stories_2.yml
 
-```
+```yaml
 - object: PetFood
   nickname: petschoice
   fields:
     name: Pets Choice
     cost: $10
-    
+
 - object: PetFood
   nickname: vetschoice
   fields:
@@ -367,7 +374,7 @@ pet_stories_2.yml
             reference: vetschoice
 ```
 
-```
+```json
 PetFood(id=1, name=Pets Choice, cost=$10)
 PetFood(id=2, name=Vets Choice, cost=$12)
 Animal(id=1, owner=Person, name=Dustin, species=canine, food=PetFood(1))
@@ -395,13 +402,13 @@ Fields can refer to functions which randomize, compute or look up data. We can d
 
 This function allows you to look up a previously created row (object) and make a reference to it.
 
-```
-      - object: Animal
-        fields:
-          name:
-            fake: first_name
-          owner:
-            reference: Person
+```yaml
+- object: Animal
+  fields:
+    name:
+      fake: first_name
+    owner:
+      reference: Person
 ```
 
 The reference function looks for an ancestor object by table name (`Person`, in this example) or a previously created nicknamed object by `nickname`.
@@ -410,7 +417,7 @@ The reference function looks for an ancestor object by table name (`Person`, in 
 
 Function to choose an option randomly from a list:
 
-```
+```yaml
 Payment_Method:
   random_choice:
     - Cash
@@ -420,7 +427,7 @@ Payment_Method:
 
 You can either pick with even odds as above, or supply odds as a percentage:
 
-```
+```yaml
 StageName:
  random_choice:
     Closed Won: 60%
@@ -434,7 +441,7 @@ You can do more sophisticated randomness with features that will be discussed in
 
 Generate fake data using functions from the [faker](https://github.com/joke2k/faker) library:
 
-```
+```yaml
 - object: Account
   fields:
     Name:
@@ -455,7 +462,7 @@ https://faker.readthedocs.io/en/stable/providers.html
 
 You can also include Faker extension libraries after you’ve added them to your Python install:
 
-```
+```yaml
 - plugin: faker_microservice.Provider
 - object: OBJ
     fields:
@@ -466,7 +473,7 @@ You can also include Faker extension libraries after you’ve added them to your
 
 You would install that provider like this:
 
-```
+```bash
 $ pip install faker_microservice
 ```
 
@@ -478,13 +485,13 @@ And you could make your own providers as well.
 
 Fake can be called as an inline function in an expression:
 
-```
+```yaml
 FullName: ${{fake.first_name}} Johnson
 ```
 
 You can also call these functions with arguments as described in Faker's [documentation](https://faker.readthedocs.io/en/master/providers.html)
 
-```
+```yaml
 country: ${{fake.country_code(representation='alpha-2')}}
 ```
 
@@ -492,7 +499,7 @@ country: ${{fake.country_code(representation='alpha-2')}}
 
 You can specify internationally appropriate fakes for many different kind of names (e.g. person, company) like this:
 
-```
+```yaml
 - object: Viking
   fields:
     Name:
@@ -507,7 +514,7 @@ You can infer which Faker providers are internationalizable by looking through t
 
 You can also call this as an inline function:
 
-```
+```yaml
 lars_or_alf_or_something: ${{i18n_fake(locale="no_NO", fake='first_name')}}
 ```
 
@@ -515,7 +522,7 @@ lars_or_alf_or_something: ${{i18n_fake(locale="no_NO", fake='first_name')}}
 
 Pick a random date in some date range
 
-```
+```yaml
 - object: OBJ
     fields:
     date:
@@ -573,7 +580,7 @@ some_number: A number ${{random_number(min=5, max=10)}}
 
 `If` allows you to make field values conditional on other field values.
 
-```
+```yaml
 - object: Person
   fields:
     gender:
@@ -614,14 +621,33 @@ The `child_index` variable returns a counter of how many objects from this templ
 during the execution of the nearest parent template. It resets each time the parent template is
 executed again.
 
-  ```
-  child_num: Child number ${{child_index}}
-  ```
+```yaml
+child_index: Child number ${{child_index}}
+```
+
+The `id` variable returns a unique identifier for the current Object/Row to allow you to construct unique identifiers.
+
+```yaml
+fields:
+  name: ${{fake.last_name}} Household ${{id}}
+```
+
+The `today` variable returns a date
+representing the current date. This date
+will not chanage during the execution of
+a single recipe.
+
+The `fake` variable gives access to faker as described elsewhere in this documentation.
+
+The `context.id` variable is a unique identifyer representing the current Object Template (as opposed to Object/Row).
+
+The `context.filename` variable represents the file containing the template. This is useful
+for relative paths.
 
 The `date` function can either coerce a string into a date object for calculations OR generate
 a new date object from year/month/day parts:
 
-```
+```yaml
     the_date: ${{date("2018-10-30")}}
     another_date: ${{date(year=2018, month=11, day=30)}}
 ```
@@ -629,7 +655,7 @@ a new date object from year/month/day parts:
 The `relativedelta` [function](https://dateutil.readthedocs.io/en/stable/relativedelta.html) 
 from `dateutil` is available for use in calculations like this:
 
-```
+```yaml
 ${{ date(Date_Established__c) + relativedelta(months=child_index) }}
 ```
 
@@ -639,7 +665,7 @@ Macros allow you to re-use groups of fields instead of repeating them manually.
 
 `evolution.yml`
 
-```
+```yaml
 - macro: canine
   fields:
     sound: barks
@@ -661,7 +687,7 @@ Macros allow you to re-use groups of fields instead of repeating them manually.
 
 Which generates:
 
-```
+```yaml
 Animal(id=1, sound=barks, legs=4.0, family=Caninae, species=dog, home=inside)
 Animal(id=2, sound=barks, legs=4.0, family=Caninae, species=wolf, home=outside)
 ```
@@ -670,7 +696,7 @@ You can include more than one group of macros:
 
 evolution_2.yml
 
-```
+```yaml
 - macro: canine
   fields:
     sound: barks
@@ -691,7 +717,7 @@ evolution_2.yml
 
 Which generates:
 
-```
+```yaml
 Animal(id=1, sound=barks, legs=4.0, family=Caninae, home=inside, eats=petfood, species=dog)
 Animal(id=2, sound=barks, legs=4.0, family=Caninae, home=inside, eats=petfood, species=dog)
 ```
@@ -706,7 +732,7 @@ Fields or friends declared  in the macros listed later override those listed ear
 
 You can include a file by a relative path:
 
-```
+```yaml
 - include_file: child.yml
 ```
 
@@ -716,7 +742,7 @@ This pulls in all of the declarations from that file. That file can itself inclu
 
 Sometimes you would like to include data from another field into the one you are defining now. You can do that with the formula language.
 
-```
+```yaml
 - object: Sale
   fields:
     num_items:
@@ -734,7 +760,7 @@ Sometimes you would like to include data from another field into the one you are
 
 You can make your data more dynamic by using formulas. Formulas use the same functions described in [Function Blocks](#function-blocks), but they can be used inline like this:
 
-```
+```yaml
 - object: Sale
   count: 2
   fields:
@@ -766,7 +792,7 @@ You can pass options (numbers, strings, booleans) to your generator script from 
 
 The first step is to declare the options in your template file:
 
-```
+```yaml
 - option: num_accounts
   default: 10
 ```
@@ -775,15 +801,14 @@ If you do not specify a default, the option is required and the template will no
 
 In your script, you use the value by referring to it in a formula:
 
-
-```
+```yaml
 - object: Account
   count: ${{num_accounts}}
 ```
 
 Of course you can do any math you want in the formula:
 
-```
+```yaml
 - object: Account
   count: ${{num_accounts / 2}}
     field:
@@ -796,13 +821,13 @@ Of course you can do any math you want in the formula:
 
 And then you pass that option like this:
 
-```
+```yaml
 --option numaccounts 10
 ```
 
 ## Command Line Interface
 
-```
+```yaml
 $ snowfakery --help
 
   Usage: snowfakery [OPTIONS] YAML_FILE
@@ -849,16 +874,17 @@ Options:
 
 You create a CSV directory like this:
 
-```
-python snowfakery.py template.yml --output-format csv --output-folder csvfiles
+```basy
+$ snowfakery template.yml --output-format csv --output-folder csvfiles
+...
 ```
 
 This would generate a directory that looks like:
 
-```
-Animal.csv 
-Person.csv 
-PetFood.csv 
+```bash
+Animal.csv
+Person.csv
+PetFood.csv
 csvw_metadata.json
 ```
 
@@ -881,7 +907,7 @@ You can even do this with Object Templates to generate “objects” which are n
 
 Consider the following field definition:
 
-```
+```yaml
 StageName:
  random_choice:
     Closed Won: 5
@@ -897,8 +923,7 @@ Plugins and Providers allow Snowfakery to be extended with Python code. A plugin
 
 You include either Plugins or Providers in a Snowfakery file like this:
 
-
-```
+```yaml
 - plugin: package.module.classname
 ```
 
@@ -911,48 +936,56 @@ To write a new Provider, please refer to the documentation for Faker at https://
 Snowfakery has a "Math" plugin which gives you access to all features from Python's
 [math](https://docs.python.org/3/library/math.html) module. For example:
 
-```
+```yaml
 - plugin: snowfakery.standard_plugins.Math
 - object: OBJ
   fields:
     twelve:
         Math.sqrt: 144
 ```
+
 Or:
-```
+
+```yaml
 - plugin: snowfakery.standard_plugins.Math
 - object: OBJ
   fields:
     twelve: ${Math.sqrt}
+```
 
 ### Custom Plugins
 
 To write a new Plugin, make a class that inherits from `SnowfakeryPlugin` and implements either the `custom_functions()` method or a `Functions` nested class. The nested class is simple: each method represents a function to expose in the namespace. In this case the function name would be `DoublingPlugin.double`.
 
-```
-class DoublingPlugin(SnowfakeryPlugin):
-    class Functions:
-        def double(self, value):
-            return value * 2
+```python
+    class DoublingPlugin(SnowfakeryPlugin):
+        class Functions:
+            def double(self, value):
+                return value * 2
 ```
 
-Make sure to accept `*args` and `**kwargs` to allow for future extensibility of the method signature, and return an object that implements the namespace that you would like to expose. Once again, the function name would be `DoublingPlugin.double`.
+Alternately, you can implement the custom_functions method to return an
+object with the attributes that implement your namespace:
 
+```python
+    class Doubler:
+      def double(self, value):
+          return value * 2
 ```
-class Doubler:
-   def double(self, value):
-       return value * 2
 
-class DoublingPlugin(SnowfakeryPlugin):
-    def custom_functions(self, *args, **kwargs):
-        return Doubler()
+```python
+    class DoublingPlugin(SnowfakeryPlugin):
+        def custom_functions(self, *args, **kwargs):
+            return Doubler()
 ```
+
+Make sure to accept `*args` and `**kwargs` to allow for future extensibility of the method signature.
 
 Despite the name, plugins can also include data values rather than functions in either form of plugin. Plugins essentially use Python's `getattr` to find attributes, properties, methods or functions in the namespace of the object you return from `custom_functions()`.
 
 Plugin functions can store persistent information in a Python dictionary called self.context.context_vars(). It will always be supplied to your plugin. For example, here is a simple plugin that counts:
 
-```
+```python
 class PluginThatCounts(SnowfakeryPlugin):
     class Functions:
         def count(self):
@@ -962,11 +995,19 @@ class PluginThatCounts(SnowfakeryPlugin):
             return context_vars["count"]
 ```
 
+Plugins also have access to a dictionary called `self.context.field_vars()` whic
+represents the values that would be available to a formula running in the same context.
+
+Plugins can return normal Python primitive types, datetime.date, `ObjectRow` or `PluginResult` objects. `ObjectRow` objects represent new output records/objects. `PluginResult` objects
+expose a namespace that other code can access through dot-notation. PluginResults can be
+initialized with either a dict or an object that exposes the namespace through Python 
+getattr().
+
 In the rare event that a plugin has a function which need its arguments to be passed to it unevaluated, for later (perhaps conditional) evaluation, you can use the `@snowfakery.lazy decorator`. Then you can evaluate the arguments with `self.context.evaluate()`. 
 
 For example:
 
-```
+```python
 class DoubleVisionPlugin(SnowfakeryPlugin):
     class Functions:
         @lazy
@@ -974,48 +1015,48 @@ class DoubleVisionPlugin(SnowfakeryPlugin):
             "Evaluates its argument 0 times or twice"
             rc = f"{self.context.evaluate(value)} : {self.context.evaluate(value)}"
 
-           return rc
+          return rc
 ```
 
 Every second time this is called, it will evaluate its argument twice, and stick the two results into a string. For example, if it were called with a call to `random_number`, you would get two different random numbers rather than the same number twice. If it were called with the counter from above, you would get two different counter values in the string.
 
-
-```
-        - plugin: tests.test_custom_plugins_and_providers.DoubleVisionPlugin
-        - plugin: tests.test_custom_plugins_and_providers.PluginThatNeedsState
-        - object: OBJ
-          fields:
-            some_value:
-                - DoubleVisionPlugin.do_it_twice:
-                    - abc
-            some_value_2:
-                - DoubleVisionPlugin.do_it_twice:
-                    - ${{PluginThatNeedsState.count()}}
-```
-
-This would output an `OBJ` row with values 
-
-```
-`{'id': 1, 'some_value': 'abc : abc', 'some_value_2': '1 : 2'})`
+```yaml
+- plugin: tests.test_custom_plugins_and_providers.DoubleVisionPlugin
+- plugin: tests.test_custom_plugins_and_providers.PluginThatNeedsState
+- object: OBJ
+  fields:
+    some_value:
+        - DoubleVisionPlugin.do_it_twice:
+            - abc
+    some_value_2:
+        - DoubleVisionPlugin.do_it_twice:
+            - ${{PluginThatNeedsState.count()}}
 ```
 
-## Using Snowfakery within CumulusCI
+This would output an `OBJ` row with values:
+
+```json
+{'id': 1, 'some_value': 'abc : abc', 'some_value_2': '1 : 2'})
+```
+## Using Snowfakery within CumulusC
 
 You can verify that a Snowfakery-compatible version of CumulusCI is installed like this:
 
-```
-cci task info generate_and_load_from_yaml
+```bash
+    cci task info generate_and_load_from_yaml
 ```
 
 or
 
-```
-cci task run generate_and_load_from_yaml
+```bash
+$ cci task run generate_and_load_from_yaml
 ```
 
 If its properly configured, you can use the built-in documentation to invoke Snowfakery options through their CumulusCI names. But for example, you would often run it like this:
 
-`cci task run generate_and_load_from_yaml -o generator_yaml datasets/some_snowfakery_yaml -o num_records 1000 -o num_records_tablename Account —org dev`
+```bash
+$ cci task run generate_and_load_from_yaml -o generator_yaml datasets/some_snowfakery_yaml -o num_records 1000 -o num_records_tablename Account —org dev`
+```
 
 Options (tbd):
 
@@ -1057,46 +1098,44 @@ To specify a record type for a record, just put the Record Type’s API Name in 
 
 ## Appendix: The Age Old Puzzle
 
-
-
-```
-# As I was going to St. Ives,
-# I met a man with seven wives,
-# Each wife had seven sacks,
-# Each sack had seven cats,
-# Each cat had seven kits:
-# Kits, cats, sacks, and wives,
-# How many were there going to St. Ives?
-#
-# https://en.wikipedia.org/wiki/As_I_was_going_to_St_Ives
-- object: narrator
-- object: man
-  fields:
-    wives:
-      - object: woman
-        count: 7
-        fields:
-          luggage:
-            - object: sack
-              count: 7
-              fields:
-                contents:
-                  - object: cat
-                    count: 7
-                    fields:
-                      offspring:
-                      - object: kit
+```yaml
+    # As I was going to St. Ives,
+    # I met a man with seven wives,
+    # Each wife had seven sacks,
+    # Each sack had seven cats,
+    # Each cat had seven kits:
+    # Kits, cats, sacks, and wives,
+    # How many were there going to St. Ives?
+    #
+    # https://en.wikipedia.org/wiki/As_I_was_going_to_St_Ives
+    - object: narrator
+    - object: man
+      fields:
+        wives:
+          - object: woman
+            count: 7
+            fields:
+              luggage:
+                - object: sack
+                  count: 7
+                  fields:
+                    contents:
+                      - object: cat
                         count: 7
-- object: stats
-  fields:
-    num_narrators: ${{ man.id }}
-    num_men: ${{ man.id }}
-    num_women: ${{ woman.id }}
-    num_sack: ${{ sack.id }}
-    num_cat: ${{ cat.id }}
-    num_kittens: ${{ kit.id }}
-    everyone: ${{  num_men + num_narrators + num_women + num_sack + num_cat + num_kittens }}
-    going_to_st_ives: ${{ num_narrators }}
+                        fields:
+                          offspring:
+                          - object: kit
+                            count: 7
+    - object: stats
+      fields:
+        num_narrators: ${{ man.id }}
+        num_men: ${{ man.id }}
+        num_women: ${{ woman.id }}
+        num_sack: ${{ sack.id }}
+        num_cat: ${{ cat.id }}
+        num_kittens: ${{ kit.id }}
+        everyone: ${{  num_men + num_narrators + num_women + num_sack + num_cat + num_kittens }}
+        going_to_st_ives: ${{ num_narrators }}
 ```
 
 What does it output as its last row? 
