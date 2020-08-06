@@ -463,8 +463,8 @@ https://faker.readthedocs.io/en/stable/providers.html
 You can also include Faker extension libraries after you’ve added them to your Python install:
 
 ```yaml
-- plugin: faker_microservice.Provider
-- object: OBJ
+ - plugin: faker_microservice.Provider
+ - object: OBJ
     fields:
     service_name:
         fake:
