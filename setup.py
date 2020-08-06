@@ -25,7 +25,7 @@ setuptools.setup(
     entry_points={"console_scripts": ["snowfakery=snowfakery.cli:main"]},
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/SalesforceFoundation/Snowfakery",
+    url="https://github.com/SFDO-Tooling/Snowfakery",
     packages=setuptools.find_packages(),
     package_dir={"snowfakery": "snowfakery"},
     classifiers=[

@@ -4,6 +4,10 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 1.0.1
+
+Update URLs for PyPI. No changes to the Snowfakery code itself.
+
 ## Snowfakery 1.0.0
 
 Add child_index feature for calculating the index number of each child object (see documentation for more information).
