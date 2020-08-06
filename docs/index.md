@@ -74,7 +74,6 @@ Let’s make this example more interesting:
 
 persons_of_interest.yml
 
-
 ```yaml
 - object: Person
     count: 3
@@ -147,13 +146,13 @@ If you’re lost: don't worry! Those are a lot of new concepts at once, and you 
 
 But in case you’re in a hurry: In this case we're creating 3 Person objects. Each one has a name, age, dog and cat. Each dog or cat is an Animal, so we'll get 2 animals per Person or a total of 6. Each animal has a favorite food, so we'll get 6 PetFood objects as well.
 
-<img src='images/img1.png' id='PJUACATPCzI' alt='Relationship diagram' width='800' height='190'>Later, we’ll discuss how we could have just 2 PetFood objects which are shared. We’ll also discuss how we could randomly select a Pet species or Food. 
+<img src='images/img1.png' id='PJUACATPCzI' alt='Relationship diagram' width='800' height='190'>Later, we’ll discuss how we could have just 2 PetFood objects which are shared. We’ll also discuss how we could randomly select a Pet species or Food.
 
 ## Outputs
 
 Snowfakery builds on a tool called SQLAlchemy, so it gets a variety of database connectors for free:
 
-https://docs.sqlalchemy.org/en/13/dialects/index.html
+<https://docs.sqlalchemy.org/en/13/dialects/index.html>
 
 When integrated with CumulusCI (see [Advanced Features](#advanced-features)) it is possible to output to a Salesforce instance.
 
@@ -165,7 +164,7 @@ CSV output goes to a directory with one CSV file per table and a JSON manifest f
 
 The main, core concept in the language is an “*Object Template*”. It basically represents instructions on how to create a *Row* (or multiple rows) in a database. Rows in turn represent real-world entities like People,  Places or Things and that’s why we use the keyword “Object”.
 
- Each *Row* has a type, which represents — for example — the name of the table it goes in if it is headed for a relational database, or which CSV file it goes in it if it is destined to be output as CSV. You declare the type after the keyword `object`. 
+ Each *Row* has a type, which represents — for example — the name of the table it goes in if it is headed for a relational database, or which CSV file it goes in it if it is destined to be output as CSV. You declare the type after the keyword `object`.
 
 Just as in an Object Relational system, you can think of “Objects” or “Rows” as synonyms (and also synoym with what some systems such as Salesforce call “Records”). Rows are how we represent objects in tables or files.
 
@@ -324,7 +323,7 @@ Person(id=3, name=Corey Zamora, pet=Animal(3))
 
 <img src='images/img4.png' id='PJUACAKTd0o' alt='Relationship Diagram'>
 
-The relationship from the `Person` to the `Animal` is called `pet `and it is expressed simply by embedding the template for Animal in the field named `pet`. 
+The relationship from the `Person` to the `Animal` is called `pet` and it is expressed simply by embedding the template for Animal in the field named `pet`. 
 
 The relationship from `Animal` to `Person` is called `owner` and it is expressed using the `reference` function. The function looks up the YAML tree for the relevant Person row.
 
@@ -458,7 +457,7 @@ Generate fake data using functions from the [faker](https://github.com/joke2k/fa
 
 You can fake all sorts of stuff. Names, addresses, Latin text, English sentences, URLs, etc. The complete list is here:
 
-https://faker.readthedocs.io/en/stable/providers.html
+<https://faker.readthedocs.io/en/stable/providers.html>
 
 You can also include Faker extension libraries after you’ve added them to your Python install:
 
@@ -479,7 +478,7 @@ $ pip install faker_microservice
 
 Here are some Python Faker providers:
 
-https://faker.readthedocs.io/en/master/communityproviders.html
+<https://faker.readthedocs.io/en/master/communityproviders.html>
 
 And you could make your own providers as well.
 
@@ -535,18 +534,18 @@ That would pick a date between Y2K and the present day.
 
 The options `start_date` and `end_date` can take the following forms:
 
-* `YYYY-MM-DD`
-* `+<number>d` : `number` days in the future, e.g. `+10d`
-* `-<number>d` : `number` days in the past, e.g. `-10d`
-* `+<number>m: number` months in the future, e.g. +`10m`
-* `+<number>m`: `number` months in the past, e.g. `-10m`
-* `+<number>y: number` years in the future, e.g. +`10y`
-* `+<number>y`: `number` years in the past, e.g. `-10y`
-* `today` : the date the template is evaluated
+- `YYYY-MM-DD`
+- `+<number>d` : `number` days in the future, e.g. `+10d`
+- `-<number>d` : `number` days in the past, e.g. `-10d`
+- `+<number>m: number` months in the future, e.g. +`10m`
+- `+<number>m`: `number` months in the past, e.g. `-10m`
+- `+<number>y: number` years in the future, e.g. +`10y`
+- `+<number>y`: `number` years in the past, e.g. `-10y`
+- `today` : the date the template is evaluated
 
 Examples: Pick a date between 30 days ago and 108 days in the future:
 
-```
+```yaml
 Payment_Date:
   date_between:
     start_date: -30d
@@ -555,7 +554,7 @@ Payment_Date:
 
 `date_between` can also be used as a function in formulas:
 
-```
+```yaml
 wedding_date: Our big day is ${{date_between(start_date="2022-01-31", end_date="2022-12-31")}}
 ```
 
@@ -563,7 +562,7 @@ wedding_date: Our big day is ${{date_between(start_date="2022-01-31", end_date="
 
 Pick a random number in a range specified by min and max:
 
-```
+```yaml
 age:
   random_number:
     min: 12
@@ -572,7 +571,7 @@ age:
 
 `random_number` can also be used as a function in formulas:
 
-```
+```yaml
 some_number: A number ${{random_number(min=5, max=10)}}
 ```
 
@@ -666,23 +665,23 @@ Macros allow you to re-use groups of fields instead of repeating them manually.
 `evolution.yml`
 
 ```yaml
-- macro: canine
-  fields:
-    sound: barks
-    legs: 4
-    family: Caninae
+ - macro: canine
+   fields:
+      sound: barks
+      legs: 4
+      family: Caninae
 
-- object: Animal
-  include: canine
-  fields:
-    species: dog
-    home: inside
+ - object: Animal
+   include: canine
+   fields:
+      species: dog
+      home: inside
 
-- object: Animal
-  include: canine
-  fields:
-    species: wolf
-    home: outside
+ - object: Animal
+   include: canine
+   fields:
+      species: wolf
+      home: outside
 ```
 
 Which generates:
@@ -697,22 +696,22 @@ You can include more than one group of macros:
 evolution_2.yml
 
 ```yaml
-- macro: canine
-  fields:
-    sound: barks
-    legs: 4
-    family: Caninae
+  - macro: canine
+    fields:
+      sound: barks
+      legs: 4
+      family: Caninae
 
-- macro: domestic
-  fields:
-    home: inside
-    eats: petfood
+  - macro: domestic
+    fields:
+      home: inside
+      eats: petfood
 
-- object: Animal
-  count: 2
-  include: canine, domestic
-  fields:
-    name: dog
+  - object: Animal
+    count: 2
+    include: canine, domestic
+    fields:
+      name: dog
 ```
 
 Which generates:
@@ -772,11 +771,11 @@ You can make your data more dynamic by using formulas. Formulas use the same fun
 
 There is a lot to say about formulas and one day they will all be documented here. In the meantime, here are some general principles:
 
-* use `${{` to start a formula and `}}` to end it
-* use Python expression syntax in the middle
-* field values defined earlier on this object are available as names
-* Use faker values like this: Name: ${{fake.first_name}} Johnson
-* parent (or ancestor) values are available through the parent’s object name. Like Opportunity.amount
+- use `${{` to start a formula and `}}` to end it
+- use Python expression syntax in the middle
+- field values defined earlier on this object are available as names
+- Use faker values like this: Name: ${{fake.first_name}} Johnson
+- parent (or ancestor) values are available through the parent’s object name. Like Opportunity.amount
 
 Formulas are based on a similar language called Jinja2, but we use `${{` and `}}` where Jinja2 uses `{{` and `}}` because our version is more compatible with YAML.
 
@@ -822,7 +821,7 @@ Of course you can do any math you want in the formula:
 And then you pass that option like this:
 
 ```yaml
---option numaccounts 10
+    --option numaccounts 10
 ```
 
 ## Command Line Interface
@@ -937,20 +936,20 @@ Snowfakery has a "Math" plugin which gives you access to all features from Pytho
 [math](https://docs.python.org/3/library/math.html) module. For example:
 
 ```yaml
-- plugin: snowfakery.standard_plugins.Math
-- object: OBJ
-  fields:
-    twelve:
-        Math.sqrt: 144
+  - plugin: snowfakery.standard_plugins.Math
+  - object: OBJ
+    fields:
+      twelve:
+          Math.sqrt: 144
 ```
 
 Or:
 
 ```yaml
-- plugin: snowfakery.standard_plugins.Math
-- object: OBJ
-  fields:
-    twelve: ${Math.sqrt}
+  - plugin: snowfakery.standard_plugins.Math
+  - object: OBJ
+    fields:
+      twelve: ${Math.sqrt}
 ```
 
 ### Custom Plugins
@@ -958,25 +957,25 @@ Or:
 To write a new Plugin, make a class that inherits from `SnowfakeryPlugin` and implements either the `custom_functions()` method or a `Functions` nested class. The nested class is simple: each method represents a function to expose in the namespace. In this case the function name would be `DoublingPlugin.double`.
 
 ```python
-    class DoublingPlugin(SnowfakeryPlugin):
-        class Functions:
-            def double(self, value):
-                return value * 2
+class DoublingPlugin(SnowfakeryPlugin):
+    class Functions:
+        def double(self, value):
+            return value * 2
 ```
 
 Alternately, you can implement the custom_functions method to return an
 object with the attributes that implement your namespace:
 
 ```python
-    class Doubler:
-      def double(self, value):
-          return value * 2
+class Doubler:
+  def double(self, value):
+      return value * 2
 ```
 
 ```python
-    class DoublingPlugin(SnowfakeryPlugin):
-        def custom_functions(self, *args, **kwargs):
-            return Doubler()
+class DoublingPlugin(SnowfakeryPlugin):
+    def custom_functions(self, *args, **kwargs):
+        return Doubler()
 ```
 
 Make sure to accept `*args` and `**kwargs` to allow for future extensibility of the method signature.
@@ -1021,23 +1020,24 @@ class DoubleVisionPlugin(SnowfakeryPlugin):
 Every second time this is called, it will evaluate its argument twice, and stick the two results into a string. For example, if it were called with a call to `random_number`, you would get two different random numbers rather than the same number twice. If it were called with the counter from above, you would get two different counter values in the string.
 
 ```yaml
-- plugin: tests.test_custom_plugins_and_providers.DoubleVisionPlugin
-- plugin: tests.test_custom_plugins_and_providers.PluginThatNeedsState
-- object: OBJ
-  fields:
-    some_value:
-        - DoubleVisionPlugin.do_it_twice:
-            - abc
-    some_value_2:
-        - DoubleVisionPlugin.do_it_twice:
-            - ${{PluginThatNeedsState.count()}}
+  - plugin: tests.test_custom_plugins_and_providers.DoubleVisionPlugin
+  - plugin: tests.test_custom_plugins_and_providers.PluginThatNeedsState
+  - object: OBJ
+    fields:
+      some_value:
+          - DoubleVisionPlugin.do_it_twice:
+              - abc
+      some_value_2:
+          - DoubleVisionPlugin.do_it_twice:
+              - ${{PluginThatNeedsState.count()}}
 ```
 
 This would output an `OBJ` row with values:
 
 ```json
-{'id': 1, 'some_value': 'abc : abc', 'some_value_2': '1 : 2'})
+  {'id': 1, 'some_value': 'abc : abc', 'some_value_2': '1 : 2'})
 ```
+
 ## Using Snowfakery within CumulusC
 
 You can verify that a Snowfakery-compatible version of CumulusCI is installed like this:
@@ -1050,6 +1050,7 @@ or
 
 ```bash
 $ cci task run generate_and_load_from_yaml
+...
 ```
 
 If its properly configured, you can use the built-in documentation to invoke Snowfakery options through their CumulusCI names. But for example, you would often run it like this:
