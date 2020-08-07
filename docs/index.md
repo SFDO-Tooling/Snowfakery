@@ -76,8 +76,8 @@ persons_of_interest.yml
 
 ```yaml
 - object: Person
-    count: 3
-    fields:
+  count: 3
+  fields:
       name:
         fake: name
       age:
@@ -279,7 +279,7 @@ Now each of the 3 people has a Sugar glider for a pet. Which is a good thing, as
 
 Let’s look at what that generates:
 
-```
+```json
 Person(id=1, name=Rachel Thompson, pet=Animal(1))
 Animal(id=2, name=Charles, species=Petaurus Breviceps)
 Person(id=2, name=Alexander Zhang, pet=Animal(2))
@@ -391,7 +391,7 @@ Person(id=3, name=Rebecca Williams, dog=Animal(5), cat=Animal(6))
 
 Funky!
 
-The basic rule is that the last row (object) created with the nickname is the one that is referenced. 
+The basic rule is that the last row (object) created with the nickname is the one that is referenced.
 
 ## Function Blocks
 
@@ -1043,7 +1043,8 @@ This would output an `OBJ` row with values:
 You can verify that a Snowfakery-compatible version of CumulusCI is installed like this:
 
 ```bash
-    cci task info generate_and_load_from_yaml
+$ cci task info generate_and_load_from_yaml
+...
 ```
 
 or
@@ -1056,7 +1057,8 @@ $ cci task run generate_and_load_from_yaml
 If its properly configured, you can use the built-in documentation to invoke Snowfakery options through their CumulusCI names. But for example, you would often run it like this:
 
 ```bash
-$ cci task run generate_and_load_from_yaml -o generator_yaml datasets/some_snowfakery_yaml -o num_records 1000 -o num_records_tablename Account —org dev`
+$ cci task run generate_and_load_from_yaml -o generator_yaml datasets/some_snowfakery_yaml -o num_records 1000 -o num_records_tablename Account —org dev
+...
 ```
 
 Options (tbd):
@@ -1072,11 +1074,11 @@ To specify a record type for a record, just put the Record Type’s API Name in 
 
 ## Snowfakery Glossary
 
-* Object: When we think about our Rows in the context of each other, we often use the word “Object”. That’s because rows often *represent* real-world entities like houses (or at least their, addresses), organizations and people (in this case its acceptable to objectify people). See also: “Rows”
-* Object Template: These represent instructions on how to create a row, or multiple rows in a database. Each row represents a real-world Object.
-* Rows: Rows (often also called “records”) in a database are a unit of related information. For example in Salesforce (which includes a database) a “Contact” has a first name, last name, phone number, etc. Each Contact is a row. “Contact” is the type of each of those rows. Rows represent real-world Objects. See “Objects” above for more information.
-* Recipe: A Snowfakery YAML file instructing Snowfakery on what to generate.
-* YAML: YAML is a relatively simple, human-readable format. You can learn more about it at [yaml.org](http://yaml.org/). But you can also just pick up the basics of it by reading along.
+- Object: When we think about our Rows in the context of each other, we often use the word “Object”. That’s because rows often *represent* real-world entities like houses (or at least their, addresses), organizations and people (in this case its acceptable to objectify people). See also: “Rows”
+- Object Template: These represent instructions on how to create a row, or multiple rows in a database. Each row represents a real-world Object.
+- Rows: Rows (often also called “records”) in a database are a unit of related information. For example in Salesforce (which includes a database) a “Contact” has a first name, last name, phone number, etc. Each Contact is a row. “Contact” is the type of each of those rows. Rows represent real-world Objects. See “Objects” above for more information.
+- Recipe: A Snowfakery YAML file instructing Snowfakery on what to generate.
+- YAML: YAML is a relatively simple, human-readable format. You can learn more about it at [yaml.org](http://yaml.org/). But you can also just pick up the basics of it by reading along.
 
 ## Internal Software Architecture
 
@@ -1139,9 +1141,8 @@ To specify a record type for a record, just put the Record Type’s API Name in 
         going_to_st_ives: ${{ num_narrators }}
 ```
 
-What does it output as its last row? 
+What does it output as its last row?
 
 This (incomplete) picture probably won’t help....
 
 <img src='images/img7.png' id='PJUACAyJrGL' alt='Silly diagram'>
-
