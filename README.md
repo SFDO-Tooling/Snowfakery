@@ -6,6 +6,4 @@ To tell Snowfakery what data you want to generate, you need to write a Recipe fi
 
 Snowfakery can write its output to stdout, or any database accessible to SQLAlchemy. **When it is embedded in CumulusCI it can output to a Salesforce org**. Adding new output formats is fairly straightforward and open source contributions of that form are gratefully accepted.
 
-[Documentation](./docs/index.md)
-
-Documentation will move to Sphinx and readthedocs soon.
+[Documentation](https://github.com/SFDO-Tooling/Snowfakery/blob/master/docs/index.md)
