@@ -6,6 +6,10 @@ from random import shuffle
 
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.sql.expression import func, select
+from sqlalchemy.sql.elements import quoted_name
+
+import yaml
+from yaml.representer import Representer
 
 from snowfakery.plugins import SnowfakeryPlugin, PluginResult
 
@@ -211,3 +215,6 @@ def chdir(path):
         yield
     finally:
         os.chdir(cwd)
+
+
+yaml.SafeDumper.add_representer(quoted_name, Representer.represent_str)

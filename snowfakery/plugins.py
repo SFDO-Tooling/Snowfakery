@@ -1,5 +1,8 @@
 from typing import Any, Callable, Mapping
 
+import yaml
+from yaml.representer import Representer
+
 
 class SnowfakeryPlugin:
     """Base class for all plugins.
@@ -75,11 +78,19 @@ def lazy(func: Any) -> Callable:
 
 
 class PluginResult:
-    def __init__(self, result):
+    def __init__(self, result: Mapping):
         self.result = result
 
     def __getattr__(self, name):
-        if isinstance(self.result, Mapping):
-            return self.result[name]
-        else:
-            return getattr(self.result, name)
+        return self.result[name]
+
+    def __reduce__(self):
+        return (self.__class__, (dict(self.result),))
+
+
+# round-trip PluginResult objects through continuation YAML if needed.
+yaml.SafeDumper.add_representer(PluginResult, Representer.represent_object)
+yaml.SafeLoader.add_constructor(
+    "tag:yaml.org,2002:python/object/apply:snowfakery.plugins.PluginResult",
+    lambda loader, node: PluginResult(loader.construct_sequence(node)[0]),
+)
