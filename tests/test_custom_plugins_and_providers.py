@@ -3,7 +3,11 @@ import math
 
 from snowfakery.data_generator import generate
 from snowfakery import SnowfakeryPlugin, lazy
-from snowfakery.data_gen_exceptions import DataGenError
+from snowfakery.data_gen_exceptions import (
+    DataGenError,
+    DataGenTypeError,
+    DataGenImportError,
+)
 
 from unittest import mock
 import pytest
@@ -61,9 +65,10 @@ class TestCustomPlugin:
           fields:
             service_name: saascrmlightning
         """
-        with pytest.raises(TypeError) as e:
+        with pytest.raises(DataGenTypeError) as e:
             generate(StringIO(yaml), {})
         assert "TestCustomPlugin" in str(e.value)
+        assert ":2" in str(e.value)
 
     def test_missing_plugin(self):
         yaml = """
@@ -72,7 +77,7 @@ class TestCustomPlugin:
           fields:
             service_name: saascrmlightning
         """
-        with pytest.raises(ImportError) as e:
+        with pytest.raises(DataGenImportError) as e:
             generate(StringIO(yaml), {})
         assert "xyzzy" in str(e.value)
 

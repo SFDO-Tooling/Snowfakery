@@ -19,6 +19,7 @@ from .data_generator_runtime_object_model import (
 )
 
 from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError, DataGenError
+from snowfakery.plugins import resolve_plugin
 
 SHARED_OBJECT = "#SHARED_OBJECT"
 
@@ -31,9 +32,7 @@ LineTracker = namedtuple("LineTracker", ["filename", "line_num"])
 
 
 class ParseResult:
-    def __init__(
-        self, options, tables: Mapping, templates, plugins: Sequence[str] = ()
-    ):
+    def __init__(self, options, tables: Mapping, templates, plugins: Sequence = ()):
         self.options = options
         self.tables = tables
         self.templates = templates
@@ -464,7 +463,12 @@ def parse_top_level_elements(path: Path, data: List, context: ParseContext):
     templates.extend(parse_included_files(path, data, context))
     context.options.extend(top_level_objects["option"])
     context.macros.update({obj["macro"]: obj for obj in top_level_objects["macro"]})
-    context.plugins.extend([obj["plugin"] for obj in top_level_objects["plugin"]])
+    context.plugins.extend(
+        [
+            resolve_plugin(obj["plugin"], obj["__line__"])
+            for obj in top_level_objects["plugin"]
+        ]
+    )
     templates.extend(top_level_objects["object"])
     return templates
 

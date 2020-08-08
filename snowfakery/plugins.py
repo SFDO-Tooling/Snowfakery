@@ -1,4 +1,10 @@
 from typing import Any, Callable
+from importlib import import_module
+
+
+from faker.providers import BaseProvider as FakerProvider
+
+import snowfakery.data_gen_exceptions as exc
 
 
 class SnowfakeryPlugin:
@@ -72,3 +78,25 @@ def lazy(func: Any) -> Callable:
     """A lazy function is one that expects its arguments to be unparsed"""
     func.lazy = True
     return func
+
+
+def resolve_plugin(plugin: str, lineinfo) -> object:
+    "Resolve a plugin to a class"
+    module_name, class_name = plugin.rsplit(".", 1)
+    try:
+        module = import_module(module_name)
+    except ModuleNotFoundError as e:
+        raise exc.DataGenImportError(
+            f"Cannot find plugin: {e}", lineinfo.filename, lineinfo.line_num
+        )
+    cls = getattr(module, class_name)
+    if issubclass(cls, FakerProvider):
+        return (FakerProvider, cls)
+    elif issubclass(cls, SnowfakeryPlugin):
+        return (SnowfakeryPlugin, cls)
+    else:
+        raise exc.DataGenTypeError(
+            f"{cls} is not a Faker Provider nor Snowfakery Plugin",
+            lineinfo.filename,
+            lineinfo.line_num,
+        )
