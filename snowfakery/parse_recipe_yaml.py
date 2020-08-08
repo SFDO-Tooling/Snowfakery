@@ -9,6 +9,7 @@ from typing import IO, List, Dict, Union, Tuple, Any, Iterable, Sequence, Mappin
 import yaml
 from yaml.composer import Composer
 from yaml.constructor import SafeConstructor
+from yaml.error import YAMLError
 
 from .data_generator_runtime_object_model import (
     ObjectTemplate,
@@ -475,7 +476,14 @@ def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
         path = Path(fsdecode(stream.name)).absolute()
     else:
         path = Path("<stream>")
-    data, line_numbers = yaml_safe_load_with_line_numbers(stream, str(path))
+    try:
+        data, line_numbers = yaml_safe_load_with_line_numbers(stream, str(path))
+    except YAMLError as y:
+        raise DataGenSyntaxError(
+            f"There is a problem with your yaml file:\n{y}",
+            str(path),
+            y.problem_mark.line,
+        )
     context.line_numbers.update(line_numbers)
 
     if not isinstance(data, list):

@@ -89,3 +89,12 @@ class TestErrors(unittest.TestCase):
             generate(StringIO(yaml))
         assert "Cannot evaluate function" in str(e.exception)
         assert ":6" in str(e.exception)
+
+    def test_yaml_error(self):
+        yaml = """
+        - object: B                             #2
+            velcro: C                             #3
+        """
+        with self.assertRaises(DataGenSyntaxError) as e:
+            generate(StringIO(yaml), {}, None)
+        assert str(e.exception)[-2:] == ":2"
