@@ -7,9 +7,9 @@ from snowfakery.parse_recipe_yaml import (
     categorize_top_level_objects,
     ParseContext,
     LineTracker,
-    DataGenError,
     parse_file,
 )
+from snowfakery.data_gen_exceptions import DataGenError
 from tempfile import TemporaryDirectory
 
 linenum = {"__line__": LineTracker("f", 5)}

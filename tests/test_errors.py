@@ -97,4 +97,4 @@ class TestErrors(unittest.TestCase):
         """
         with self.assertRaises(DataGenSyntaxError) as e:
             generate(StringIO(yaml), {}, None)
-        assert str(e.exception)[-2:] == ":2"
+        assert str(e.exception)[-2:] == ":3"

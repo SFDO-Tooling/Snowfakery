@@ -19,7 +19,7 @@ from .data_generator_runtime_object_model import (
     ReferenceValue,
 )
 
-from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError, DataGenError
+import snowfakery.data_gen_exceptions as exc
 
 SHARED_OBJECT = "#SHARED_OBJECT"
 
@@ -108,10 +108,10 @@ class ParseContext:
         self.current_parent_object = obj
         try:
             yield
-        except DataGenError:
+        except exc.DataGenError:
             raise
         except Exception as e:
-            raise DataGenSyntaxError(str(e), **self.line_num()) from e
+            raise exc.DataGenSyntaxError(str(e), **self.line_num()) from e
         finally:
             self.current_parent_object = _old_parsed_template
 
@@ -165,11 +165,11 @@ def parse_structured_value(
     """
     top_level = removeline_numbers(field).items()
     if not top_level:
-        raise DataGenSyntaxError(
+        raise exc.DataGenSyntaxError(
             f"Strange datastructure ({field})", **context.line_num(field)
         )
     elif len(top_level) > 1:
-        raise DataGenSyntaxError(
+        raise exc.DataGenSyntaxError(
             f"Extra keys for field {name} : {top_level}", **context.line_num(field)
         )
     [[function_name, args]] = top_level
@@ -195,7 +195,7 @@ def parse_field_value(
         # a mistake and we can infer their real meaning
         return parse_field_value(name, field[0], context)
     else:
-        raise DataGenSyntaxError(
+        raise exc.DataGenSyntaxError(
             f"Unknown field {type(field)} type for {name}. Should be a string or 'object': \n {field} ",
             **(context.line_num(field) or context.line_num()),
         )
@@ -213,7 +213,7 @@ def parse_field(name: str, definition, context: ParseContext) -> FieldFactory:
 def parse_fields(fields: Dict, context: ParseContext) -> List[FieldFactory]:
     with context.change_current_parent_object(fields):
         if not isinstance(fields, dict):
-            raise DataGenSyntaxError(
+            raise exc.DataGenSyntaxError(
                 "Fields should be a dictionary (should not start with -) ",
                 **context.line_num(),
             )
@@ -237,7 +237,9 @@ def include_macro(
 ) -> Tuple[List[FieldFactory], List[TemplateLike]]:
     macro = context.macros.get(name)
     if not macro:
-        raise DataGenNameError(f"Cannot find macro named {name}", **context.line_num())
+        raise exc.DataGenNameError(
+            f"Cannot find macro named {name}", **context.line_num()
+        )
     parsed_macro = parse_element(
         macro, "macro", {}, {"fields": Dict, "friends": List}, context
     )
@@ -368,11 +370,13 @@ def parse_element(
         for key in dct:
             key_definition = expected_keys.get(key)
             if not key_definition:
-                raise DataGenError(f"Unexpected key: {key}", **context.line_num(key))
+                raise exc.DataGenError(
+                    f"Unexpected key: {key}", **context.line_num(key)
+                )
             else:
                 value = dct[key]
                 if not isinstance(value, key_definition):
-                    raise DataGenError(
+                    raise exc.DataGenError(
                         f"Expected `{key}` to be of type {key_definition} instead of {type(value)}.",
                         **context.line_num(dct),
                     )
@@ -381,7 +385,7 @@ def parse_element(
 
         missing_keys = set(mandatory_keys) - set(dct.keys())
         if missing_keys:
-            raise DataGenError(
+            raise exc.DataGenError(
                 f"Expected to see `{missing_keys}` in `{element_type}``.",
                 **context.line_num(dct),
             )
@@ -410,7 +414,7 @@ def parse_included_file(
     inclusion_path = parent_path.parent / relpath
     # someday add a check that we don't go outside of the project dir
     if not inclusion_path.exists():
-        raise DataGenError(
+        raise exc.DataGenError(
             f"Cannot load include file {inclusion_path}", **linenum._asdict()
         )
     with inclusion_path.open() as f:
@@ -439,7 +443,7 @@ def categorize_top_level_objects(data: List, context: ParseContext):
     assert isinstance(data, list)
     for obj in data:
         if not isinstance(obj, dict):
-            raise DataGenSyntaxError(
+            raise exc.DataGenSyntaxError(
                 f"Top level elements in a data generation template should all be dictionaries, not {obj}",
                 **context.line_num(data),
             )
@@ -447,7 +451,7 @@ def categorize_top_level_objects(data: List, context: ParseContext):
         for collection in top_level_collections:
             if obj.get(collection):
                 if parent_collection:
-                    raise DataGenError(
+                    raise exc.DataGenError(
                         f"Top level element seems to match two name patterns: {collection, parent_collection}",
                         **context.line_num(obj),
                     )
@@ -455,7 +459,9 @@ def categorize_top_level_objects(data: List, context: ParseContext):
         if parent_collection:
             top_level_collections[parent_collection].append(obj)
         else:
-            raise DataGenError(f"Unknown object type {obj}", **context.line_num(obj))
+            raise exc.DataGenError(
+                f"Unknown object type {obj}", **context.line_num(obj)
+            )
     return top_level_collections
 
 
@@ -479,15 +485,13 @@ def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
     try:
         data, line_numbers = yaml_safe_load_with_line_numbers(stream, str(path))
     except YAMLError as y:
-        raise DataGenSyntaxError(
-            f"There is a problem with your yaml file:\n{y}",
-            str(path),
-            y.problem_mark.line,
+        raise exc.DataGenYamlSyntaxError(
+            str(y), str(path), y.problem_mark.line + 1,
         )
     context.line_numbers.update(line_numbers)
 
     if not isinstance(data, list):
-        raise DataGenSyntaxError(
+        raise exc.DataGenSyntaxError(
             "Generator file should be a list (use '-' on top-level lines)",
             stream_name,
             1,
