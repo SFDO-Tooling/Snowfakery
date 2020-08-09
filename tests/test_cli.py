@@ -172,10 +172,11 @@ class TestGenerateFromCLI:
                 output = f.read()
             assert len(re.findall(r"Account\(", output)) == 5
 
-    def test_from_cli__generate_mapping_file(self, capsys):
+    def test_from_cli__continuation(self, capsys):
         with TemporaryDirectory() as t:
             mapping_file_path = Path(t) / "mapping.yml"
-            database_path = f"sqlite:///{t}/foo.db"
+            database_path = f"{t}/foo.db"
+            database_url = f"sqlite:///{database_path}"
             continuation_file = Path(t) / "continuation.yml"
             assert not mapping_file_path.exists()
             generate_cli.main(
@@ -184,25 +185,61 @@ class TestGenerateFromCLI:
                     "--generate-cci-mapping-file",
                     mapping_file_path,
                     "--dburl",
-                    database_path,
+                    database_url,
                     "--generate-continuation-file",
                     continuation_file,
                 ],
                 standalone_mode=False,
             )
             assert mapping_file_path.exists()
+            Path(database_path).unlink()
             generate_cli.main(
                 [
                     str(sample_yaml),
                     "--cci-mapping-file",
                     mapping_file_path,
                     "--dburl",
-                    database_path,
+                    database_url,
                     "--continuation-file",
                     continuation_file,
                 ],
                 standalone_mode=False,
             )
+
+    def test_from_cli__checks_tables_are_empty(self, capsys):
+        with TemporaryDirectory() as t:
+            mapping_file_path = Path(t) / "mapping.yml"
+            database_path = f"{t}/foo.db"
+            database_url = f"sqlite:///{database_path}"
+            continuation_file = Path(t) / "continuation.yml"
+            assert not mapping_file_path.exists()
+            generate_cli.main(
+                [
+                    str(sample_yaml),
+                    "--generate-cci-mapping-file",
+                    mapping_file_path,
+                    "--dburl",
+                    database_url,
+                    "--generate-continuation-file",
+                    continuation_file,
+                ],
+                standalone_mode=False,
+            )
+            assert mapping_file_path.exists()
+            with pytest.raises(ClickException) as e:
+                generate_cli.main(
+                    [
+                        str(sample_yaml),
+                        "--cci-mapping-file",
+                        mapping_file_path,
+                        "--dburl",
+                        database_url,
+                        "--continuation-file",
+                        continuation_file,
+                    ],
+                    standalone_mode=False,
+                )
+                assert "Table already exists" in str(e.value)
 
     def test_image_outputs(self):
         pytest.importorskip("pygraphviz")
