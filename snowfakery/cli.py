@@ -175,10 +175,7 @@ def generate_cli(
                 raise e
             else:
                 click.echo("")
-                click.echo(
-                    "An error occurred. If you would like to see a Python traceback, "
-                    "use the --debug-internals option."
-                )
+                click.echo(e.prefix)
                 raise click.ClickException(str(e)) from e
 
 
