@@ -6,10 +6,11 @@ from pathlib import Path
 from collections import namedtuple, defaultdict
 from typing import Dict, Union, Optional, Mapping, Callable, Sequence
 
-from sqlalchemy import create_engine, MetaData, Column, Integer, Table, Unicode
+from sqlalchemy import create_engine, MetaData, Column, Integer, Table, Unicode, func
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import create_session
 from sqlalchemy.engine import Engine
+from sqlalchemy.sql import select
 
 from faker.utils.datetime_safe import date as fake_date, datetime as fake_datetime
 
@@ -288,21 +289,7 @@ class SqlOutputStream(OutputStream):
     def create_or_validate_tables(self, inferred_tables: Dict[str, TableInfo]) -> None:
         if self.mappings:
             _validate_fields(self.mappings, inferred_tables)
-            with self.engine.connect() as connection:
-                for mapping in self.mappings.values():
-                    # caller may have already created the tables
-                    # or the table may be defined in two different
-                    # mappings
-                    tablename = mapping["table"]
-                    if (
-                        not self.engine.dialect.has_table(connection, tablename)
-                        and tablename not in self.metadata.tables
-                    ):
-                        create_table_from_mapping(mapping, self.metadata)
-        else:
-            create_tables_from_inferred_fields(
-                inferred_tables, self.engine, self.metadata
-            )
+        create_tables_from_inferred_fields(inferred_tables, self.engine, self.metadata)
         self.metadata.create_all()
         self.base.prepare(self.engine, reflect=True)
 
@@ -327,19 +314,25 @@ def _validate_fields(mappings, tables):
 
 def create_tables_from_inferred_fields(tables, engine, metadata):
     """Create tables based on dictionary of tables->field-list."""
-    for table_name, table in tables.items():
-        columns = [
-            Column(field_name, Unicode(255))
-            for field_name in table.fields
-            if field_name != "id"
-        ]
-        id_column = Column("id", Integer(), primary_key=True, autoincrement=True)
+    with engine.connect() as conn:
+        for table_name, table in tables.items():
+            columns = [
+                Column(field_name, Unicode(255))
+                for field_name in table.fields
+                if field_name != "id"
+            ]
+            id_column = Column("id", Integer(), primary_key=True, autoincrement=True)
 
-        t = Table(table_name, metadata, id_column, *columns)
-        if t.exists():
-            raise DataGenError(
-                f"Table already exists: {table_name} in {engine.url}", None, None
-            )
+            t = Table(table_name, metadata, id_column, *columns)
+            if t.exists():
+                stmt = select([func.count(t.c.id)])
+                count = conn.execute(stmt).first()[0]
+                if count > 0:
+                    raise DataGenError(
+                        f"Table already exists and has data: {table_name} in {engine.url}",
+                        None,
+                        None,
+                    )
 
 
 class GraphvizOutputStream(FileOutputStream):
