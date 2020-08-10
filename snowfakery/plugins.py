@@ -3,6 +3,7 @@ from importlib import import_module
 
 import yaml
 from yaml.representer import Representer
+from faker.providers import BaseProvider as FakerProvider
 
 from .utils.yaml_utils import SnowfakeryDumper
 
@@ -113,10 +114,6 @@ yaml.SafeLoader.add_constructor(
 def resolve_plugin(plugin: str, lineinfo) -> object:
     "Resolve a plugin to a class"
     module_name, class_name = plugin.rsplit(".", 1)
-
-    # delay this import because otherwise:
-    # https://github.com/SFDO-Tooling/Snowfakery/pull/97/checks?check_run_id=960572304
-    from faker.providers import BaseProvider as FakerProvider
 
     try:
         module = import_module(module_name)
