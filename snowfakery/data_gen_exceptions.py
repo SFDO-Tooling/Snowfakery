@@ -1,4 +1,9 @@
 class DataGenError(Exception):
+    prefix = (
+        "An error occurred. If you would like to see a Python traceback, "
+        "use the --debug-internals option."
+    )
+
     def __init__(self, message, filename, line_num):
         self.message = message
         self.filename = filename
@@ -12,6 +17,18 @@ class DataGenError(Exception):
 
 
 class DataGenSyntaxError(DataGenError):
+    pass
+
+
+class DataGenYamlSyntaxError(DataGenSyntaxError):
+    prefix = (
+        "There is a problem with your YAML file.\n"
+        + "Consider installing a YAML Validator Plugin for your editor.\n"
+        + "For example, if you use VSCode, "
+        + "https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml \n"
+        + "Or: https://marketplace.visualstudio.com/items?itemName=docsmsft.docs-yaml \n"
+        + "The error is:\n"
+    )
     pass
 
 
