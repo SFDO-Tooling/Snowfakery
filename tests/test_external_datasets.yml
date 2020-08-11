@@ -1,0 +1,40 @@
+- plugin: snowfakery.standard_plugins.datasets.Dataset
+
+- object: PersonAddress
+  fields:
+      __name_from_db:
+          Dataset.iterate:
+              dataset: sqlite:///test_db.db
+      FirstName: ${{__name_from_db.first_name}}
+      LastName: ${{__name_from_db.last_name}}
+      __address_from_csv:
+          Dataset.iterate:
+              dataset: test_csv.csv
+      Street: ${{__address_from_csv.NUMBER}} ${{__address_from_csv.STREET}}
+      City: ${{__address_from_csv.CITY}}
+
+- object: PersonAddressRandomized
+  fields:
+      __name_from_db:
+          Dataset.permute:
+              dataset: sqlite:///test_db.db
+      FirstName: ${{__name_from_db.first_name}}
+      LastName: ${{__name_from_db.last_name}}
+      __address_from_csv:
+          Dataset.permute:
+              dataset: test_csv.csv
+      Street: ${{__address_from_csv.NUMBER}} ${{__address_from_csv.STREET}}
+      City: ${{__address_from_csv.CITY}}
+
+- object: PersonAddressRandomizedNY
+  fields:
+      __name_from_db:
+          Dataset.permute:
+              dataset: sqlite:///test_db.db
+      FirstName: ${{__name_from_db.first_name}}
+      LastName: ${{__name_from_db.last_name}}
+      __address_from_csv:
+          Dataset.permute:
+              dataset: test_csv.csv
+      Street: ${{__address_from_csv.NUMBER}} ${{__address_from_csv.STREET}}
+      City: ${{__address_from_csv.CITY}}

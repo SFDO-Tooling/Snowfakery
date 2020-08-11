@@ -91,7 +91,7 @@ class SQLDatasetLinearIterator(DatasetIteratorBase):
 
     def start(self):
         self.results = (
-            PluginResult(row) for row in self.engine.execute(select([self.table]))
+            PluginResult(dict(row)) for row in self.engine.execute(select([self.table]))
         )
 
     # TODO: runtime doesn't call this yet
@@ -104,13 +104,13 @@ class SQLDatasetRandomPermutationIterator(SQLDatasetLinearIterator):
 
     def start(self):
         self.results = (
-            PluginResult(row)
+            PluginResult(dict(row))
             for row in self.engine.execute(select([self.table]).order_by(func.random()))
         )
 
 
 class CSVDatasetLinearIterator(DatasetIteratorBase):
-    def __init__(self, datasource: str, should_restart: bool = True):
+    def __init__(self, datasource: Path, should_restart: bool = True):
         self.datasource = datasource
         self.file = open(self.datasource)
         self.should_restart = should_restart
@@ -187,7 +187,7 @@ class Dataset(SnowfakeryPlugin):
                     filename = Path(dataset)
 
                     if not filename.exists():
-                        raise FileNotFoundError(filename)
+                        raise FileNotFoundError("File not found:" + str(filename))
 
                     if filename.suffix != ".csv":
                         raise AssertionError(
