@@ -6,6 +6,7 @@ import pytest
 
 from snowfakery.data_generator import generate
 from snowfakery import data_gen_exceptions as exc
+from snowfakery.standard_plugins.datasets import SQLDatasetRandomPermutationIterator
 
 
 class TestExternalDatasets:
@@ -118,10 +119,21 @@ class TestExternalDatasets:
             % abs_path
         )
 
-        with mock.patch("sqlalchemy.engine.base.Engine.execute") as execute:
-            execute.return_value = [{"first_name": "Mr", "last_name": "T"}]
+        orig_query = SQLDatasetRandomPermutationIterator.query
+
+        called = None
+
+        def new_query(self):
+            nonlocal called
+            called = True
+            return orig_query(self)
+
+        with mock.patch(
+            "snowfakery.standard_plugins.datasets.SQLDatasetRandomPermutationIterator.query",
+            new_query,
+        ):
             generate(StringIO(yaml), {})
-            assert "ORDER BY random()" in str(execute.mock_calls[0][1][0])
+        assert called
 
     def test_csv_missing(self, generated_rows):
         abs_path = str(Path(__file__).parent)

@@ -4,7 +4,7 @@
   fields:
       __name_from_db:
           Dataset.iterate:
-              dataset: sqlite:///test_db.db
+              dataset: sqlite:///databases/test_db.db
       FirstName: ${{__name_from_db.first_name}}
       LastName: ${{__name_from_db.last_name}}
       __address_from_csv:
@@ -17,7 +17,7 @@
   fields:
       __name_from_db:
           Dataset.permute:
-              dataset: sqlite:///test_db.db
+              dataset: sqlite:///databases/test_db.db
       FirstName: ${{__name_from_db.first_name}}
       LastName: ${{__name_from_db.last_name}}
       __address_from_csv:
@@ -30,7 +30,7 @@
   fields:
       __name_from_db:
           Dataset.permute:
-              dataset: sqlite:///test_db.db
+              dataset: sqlite:///databases/test_db.db
       FirstName: ${{__name_from_db.first_name}}
       LastName: ${{__name_from_db.last_name}}
       __address_from_csv:
