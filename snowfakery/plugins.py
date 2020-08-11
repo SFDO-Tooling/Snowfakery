@@ -51,6 +51,9 @@ class SnowfakeryPlugin:
         functions.context = self.context
         return functions
 
+    def close(self, *args, **kwargs):
+        pass
+
 
 class PluginContext:
     "Exposes certain stable internals to plugins"

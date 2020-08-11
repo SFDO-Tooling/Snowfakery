@@ -57,63 +57,62 @@ class DatasetIteratorBase:
     Subclasses should implement 'self.restart' which puts an iterator into 'self.results'
     """
 
-    def __iter__(self):
-        return self
-
     def __next__(self):
         try:
             return next(self.results)
         except StopIteration:
-            if self.should_restart:
-                self.start()
-            else:
-                raise StopIteration("Dataset is finished")
+            self.restart()
 
     def start(self):
-        "Initialize the iterator."
-        self.restart()
+        "Initialize the iterator in self.results."
+        raise NotImplementedError()
 
     def restart(self):
-        raise NotImplementedError()
+        "Restart the iterator by assigning to self.results"
+        self.start()
 
-    def stop(self):
-        raise NotImplementedError()
+    def close(self):
+        "Subclasses should implement this if they need to clean up resources"
+        pass
 
 
-class SQLDatasetLinearIterator(DatasetIteratorBase):
-    "Iterator that reads a SQL table from top to bottom"
-
-    def __init__(self, engine, table, should_restart=True):
-        self.should_restart = should_restart
-        self.engine = engine
+class SQLDatasetIterator(DatasetIteratorBase):
+    def __init__(self, engine, table):
+        self.connection = engine.connect()
         self.table = table
         self.start()
 
     def start(self):
         self.results = (
-            PluginResult(dict(row)) for row in self.engine.execute(select([self.table]))
+            PluginResult(dict(row)) for row in self.connection.execute(self.query())
         )
 
-    # TODO: runtime doesn't call this yet
-    def stop(self):
-        self.engine.close()
+    def close(self):
+        self.connection.close()
+
+    def query(self):
+        "Return a SQL Alchemy SELECT statement"
+        raise NotImplementedError
 
 
-class SQLDatasetRandomPermutationIterator(SQLDatasetLinearIterator):
+class SQLDatasetLinearIterator(SQLDatasetIterator):
+    "Iterator that reads a SQL table from top to bottom"
+
+    def query(self):
+        return select([self.table])
+
+
+class SQLDatasetRandomPermutationIterator(SQLDatasetIterator):
     "Iterator that reads a SQL table in random order"
 
-    def start(self):
-        self.results = (
-            PluginResult(dict(row))
-            for row in self.engine.execute(select([self.table]).order_by(func.random()))
-        )
+    def query(self):
+        return select([self.table]).order_by(func.random())
 
 
 class CSVDatasetLinearIterator(DatasetIteratorBase):
-    def __init__(self, datasource: Path, should_restart: bool = True):
+    def __init__(self, datasource: Path):
         self.datasource = datasource
         self.file = open(self.datasource)
-        self.should_restart = should_restart
         self.start()
 
     def start(self):
@@ -150,7 +149,8 @@ class CSVDatasetRandomPermutationIterator(CSVDatasetLinearIterator):
 
 class Dataset(SnowfakeryPlugin):
     class Functions:
-        record_sets = {}
+
+        datasets = {}
 
         def iterate(self, *args, **kwargs):
             return self._iterate(*args, **kwargs, iteration_mode="linear")
@@ -161,14 +161,12 @@ class Dataset(SnowfakeryPlugin):
         def _iterate(self, dataset, tablename=None, name=None, iteration_mode="linear"):
             name = name or self.context.field_vars()["template"].id
             key = (dataset, tablename, name)
-            dataset_instance = self.record_sets.get(key)
+            dataset_instance = self.datasets.get(key)
             if not dataset_instance:
                 filename = self.context.field_vars()["template"].filename
-                if filename:
-                    rootpath = Path(filename).parent
-                else:
-                    rootpath = "."
-                dataset_instance = self.record_sets[key] = self._load_dataset(
+                assert filename
+                rootpath = Path(filename).parent
+                dataset_instance = self.datasets[key] = self._load_dataset(
                     dataset, tablename, rootpath, iteration_mode
                 )
             rc = next(dataset_instance, None)
@@ -199,6 +197,10 @@ class Dataset(SnowfakeryPlugin):
                     elif iteration_mode == "permute":
                         return CSVDatasetRandomPermutationIterator(filename)
 
+        def close(self):
+            for dataset in self.datasets.values():
+                dataset.close()
+
 
 @contextmanager
 def chdir(path):
@@ -206,9 +208,6 @@ def chdir(path):
 
     Not thread-safe!!!
     """
-    if not path:
-        yield
-        return
     cwd = os.getcwd()
     os.chdir(path)
     try:
