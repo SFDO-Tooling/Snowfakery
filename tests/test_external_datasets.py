@@ -123,6 +123,40 @@ class TestExternalDatasets:
             generate(StringIO(yaml), {})
             assert "ORDER BY random()" in str(execute.mock_calls[0][1][0])
 
+    def test_csv_missing(self, generated_rows):
+        abs_path = str(Path(__file__).parent)
+        yaml = (
+            """
+        - plugin: snowfakery.standard_plugins.datasets.Dataset
+        - object: XXX
+          fields:
+            __address_from_csv:
+              Dataset.iterate:
+                dataset: %s/test_csv_missing.csv
+        """
+            % abs_path
+        )
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml), {})
+        assert "File not found" in str(e.value)
+
+    def test_csv_wrong_name(self, generated_rows):
+        abs_path = str(Path(__file__).parent)
+        yaml = (
+            """
+        - plugin: snowfakery.standard_plugins.datasets.Dataset
+        - object: XXX
+          fields:
+            __address_from_csv:
+              Dataset.iterate:
+                dataset: %s/test_external_datasets.py
+        """
+            % abs_path
+        )
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml), {})
+        assert "Filename extension must be .csv" in str(e.value)
+
     def test_SQL_dataset_bad_tablename(self, generated_rows):
         abs_path = str(Path(__file__).parent)
         yaml = (
@@ -172,3 +206,24 @@ class TestExternalDatasets:
             generate(StringIO(yaml), {})
 
         assert "unable to open database file" in str(e.value)
+
+    def test_SQL_dataset_multitable_file(self, generated_rows):
+        abs_path = str(Path(__file__).parent)
+        yaml = (
+            """
+        - plugin: snowfakery.standard_plugins.datasets.Dataset
+        - object: XXX
+          count: 14
+          fields:
+            __name_from_db:
+              Dataset.iterate:
+                dataset: sqlite:///%s/databases/multitable.db
+            FirstName: ${{__name_from_db.first_name}}
+            LastName: ${{__name_from_db.last_name}}
+        """
+            % abs_path
+        )
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml), {})
+
+        assert "multiple tables in it" in str(e.value)
