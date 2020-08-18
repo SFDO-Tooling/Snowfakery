@@ -1,6 +1,6 @@
 [run]
     source=snowfakery
-[omit]
+omit =
     snowfakery/standard_plugins/statistical_distributions.py
 [report]
 show_missing = True
