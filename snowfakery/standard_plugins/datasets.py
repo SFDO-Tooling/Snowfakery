@@ -45,7 +45,7 @@ def sql_dataset(db_url: str, tablename: str = None, mode="linear"):
         )
     if mode == "linear":
         return SQLDatasetLinearIterator(engine, table)
-    elif mode == "permute":
+    elif mode == "shuffle":
         return SQLDatasetRandomPermutationIterator(engine, table)
     else:
         raise NotImplementedError()
@@ -155,10 +155,11 @@ class Dataset(SnowfakeryPlugin):
         def iterate(self, *args, **kwargs):
             return self._iterate(*args, **kwargs, iteration_mode="linear")
 
-        def permute(self, *args, **kwargs):
-            return self._iterate(*args, **kwargs, iteration_mode="permute")
+        def shuffle(self, *args, **kwargs):
+            return self._iterate(*args, **kwargs, iteration_mode="shuffle")
 
-        def _iterate(self, dataset, tablename=None, name=None, iteration_mode="linear"):
+        def _iterate(self, dataset, table=None, name=None, iteration_mode="linear"):
+            tablename = table
             name = name or self.context.field_vars()["template"].id
             key = (dataset, tablename, name)
             dataset_instance = self.datasets.get(key)
@@ -194,7 +195,7 @@ class Dataset(SnowfakeryPlugin):
 
                     if iteration_mode == "linear":
                         return CSVDatasetLinearIterator(filename)
-                    elif iteration_mode == "permute":
+                    elif iteration_mode == "shuffle":
                         return CSVDatasetRandomPermutationIterator(filename)
 
         def close(self):

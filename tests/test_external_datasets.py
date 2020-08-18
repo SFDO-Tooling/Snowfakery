@@ -66,7 +66,7 @@ class TestExternalDatasets:
           count: 14
           fields:
             __address_from_csv:
-              Dataset.permute:
+              Dataset.shuffle:
                 dataset: %s/test_csv.csv
             City: ${{__address_from_csv.CITY}}
         """
@@ -87,9 +87,9 @@ class TestExternalDatasets:
           count: 14
           fields:
             __name_from_db:
-              Dataset.permute:
+              Dataset.shuffle:
                 dataset: sqlite:///%s/databases/test_db.db
-                tablename: contacts
+                table: contacts
             FirstName: ${{__name_from_db.first_name}}
             LastName: ${{__name_from_db.last_name}}
         """
@@ -101,7 +101,7 @@ class TestExternalDatasets:
         next_7 = [generated_rows.row_values(i, "FirstName") for i in range(7, 14)]
         assert set(first_7) == set(next_7)
 
-    def test_SQL_dataset_permutation_really_permutes(self, generated_rows):
+    def test_SQL_dataset_permutation_really_shuffles(self, generated_rows):
         abs_path = str(Path(__file__).parent)
         yaml = (
             """
@@ -110,9 +110,9 @@ class TestExternalDatasets:
           count: 14
           fields:
             __name_from_db:
-              Dataset.permute:
+              Dataset.shuffle:
                 dataset: sqlite:///%s/databases/test_db.db
-                tablename: contacts
+                table: contacts
             FirstName: ${{__name_from_db.first_name}}
             LastName: ${{__name_from_db.last_name}}
         """
@@ -180,7 +180,7 @@ class TestExternalDatasets:
             __name_from_db:
               Dataset.iterate:
                 dataset: sqlite:///%s/databases/test_db.db
-                tablename: xyzzy
+                table: xyzzy
             FirstName: ${{__name_from_db.first_name}}
             LastName: ${{__name_from_db.last_name}}
         """
