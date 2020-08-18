@@ -1,4 +1,5 @@
 import sys
+import click
 
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.ext.automap import automap_base
@@ -34,6 +35,7 @@ def undo_snake_case(name):
 
 
 def fixup(obj, oids, record_types, relationships):
+    relationships.add_node(obj["nickname"])
     fields = obj["fields"]
     for name, value in fields.items():
         if name == "RecordTypeId":
@@ -48,6 +50,8 @@ def fixup(obj, oids, record_types, relationships):
             fields[name] = True
         elif value == "false":
             fields[name] = False
+        elif isinstance(value, int):
+            fields[name] = value
         else:
             try:
                 fields[name] = look_for_number(value)
@@ -75,6 +79,8 @@ def find_record_types(engine, tables):
     return rc
 
 
+@click.command()
+@click.argument("db_url")
 def main(db_url):
     oids = {}
     objs_by_name = {}
@@ -94,7 +100,12 @@ def main(db_url):
         for row in rows:
             fields = {undo_snake_case(n): v for n, v in row.items() if v}
             obj = {"object": tablename}
-            oid = fields.pop("sf_id", None) or fields.pop("sf_Id", None)
+            oid = str(
+                fields.pop("sf_id", None)
+                or fields.pop("sf_Id", None)
+                or fields.pop("Id", None)
+                or fields.pop("id", None)
+            )
 
             nick = fields.get("Name") or fields.get("name") or person_name(fields) or ""
             obj["nickname"] = " ".join([tablename, oid or str(id(obj)), nick]).strip()
@@ -107,7 +118,10 @@ def main(db_url):
         fixup(obj, oids, record_types, relationships)
 
     objs = []
+
     cycles = nx.simple_cycles(relationships)
+
+    # should be a less aggressive way of doing this:
     for cycle in cycles:
         for nodenum in range(len(cycle) - 1):
             frm = cycle[nodenum]
@@ -124,8 +138,10 @@ def main(db_url):
             assert node in record_types
             continue
 
+    dump(objs, sys.stdout, sort_keys=False)
+
     return objs
 
 
-objs = main("sqlite:////tmp/data.db")
-dump(objs, sys.stdout, sort_keys=False)
+if __name__ == "__main__":
+    main()
