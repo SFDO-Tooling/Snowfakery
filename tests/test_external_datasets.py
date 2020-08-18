@@ -20,8 +20,8 @@ class TestExternalDatasets:
           fields:
             __address_from_csv:
               Dataset.iterate:
-                dataset: %s/test_csv.csv
-            City: ${{__address_from_csv.CITY}}
+                dataset: %s/../examples/datasets/addresses.csv
+            City: ${{__address_from_csv.City}}
         """
             % abs_path
         )
@@ -29,8 +29,8 @@ class TestExternalDatasets:
         assert generated_rows.row_values(0, "City") == "Burnaby"
         assert generated_rows.row_values(1, "City") == "White Rock"
         # wraps around:
-        assert generated_rows.row_values(7, "City") == "Burnaby"
-        assert generated_rows.row_values(8, "City") == "White Rock"
+        assert generated_rows.row_values(7, "City") == "White Rock"
+        assert generated_rows.row_values(8, "City") == "Richmond"
 
     def test_SQL_dataset_linear(self, generated_rows):
         abs_path = str(Path(__file__).parent)
@@ -67,16 +67,16 @@ class TestExternalDatasets:
           fields:
             __address_from_csv:
               Dataset.shuffle:
-                dataset: %s/test_csv.csv
-            City: ${{__address_from_csv.CITY}}
+                dataset: %s/../examples/datasets/addresses.csv
+            City: ${{__address_from_csv.City}}
         """
             % abs_path
         )
         generate(StringIO(yaml), {})
-        first_7 = [generated_rows.row_values(i, "City") for i in range(0, 7)]
-        assert len(first_7) == len(set(first_7))  # 7 unique items, in some order
-        next_7 = [generated_rows.row_values(i, "City") for i in range(7, 14)]
-        assert set(first_7) == set(next_7)
+        first_3 = [generated_rows.row_values(i, "City") for i in range(0, 3)]
+        assert len(first_3) == len(set(first_3))  # 3 unique items, in some order
+        next_3 = [generated_rows.row_values(i, "City") for i in range(3, 14)]
+        assert set(first_3) == set(next_3)
 
     def test_SQL_dataset_permutation(self, generated_rows):
         abs_path = str(Path(__file__).parent)
