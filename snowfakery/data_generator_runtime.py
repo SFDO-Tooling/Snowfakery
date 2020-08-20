@@ -372,7 +372,7 @@ class RuntimeContext:
 
     def check_if_finished(self):
         "Have we iterated over the script enough times?"
-        # TODO: check that every forward reference was resolved
+        # check that every forward reference was resolved
         self.interpreter.globals.check_slots_filled()
         return self.interpreter.finished_checker.check_if_finished(
             self.interpreter.globals.id_manager
