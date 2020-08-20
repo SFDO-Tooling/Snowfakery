@@ -88,8 +88,9 @@ class TestGenerateMapping(unittest.TestCase):
                   reference:
                     alpha
               """
-        with self.assertRaises(DataGenError):
-            generate(StringIO(yaml), {}, None)
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+        assert mapping
 
     def test_circular_table_reference(self):
         yaml = """

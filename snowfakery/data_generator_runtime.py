@@ -1,8 +1,10 @@
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime
 from contextlib import contextmanager
+from enum import Enum, auto
 
-from typing import Optional, Dict, List, Sequence, Mapping, NamedTuple
+from typing import Optional, Dict, List, Sequence, Mapping, NamedTuple, Union
+from numbers import Number
 
 from faker.utils.datetime_safe import date as faker_date
 import jinja2
@@ -15,7 +17,7 @@ from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError
 import snowfakery  # noqa
 
 OutputStream = "snowfakery.output_streams.OutputStream"
-
+ObjectTemplate = "snowfakery.data_generator_runtime_object_model.ObjectTemplate"
 
 # Runtime objects and algorithms used during the generation of rows.
 
@@ -119,6 +121,45 @@ yaml.SafeDumper.add_representer(
 )
 
 
+class SlotState(Enum):
+    UNUSED = auto()
+    ALLOCATED = auto()
+    CONSUMED = auto()
+
+
+class NicknameSlot:
+    _tablename: str
+    id_manager: IdManager
+    allocated_id: int = None
+
+    def __init__(self, tablename, id_manager):
+        self._tablename = tablename
+        self.id_manager = id_manager
+
+    @property
+    def id(self):
+        if self.allocated_id is None:
+            self.allocated_id = self.id_manager.generate_id(self._tablename)
+        return self.allocated_id
+
+    def consume_slot(self):
+        rc = self.allocated_id
+        self.allocated_id = SlotState.CONSUMED
+        return rc
+
+    @property
+    def status(self):
+        if self.allocated_id is None:
+            return SlotState.UNUSED
+        elif isinstance(self.allocated_id, int):
+            return SlotState.ALLOCATED
+        elif self.allocated_id == SlotState.CONSUMED:
+            return SlotState.CONSUMED
+
+    def __repr__(self):
+        return f"<NicknameSlot {vars(self)}>"
+
+
 class Globals(yaml.YAMLObject):
     """Globally named objects and other aspects of global scope
 
@@ -131,12 +172,21 @@ class Globals(yaml.YAMLObject):
     yaml_dumper = yaml.SafeDumper
     yaml_tag = "!snowfakery_globals"
 
-    def __init__(self, start_ids: Optional[Dict[str, id]] = None, today: date = None):
+    def __init__(
+        self,
+        start_ids: Optional[Dict[str, id]] = None,
+        today: date = None,
+        name_slots: Mapping[str, str] = (),
+    ):
+        # list starts empty and is filled. Survives continuations.
         self.named_objects = {}
+
         self.id_manager = IdManager(start_ids)
         self.last_seen_obj_of_type = {}
         self.intertable_dependencies = set()
         self.today = today or date.today()
+        self.nicknames_and_tables = name_slots
+        self.reset_slots()
 
     def register_object(self, obj, nickname: str = None):
         """Register an object for lookup by object type and (optionally) Nickname"""
@@ -147,7 +197,12 @@ class Globals(yaml.YAMLObject):
     @property
     def object_names(self):
         """The globally named objects"""
-        return {**self.named_objects, **self.last_seen_obj_of_type}
+        return {**self.named_slots, **self.named_objects, **self.last_seen_obj_of_type}
+
+    def generate_id_for_nickname(self, nickname: str):
+        slot = self.named_slots[nickname]
+        if slot.status == SlotState.ALLOCATED:
+            return slot.consume_slot()
 
     def register_intertable_reference(
         self, table_name_from: str, table_name_to: str, fieldname: str
@@ -156,9 +211,32 @@ class Globals(yaml.YAMLObject):
             Dependency(table_name_from, table_name_to, fieldname)
         )
 
+    def reset_slots(self):
+        "At the beginning of every execution, reset the forward reference slots"
+        self.named_slots = {
+            name: NicknameSlot(table, self.id_manager)
+            for name, table in self.nicknames_and_tables.items()
+        }
+
+    def check_slots_filled(self):
+        not_filled = [
+            name
+            for name, slot in self.named_slots.items()
+            if slot.status == SlotState.ALLOCATED
+        ]
+        if len(not_filled) > 1:
+            raise DataGenNameError(
+                f"References not fulfilled: {','.join(not_filled)}", None, None
+            )
+        elif not_filled:
+            raise DataGenNameError(
+                f"Reference not fulfilled: {not_filled[0]}", None, None
+            )
+
     def __getstate__(self):
         state = self.__dict__.copy()
         del state["intertable_dependencies"]
+        del state["named_slots"]
         return state
 
     def __setstate__(self, state):
@@ -166,6 +244,7 @@ class Globals(yaml.YAMLObject):
         for slot, value in state.items():
             setattr(self, slot, value)
         self.intertable_dependencies = set()
+        self.reset_slots()
 
 
 class JinjaTemplateEvaluatorFactory:
@@ -220,18 +299,24 @@ class Interpreter:
         stopping_criteria: Optional[StoppingCriteria] = None,
         start_ids: Optional[Mapping[str, int]] = None,
         faker_providers: Sequence[object] = (),
+        templates: Sequence[ObjectTemplate] = (),
     ):
         self.output_stream = output_stream
         self.options = options or {}
         snowfakery_plugins = snowfakery_plugins or {}
-        # todo: some caching of these could speed things up a bit
         self.plugin_function_libraries = {
             name: plugin(self).custom_functions()
             for name, plugin in snowfakery_plugins.items()
         }
         self.finished_checker = FinishedChecker(start_ids, stopping_criteria)
         self.faker_template_library = FakerTemplateLibrary(faker_providers)
-        self.globals = globals or Globals()
+        name_slots = {
+            template.nickname: template.tablename
+            for template in templates
+            if template.nickname
+        }
+
+        self.globals = globals or Globals(name_slots=name_slots)
 
         # inject context into the standard functions
         standard_funcs_obj = StandardFuncs(self).custom_functions()
@@ -240,6 +325,21 @@ class Interpreter:
             for name in dir(standard_funcs_obj)
             if not name.startswith("_") and name != "context"
         }
+
+        self.templates = templates
+
+    def loop_over_templates(self, runtimecontext, continuing):
+        finished = False
+        while not finished:
+            self.loop_over_templates_once(runtimecontext, continuing)
+            finished = runtimecontext.check_if_finished()
+            continuing = True
+
+    def loop_over_templates_once(self, runtimecontext, continuing):
+        for template in self.templates:
+            should_skip = template.just_once and continuing is True
+            if not should_skip:
+                template.generate_rows(self.output_stream, runtimecontext)
 
 
 class RuntimeContext:
@@ -272,13 +372,21 @@ class RuntimeContext:
 
     def check_if_finished(self):
         "Have we iterated over the script enough times?"
+        # TODO: check that every forward reference was resolved
+        self.interpreter.globals.check_slots_filled()
         return self.interpreter.finished_checker.check_if_finished(
             self.interpreter.globals.id_manager
         )
 
-    def generate_id(self):
+    def generate_id(self, nickname: Optional[str]):
         "Generate a unique ID for this object"
-        return self.interpreter.globals.id_manager.generate_id(self.current_table_name)
+        rc = None
+        if nickname:
+            rc = self.interpreter.globals.generate_id_for_nickname(nickname)
+        rc = rc or self.interpreter.globals.id_manager.generate_id(
+            self.current_table_name
+        )
+        return rc
 
     def register_object(self, obj, name=None):
         "Keep track of this object in case its children refer to it."
@@ -447,7 +555,12 @@ def output_batches(
             name: val + 1 for name, val in globals.id_manager.last_used_ids.items()
         }
     else:
-        globals = Globals()
+        name_slots = {
+            template.nickname: template.tablename
+            for template in templates
+            if template.nickname
+        }
+        globals = Globals(name_slots=name_slots)
         # at one point start-ids were passed from the command line
         # but for simplicity this feature has been removed and they can only
         # be inferred from the continuation_file.
@@ -461,21 +574,14 @@ def output_batches(
         stopping_criteria=stopping_criteria,
         start_ids=start_ids,
         faker_providers=faker_providers,
+        templates=templates,
     )
 
     runtimecontext = RuntimeContext(interpreter=interpreter)
     continuing = bool(continuation_data)
-    loop_over_templates(templates, runtimecontext, output_stream, continuing)
+    interpreter.loop_over_templates(runtimecontext, continuing)
     return interpreter.globals
 
 
-def loop_over_templates(templates, runtimecontext, output_stream, continuing):
-    finished = False
-    while not finished:
-        for template in templates:
-            should_skip = template.just_once and continuing is True
-            if not should_skip:
-                template.generate_rows(output_stream, runtimecontext)
-        finished = runtimecontext.check_if_finished()
-
-        continuing = True
+Scalar = Union[str, Number, date, datetime, None]
+FieldValue = Union[None, Scalar, ObjectRow, tuple, NicknameSlot]
