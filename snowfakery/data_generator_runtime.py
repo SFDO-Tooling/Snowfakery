@@ -328,7 +328,7 @@ class Interpreter:
 
         self.templates = templates
 
-    def loop_over_templates(self, runtimecontext, continuing):
+    def loop_over_templates_until_finished(self, runtimecontext, continuing):
         finished = False
         while not finished:
             self.loop_over_templates_once(runtimecontext, continuing)
@@ -579,7 +579,7 @@ def output_batches(
 
     runtimecontext = RuntimeContext(interpreter=interpreter)
     continuing = bool(continuation_data)
-    interpreter.loop_over_templates(runtimecontext, continuing)
+    interpreter.loop_over_templates_until_finished(runtimecontext, continuing)
     return interpreter.globals
 
 

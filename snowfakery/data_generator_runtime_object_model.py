@@ -156,8 +156,7 @@ class ObjectTemplate:
 
     def _check_type(self, field, generated_value, context: RuntimeContext):
         """Check the type of a field value"""
-        allowed_types = FieldValue
-        if not isinstance(generated_value, allowed_types.__args__):
+        if not isinstance(generated_value, FieldValue.__args__):
             raise DataGenValueError(
                 f"Field '{field.name}' generated unexpected object: {generated_value} {type(generated_value)}",
                 self.filename,
