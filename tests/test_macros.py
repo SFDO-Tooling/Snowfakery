@@ -77,3 +77,23 @@ class TestMacros(unittest.TestCase):
         assert write_row.mock_calls[0] == mock.call("foo", {"id": 1})
         assert write_row.mock_calls[1][1][0] == "bar"
         assert write_row.mock_calls[1][1][1]["myfoo"].id == 1
+
+    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
+    def test_macros_include_macros(self, write_row):
+        yaml = """
+        - macro: foo
+          fields:
+            foobar: FOOBAR
+
+        - macro: bar
+          include: foo
+          fields:
+            barbar: BARBAR
+
+        - object: Bar
+          include: bar
+        """
+        generate(StringIO(yaml))
+        assert write_row.mock_calls[0] == mock.call(
+            "Bar", {"id": 1, "barbar": "BARBAR", "foobar": "FOOBAR"}
+        )
