@@ -1,5 +1,5 @@
-SQLAlchemy==1.3.18
-Faker==4.1.1
+SQLAlchemy==1.3.19
+Faker==4.1.2
 jinja2==2.11.2
 PyYAML==5.3.1
 click==7.1.2
