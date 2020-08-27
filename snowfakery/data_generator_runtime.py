@@ -179,7 +179,7 @@ class Globals(yaml.YAMLObject):
         name_slots: Mapping[str, str] = (),
     ):
         # list starts empty and is filled. Survives continuations.
-        self.named_objects = {}
+        self.nicknamed_objects = {}
 
         self.id_manager = IdManager(start_ids)
         self.last_seen_obj_of_type = {}
@@ -191,17 +191,22 @@ class Globals(yaml.YAMLObject):
     def register_object(self, obj, nickname: str = None):
         """Register an object for lookup by object type and (optionally) Nickname"""
         if nickname:
-            self.named_objects[nickname] = obj
+            self.nicknamed_objects[nickname] = obj
         self.last_seen_obj_of_type[obj._tablename] = obj
 
     @property
     def object_names(self):
         """The globally named objects"""
-        return {**self.named_slots, **self.named_objects, **self.last_seen_obj_of_type}
+        # the order is important: later overrides earlie
+        return {
+            **self.named_slots,  # potential forward or backwards references
+            **self.nicknamed_objects,  # nicknames that have been fulfilled
+            **self.last_seen_obj_of_type,  # tablenames that have been fulfilled
+        }
 
     def generate_id_for_nickname(self, nickname: str):
-        slot = self.named_slots[nickname]
-        if slot.status == SlotState.ALLOCATED:
+        slot = self.named_slots.get(nickname)
+        if slot and slot.status == SlotState.ALLOCATED:
             return slot.consume_slot()
 
     def register_intertable_reference(
@@ -310,11 +315,20 @@ class Interpreter:
         }
         self.finished_checker = FinishedChecker(start_ids, stopping_criteria)
         self.faker_template_library = FakerTemplateLibrary(faker_providers)
+
+        # TODO: clean this duplicated code up
         name_slots = {
             template.nickname: template.tablename
             for template in templates
             if template.nickname
         }
+
+        # table names are sort of nicknames for themselves too, because
+        # you can refer to them.
+        name_slots.update(
+            {template.tablename: template.tablename for template in templates}
+        )
+        # print("XXXX", name_slots, globals)
 
         self.globals = globals or Globals(name_slots=name_slots)
 
@@ -381,8 +395,16 @@ class RuntimeContext:
     def generate_id(self, nickname: Optional[str]):
         "Generate a unique ID for this object"
         rc = None
+        # check if an ID has already been assigned based on the nickname
+        # (due to a forward reference)
         if nickname:
             rc = self.interpreter.globals.generate_id_for_nickname(nickname)
+        # check if an ID has already been assigned based on the tablenmae.
+        # (due to a forward reference)
+        rc = rc or self.interpreter.globals.generate_id_for_nickname(
+            self.current_table_name
+        )
+        # othewise just create a new one
         rc = rc or self.interpreter.globals.id_manager.generate_id(
             self.current_table_name
         )
@@ -560,6 +582,11 @@ def output_batches(
             for template in templates
             if template.nickname
         }
+        name_slots.update(
+            {template.tablename: template.tablename for template in templates}
+        )
+        # print("YYYY", name_slots)
+
         globals = Globals(name_slots=name_slots)
         # at one point start-ids were passed from the command line
         # but for simplicity this feature has been removed and they can only

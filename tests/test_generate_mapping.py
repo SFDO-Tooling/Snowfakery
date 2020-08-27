@@ -73,7 +73,7 @@ class TestGenerateMapping(unittest.TestCase):
         assert mapping["Insert Referrer"]["fields"] == {"food": "food"}
         assert mapping["Insert Referrer"]["lookups"]["shrimpguy"]["table"] == "Target"
 
-    def test_forward_reference(self):
+    def test_forward_reference__nickname(self):
         yaml = """
             - object: A
               nickname: alpha

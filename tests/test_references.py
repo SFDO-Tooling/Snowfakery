@@ -122,6 +122,26 @@ class TestReferences(unittest.TestCase):
         assert b_values["A"] == "A(1)"
 
     @mock.patch(write_row_path)
+    def test_forward_reference__tablename(self, write_row):
+        yaml = """
+            - object: A
+              fields:
+                B:
+                  reference:
+                    B
+            - object: B
+              fields:
+                A:
+                  reference:
+                    A
+              """
+        generate(StringIO(yaml), {}, None)
+        a_values = find_row("A", {}, write_row.mock_calls)
+        b_values = find_row("B", {}, write_row.mock_calls)
+        assert a_values["B"] == "B(1)"
+        assert b_values["A"] == "A(1)"
+
+    @mock.patch(write_row_path)
     def test_forward_reference_not_fulfilled(self, write_row):
         yaml = """
         - object: A
@@ -140,8 +160,26 @@ class TestReferences(unittest.TestCase):
 
         assert "Bob" in str(e.value)
 
+    def test_forward_reference_not_fulfilled__tablename(self):
+        yaml = """
+            - object: AAA
+              fields:
+                B:
+                  reference:
+                    BBB
+            - object: BBB
+              count: 0
+              fields:
+                A:
+                  reference:
+                    AAA
+              """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml), {}, None)
+        assert "BBB" in str(e.value)
+
     @mock.patch(write_row_path)
-    def test_forward_references_not_fulfilled(self, write_row):
+    def test_forward_references_not_fulfilled__nickname(self, write_row):
         yaml = """
         - object: A
           fields:

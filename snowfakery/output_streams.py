@@ -68,7 +68,7 @@ class OutputStream(ABC):
         sourcetable: str,
         fieldname: str,
         source_row_dict: Dict,
-        target_object_row: [ObjectRow, NicknameSlot],
+        target_object_row: Union[ObjectRow, NicknameSlot],
     ) -> Union[str, int]:
         return target_object_row.id
 
@@ -155,7 +155,7 @@ class DebugOutputStream(FileOutputStream):
         sourcetable: str,
         fieldname: str,
         source_row_dict: Dict,
-        target_object_row: [ObjectRow, NicknameSlot],
+        target_object_row: Union[ObjectRow, NicknameSlot],
     ) -> Union[str, int]:
         return f"{target_object_row._tablename}({target_object_row.id})"
 
@@ -354,7 +354,7 @@ class GraphvizOutputStream(FileOutputStream):
         sourcetable: str,
         fieldname: str,
         source_row_dict: Dict,
-        target_object_row: [ObjectRow, NicknameSlot],
+        target_object_row: Union[ObjectRow, NicknameSlot],
     ) -> Union[str, int]:
         source_node_name = self.generate_node_name(
             sourcetable, source_row_dict.get("name"), source_row_dict.get("id")
