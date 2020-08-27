@@ -148,7 +148,7 @@ But in case you’re in a hurry: In this case we're creating 3 Person objects. E
 
 <img src='images/img1.png' id='PJUACATPCzI' alt='Relationship diagram' width='800' height='190'>Later, we’ll discuss how we could have just 2 PetFood objects which are shared. We’ll also discuss how we could randomly select a Pet species or Food.
 
-## Outputs
+### Outputs
 
 Snowfakery builds on a tool called SQLAlchemy, so it gets a variety of database connectors for free:
 
@@ -160,7 +160,7 @@ Snowfakery can also output JSON, directories of CSV and object diagrams.
 
 CSV output goes to a directory with one CSV file per table and a JSON manifest file in the [csvw](https://www.w3.org/TR/tabular-data-primer/) format.
 
-## Objects
+### Objects
 
 The main, core concept in the language is an “*Object Template*”. It basically represents instructions on how to create a *Row* (or multiple rows) in a database. Rows in turn represent real-world entities like People,  Places or Things and that’s why we use the keyword “Object”.
 
@@ -257,7 +257,7 @@ Animal(id=6, name=Kimberly)
 
 There is no explicit relationship between the animals and the people in this case, but sometimes you do want such an implicit “relationship” between the number of one object created and the number of the other.
 
-## Relationships
+### Relationships
 
 Relationships are a big part of what makes Snowfakery different than the dozens(!) of tools for data generation out there. For example, we can relate pets to their owners like this:
 
@@ -393,9 +393,15 @@ Funky!
 
 The basic rule is that the last row (object) created with the nickname is the one that is referenced.
 
-## Function Blocks
+The details are described in the section on [References](#references)
+
+## Functions
 
 Fields can refer to functions which randomize, compute or look up data. We can do that by nesting the function name under the field name or by using formulas. ([Simple Formulas](#simple-formulas))
+
+### Function Blocks
+
+These functions are most often used with the block-syntax rather than in formulas:
 
 ### Reference
 
@@ -449,7 +455,7 @@ StageName:
 
 You can do more sophisticated randomness with features that will be discussed in the section [Random Weights That Are Not Percentages](#random-weights-that-are-not-percentages).
 
-### `fake`
+#### `fake`
 
 Generate fake data using functions from the [faker](https://github.com/joke2k/faker) library:
 
@@ -507,7 +513,7 @@ You can also call these functions with arguments as described in Faker's [docume
 country: ${{fake.country_code(representation='alpha-2')}}
 ```
 
-### International Fakes (syntax still under development)
+#### International Fakes (syntax still under development)
 
 You can specify internationally appropriate fakes for many different kind of names (e.g. person, company) like this:
 
@@ -530,7 +536,7 @@ You can also call this as an inline function:
 lars_or_alf_or_something: ${{i18n_fake(locale="no_NO", fake='first_name')}}
 ```
 
-### `date_between`
+#### `date_between`
 
 Pick a random date in some date range
 
@@ -573,7 +579,7 @@ Payment_Date:
 wedding_date: Our big day is ${{date_between(start_date="2022-01-31", end_date="2022-12-31")}}
 ```
 
-### `random_number`
+#### `random_number`
 
 Pick a random number in a range specified by min and max:
 
@@ -590,7 +596,7 @@ age:
 some_number: A number ${{random_number(min=5, max=10)}}
 ```
 
-### `if`
+#### `if`
 
 `If` allows you to make field values conditional on other field values.
 
