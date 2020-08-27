@@ -537,10 +537,12 @@ The options `start_date` and `end_date` can take the following forms:
 - `YYYY-MM-DD`
 - `+<number>d` : `number` days in the future, e.g. `+10d`
 - `-<number>d` : `number` days in the past, e.g. `-10d`
-- `+<number>m: number` months in the future, e.g. +`10m`
-- `+<number>m`: `number` months in the past, e.g. `-10m`
-- `+<number>y: number` years in the future, e.g. +`10y`
-- `+<number>y`: `number` years in the past, e.g. `-10y`
+- `+<number>M`: `number` months in the future, e.g. `+10M`
+- `-<number>M`: `number` months in the past, e.g. `-10M`
+- `+<number>y`: `number` years in the future, e.g. `+10y`
+- `-<number>y`: `number` years in the past, e.g. `-10y`
+- `+<number>w`: `number` weeks in the future, e.g. `+10w`
+- `-<number>w`: `number` weeks in the past, e.g. `-10w`
 - `today` : the date the template is evaluated
 
 Examples: Pick a date between 30 days ago and 108 days in the future:
