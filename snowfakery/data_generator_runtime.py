@@ -122,12 +122,18 @@ yaml.SafeDumper.add_representer(
 
 
 class SlotState(Enum):
+    """The current state of a NicknameSlot.
+
+    UNUSED=empty, ALLOCATED=referenced, CONSUMED=object generated"""
+
     UNUSED = auto()
     ALLOCATED = auto()
     CONSUMED = auto()
 
 
 class NicknameSlot:
+    """A slot that represents a Nickname or Tablename"""
+
     _tablename: str
     id_manager: IdManager
     allocated_id: int = None
@@ -138,17 +144,20 @@ class NicknameSlot:
 
     @property
     def id(self):
+        "Get an id corresponding to this slot. Generate one if necessary."
         if self.allocated_id is None:
             self.allocated_id = self.id_manager.generate_id(self._tablename)
         return self.allocated_id
 
     def consume_slot(self):
+        "Mark a slot as filled by an object and return its id for use by the object."
         rc = self.allocated_id
         self.allocated_id = SlotState.CONSUMED
         return rc
 
     @property
     def status(self):
+        "Is the slot empty/unreferenced, allocated/referenced or consumed/used"
         if self.allocated_id is None:
             return SlotState.UNUSED
         elif isinstance(self.allocated_id, int):
@@ -176,7 +185,7 @@ class Globals(yaml.YAMLObject):
         self,
         start_ids: Optional[Dict[str, id]] = None,
         today: date = None,
-        name_slots: Mapping[str, str] = (),
+        name_slots: Mapping[str, str] = None,
     ):
         # list starts empty and is filled. Survives continuations.
         self.nicknamed_objects = {}
@@ -185,7 +194,7 @@ class Globals(yaml.YAMLObject):
         self.last_seen_obj_of_type = {}
         self.intertable_dependencies = set()
         self.today = today or date.today()
-        self.nicknames_and_tables = name_slots
+        self.nicknames_and_tables = name_slots or {}
         self.reset_slots()
 
     def register_object(self, obj, nickname: str = None):
@@ -229,13 +238,10 @@ class Globals(yaml.YAMLObject):
             for name, slot in self.named_slots.items()
             if slot.status == SlotState.ALLOCATED
         ]
-        if len(not_filled) > 1:
+        if not_filled:
+            plural = "s" if len(not_filled) > 1 else ""
             raise DataGenNameError(
-                f"References not fulfilled: {','.join(not_filled)}", None, None
-            )
-        elif not_filled:
-            raise DataGenNameError(
-                f"Reference not fulfilled: {not_filled[0]}", None, None
+                f"Reference{plural} not fulfilled: {','.join(not_filled)}", None, None,
             )
 
     def __getstate__(self):
@@ -351,7 +357,7 @@ class Interpreter:
 
     def loop_over_templates_once(self, runtimecontext, continuing):
         for template in self.templates:
-            should_skip = template.just_once and continuing is True
+            should_skip = template.just_once and continuing
             if not should_skip:
                 template.generate_rows(self.output_stream, runtimecontext)
 
