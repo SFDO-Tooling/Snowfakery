@@ -399,7 +399,7 @@ Fields can refer to functions which randomize, compute or look up data. We can d
 
 ### Reference
 
-This function allows you to look up a previously created row (object) and make a reference to it.
+This function allows you to look up another row (object) and make a reference to it.
 
 ```yaml
 - object: Animal
@@ -410,9 +410,22 @@ This function allows you to look up a previously created row (object) and make a
       reference: Person
 ```
 
-The reference function looks for an ancestor object by table name (`Person`, in this example) or a previously created nicknamed object by `nickname`.
+The reference function looks for another object by table name (`Person`, in this example) or a nicknamed object by `nickname`.
 
-### `random_choice`
+If an object was created earlier in the recipe, and it has the appropriate
+nickname or tablename, that object is the target reference.
+
+Otherwise, the reference can be to an object that has not been created yet. Snowfakery will generate an ID for the object so that the current row can be generated. No other properties of the other object can be referred to, because
+it does not exist yet.
+
+Snowfakery (and CumulusCI) allow one to loop over a recipe many times to
+generate multiple rows. In this case, references are always to objects
+created within the current "batch" of a recipe and never to a previous
+batch with only one exception: objects marked 'just_once' are always
+created only in the first run and references to them are to the
+objects created in that first batch.
+
+#### `random_choice`
 
 Function to choose an option randomly from a list:
 
