@@ -1,0 +1,19 @@
+- object: A
+  fields:
+    B:
+      reference: Bob
+    C:
+      reference: John
+- object: B
+  nickname: Bob
+  fields:
+    A:
+      reference: A
+    D:
+      reference: Bill
+- object: C
+  nickname: John
+  count: 0
+- object: D
+  nickname: Bill
+  count: 0

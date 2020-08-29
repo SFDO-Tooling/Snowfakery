@@ -13,7 +13,13 @@ class DataGenError(Exception):
         super().__init__(self.message)
 
     def __str__(self):
-        return f"{self.message}\n near {self.filename}:{self.line_num}"
+        if self.line_num:
+            location = f"\n near {self.filename}:{self.line_num}"
+        elif self.filename:
+            location = f"\n in {self.filename}"
+        else:
+            location = ""
+        return f"{self.message}{location}"
 
 
 class DataGenSyntaxError(DataGenError):

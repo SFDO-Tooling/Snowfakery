@@ -8,6 +8,7 @@ from ast import literal_eval
 from typing import Union, List, Tuple
 
 from faker import Faker
+from faker.providers.date_time import Provider as DateProvider
 
 from .data_gen_exceptions import DataGenError
 
@@ -96,15 +97,17 @@ class StandardFuncs(SnowfakeryPlugin):
 
         def date_between(self, *, start_date, end_date):
             """A YAML-embeddable function to pick a date between two ranges"""
-            try:
-                start_date = parse_date(start_date)
-            except Exception:  # let's hope its something faker can parse
-                pass
 
-            try:
-                end_date = parse_date(end_date)
-            except Exception:  # let's hope its something faker can parse
-                pass
+            def try_parse_date(d):
+                if not isinstance(d, str) or not DateProvider.regex.fullmatch(d):
+                    try:
+                        d = parse_date(d)
+                    except Exception:  # let's hope its something faker can parse
+                        pass
+                return d
+
+            start_date = try_parse_date(start_date)
+            end_date = try_parse_date(end_date)
 
             try:
                 return fake.date_between(start_date, end_date)
@@ -127,7 +130,9 @@ class StandardFuncs(SnowfakeryPlugin):
             if hasattr(x, "id"):  # reference to an object with an id
                 target = x
             elif isinstance(x, str):  # name of an object
-                obj = self.context.field_vars()[x]
+                obj = self.context.field_vars().get(x)
+                if not obj:
+                    raise DataGenError(f"Cannot find an object named {x}", None, None)
                 if not getattr(obj, "id"):
                     raise DataGenError(
                         f"Reference to incorrect object type {obj}", None, None

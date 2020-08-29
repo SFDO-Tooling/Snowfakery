@@ -8,6 +8,7 @@ from .data_gen_exceptions import DataGenNameError
 from .output_streams import DebugOutputStream, OutputStream
 from .parse_recipe_yaml import parse_recipe
 from .data_generator_runtime import output_batches, StoppingCriteria, Globals
+from .data_gen_exceptions import DataGenError
 from . import SnowfakeryPlugin
 from faker.providers import BaseProvider as FakerProvider
 
@@ -129,17 +130,24 @@ def generate(
 
     faker_providers, snowfakery_plugins = process_plugins(parse_result.plugins)
 
-    # now do the output
-    runtime_context = output_batches(
-        output_stream,
-        parse_result.templates,
-        options,
-        stopping_criteria=stopping_criteria,
-        continuation_data=continuation_data,
-        tables=parse_result.tables,
-        snowfakery_plugins=snowfakery_plugins,
-        faker_providers=faker_providers,
-    )
+    try:
+        # now do the output
+        runtime_context = output_batches(
+            output_stream,
+            parse_result.templates,
+            options,
+            stopping_criteria=stopping_criteria,
+            continuation_data=continuation_data,
+            tables=parse_result.tables,
+            snowfakery_plugins=snowfakery_plugins,
+            faker_providers=faker_providers,
+        )
+    except DataGenError as e:
+        if e.filename:
+            raise
+        else:
+            e.filename = getattr(open_yaml_file, "name", None)
+            raise
 
     if generate_continuation_file:
         safe_dump(runtime_context, generate_continuation_file)
