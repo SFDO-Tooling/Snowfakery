@@ -66,6 +66,7 @@ last_seen_obj_of_type:
     id: 41
   bar:
     id: 1000
+nicknames_and_tables: {}
                 """
         generate(
             StringIO(yaml),

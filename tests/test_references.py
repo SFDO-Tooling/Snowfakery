@@ -1,8 +1,12 @@
 from io import StringIO
 import unittest
 from unittest import mock
+
+import pytest
+
 from snowfakery.data_generator import generate
 from test_parse_samples import find_row
+from snowfakery.data_gen_exceptions import DataGenError
 
 simple_parent = """                     #1
 - object: A                             #2
@@ -96,3 +100,108 @@ class TestReferences(unittest.TestCase):
         id_a = a_values["id"]
         reference_a = b_values["A_ref"]
         assert f"A({id_a})" == reference_a
+
+    @mock.patch(write_row_path)
+    def test_forward_reference(self, write_row):
+        yaml = """
+        - object: A
+          fields:
+            B:
+              reference: Bob
+        - object: B
+          nickname: Bob
+          fields:
+            A:
+              reference: A
+        """
+        generate(StringIO(yaml), {}, None)
+
+        a_values = find_row("A", {}, write_row.mock_calls)
+        b_values = find_row("B", {}, write_row.mock_calls)
+        assert a_values["B"] == "B(1)"
+        assert b_values["A"] == "A(1)"
+
+    @mock.patch(write_row_path)
+    def test_forward_reference__tablename(self, write_row):
+        yaml = """
+            - object: A
+              fields:
+                B:
+                  reference:
+                    B
+            - object: B
+              fields:
+                A:
+                  reference:
+                    A
+              """
+        generate(StringIO(yaml), {}, None)
+        a_values = find_row("A", {}, write_row.mock_calls)
+        b_values = find_row("B", {}, write_row.mock_calls)
+        assert a_values["B"] == "B(1)"
+        assert b_values["A"] == "A(1)"
+
+    @mock.patch(write_row_path)
+    def test_forward_reference_not_fulfilled(self, write_row):
+        yaml = """
+        - object: A
+          fields:
+            B:
+              reference: Bob
+        - object: B
+          count: 0
+          nickname: Bob
+          fields:
+            A:
+              reference: A
+        """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml), {}, None)
+
+        assert "Bob" in str(e.value)
+
+    def test_forward_reference_not_fulfilled__tablename(self):
+        yaml = """
+            - object: AAA
+              fields:
+                B:
+                  reference:
+                    BBB
+            - object: BBB
+              count: 0
+              fields:
+                A:
+                  reference:
+                    AAA
+              """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml), {}, None)
+        assert "BBB" in str(e.value)
+
+    @mock.patch(write_row_path)
+    def test_forward_references_not_fulfilled__nickname(self, write_row):
+        yaml = """
+        - object: A
+          fields:
+            B:
+              reference: Bob
+            C:
+              reference: Bill
+        - object: B
+          count: 0
+          nickname: Bob
+          fields:
+            A:
+              reference: A
+        - object: B
+          count: 0
+          nickname: Bill
+          fields:
+            A:
+              reference: A
+        """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml), {}, None)
+
+        assert "Bob" in str(e.value)
+        assert "Bill" in str(e.value)

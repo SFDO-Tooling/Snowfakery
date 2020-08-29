@@ -73,7 +73,7 @@ class TestGenerateMapping(unittest.TestCase):
         assert mapping["Insert Referrer"]["fields"] == {"food": "food"}
         assert mapping["Insert Referrer"]["lookups"]["shrimpguy"]["table"] == "Target"
 
-    def test_forward_reference(self):
+    def test_forward_reference__nickname(self):
         yaml = """
             - object: A
               nickname: alpha
@@ -88,8 +88,9 @@ class TestGenerateMapping(unittest.TestCase):
                   reference:
                     alpha
               """
-        with self.assertRaises(DataGenError):
-            generate(StringIO(yaml), {}, None)
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+        assert mapping
 
     def test_circular_table_reference(self):
         yaml = """
