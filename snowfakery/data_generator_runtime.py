@@ -172,10 +172,10 @@ class NicknameSlot:
 class Globals(yaml.YAMLObject):
     """Globally named objects and other aspects of global scope
 
-     This object is designed to be persisted to allow long-running
-     Snowfakery executions to stop and restart. Other Interpreter internals
-     do not persist. For example, it isn't possible to persist a database
-     handle in an output_stream."""
+    This object is designed to be persisted to allow long-running
+    Snowfakery executions to stop and restart. Other Interpreter internals
+    do not persist. For example, it isn't possible to persist a database
+    handle in an output_stream."""
 
     yaml_loader = yaml.SafeLoader
     yaml_dumper = yaml.SafeDumper
@@ -241,7 +241,9 @@ class Globals(yaml.YAMLObject):
         if not_filled:
             plural = "s" if len(not_filled) > 1 else ""
             raise DataGenNameError(
-                f"Reference{plural} not fulfilled: {','.join(not_filled)}", None, None,
+                f"Reference{plural} not fulfilled: {','.join(not_filled)}",
+                None,
+                None,
             )
 
     def __getstate__(self):

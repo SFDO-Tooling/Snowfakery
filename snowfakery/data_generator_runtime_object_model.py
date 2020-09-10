@@ -227,19 +227,18 @@ class SimpleValue(FieldDefinition):
 class StructuredValue(FieldDefinition):
     """A value with substructure which will call a handler function.
 
-        - object: abc
-          fields:
-            fieldname:
-                - reference:
-                    foo
-            fieldname2:
-                - random_number:
-                    min: 10
-                    max: 20
-            fieldname3:
-                - reference:
-                    ...
-"""
+    - object: abc
+      fields:
+        fieldname:
+            - reference:
+                foo
+        fieldname2:
+            - random_number:
+                min: 10
+                max: 20
+        fieldname3:
+            - reference:
+                ..."""
 
     def __init__(self, function_name, args, filename, line_num):
         self.function_name = function_name
@@ -309,10 +308,10 @@ class StructuredValue(FieldDefinition):
 
 
 class ReferenceValue(StructuredValue):
-    """ - object: foo
-          fields:
-            - reference:
-                Y"""
+    """- object: foo
+    fields:
+      - reference:
+          Y"""
 
 
 class FieldFactory:
