@@ -12,13 +12,12 @@ def generated_rows(request):
     p = patch("snowfakery.output_streams.DebugOutputStream.write_single_row")
     mockobj = p.start()
 
-    def fin():
-        p.stop()
-
     def row_values(index, value):
         return mockobj.mock_calls[index][1][1][value]
 
-    request.addfinalizer(fin)
-
     mockobj.row_values = row_values
-    return mockobj
+    yield mockobj
+
+    p.stop()
+
+    return
