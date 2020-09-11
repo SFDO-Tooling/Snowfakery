@@ -151,14 +151,15 @@ class CSVDatasetRandomPermutationIterator(CSVDatasetLinearIterator):
 
 
 class Dataset(SnowfakeryPlugin):
+    def __init__(self, *args, **kwargs):
+        self.datasets = {}
+        super().__init__(*args, **kwargs)
+
     def close(self):
         for dataset in self.datasets.values():
             dataset.close()
 
     class Functions:
-
-        datasets = {}
-
         def iterate(self, *args, **kwargs):
             return self._iterate(*args, **kwargs, iteration_mode="linear")
 
@@ -169,14 +170,14 @@ class Dataset(SnowfakeryPlugin):
             tablename = table
             name = name or self.context.field_vars()["template"].id
             key = (dataset, tablename, name)
-            dataset_instance = self.datasets.get(key)
+            dataset_instance = self.context.plugin.datasets.get(key)
             if not dataset_instance:
                 filename = self.context.field_vars()["template"].filename
                 assert filename
                 rootpath = Path(filename).parent
-                dataset_instance = self.datasets[key] = self._load_dataset(
-                    dataset, tablename, rootpath, iteration_mode
-                )
+                dataset_instance = self.context.plugin.datasets[
+                    key
+                ] = self._load_dataset(dataset, tablename, rootpath, iteration_mode)
             rc = next(dataset_instance, None)
             if not rc:
                 dataset_instance.start()
