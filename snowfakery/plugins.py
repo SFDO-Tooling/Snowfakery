@@ -81,6 +81,12 @@ def lazy(func: Any) -> Callable:
 
 
 class PluginResult:
+    """`PluginResult` objects expose a namespace that other code can access through dot-notation.
+
+    PluginResults can be initialized with a dict or dict-like object.
+
+    PluginResults are serialized to contniuation files as dicts."""
+
     def __init__(self, result: Mapping):
         self.result = result
 
