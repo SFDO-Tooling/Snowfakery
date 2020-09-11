@@ -13,7 +13,7 @@ with open("requirements_dev.txt") as dev_requirements_file:
 
 # get the version into a global variable named "version"
 with open("snowfakery/version.txt") as f:
-    version = f.read()
+    version = f.read().strip()
 
 setuptools.setup(
     name="snowfakery",

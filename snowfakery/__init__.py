@@ -9,4 +9,4 @@ from .plugins import SnowfakeryPlugin, lazy  # noqa
 
 version_file = Path(__file__).parent / "version.txt"
 with version_file.open() as f:
-    version = f.read()
+    version = f.read().strip()
