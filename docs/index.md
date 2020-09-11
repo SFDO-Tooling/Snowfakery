@@ -1010,7 +1010,7 @@ The double-underscore ("dunder") syntax is described in [#hidden-fields-and-obje
 In this context it is used to grab a whole CSV row and give it a name so that we
 can pull out bits of it by name later.
 
-The `Dataset.iterate` [function block](#function-blocks) pulls each row from the dataset in order. It will go back to the top after it has used every row.
+The `Dataset.iterate` [function block](#function-blocks) pulls each row from the dataset in order, one for each Person. It will go back to the top after it has used every row.
 
 So it would generate output like this:
 
