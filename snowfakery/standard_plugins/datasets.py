@@ -48,7 +48,7 @@ def sql_dataset(db_url: str, tablename: str = None, mode="linear"):
     elif mode == "shuffle":
         return SQLDatasetRandomPermutationIterator(engine, table)
     else:
-        raise NotImplementedError()
+        raise NotImplementedError(f"Unknown mode: {mode}")
 
 
 class DatasetIteratorBase:
@@ -65,7 +65,7 @@ class DatasetIteratorBase:
 
     def start(self):
         "Initialize the iterator in self.results."
-        raise NotImplementedError()
+        raise NotImplementedError(f"start method on {self.__class__.__name__}")
 
     def restart(self):
         "Restart the iterator by assigning to self.results"
@@ -92,7 +92,7 @@ class SQLDatasetIterator(DatasetIteratorBase):
 
     def query(self):
         "Return a SQL Alchemy SELECT statement"
-        raise NotImplementedError
+        raise NotImplementedError(f"query method on {self.__class__.__name__}")
 
 
 class SQLDatasetLinearIterator(SQLDatasetIterator):
@@ -112,7 +112,7 @@ class SQLDatasetRandomPermutationIterator(SQLDatasetIterator):
 class CSVDatasetLinearIterator(DatasetIteratorBase):
     def __init__(self, datasource: Path):
         self.datasource = datasource
-        self.file = open(self.datasource)
+        self.file = open(self.datasource, newline="", encoding="utf-8")
         self.start()
 
     def start(self):

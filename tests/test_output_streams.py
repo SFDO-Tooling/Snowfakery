@@ -27,7 +27,7 @@ def normalize(row):
 class OutputCommonTests(ABC):
     @abstractmethod
     def do_output(self, yaml):
-        raise NotImplementedError
+        raise NotImplementedError(f"do_output method on {self.__class__.__name__}")
 
     def test_dates(self):
         yaml = """
