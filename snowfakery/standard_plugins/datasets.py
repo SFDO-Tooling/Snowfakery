@@ -151,6 +151,10 @@ class CSVDatasetRandomPermutationIterator(CSVDatasetLinearIterator):
 
 
 class Dataset(SnowfakeryPlugin):
+    def close(self):
+        for dataset in self.datasets.values():
+            dataset.close()
+
     class Functions:
 
         datasets = {}
@@ -200,10 +204,6 @@ class Dataset(SnowfakeryPlugin):
                         return CSVDatasetLinearIterator(filename)
                     elif iteration_mode == "shuffle":
                         return CSVDatasetRandomPermutationIterator(filename)
-
-        def close(self):
-            for dataset in self.datasets.values():
-                dataset.close()
 
 
 @contextmanager
