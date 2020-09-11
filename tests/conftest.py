@@ -17,5 +17,3 @@ def generated_rows(request):
     ) as mockobj:
         mockobj.row_values = row_values
         yield mockobj
-
-    return
