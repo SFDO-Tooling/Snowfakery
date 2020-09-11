@@ -120,6 +120,9 @@ class CSVDatasetLinearIterator(DatasetIteratorBase):
         d = DictReader(self.file)
         self.results = (PluginResult(row) for row in d)
 
+    def close(self):
+        self.file.close()
+
 
 class CSVDatasetRandomPermutationIterator(CSVDatasetLinearIterator):
     # This algorithm shuffles a million records without a problem on my laptop.
