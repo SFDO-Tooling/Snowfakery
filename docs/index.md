@@ -984,7 +984,7 @@ Number,Street,City,Postcode
 
 `examples/datasets/addresses.csv`
 
-Note that the column numbers come from the first row.
+Note that the column names come from the first row.
 
 Here is how we can use those rows:
 
@@ -995,6 +995,7 @@ Here is how we can use those rows:
   fields:
     Name:
       fake: name
+
     __address_from_csv:
       Dataset.iterate:
         dataset: addresses.csv
@@ -1057,8 +1058,9 @@ to use like this:
 
 ##### Shuffling Data
 
-If you would rather the rows be pulled out in random order, you have two options. The simplest thing
-is to shuffle it in your Snowfakery recipe like this:
+If you would rather the rows be pulled out in random order, you
+have two options. The simplest thing is to shuffle it in your
+Snowfakery recipe like this:
 
 ```yaml
     __address_from_csv:
@@ -1071,7 +1073,7 @@ is to shuffle it in your Snowfakery recipe like this:
 
 If you experience performance or memory usage problems with big datasets,
 you might want to shuffle your data into a random order  before using it
-in Snowfakery. Snowfakery's source repository includes a tool called
+in Snowfakery. Snowfakery's source repository includes a simplistic tool called
 `shufflecsv.py` which can do that for CSV files. You feed it a CSV on stdin
  and it will generate another one on stdout like this:
 
@@ -1080,11 +1082,14 @@ $ python tools/shufflecsv.py < examples/datasets/addresses.csv > examples/datase
 ...
 ```
 
-Doing something equivalent for a SQLite or other database
-would involve the clause `order by random()`. This is also
-how Snowfakery does its randomization internally, so it would not
-gain you very much if you are only running the Snowfakery recipe
-once. It could, however, save you time if you  were running
+This script does not currently support CSVs that include newlines
+within fields.
+
+Doing something equivalent for a SQLite or other database would
+involve writing a script using the clause `order by random()`. This
+is also how Snowfakery does its randomization internally, so it
+would not gain you very much if you are only running the Snowfakery
+recipe once. It could, however, save you time if you  were running
 the Snowfakery recipe over and over, because the shuffling would
 happen just once.
 
