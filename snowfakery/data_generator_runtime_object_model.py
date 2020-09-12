@@ -1,9 +1,13 @@
 from abc import abstractmethod, ABC
-from datetime import date, datetime
-from .data_generator_runtime import evaluate_function, ObjectRow, RuntimeContext
+from .data_generator_runtime import (
+    evaluate_function,
+    ObjectRow,
+    RuntimeContext,
+    FieldValue,
+    Scalar,
+)
 from contextlib import contextmanager
 from typing import Union, Dict, Sequence, Optional, cast
-from numbers import Number
 from .utils.template_utils import look_for_number
 
 import jinja2
@@ -18,8 +22,6 @@ from .data_gen_exceptions import (
 
 # objects that represent the hierarchy of a data generator.
 # roughly similar to the YAML structure but with domain-specific objects
-Scalar = Union[str, Number, date, datetime, None]
-FieldValue = Union[None, Scalar, ObjectRow, tuple]
 Definition = Union["ObjectTemplate", "SimpleValue", "StructuredValue"]
 
 
@@ -128,7 +130,8 @@ class ObjectTemplate:
 
     def _generate_row(self, storage, context: RuntimeContext, index: int) -> ObjectRow:
         """Generate an individual row"""
-        row = {"id": context.generate_id()}
+        id = context.generate_id(self.nickname)
+        row = {"id": id}
         sobj = ObjectRow(self.tablename, row, index)
 
         context.register_object(sobj, self.nickname)
@@ -153,8 +156,7 @@ class ObjectTemplate:
 
     def _check_type(self, field, generated_value, context: RuntimeContext):
         """Check the type of a field value"""
-        allowed_types = (int, str, bool, date, float, type(None), ObjectRow)
-        if not isinstance(generated_value, allowed_types):
+        if not isinstance(generated_value, FieldValue.__args__):
             raise DataGenValueError(
                 f"Field '{field.name}' generated unexpected object: {generated_value} {type(generated_value)}",
                 self.filename,
@@ -221,19 +223,18 @@ class SimpleValue(FieldDefinition):
 class StructuredValue(FieldDefinition):
     """A value with substructure which will call a handler function.
 
-        - object: abc
-          fields:
-            fieldname:
-                - reference:
-                    foo
-            fieldname2:
-                - random_number:
-                    min: 10
-                    max: 20
-            fieldname3:
-                - reference:
-                    ...
-"""
+    - object: abc
+      fields:
+        fieldname:
+            - reference:
+                foo
+        fieldname2:
+            - random_number:
+                min: 10
+                max: 20
+        fieldname3:
+            - reference:
+                ..."""
 
     def __init__(self, function_name, args, filename, line_num):
         self.function_name = function_name
@@ -303,10 +304,10 @@ class StructuredValue(FieldDefinition):
 
 
 class ReferenceValue(StructuredValue):
-    """ - object: foo
-          fields:
-            - reference:
-                Y"""
+    """- object: foo
+    fields:
+      - reference:
+          Y"""
 
 
 class FieldFactory:

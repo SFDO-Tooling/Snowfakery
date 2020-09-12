@@ -1,0 +1,9 @@
+- object: A
+  fields:
+    B:
+      reference: Bob
+- object: B
+  nickname: Bob
+  fields:
+    A:
+      reference: A

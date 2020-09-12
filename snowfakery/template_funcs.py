@@ -130,7 +130,9 @@ class StandardFuncs(SnowfakeryPlugin):
             if hasattr(x, "id"):  # reference to an object with an id
                 target = x
             elif isinstance(x, str):  # name of an object
-                obj = self.context.field_vars()[x]
+                obj = self.context.field_vars().get(x)
+                if not obj:
+                    raise DataGenError(f"Cannot find an object named {x}", None, None)
                 if not getattr(obj, "id"):
                     raise DataGenError(
                         f"Reference to incorrect object type {obj}", None, None
