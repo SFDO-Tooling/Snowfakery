@@ -121,17 +121,17 @@ def generate_cli(
     generate_continuation_file=None,
 ):
     """
-    Generates records from a YAML file
+        Generates records from a YAML file
 
-\b
-    Records can go to:
-        * stdout (default)
-        * JSON file (--output_format=json --output-file=foo.json)
-        * diagram file (--output_format=png --output-file=foo.png)
-        * a database identified by --dburl (e.g. --dburl sqlite:////tmp/foo.db)
-        * or to a directory as a set of CSV files (--output-format=csv --output-folder=csvfiles)
+    \b
+        Records can go to:
+            * stdout (default)
+            * JSON file (--output_format=json --output-file=foo.json)
+            * diagram file (--output_format=png --output-file=foo.png)
+            * a database identified by --dburl (e.g. --dburl sqlite:////tmp/foo.db)
+            * or to a directory as a set of CSV files (--output-format=csv --output-folder=csvfiles)
 
-    Diagram output depends on the installation of pygraphviz ("pip install pygraphviz")
+        Diagram output depends on the installation of pygraphviz ("pip install pygraphviz")
     """
     output_files = list(output_files) if output_files else []
     stopping_criteria = StoppingCriteria(*target_number) if target_number else None

@@ -500,7 +500,9 @@ def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
         data, line_numbers = yaml_safe_load_with_line_numbers(stream, str(path))
     except YAMLError as y:
         raise exc.DataGenYamlSyntaxError(
-            str(y), str(path), y.problem_mark.line + 1,
+            str(y),
+            str(path),
+            y.problem_mark.line + 1,
         )
     context.line_numbers.update(line_numbers)
 
