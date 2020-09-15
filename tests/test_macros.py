@@ -1,8 +1,10 @@
 import unittest
 from unittest import mock
 from io import StringIO
+import pytest
 
 from snowfakery.data_generator import generate
+import snowfakery.data_gen_exceptions as exc
 
 write_row_path = "snowfakery.output_streams.DebugOutputStream.write_row"
 
@@ -77,3 +79,44 @@ class TestMacros(unittest.TestCase):
         assert write_row.mock_calls[0] == mock.call("foo", {"id": 1})
         assert write_row.mock_calls[1][1][0] == "bar"
         assert write_row.mock_calls[1][1][1]["myfoo"].id == 1
+
+    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
+    def test_macros_include_macros(self, write_row):
+        yaml = """
+        - macro: foo
+          fields:
+            foobar: FOOBAR
+
+        - macro: bar
+          include: foo
+          fields:
+            barbar: BARBAR
+
+        - object: Bar
+          include: bar
+        """
+        generate(StringIO(yaml))
+        assert write_row.mock_calls[0] == mock.call(
+            "Bar", {"id": 1, "barbar": "BARBAR", "foobar": "FOOBAR"}
+        )
+
+    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
+    def test_macros_include_themselves(self, write_row):
+        yaml = """
+        - macro: foo
+          include: bar
+          fields:
+            foobar: FOOBAR
+
+        - macro: bar
+          include: foo
+          fields:
+            barbar: BARBAR
+
+        - object: Bar
+          include: bar
+        """
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml))
+        assert "foo" in str(e.value)
+        assert "bar" in str(e.value)
