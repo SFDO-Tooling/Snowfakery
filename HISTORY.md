@@ -4,6 +4,10 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 1.1.1
+
+Fix a deployment problem relating to version.txt
+
 ## Snowfakery 1.1
 
 Support for External Datasets. (PR #102)
