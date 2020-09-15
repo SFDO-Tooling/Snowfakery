@@ -7,14 +7,18 @@ import csv
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from contextlib import redirect_stdout
-from tests.utils import named_temporary_file_path
+
+
+import pytest
 
 from sqlalchemy import create_engine
 
 from snowfakery.output_streams import SqlOutputStream, JSONOutputStream, CSVOutputStream
+import snowfakery.data_gen_exceptions as exc
 
 from snowfakery.data_generator import generate
 from snowfakery.cli import generate_cli
+from tests.utils import named_temporary_file_path
 
 
 sample_yaml = Path(__file__).parent / "include_parent.yml"
@@ -169,7 +173,7 @@ class JSONTables:
         return self.tables[name]
 
 
-class TestJSONOutputStream(unittest.TestCase, OutputCommonTests):
+class TestJSONOutputStream(OutputCommonTests):
     def do_output(self, yaml):
         with StringIO() as s:
             output_stream = JSONOutputStream(s)
@@ -232,6 +236,19 @@ class TestJSONOutputStream(unittest.TestCase, OutputCommonTests):
         assert "null" in output.raw
         values = output["foo"][0]
         assert values["is_null"] is None
+
+    def test_error_generates_empty_string(self):
+        yaml = """
+        - object: foo
+          fields: bar: baz: jaz
+            is_null:
+            """
+        with StringIO() as s:
+            output_stream = JSONOutputStream(s)
+            with pytest.raises(exc.DataGenYamlSyntaxError):
+                generate(StringIO(yaml), {}, output_stream)
+            output_stream.close()
+            assert s.getvalue() == ""
 
 
 class TestCSVOutputStream(unittest.TestCase, OutputCommonTests):

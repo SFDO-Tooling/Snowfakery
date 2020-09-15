@@ -229,7 +229,8 @@ class JSONOutputStream(FileOutputStream):
         self.stream.write(json.dumps(values))
 
     def close(self) -> None:
-        self.stream.write("]\n")
+        if not self.first_row:
+            self.stream.write("]\n")
         super().close()
 
 
