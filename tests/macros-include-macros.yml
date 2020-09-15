@@ -1,0 +1,11 @@
+- macro: foo
+  fields:
+    foobar: FOOBAR
+
+- macro: bar
+  include: foo
+  fields:
+    barbar: BARBAR
+
+- object: Bar
+  include: bar

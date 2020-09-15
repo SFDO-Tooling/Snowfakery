@@ -14,7 +14,7 @@ from .utils.template_utils import FakerTemplateLibrary
 
 from .template_funcs import StandardFuncs
 from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError
-import snowfakery  # noqa
+import snowfakery
 
 OutputStream = "snowfakery.output_streams.OutputStream"
 ObjectTemplate = "snowfakery.data_generator_runtime_object_model.ObjectTemplate"
@@ -317,9 +317,12 @@ class Interpreter:
         self.output_stream = output_stream
         self.options = options or {}
         snowfakery_plugins = snowfakery_plugins or {}
+        self.plugin_instances = {
+            name: plugin(self) for name, plugin in snowfakery_plugins.items()
+        }
         self.plugin_function_libraries = {
-            name: plugin(self).custom_functions()
-            for name, plugin in snowfakery_plugins.items()
+            name: plugin.custom_functions()
+            for name, plugin in self.plugin_instances.items()
         }
         self.finished_checker = FinishedChecker(start_ids, stopping_criteria)
         self.faker_template_library = FakerTemplateLibrary(faker_providers)
@@ -363,6 +366,13 @@ class Interpreter:
             if not should_skip:
                 template.generate_rows(self.output_stream, runtimecontext)
 
+    def __enter__(self, *args):
+        return self
+
+    def __exit__(self, *args):
+        for plugin in self.plugin_instances.values():
+            plugin.close()
+
 
 class RuntimeContext:
     """Local "stack frame" type object. RuntimeContexts live on the Python stack.
@@ -374,14 +384,18 @@ class RuntimeContext:
 
     obj: Optional["ObjectRow"] = None
     template_evaluator_recipe = JinjaTemplateEvaluatorFactory()
+    current_template = None
 
     def __init__(
         self,
         interpreter: Interpreter,
-        current_table_name: Optional[str] = None,
+        current_template: ObjectTemplate = None,
         parent_context: "RuntimeContext" = None,
     ):
-        self.current_table_name = current_table_name
+        if current_template:
+            self.current_table_name = current_template.tablename
+            self.current_template = current_template
+
         self.interpreter = interpreter
         self.interpreter.current_context = self
         self.parent = parent_context
@@ -430,10 +444,10 @@ class RuntimeContext:
         )
 
     @contextmanager
-    def child_context(self, tablename):
+    def child_context(self, template):
         "Create a nested RuntimeContext (analogous to a 'stack frame')."
         jr = self.__class__(
-            current_table_name=tablename,
+            current_template=template,
             interpreter=self.interpreter,
             parent_context=self,
         )
@@ -484,6 +498,7 @@ class EvaluationNamespace(NamedTuple):
             "this": obj,
             "today": interpreter.globals.today,
             "fake": interpreter.faker_template_library,
+            "template": self.runtime_context.current_template,
             **interpreter.options,
             **interpreter.globals.object_names,
             **(obj._values if obj else {}),
@@ -601,7 +616,7 @@ def output_batches(
         # be inferred from the continuation_file.
         start_ids = {}
 
-    interpreter = Interpreter(
+    with Interpreter(
         output_stream=output_stream,
         globals=globals,
         options=options,
@@ -610,13 +625,16 @@ def output_batches(
         start_ids=start_ids,
         faker_providers=faker_providers,
         templates=templates,
-    )
+    ) as interpreter:
 
-    runtimecontext = RuntimeContext(interpreter=interpreter)
-    continuing = bool(continuation_data)
-    interpreter.loop_over_templates_until_finished(runtimecontext, continuing)
-    return interpreter.globals
+        runtimecontext = RuntimeContext(interpreter=interpreter)
+        continuing = bool(continuation_data)
+        interpreter.loop_over_templates_until_finished(runtimecontext, continuing)
+        return interpreter.globals
 
 
 Scalar = Union[str, Number, date, datetime, None]
-FieldValue = Union[None, Scalar, ObjectRow, tuple, NicknameSlot]
+FieldValue = Union[
+    None, Scalar, ObjectRow, tuple, NicknameSlot, snowfakery.plugins.PluginResult
+]
+

@@ -22,7 +22,7 @@ line = {"filename": "abc.yml", "line_num": 42}
 
 def standard_runtime():
     output_stream = DebugOutputStream()
-    return RuntimeContext(Interpreter(output_stream=output_stream), "Foo")
+    return RuntimeContext(Interpreter(output_stream=output_stream))
 
 
 x = standard_runtime()

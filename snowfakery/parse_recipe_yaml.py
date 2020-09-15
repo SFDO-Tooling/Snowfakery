@@ -233,7 +233,7 @@ def parse_count_expression(yaml_sobj: Dict, sobj_def: Dict, context: ParseContex
 
 
 def include_macro(
-    name: str, context: ParseContext
+    name: str, context: ParseContext, parent_macros=()
 ) -> Tuple[List[FieldFactory], List[TemplateLike]]:
     macro = context.macros.get(name)
     if not macro:
@@ -241,22 +241,36 @@ def include_macro(
             f"Cannot find macro named {name}", **context.line_num()
         )
     parsed_macro = parse_element(
-        macro, "macro", {}, {"fields": Dict, "friends": List}, context
+        macro, "macro", {}, {"fields": Dict, "friends": List, "include": str}, context
     )
     fields = parsed_macro.fields or {}
     friends = parsed_macro.friends or []
-    return parse_fields(fields, context), parse_friends(friends, context)
+    fields, friends = parse_fields(fields, context), parse_friends(friends, context)
+    if name in parent_macros:
+        idx = parent_macros.index(name)
+        raise exc.DataGenError(
+            f"Macro `{name}` calls `{'` which calls `'.join(parent_macros[idx+1:])}` which calls `{name}`",
+            **context.line_num(macro),
+        )
+    parse_inclusions(macro, fields, friends, context, parent_macros + (name,))
+    return fields, friends
 
 
 def parse_inclusions(
-    yaml_sobj: Dict, fields: List, friends: List, context: ParseContext
+    yaml_sobj: Dict,
+    fields: List,
+    friends: List,
+    context: ParseContext,
+    parent_macros=(),
 ) -> None:
     inclusions: Iterable[str] = [
         x.strip() for x in yaml_sobj.get("include", "").split(",")
     ]
     inclusions = filter(None, inclusions)
     for inclusion in inclusions:
-        include_fields, include_friends = include_macro(inclusion, context)
+        include_fields, include_friends = include_macro(
+            inclusion, context, parent_macros
+        )
         fields.extend(include_fields)
         friends.extend(include_friends)
 
