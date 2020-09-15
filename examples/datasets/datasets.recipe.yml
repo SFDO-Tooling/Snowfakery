@@ -1,0 +1,45 @@
+- plugin: snowfakery.standard_plugins.datasets.Dataset
+- object: Person
+  count: 10
+  fields:
+    Name:
+      fake: name
+    __address_from_csv:
+      Dataset.iterate:
+        dataset: addresses.csv
+    StreetAddress: ${{__address_from_csv.Number}} ${{__address_from_csv.Street}}
+    City: ${{__address_from_csv.City}}
+
+- object: Person
+  count: 10
+  fields:
+    Name:
+      fake: name
+    __address_from_db:
+      Dataset.iterate:
+        dataset: sqlite:///addresses.db
+    StreetAddress: ${{__address_from_db.Number}} ${{__address_from_db.Street}}
+    City: ${{__address_from_db.City}}
+
+- object: Person
+  count: 10
+  fields:
+    Name:
+      fake: name
+    __address_from_csv:
+      Dataset.shuffle:
+        dataset: addresses.csv
+    StreetAddress: ${{__address_from_csv.Number}} ${{__address_from_csv.Street}}
+    City: ${{__address_from_csv.City}}
+
+- object: Person
+  count: 10
+  fields:
+    Name:
+      fake: name
+    __address_from_csv:
+      Dataset.iterate:
+        dataset: addresses.csv
+        table: addresses
+    StreetAddress: ${{__address_from_csv.Number}} ${{__address_from_csv.Street}}
+    City: ${{__address_from_csv.City}}

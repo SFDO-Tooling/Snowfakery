@@ -1,5 +1,4 @@
 import setuptools
-from snowfakery import version
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -12,9 +11,13 @@ with open("requirements_dev.txt") as dev_requirements_file:
         req for req in dev_requirements_file if not req.startswith("-")
     ]
 
+# get the version into a global variable named "version"
+with open("snowfakery/version.txt") as f:
+    version = f.read().strip()
+
 setuptools.setup(
-    name="snowfakery",  # Replace with your own username
-    version=version.version,
+    name="snowfakery",
+    version=version,
     author="Paul Prescod",
     author_email="pprescod@salesforce.com",
     description=(

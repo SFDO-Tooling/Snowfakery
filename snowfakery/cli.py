@@ -16,7 +16,7 @@ from contextlib import contextmanager
 
 import yaml
 import click
-from snowfakery.version import version
+from snowfakery import version
 
 if __name__ == "__main__":  # pragma: no cover
     sys.path.append(str(Path(__file__).parent.parent))
