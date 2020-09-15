@@ -31,6 +31,7 @@ setuptools.setup(
     url="https://github.com/SFDO-Tooling/Snowfakery",
     packages=setuptools.find_packages(),
     package_dir={"snowfakery": "snowfakery"},
+    package_data={"snowfakery": ["version.txt"]},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
