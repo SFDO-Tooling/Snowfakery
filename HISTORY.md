@@ -4,6 +4,22 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 1.1
+
+Support for External Datasets. (PR #102)
+
+Macros within Macros now work correctly. (PR #120)
+
+It is now possible to have forward references to Nicknames. (PR #113)
+
+Closed Issue #42: relating to relative month parsing
+
+Closed Issue #131: Parse errors would result in an invalid rather than empty
+JSON file.
+
+Change the architecture to always initialize the database based on the recipe
+and never do it from the CumulusCI Mapping file.
+
 ## Snowfakery 1.0.1
 
 Update URLs for PyPI. No changes to the Snowfakery code itself.
@@ -20,8 +36,8 @@ Dates can now be parsed from strings with the `date()` function. (see docs)
 
 Added `relativedelta()` function. (see docs)
 
-Official formula syntax is now ${{foo}} instead of <<foo>>. The old syntax will be supported 
-for at least the remainder of 2020.
+Official formula syntax is now ${{foo}} instead of `<<foo>>`.
+The old syntax will be supported for at least the remainder of 2020.
 
 Docs are checked into Git in Markdown format.
 
@@ -41,11 +57,12 @@ Snowfakery can output SQL/JSON NULL using YAML blank fields or the YAML literal 
 
 Fields starting with __ are now properly suppressed as per the documentation.
 
-Various performance and reliability improvements: 
- * parsed dates are now cached
- * Jinja values are always coerced to a string where appropriate
- * internal attributes were renamed for clarity
- * lookups are only generated in CCI mappings if they are actually needed
+Various performance and reliability improvements:
+
+* parsed dates are now cached
+* Jinja values are always coerced to a string where appropriate
+* internal attributes were renamed for clarity
+* lookups are only generated in CCI mappings if they are actually needed
 
 ## Snowfakery 0.8.0
 
