@@ -84,10 +84,13 @@ class OutputStream(ABC):
         else:
             encoder = self.encoders.get(type(field_value))
             if not encoder:
-                raise TypeError(
-                    f"No encoder found for {type(field_value)} in {self.__class__.__name__} "
-                    f"for {field_name}, {field_value} in {sourcetable}"
-                )
+                try:
+                    return field_value.sf_encode()
+                except KeyError:
+                    raise TypeError(
+                        f"No encoder found for {type(field_value)} in {self.__class__.__name__} "
+                        f"for {field_name}, {field_value} in {sourcetable}"
+                    )
             return encoder(field_value)
 
     def should_output(self, value):

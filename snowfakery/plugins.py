@@ -1,4 +1,4 @@
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, Sequence
 
 import yaml
 from yaml.representer import Representer
@@ -85,7 +85,7 @@ class PluginResult:
 
     PluginResults can be initialized with a dict or dict-like object.
 
-    PluginResults are serialized to contniuation files as dicts."""
+    PluginResults are serialized to continuation files as dicts."""
 
     def __init__(self, result: Mapping):
         self.result = result
@@ -96,10 +96,32 @@ class PluginResult:
     def __reduce__(self):
         return (self.__class__, (dict(self.result),))
 
+    def __getstate__(self):
+        return self.result.__getstate__()
+
+    def sf_encode(self) -> str:
+        return self.result.sf_encode()
+
+
+class ArrayPluginResult(PluginResult):
+    def __init__(self, result: Sequence):
+        self.result = result
+
+    def __getitem__(self, index):
+        return self.result[index]
+
+    def __reduce__(self):
+        return (self.__class__, (list(self.result),))
+
 
 # round-trip PluginResult objects through continuation YAML if needed.
 yaml.SafeDumper.add_representer(PluginResult, Representer.represent_object)
+yaml.SafeDumper.add_representer(ArrayPluginResult, Representer.represent_object)
 yaml.SafeLoader.add_constructor(
     "tag:yaml.org,2002:python/object/apply:snowfakery.plugins.PluginResult",
     lambda loader, node: PluginResult(loader.construct_sequence(node)[0]),
+)
+yaml.SafeLoader.add_constructor(
+    "tag:yaml.org,2002:python/object/apply:snowfakery.plugins.ArrayPluginResult",
+    lambda loader, node: ArrayPluginResult(loader.construct_sequence(node)[0]),
 )

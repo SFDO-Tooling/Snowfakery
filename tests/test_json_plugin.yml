@@ -1,0 +1,29 @@
+- plugin: snowfakery.standard_plugins.json.JSON
+
+- object: Flat
+  fields:
+    date_as_json_object:
+      JSON.object:
+        year: 2023
+        month: Nov
+        day: 3
+    date_as_json_array:
+      JSON.array:
+        - 2023
+        - Nov
+        - 3
+
+- object: Nested
+  fields:
+    date_time_representations:
+      JSON.object:
+        date_as_json_object:
+          JSON.object:
+            year: 2023
+            month: Nov
+            day: 3
+        date_as_json_array:
+          JSON.array:
+            - 2023
+            - Nov
+            - 3
