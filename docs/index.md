@@ -1093,6 +1093,38 @@ recipe once. It could, however, save you time if you  were running
 the Snowfakery recipe over and over, because the shuffling would
 happen just once.
 
+#### JSON
+
+Sometimes you might want to include JSON inside of another forrmat.
+
+For example, in CSV:
+
+```csv
+id,date_as_json_object,date_as_json_array
+1,"{""year"": 2023, ""month"": ""Nov"", ""day"": 3}","[2023, ""Nov"", 3]"
+```
+
+The JSON is "just" a string from the point of view of the CSV.
+
+There are two kinds of data structures in JSON: Arrays and Objects (key/value pairs). Accordingly, the JSON plugin has two keywords for inserting them.
+
+```yaml
+- object: Flat
+  fields:
+    date_as_json_object:
+      JSON.object:
+        year: 2023
+        month: Nov
+        day: 3
+    date_as_json_array:
+      JSON.array:
+        - 2023
+        - Nov
+        - 3
+```
+
+REVISIT
+
 ### Custom Plugins
 
 To write a new Plugin, make a class that inherits from `SnowfakeryPlugin` and implements either the `custom_functions()` method or a `Functions` nested class. The nested class is simple: each method represents a function to expose in the namespace. In this case the function name would be `DoublingPlugin.double`.
@@ -1140,8 +1172,7 @@ represents the values that would be available to a formula running in the same c
 
 Plugins can return normal Python primitive types, datetime.date, `ObjectRow` or `PluginResult` objects. `ObjectRow` objects represent new output records/objects. `PluginResult` objects
 expose a namespace that other code can access through dot-notation. PluginResults can be
-initialized with either a dict or an object that exposes the namespace through Python 
-getattr().
+initialized with either a dict or an object that exposes the namespace through Python `getattr()`.
 
 In the rare event that a plugin has a function which need its arguments to be passed to it unevaluated, for later (perhaps conditional) evaluation, you can use the `@snowfakery.lazy decorator`. Then you can evaluate the arguments with `self.context.evaluate()`. 
 
