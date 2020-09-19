@@ -6,7 +6,6 @@ from enum import Enum, auto
 from typing import Optional, Dict, List, Sequence, Mapping, NamedTuple, Union
 from numbers import Number
 
-from faker.utils.datetime_safe import date as faker_date
 import jinja2
 import yaml
 
@@ -107,8 +106,8 @@ class Dependency(NamedTuple):
     field_name: str
 
 
-SnowfakeryDumper.add_representer(
-    faker_date, yaml.representer.SafeRepresenter.represent_date
+yaml.SafeDumper.add_representer(
+    Dependency, lambda representer, obj: representer.represent_list(obj)
 )
 
 
@@ -228,9 +227,7 @@ class Globals:
         if not_filled:
             plural = "s" if len(not_filled) > 1 else ""
             raise DataGenNameError(
-                f"Reference{plural} not fulfilled: {','.join(not_filled)}",
-                None,
-                None,
+                f"Reference{plural} not fulfilled: {','.join(not_filled)}", None, None,
             )
 
     def __getstate__(self):
