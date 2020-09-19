@@ -6,7 +6,6 @@ from enum import Enum, auto
 from typing import Optional, Dict, List, Sequence, Mapping, NamedTuple, Union
 from numbers import Number
 
-from faker.utils.datetime_safe import date as faker_date
 import jinja2
 import yaml
 
@@ -113,11 +112,6 @@ class Dependency(NamedTuple):
 
 yaml.SafeDumper.add_representer(
     Dependency, lambda representer, obj: representer.represent_list(obj)
-)
-
-
-yaml.SafeDumper.add_representer(
-    faker_date, yaml.representer.SafeRepresenter.represent_date
 )
 
 
@@ -637,4 +631,3 @@ Scalar = Union[str, Number, date, datetime, None]
 FieldValue = Union[
     None, Scalar, ObjectRow, tuple, NicknameSlot, snowfakery.plugins.PluginResult
 ]
-
