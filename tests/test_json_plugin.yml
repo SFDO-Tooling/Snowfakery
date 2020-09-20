@@ -4,13 +4,15 @@
   fields:
     date_as_json_object:
       JSON.object:
-        year: 2023
-        month: Nov
+        year: 
+          fake: year
+        month:
+          fake: month
         day: 3
     date_as_json_array:
       JSON.array:
-        - 2023
-        - Nov
+        - fake: year
+        - fake: month
         - 3
 
 - object: Nested
@@ -19,11 +21,14 @@
       JSON.object:
         date_as_json_object:
           JSON.object:
-            year: 2023
-            month: Nov
-            day: 3
+            day:
+              fake: day_of_month
+            month:
+              fake: month
+            year: 
+              fake: year
         date_as_json_array:
           JSON.array:
-            - 2023
-            - Nov
-            - 3
+            - fake: day_of_month
+            - fake: month
+            - fake: year
