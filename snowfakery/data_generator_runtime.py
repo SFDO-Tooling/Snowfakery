@@ -243,7 +243,9 @@ class Globals:
         }
         nicknames_and_tables = {k: v for k, v in self.nicknames_and_tables.items()}
         today = self.today
-        intertable_dependencies = [v._asdict() for v in self.intertable_dependencies]
+        intertable_dependencies = [
+            dict(v._asdict()) for v in self.intertable_dependencies
+        ]  # converts ordered-dict to dict for Python 3.6 and 3.7
         return {
             "id_manager": id_manager.__getstate__(),
             "last_seen_obj_of_type": last_seen_obj_of_type,
