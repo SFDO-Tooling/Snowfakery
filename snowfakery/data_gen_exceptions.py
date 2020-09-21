@@ -46,6 +46,14 @@ class DataGenValueError(DataGenError):
     pass
 
 
+class DataGenImportError(DataGenError):
+    pass
+
+
+class DataGenTypeError(DataGenError):
+    pass
+
+
 def fix_exception(message, parentobj, e):
     """Add filename and linenumber to an exception if needed"""
     filename, line_num = parentobj.filename, parentobj.line_num
