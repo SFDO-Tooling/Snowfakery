@@ -12,11 +12,12 @@ with open("requirements_dev.txt") as dev_requirements_file:
     ]
 
 # get the version into a global variable named "version"
-exec(open("snowfakery/version.py").read())
+with open("snowfakery/version.txt") as f:
+    version = f.read().strip()
 
 setuptools.setup(
     name="snowfakery",
-    version=version,  # noQA
+    version=version,
     author="Paul Prescod",
     author_email="pprescod@salesforce.com",
     description=(
@@ -30,6 +31,7 @@ setuptools.setup(
     url="https://github.com/SFDO-Tooling/Snowfakery",
     packages=setuptools.find_packages(),
     package_dir={"snowfakery": "snowfakery"},
+    include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

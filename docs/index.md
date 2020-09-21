@@ -967,6 +967,132 @@ Or:
       twelve: ${Math.sqrt}
 ```
 
+#### External datasets
+
+Snowfakery can incorporate data from external CSV files or databases as datasets.
+
+##### Iterating over CSV datasets
+
+Here is an example of a simple CSV-based dataset:
+
+```csv
+Number,Street,City,Postcode
+420,Kings Ave,Burnaby,85633
+421,Granville Street,White Rock,85633
+422,Kingsway Road,Richmond,85633
+```
+
+`examples/datasets/addresses.csv`
+
+Note that the column names come from the first row.
+
+Here is how we can use those rows:
+
+```yaml
+- plugin: snowfakery.standard_plugins.datasets.Dataset
+- object: Person
+  count: 10
+  fields:
+    Name:
+      fake: name
+
+    __address_from_csv:
+      Dataset.iterate:
+        dataset: addresses.csv
+    StreetAddress: ${{__address_from_csv.Number}} ${{__address_from_csv.Street}}
+    City: ${{__address_from_csv.City}}
+```
+
+`examples/datasets/datasets.recipe.yml`
+
+The plugin only needs to be declared once per recipe.
+
+The double-underscore ("dunder") syntax is described in [#hidden-fields-and-objects].
+In this context it is used to grab a whole CSV row and give it a name so that we
+can pull out specific columns by name later.
+
+The `Dataset.iterate` [function block](#function-blocks) pulls each row from the dataset in order, one for each Person. It will go back to the top after it has used every row.
+
+So it would generate output like this:
+
+```bash
+$ snowfakery examples/datasets/datasets.recipe.yml 
+Person(id=1, Name=Dawn Gray, StreetAddress=420 Kings Ave, City=Burnaby)
+Person(id=2, Name=Melissa Walker, StreetAddress=421 Granville Street, City=White Rock)
+Person(id=3, Name=Roberto Simon, StreetAddress=422 Kingsway Road, City=Richmond)
+Person(id=4, Name=Miss Jessica Ramsey, StreetAddress=420 Kings Ave, City=Burnaby)
+Person(id=5, Name=Bobby Sutton, StreetAddress=421 Granville Street, City=White Rock)
+Person(id=6, Name=Tiffany Cox, StreetAddress=422 Kingsway Road, City=Richmond)
+Person(id=7, Name=Ethan Potts, StreetAddress=420 Kings Ave, City=Burnaby)
+Person(id=8, Name=Tamara Farley, StreetAddress=421 Granville Street, City=White Rock)
+Person(id=9, Name=Austin Wong, StreetAddress=422 Kingsway Road, City=Richmond)
+Person(id=10, Name=Kelly Jones, StreetAddress=420 Kings Ave, City=Burnaby)
+```
+
+##### Iterating over SQL database datasets
+
+If the reference to a dataset is a URL instead, Snowfakery will attempt to use
+it as a reference to a database. Out of the box  Snowfakery supports
+`sqlite:///` urls as described in the documentation for 
+[SQL Alchemy](https://docs.sqlalchemy.org/en/13/core/engines.html#sqlite).
+
+That would look exactly like above except for this line:
+
+```yaml
+   dataset: sqlite:///addresses.db
+```
+
+Depending on the context, other database URLs may work as well,
+if the context has appropriate drivers installed.
+Only SQLite is part of our test suite, however.
+
+If a SQL dataset has more than one table, you must specify which table
+to use like this:
+
+```
+    __address_from_csv:
+      Dataset.iterate:
+        dataset: addresses.csv
+        table: addresses
+```
+
+##### Shuffling Data
+
+If you would rather the rows be pulled out in random order, you
+have two options. The simplest thing is to shuffle it in your
+Snowfakery recipe like this:
+
+```yaml
+    __address_from_csv:
+      Dataset.shuffle:
+        dataset: addresses.csv
+```
+
+
+##### Shuffling data in advance
+
+If you experience performance or memory usage problems with big datasets,
+you might want to shuffle your data into a random order  before using it
+in Snowfakery. Snowfakery's source repository includes a simplistic tool called
+`shufflecsv.py` which can do that for CSV files. You feed it a CSV on stdin
+ and it will generate another one on stdout like this:
+
+```bash
+$ python tools/shufflecsv.py < examples/datasets/addresses.csv > examples/datasets/shuffled.csv
+...
+```
+
+This script does not currently support CSVs that include newlines
+within fields.
+
+Doing something equivalent for a SQLite or other database would
+involve writing a script using the clause `order by random()`. This
+is also how Snowfakery does its randomization internally, so it
+would not gain you very much if you are only running the Snowfakery
+recipe once. It could, however, save you time if you  were running
+the Snowfakery recipe over and over, because the shuffling would
+happen just once.
+
 ### Custom Plugins
 
 To write a new Plugin, make a class that inherits from `SnowfakeryPlugin` and implements either the `custom_functions()` method or a `Functions` nested class. The nested class is simple: each method represents a function to expose in the namespace. In this case the function name would be `DoublingPlugin.double`.

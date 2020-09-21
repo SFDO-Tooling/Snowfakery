@@ -1,8 +1,9 @@
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 from importlib import import_module
 
+import yaml
+from yaml.representer import Representer
 from faker.providers import BaseProvider as FakerProvider
-
 
 import snowfakery.data_gen_exceptions as exc
 
@@ -54,6 +55,9 @@ class SnowfakeryPlugin:
         functions.context = self.context
         return functions
 
+    def close(self, *args, **kwargs):
+        pass
+
 
 class PluginContext:
     "Exposes certain stable internals to plugins"
@@ -101,3 +105,28 @@ def resolve_plugin(plugin: str, lineinfo) -> object:
             lineinfo.filename,
             lineinfo.line_num,
         )
+
+
+class PluginResult:
+    """`PluginResult` objects expose a namespace that other code can access through dot-notation.
+
+    PluginResults can be initialized with a dict or dict-like object.
+
+    PluginResults are serialized to contniuation files as dicts."""
+
+    def __init__(self, result: Mapping):
+        self.result = result
+
+    def __getattr__(self, name):
+        return self.result[name]
+
+    def __reduce__(self):
+        return (self.__class__, (dict(self.result),))
+
+
+# round-trip PluginResult objects through continuation YAML if needed.
+yaml.SafeDumper.add_representer(PluginResult, Representer.represent_object)
+yaml.SafeLoader.add_constructor(
+    "tag:yaml.org,2002:python/object/apply:snowfakery.plugins.PluginResult",
+    lambda loader, node: PluginResult(loader.construct_sequence(node)[0]),
+)

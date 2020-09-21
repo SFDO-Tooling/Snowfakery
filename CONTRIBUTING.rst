@@ -102,8 +102,8 @@ create a new branch for your version::
 
 Make the necessary changes to prepare the new release:
 
-    1. Update the version in ``snowfakery/version.py``
-    2. Update the release notes in ``HISTORY.rst``
+    1. Update the version in ``snowfakery/version.txt``
+    2. Update the release notes in ``HISTORY.md``
 
 Commit the changes, open a Pull Request on GitHub and request approval from another committer.
 
