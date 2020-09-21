@@ -2,6 +2,7 @@ from typing import Any, Callable, Mapping
 
 import yaml
 from yaml.representer import Representer
+from .utils.yaml_utils import SnowfakeryDumper
 
 
 class SnowfakeryPlugin:
@@ -98,7 +99,7 @@ class PluginResult:
 
 
 # round-trip PluginResult objects through continuation YAML if needed.
-yaml.SafeDumper.add_representer(PluginResult, Representer.represent_object)
+SnowfakeryDumper.add_representer(PluginResult, Representer.represent_object)
 yaml.SafeLoader.add_constructor(
     "tag:yaml.org,2002:python/object/apply:snowfakery.plugins.PluginResult",
     lambda loader, node: PluginResult(loader.construct_sequence(node)[0]),
