@@ -1,9 +1,9 @@
 import warnings
 from typing import IO, Tuple, Mapping, List, Dict, TextIO, Union
-from click.utils import LazyFile
 
 import yaml
 from faker.providers import BaseProvider as FakerProvider
+from click import LazyFile
 
 from .data_gen_exceptions import DataGenNameError
 from .output_streams import DebugOutputStream, OutputStream
@@ -84,9 +84,7 @@ def load_continuation_yaml(continuation_file: FileLike):
 
 def save_continuation_yaml(continuation_data: Globals, continuation_file: FileLike):
     yaml.dump(
-        continuation_data.__getstate__(),
-        continuation_file,
-        Dumper=SnowfakeryDumper,
+        continuation_data.__getstate__(), continuation_file, Dumper=SnowfakeryDumper,
     )
 
 
