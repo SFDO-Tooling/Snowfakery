@@ -85,31 +85,6 @@ def lazy(func: Any) -> Callable:
     return func
 
 
-class PluginResult:
-    """`PluginResult` objects expose a namespace that other code can access through dot-notation.
-
-    PluginResults can be initialized with a dict or dict-like object.
-
-    PluginResults are serialized to contniuation files as dicts."""
-
-    def __init__(self, result: Mapping):
-        self.result = result
-
-    def __getattr__(self, name):
-        return self.result[name]
-
-    def __reduce__(self):
-        return (self.__class__, (dict(self.result),))
-
-
-# round-trip PluginResult objects through continuation YAML if needed.
-SnowfakeryDumper.add_representer(PluginResult, Representer.represent_object)
-yaml.SafeLoader.add_constructor(
-    "tag:yaml.org,2002:python/object/apply:snowfakery.plugins.PluginResult",
-    lambda loader, node: PluginResult(loader.construct_sequence(node)[0]),
-)
-
-
 def resolve_plugin(plugin: str, lineinfo) -> object:
     "Resolve a plugin to a class"
     module_name, class_name = plugin.rsplit(".", 1)
@@ -131,3 +106,25 @@ def resolve_plugin(plugin: str, lineinfo) -> object:
             lineinfo.filename,
             lineinfo.line_num,
         )
+
+
+class PluginResult:
+    """`PluginResult` objects expose a namespace that other code can access through dot-notation.
+
+    PluginResults can be initialized with a dict or dict-like object.
+
+    PluginResults are serialized to contniuation files as dicts."""
+
+    def __init__(self, result: Mapping):
+        self.result = result
+
+    def __getattr__(self, name):
+        return self.result[name]
+
+
+# round-trip PluginResult objects through continuation YAML if needed.
+SnowfakeryDumper.add_representer(PluginResult, Representer.represent_object)
+yaml.SafeLoader.add_constructor(
+    "tag:yaml.org,2002:python/object/apply:snowfakery.plugins.PluginResult",
+    lambda loader, node: PluginResult(loader.construct_sequence(node)[0]),
+)
