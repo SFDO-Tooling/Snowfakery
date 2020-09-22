@@ -1,6 +1,5 @@
 import warnings
 from typing import IO, Tuple, Mapping, List, Dict, TextIO, Union
-from importlib import import_module
 from click.utils import LazyFile
 
 import yaml
@@ -91,32 +90,18 @@ def save_continuation_yaml(continuation_data: Globals, continuation_file: FileLi
     )
 
 
-def resolve_plugin(plugin: str) -> object:
-    "Resolve a plugin to a class"
-    module_name, class_name = plugin.rsplit(".", 1)
-    module = import_module(module_name)
-    cls = getattr(module, class_name)
-    if issubclass(cls, FakerProvider):
-        return (FakerProvider, cls)
-    elif issubclass(cls, SnowfakeryPlugin):
-        return (SnowfakeryPlugin, cls)
-    else:
-        raise TypeError(f"{cls} is not a Faker Provider nor Snowfakery Plugin")
-
-
-def process_plugins(plugins: List[str]) -> Tuple[List[object], Mapping[str, object]]:
+def process_plugins(plugins: List) -> Tuple[List[object], Mapping[str, object]]:
     """Resolve a list of names for SnowfakeryPlugins and Faker Providers to objects
 
     The Providers are returned as a list of objects.
     The Plugins are a mapping of ClassName:object so they can be namespaced.
     """
-    plugin_classes = [resolve_plugin(plugin) for plugin in plugins]
     faker_providers = [
-        provider for baseclass, provider in plugin_classes if baseclass == FakerProvider
+        provider for baseclass, provider in plugins if baseclass == FakerProvider
     ]
     snowfakery_plugins = {
         plugin.__name__: plugin
-        for baseclass, plugin in plugin_classes
+        for baseclass, plugin in plugins
         if baseclass == SnowfakeryPlugin
     }
     return (faker_providers, snowfakery_plugins)

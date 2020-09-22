@@ -1,8 +1,13 @@
 from typing import Any, Callable, Mapping
+from importlib import import_module
 
 import yaml
 from yaml.representer import Representer
+from faker.providers import BaseProvider as FakerProvider
+
 from .utils.yaml_utils import SnowfakeryDumper
+
+import snowfakery.data_gen_exceptions as exc
 
 
 class SnowfakeryPlugin:
@@ -104,3 +109,25 @@ yaml.SafeLoader.add_constructor(
     "tag:yaml.org,2002:python/object/apply:snowfakery.plugins.PluginResult",
     lambda loader, node: PluginResult(loader.construct_sequence(node)[0]),
 )
+
+
+def resolve_plugin(plugin: str, lineinfo) -> object:
+    "Resolve a plugin to a class"
+    module_name, class_name = plugin.rsplit(".", 1)
+    try:
+        module = import_module(module_name)
+    except ModuleNotFoundError as e:
+        raise exc.DataGenImportError(
+            f"Cannot find plugin: {e}", lineinfo.filename, lineinfo.line_num
+        )
+    cls = getattr(module, class_name)
+    if issubclass(cls, FakerProvider):
+        return (FakerProvider, cls)
+    elif issubclass(cls, SnowfakeryPlugin):
+        return (SnowfakeryPlugin, cls)
+    else:
+        raise exc.DataGenTypeError(
+            f"{cls} is not a Faker Provider nor Snowfakery Plugin",
+            lineinfo.filename,
+            lineinfo.line_num,
+        )
