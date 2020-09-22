@@ -19,8 +19,8 @@ from .data_generator_runtime_object_model import (
     ReferenceValue,
 )
 
-import snowfakery.data_gen_exceptions as exc
 from snowfakery.plugins import resolve_plugin
+import snowfakery.data_gen_exceptions as exc
 
 SHARED_OBJECT = "#SHARED_OBJECT"
 

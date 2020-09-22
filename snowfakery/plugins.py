@@ -5,8 +5,6 @@ import yaml
 from yaml.representer import Representer
 from faker.providers import BaseProvider as FakerProvider
 
-from .utils.yaml_utils import SnowfakeryDumper
-
 import snowfakery.data_gen_exceptions as exc
 from .utils.yaml_utils import SnowfakeryDumper
 
