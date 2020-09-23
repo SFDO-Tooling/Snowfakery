@@ -1179,7 +1179,7 @@ This would output an `OBJ` row with values:
   {'id': 1, 'some_value': 'abc : abc', 'some_value_2': '1 : 2'})
 ```
 
-## Using Snowfakery within CumulusC
+## Using Snowfakery within CumulusCI
 
 You can verify that a Snowfakery-compatible version of CumulusCI is installed like this:
 
