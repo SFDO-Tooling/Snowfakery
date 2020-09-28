@@ -83,6 +83,7 @@ def load_continuation_yaml(continuation_file: FileLike):
 
 
 def save_continuation_yaml(continuation_data: Globals, continuation_file: FileLike):
+    """Save the global interpreter state from Globals into a continuation_file"""
     yaml.dump(
         continuation_data.__getstate__(),
         continuation_file,

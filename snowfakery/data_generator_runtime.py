@@ -227,7 +227,9 @@ class Globals:
         if not_filled:
             plural = "s" if len(not_filled) > 1 else ""
             raise DataGenNameError(
-                f"Reference{plural} not fulfilled: {','.join(not_filled)}", None, None,
+                f"Reference{plural} not fulfilled: {','.join(not_filled)}",
+                None,
+                None,
             )
 
     def __getstate__(self):
@@ -252,18 +254,16 @@ class Globals:
             "intertable_dependencies": intertable_dependencies,
         }
 
-    def __setstate__(self, dict):
-        self.id_manager = hydrate(IdManager, dict["id_manager"])
+    def __setstate__(self, dct):
+        self.id_manager = hydrate(IdManager, dct["id_manager"])
         self.last_seen_obj_of_type = {
-            k: v for k, v in dict["last_seen_obj_of_type"].items()
+            k: v for k, v in dct["last_seen_obj_of_type"].items()
         }
-        self.nicknamed_objects = {
-            k: v for k, v in dict["last_seen_obj_of_type"].items()
-        }
-        self.nicknames_and_tables = dict["nicknames_and_tables"]
-        self.today = dict["today"]
+        self.nicknamed_objects = {k: v for k, v in dct["last_seen_obj_of_type"].items()}
+        self.nicknames_and_tables = dct["nicknames_and_tables"]
+        self.today = dct["today"]
         self.intertable_dependencies = set(
-            Dependency(**x) for x in dict.get("intertable_dependencies", ())
+            Dependency(**x) for x in dct.get("intertable_dependencies", ())
         )
         self.reset_slots()
 
