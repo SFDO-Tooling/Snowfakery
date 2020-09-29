@@ -12,8 +12,6 @@ from sqlalchemy.orm import create_session
 from sqlalchemy.engine import Engine
 from sqlalchemy.sql import select
 
-from faker.utils.datetime_safe import date as fake_date, datetime as fake_datetime
-
 from .data_gen_exceptions import DataGenError
 
 try:
@@ -45,17 +43,6 @@ class OutputStream(ABC):
         float: float,
         datetime.date: noop,
         datetime.datetime: noop,
-        fake_date: lambda x: datetime.date(year=x.year, month=x.month, day=x.day),
-        fake_datetime: lambda x: datetime.datetime(
-            year=x.year,
-            month=x.month,
-            day=x.day,
-            hour=x.hour,
-            minute=x.minute,
-            second=x.second,
-            microsecond=x.microsecond,
-            tzinfo=x.tzinfo,
-        ),
         type(None): noop,
         bool: int,
     }
@@ -213,8 +200,6 @@ class JSONOutputStream(FileOutputStream):
         **OutputStream.encoders,
         datetime.date: str,
         datetime.datetime: str,
-        fake_date: str,
-        fake_datetime: str,
     }
 
     def __init__(self, file):
