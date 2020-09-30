@@ -32,6 +32,12 @@ class StringGenerator:
     def __call__(self, *args, **kwargs):
         return self.func(*args, **kwargs)
 
+    def __add__(self, other):
+        return str(self) + str(other)
+
+    def __radd__(self, other):
+        return str(other) + str(self)
+
 
 class FakerTemplateLibrary:
     """A Jinja template library to add the faker.xyz objects to templates"""
@@ -62,7 +68,12 @@ def look_for_number(arg):
         if char not in number_chars:
             return arg
         if char == ".":
-            looks_like_float = True
+            if looks_like_float:
+                # we already saw a ".", so this string must be
+                # of the form ###.###.### like a euro-phone #
+                return arg
+            else:
+                looks_like_float = True
     if looks_like_float:
         return float(arg)
     else:
