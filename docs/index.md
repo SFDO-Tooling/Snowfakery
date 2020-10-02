@@ -323,7 +323,7 @@ Person(id=3, name=Corey Zamora, pet=Animal(3))
 
 <img src='images/img4.png' id='PJUACAKTd0o' alt='Relationship Diagram'>
 
-The relationship from the `Person` to the `Animal` is called `pet` and it is expressed simply by embedding the template for Animal in the field named `pet`. 
+The relationship from the `Person` to the `Animal` is called `pet` and it is expressed simply by embedding the template for Animal in the field named `pet`.
 
 The relationship from `Animal` to `Person` is called `owner` and it is expressed using the `reference` function. The function looks up the YAML tree for the relevant Person row.
 
@@ -353,7 +353,7 @@ pet_stories_2.yml
       - object: Animal
         nickname: dog
         fields:
-          owner: 
+          owner:
             reference: Person
           name:
             fake: first_name
@@ -440,11 +440,17 @@ Payment_Method:
 You can either pick with even odds as above, or supply odds as a percentage:
 
 ```yaml
-StageName:
- random_choice:
-    Closed Won: 60%
-    In Progress: 20%
-    New: 20%
+    StageName:
+      random_choice:
+        - choice:
+            probability: 60%
+            pick: Closed Won
+        - choice:
+            probability: 20%
+            pick: In Progress
+        - choice:
+            probability: 20%
+            pick: New
 ```
 
 You can do more sophisticated randomness with features that will be discussed in the section [Random Weights That Are Not Percentages](#random-weights-that-are-not-percentages).
@@ -666,7 +672,7 @@ a new date object from year/month/day parts:
     another_date: ${{date(year=2018, month=11, day=30)}}
 ```
 
-The `relativedelta` [function](https://dateutil.readthedocs.io/en/stable/relativedelta.html) 
+The `relativedelta` [function](https://dateutil.readthedocs.io/en/stable/relativedelta.html)
 from `dateutil` is available for use in calculations like this:
 
 ```yaml
@@ -881,7 +887,7 @@ Options:
 
   --version                       Show the version and exit.
   --help                          Show this message and exit.
-  
+
 ```
 
 ## CSV Output
@@ -922,11 +928,17 @@ You can even do this with Object Templates to generate “objects” which are n
 Consider the following field definition:
 
 ```yaml
-StageName:
- random_choice:
-    Closed Won: 5
-    In Progress: 3
-    New: 4
+    StageName:
+      random_choice:
+        - choice:
+            probability: 5
+            pick: Closed Won
+        - choice:
+            probability: 3
+            pick: In Progress
+        - choice:
+            probability: 4
+            pick: New
 ```
 
 Observant readers will note that the values do not add up to 100. That’s fine. Closed Won will be selected 5/12 of the time, In Progress will be picked 3/12 and New will be picked 4/12 of the time. They are just weights, not necessarily percentage weights.
@@ -1016,7 +1028,7 @@ The `Dataset.iterate` [function block](#function-blocks) pulls each row from the
 So it would generate output like this:
 
 ```bash
-$ snowfakery examples/datasets/datasets.recipe.yml 
+$ snowfakery examples/datasets/datasets.recipe.yml
 Person(id=1, Name=Dawn Gray, StreetAddress=420 Kings Ave, City=Burnaby)
 Person(id=2, Name=Melissa Walker, StreetAddress=421 Granville Street, City=White Rock)
 Person(id=3, Name=Roberto Simon, StreetAddress=422 Kingsway Road, City=Richmond)
@@ -1033,7 +1045,7 @@ Person(id=10, Name=Kelly Jones, StreetAddress=420 Kings Ave, City=Burnaby)
 
 If the reference to a dataset is a URL instead, Snowfakery will attempt to use
 it as a reference to a database. Out of the box  Snowfakery supports
-`sqlite:///` urls as described in the documentation for 
+`sqlite:///` urls as described in the documentation for
 [SQL Alchemy](https://docs.sqlalchemy.org/en/13/core/engines.html#sqlite).
 
 That would look exactly like above except for this line:
@@ -1140,10 +1152,10 @@ represents the values that would be available to a formula running in the same c
 
 Plugins can return normal Python primitive types, datetime.date, `ObjectRow` or `PluginResult` objects. `ObjectRow` objects represent new output records/objects. `PluginResult` objects
 expose a namespace that other code can access through dot-notation. PluginResults can be
-initialized with either a dict or an object that exposes the namespace through Python 
+initialized with either a dict or an object that exposes the namespace through Python
 getattr().
 
-In the rare event that a plugin has a function which need its arguments to be passed to it unevaluated, for later (perhaps conditional) evaluation, you can use the `@snowfakery.lazy decorator`. Then you can evaluate the arguments with `self.context.evaluate()`. 
+In the rare event that a plugin has a function which need its arguments to be passed to it unevaluated, for later (perhaps conditional) evaluation, you can use the `@snowfakery.lazy decorator`. Then you can evaluate the arguments with `self.context.evaluate()`.
 
 For example:
 
@@ -1228,7 +1240,7 @@ To specify a record type for a record, just put the Record Type’s API Name in 
 |cli.py	                  |Click-based Command Line. Uses the Click library to supply a CLI.	|
 |data_generator.py	              |The API entry point the CLI and CCI use. <p>This may be the best place to start reading. It abstracts away all of the complexity and outlines the core flow.	|
 |parse_recipe_yaml.py	            |Phase 1: parse YAML into a Runtime DOM<p>Includes some hacks to the YAML parser for handling line numbers.	|
-|data_generator_runtime.py	      |Phase 2: Runtime.<p>Actually generate the data by walking the template list top-to-bottom, generating rows as appopriate. 	
+|data_generator_runtime.py	      |Phase 2: Runtime.<p>Actually generate the data by walking the template list top-to-bottom, generating rows as appopriate.
 |data_generator_runtime_dom.py	  |An object model used in Phase 2. Roughly similar to the shape of the YAML file.|
 |output_streams.py	              |Where the data goes in the output. Used during Phase 2.	|
 |data_gen_exceptions.py	          |Exceptions that can be thrown	|
