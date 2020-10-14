@@ -4,6 +4,12 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 1.2
+
+Improvements to plugin API: add `evaluate_raw` and `simplify`
+
+Dependency updates.
+
 ## Snowfakery 1.1.2
 
 Minor improvements in error reporting.
