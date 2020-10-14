@@ -1188,7 +1188,7 @@ parameters lazily but doesn't care about the internals of the values
 because it just returns it to some parent context. In that case,
 use `context.evaluate_raw` instead of `context.evaluate`.
 
-## Using Snowfakery within CumulusC
+## Using Snowfakery within CumulusCI
 
 You can verify that a Snowfakery-compatible version of CumulusCI is installed like this:
 
