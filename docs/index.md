@@ -1143,6 +1143,10 @@ expose a namespace that other code can access through dot-notation. PluginResult
 initialized with either a dict or an object that exposes the namespace through Python 
 getattr().
 
+If your plugin generates some special kind of data value which should be serializable
+as a primitive type (usually a string), subclass PluginResult and add a `simplify`
+method to your PluginResult. That method should return a Python primitive value.
+
 In the rare event that a plugin has a function which need its arguments to be passed to it unevaluated, for later (perhaps conditional) evaluation, you can use the `@snowfakery.lazy decorator`. Then you can evaluate the arguments with `self.context.evaluate()`. 
 
 For example:
