@@ -1183,6 +1183,11 @@ This would output an `OBJ` row with values:
   {'id': 1, 'some_value': 'abc : abc', 'some_value_2': '1 : 2'})
 ```
 
+Occasionally you might write a plugin which needs to evaluate its
+parameters lazily but doesn't care about the internals of the values
+because it just returns it to some parent context. In that case,
+use `context.evaluate_raw` instead of `context.evaluate`.
+
 ## Using Snowfakery within CumulusC
 
 You can verify that a Snowfakery-compatible version of CumulusCI is installed like this:
