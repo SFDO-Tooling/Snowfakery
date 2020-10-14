@@ -81,9 +81,11 @@ class PluginContext:
         )
 
     def evaluate_raw(self, field_definition):
+        """Evaluate the contents of a field definition"""
         return field_definition.render(self.interpreter.current_context)
 
     def evaluate(self, field_definition):
+        """Evaluate the contents of a field definition and simplify to a primitive value."""
         rc = self.evaluate_raw(field_definition)
         if isinstance(rc, Scalar.__args__):
             return rc
