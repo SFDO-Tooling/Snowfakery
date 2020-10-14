@@ -121,9 +121,9 @@ class StandardFuncs(SnowfakeryPlugin):
             func = getattr(faker, fake)
             return func()
 
-        def random_number(self, min: int, max: int) -> int:
+        def random_number(self, min: int, max: int, step: int = 1) -> int:
             """Pick a random number between min and max like Python's randint."""
-            return random.randint(min, max)
+            return random.randrange(min, max + 1, step)
 
         def reference(self, x: Union[ObjectRow, str]):
             """YAML-embeddable function to Reference another object."""
