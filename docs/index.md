@@ -886,9 +886,7 @@ Options:
 
 ### Scaling up recipe execution
 
-From the command line you can control how many rows a recipe generates by telling
-Snowfakery how many times to execute it. You do this by specifying a "target count"
-and a "target tablename", like this:
+From the command line you can control how many rows a recipe generates. You do this by specifying a "target count" and a "target tablename", like this:
 
 ```bash
 snowfakery accounts.yml --target-number 1000 Account
