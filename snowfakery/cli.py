@@ -143,6 +143,10 @@ def generate_cli(
             * or to a directory as a set of CSV files (--output-format=csv --output-folder=csvfiles)
 
         Diagram output depends on the installation of pygraphviz ("pip install pygraphviz")
+
+        Full documentation here:
+
+            * https://snowfakery.readthedocs.io/en/docs/
     """
     output_files = list(output_files) if output_files else []
     stopping_criteria = StoppingCriteria(*target_number) if target_number else None
