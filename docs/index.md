@@ -1230,6 +1230,23 @@ To specify a record type for a record, just put the Record Type’s API Name in 
 - Recipe: A Snowfakery YAML file instructing Snowfakery on what to generate.
 - YAML: YAML is a relatively simple, human-readable format. You can learn more about it at [yaml.org](http://yaml.org/). But you can also just pick up the basics of it by reading along.
 
+## Embedding API
+
+You can embed Snowfakery in a Python application like this:
+
+```python
+from snowfakery import generate_data
+
+generate_data(
+    yaml_file="filename.yml",
+    option=[("name", "value")],
+    target_number=(20, "Person"),
+    debug_internals=True,
+    output_format="json",
+    output_file="outfile.json,
+)
+```
+
 ## Internal Software Architecture
 
 |Filename	                        |Purpose	|
