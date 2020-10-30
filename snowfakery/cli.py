@@ -10,6 +10,7 @@ from snowfakery.output_streams import (
 )
 from snowfakery.data_gen_exceptions import DataGenError
 from snowfakery.data_generator import generate, StoppingCriteria
+
 import sys
 from pathlib import Path
 from contextlib import contextmanager
@@ -52,7 +53,7 @@ def int_string_tuple(ctx, param, value=None):
     """
     Parse a pair of strings that represent a string and a number.
 
-    Either number, string or string, number is allowed."""
+    Either number, string or string, number is allowed as input."""
     if not value:
         return None
     assert len(value) == 2
@@ -149,7 +150,7 @@ def generate_cli(
             * https://snowfakery.readthedocs.io/en/docs/
     """
     output_files = list(output_files) if output_files else []
-    stopping_criteria = StoppingCriteria(*target_number) if target_number else None
+    stopping_criteria = stopping_criteria_from_target_number(target_number)
     output_format = output_format.lower() if output_format else None
     validate_options(
         yaml_file,
@@ -280,6 +281,18 @@ def validate_options(
         raise click.ClickException(
             "--output-folder can only be used if files are going to be output"
         )
+
+
+def stopping_criteria_from_target_number(target_number):
+    "Deconstruct a tuple of 'str number' or 'number str' and make a StoppingCriteria"
+
+    # 'number str' is the official format so the other one can be deprecated one day.
+    if target_number:
+        if isinstance(target_number[0], int):
+            target_number = target_number[1], target_number[0]
+        return StoppingCriteria(*target_number)
+
+    return None
 
 
 def main():
