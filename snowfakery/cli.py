@@ -47,15 +47,26 @@ def eval_arg(arg):
 
 
 # don't add a type signature to this function.
-# typeguard and click will interfer with each other.
-def string_int_tuple(ctx, param, value=None):
-    """Works around Click bug
+# typeguard and click will interfere with each other.
+def int_string_tuple(ctx, param, value=None):
+    """
+    Parse a pair of strings that represent a string and a number.
 
-    https://github.com/pallets/click/issues/789#issuecomment-535121714"""
+    Either number, string or string, number is allowed."""
     if not value:
         return None
-    else:
-        return value[0], int(value[1])
+    assert len(value) == 2
+
+    try:
+        number, string = int(value[0]), value[1]
+    except ValueError:
+        try:
+            string, number = value[0], int(value[1])
+        except ValueError:
+            raise click.BadParameter(
+                "This parameter must be of the form 'number Name' like '50 Account'"
+            )
+    return string, number
 
 
 @click.command()
@@ -81,8 +92,8 @@ def string_int_tuple(ctx, param, value=None):
 @click.option(
     "--target-number",
     nargs=2,
-    help="Target options for the recipe YAML.",
-    callback=string_int_tuple,  # noqa  https://github.com/pallets/click/issues/789#issuecomment-535121714
+    help="Target options for the recipe YAML in the form of 'number tablename' like '50 Account'.",
+    callback=int_string_tuple,  # noqa  https://github.com/pallets/click/issues/789#issuecomment-535121714
 )
 @click.option(
     "--debug-internals/--no-debug-internals", "debug_internals", default=False
