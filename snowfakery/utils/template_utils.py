@@ -38,6 +38,14 @@ class StringGenerator:
     def __radd__(self, other):
         return str(other) + str(self)
 
+    def simplify(self):
+        return str(self)
+        # TODO: UNIT TESTS do not require this function, so the
+        # unit tests are incomplete
+        #
+        # The "evaluate" function that plugins use has not been
+        # tested with a loose StringGenerator
+
 
 class FakerTemplateLibrary:
     """A Jinja template library to add the faker.xyz objects to templates"""

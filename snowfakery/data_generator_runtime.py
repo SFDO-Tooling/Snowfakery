@@ -6,6 +6,7 @@ from enum import Enum, auto
 from typing import Optional, Dict, List, Sequence, Mapping, NamedTuple
 
 import jinja2
+from jinja2 import nativetypes
 import yaml
 
 from .utils.template_utils import FakerTemplateLibrary
@@ -256,13 +257,13 @@ class Globals(yaml.YAMLObject):
 class JinjaTemplateEvaluatorFactory:
     def __init__(self):
         self.compilers = [
-            jinja2.Environment(
+            nativetypes.NativeEnvironment(
                 block_start_string="<%",
                 block_end_string="%>",
                 variable_start_string="<<",
                 variable_end_string=">>",
             ),
-            jinja2.Environment(
+            nativetypes.NativeEnvironment(
                 block_start_string="${%",
                 block_end_string="%}",
                 variable_start_string="${{",

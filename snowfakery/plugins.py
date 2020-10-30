@@ -92,7 +92,9 @@ class PluginContext:
         elif hasattr(rc, "simplify"):
             return rc.simplify()
         else:
-            raise f"Cannot simplify {field_definition}. Perhaps should have used evaluate_raw?"
+            raise exc.DataGenError(
+                f"Cannot simplify {field_definition}. Perhaps should have used evaluate_raw?"
+            )
 
 
 def lazy(func: Any) -> Callable:
@@ -135,7 +137,10 @@ class PluginResult:
         self.result = result
 
     def __getattr__(self, name):
-        return self.result[name]
+        try:
+            return self.result[name]
+        except KeyError:
+            raise AttributeError(name)
 
     def __reduce__(self):
         return (self.__class__, (dict(self.result),))

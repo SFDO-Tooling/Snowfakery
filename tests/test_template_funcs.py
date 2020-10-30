@@ -178,7 +178,7 @@ class TestTemplateFuncs(unittest.TestCase):
             a: <<date("2012-01-01T00:01")>>
         """
         generate(StringIO(yaml), {}, None)
-        assert write_row.mock_calls[0][1][1]["a"] == "2012-01-01"
+        assert str(write_row.mock_calls[0][1][1]["a"]) == "2012-01-01"
 
     @mock.patch(write_row_path)
     def test_parse_date_from_date_string(self, write_row):
@@ -188,7 +188,7 @@ class TestTemplateFuncs(unittest.TestCase):
             a: ${{date("2012-01-01")}}
         """
         generate(StringIO(yaml), {}, None)
-        assert write_row.mock_calls[0][1][1]["a"] == "2012-01-01"
+        assert str(write_row.mock_calls[0][1][1]["a"]) == "2012-01-01"
 
     @mock.patch(write_row_path)
     def test_old_syntax(self, write_row):
