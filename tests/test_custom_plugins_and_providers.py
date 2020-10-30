@@ -496,3 +496,18 @@ class TestContextVars:
         """
         with pytest.warns(UserWarning, match="close"):
             generate_data(StringIO(yaml))
+
+    def test_incompatible_plugins(self):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.WrongTypePlugin  # 2
+        - plugin: tests.test_custom_plugins_and_providers.EvalPlugin       # 3
+        - object: B                                                        # 4
+          fields:                                                          # 5
+            some_value:                                                    # 6
+                - EvalPlugin.add:
+                    - 1
+                    - WrongTypePlugin.return_bad_type: 5
+        """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert 4 < e.value.line_num <= 10
