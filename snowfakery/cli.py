@@ -92,7 +92,7 @@ def int_string_tuple(ctx, param, value=None):
 @click.option(
     "--target-number",
     nargs=2,
-    help="Target options for the recipe YAML in the form of 'number tablename' like '50 Account'.",
+    help="Target options for the recipe YAML in the form of 'number tablename'. For example: '50 Account'.",
     callback=int_string_tuple,  # noqa  https://github.com/pallets/click/issues/789#issuecomment-535121714
 )
 @click.option(
