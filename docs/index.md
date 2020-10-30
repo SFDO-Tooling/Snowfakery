@@ -899,7 +899,7 @@ The counting works like this:
 - Snowfakery always executes a *complete* recipe. It never stops halfway through.
   
 - At the end of executing a recipe, it checks whether it has
-    created enough of the object type defined by ``num_records_tablename``
+    created enough of the object type defined by ``target-number``
   
 - If so, it finishes. If not, it runs the recipe again.
 

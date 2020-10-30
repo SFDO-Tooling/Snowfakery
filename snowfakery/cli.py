@@ -64,7 +64,7 @@ def int_string_tuple(ctx, param, value=None):
             string, number = value[0], int(value[1])
         except ValueError:
             raise click.BadParameter(
-                "This parameter must be of the form 'number Name' like '50 Account'"
+                "This parameter must be of the form 'number Name'. For example '50 Account'"
             )
     return string, number
 
