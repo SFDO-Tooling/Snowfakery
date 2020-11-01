@@ -197,6 +197,53 @@ class StandardFuncs(SnowfakeryPlugin):
                 probability = parse_weight_str(self.context, probability)
             return probability or when, pick
 
+        def random_reference(self, sobject: str, scope: str = "local"):
+            """Select a random, already-created row from 'sobject'
+
+            - object: Owner
+              count: 10
+              fields:
+                name: fake.name
+            - object: Pet
+              count: 10
+              fields:
+                ownedBy:
+                    random_reference:
+                        Owner
+
+            The term 'already-created' has important implications.
+
+            Let's say your Snowfakery recipe generates 10 `Owner` rows
+            and you execute it with a command line which generates 200
+            Owners and Pets. So the Snowfakery recipe must be executed
+            20 times.
+
+            The first 10 owners will be included in the set that
+            random_reference selects from 20 different times. The last
+            10 will be included in a selection set only once. The chances
+            of an early Owner having at least one pet is extremely high.
+            The chances of a late Owner having a pet is very low
+            (roughly 1/20).
+            """
+
+            # TODO: Implement scope
+
+            globals = self.context.interpreter.globals
+            last_object = globals.object_names.get(sobject)
+            if last_object:
+                last_id = last_object.id
+                if scope == "global":
+                    first_id = 1
+                elif scope == "local":
+                    first_id = globals.orig_used_ids[sobject]
+                else:
+                    raise DataGenError(f"Scope must be 'local' or 'global' not {scope}")
+                return random.randint(first_id, last_id)
+            elif sobject in globals.nicknamed_objects:
+                raise DataGenError("Nicknames cannot be used in random_reference")
+            else:
+                raise DataGenError(f"There is no table named {sobject}")
+
         @lazy
         def if_(self, *choices: FieldDefinition):
             """Template helper for conditional choices.

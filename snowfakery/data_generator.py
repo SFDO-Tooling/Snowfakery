@@ -73,7 +73,7 @@ def merge_options(option_definitions: List, user_options: Mapping) -> Tuple[Dict
     return options, extra_options
 
 
-def load_continuation_yaml(continuation_file: TextIO):
+def load_continuation_yaml(continuation_file: TextIO) -> Globals:
     """Load a continuation file from YAML."""
     return safe_load(continuation_file)
 

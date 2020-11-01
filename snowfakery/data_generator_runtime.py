@@ -189,6 +189,7 @@ class Globals(yaml.YAMLObject):
         self.today = today or date.today()
         self.nicknames_and_tables = name_slots or {}
         self.reset_slots()
+        self.orig_used_ids = defaultdict(lambda: 1)
 
     def register_object(self, obj, nickname: str = None):
         """Register an object for lookup by object type and (optionally) Nickname"""
@@ -243,12 +244,14 @@ class Globals(yaml.YAMLObject):
         state = self.__dict__.copy()
         del state["intertable_dependencies"]
         del state["named_slots"]
+        del state["orig_used_ids"]
         return state
 
     def __setstate__(self, state):
         self.last_seen_obj_of_type = {}
         for slot, value in state.items():
             setattr(self, slot, value)
+        self.orig_used_ids = self.last_seen_obj_of_type
         self.intertable_dependencies = set()
         self.reset_slots()
 
