@@ -79,8 +79,6 @@ class IdManager:
     def __init__(self, start_ids: Optional[Dict[str, int]] = None):
         start_ids = start_ids or {}
         self.last_used_ids = defaultdict(lambda: 0)
-        for name, value in start_ids.items():
-            self.last_used_ids[name] = value - 1
 
     def generate_id(self, table_name: str) -> int:
         self.last_used_ids[table_name] += 1
@@ -168,14 +166,13 @@ class Globals:
 
     def __init__(
         self,
-        start_ids: Optional[Dict[str, id]] = None,
         today: date = None,
         name_slots: Mapping[str, str] = None,
     ):
         # list starts empty and is filled. Survives continuations.
         self.nicknamed_objects = {}
 
-        self.id_manager = IdManager(start_ids)
+        self.id_manager = IdManager()
         self.last_seen_obj_of_type = {}
         self.intertable_dependencies = set()
         self.today = today or date.today()
