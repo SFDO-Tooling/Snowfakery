@@ -1,13 +1,17 @@
 from io import StringIO
 import math
+import operator
 
 from snowfakery.data_generator import generate
 from snowfakery import SnowfakeryPlugin, lazy
+from snowfakery.plugins import PluginResult
 from snowfakery.data_gen_exceptions import (
     DataGenError,
     DataGenTypeError,
     DataGenImportError,
 )
+from snowfakery.output_streams import JSONOutputStream
+
 
 from unittest import mock
 import pytest
@@ -40,6 +44,38 @@ class WrongTypePlugin(SnowfakeryPlugin):
         def return_bad_type(self, value):
             "Evaluates its argument twice into a string"
             return int  # function
+
+
+class MyEvaluator(PluginResult):
+    def __init__(self, operator, *operands):
+        super().__init__({"operator": operator, "operands": operands})
+
+    def _eval(self):
+        op = getattr(operator, self.result["operator"])
+        vals = self.result["operands"]
+        rc = op(*vals)
+        return self.result.setdefault("value", str(rc))
+
+    def __str__(self):
+        return str(self._eval())
+
+    def simplify(self):
+        return int(self._eval())
+
+
+class EvalPlugin(SnowfakeryPlugin):
+    class Functions:
+        @lazy
+        def add(self, val1, val2):
+            return MyEvaluator(
+                "add", self.context.evaluate(val1), self.context.evaluate(val2)
+            )
+
+        @lazy
+        def sub(self, val1, val2):
+            return MyEvaluator(
+                "sub", self.context.evaluate(val1), self.context.evaluate(val2)
+            )
 
 
 class TestCustomFakerProvider:
@@ -128,6 +164,25 @@ class TestCustomPlugin:
         """
         generate(StringIO(yaml), {})
         assert row_values(write_row_mock, 0, "twelve") == 12
+
+    @mock.patch(write_row_path)
+    def test_stringification(self, write_row):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.EvalPlugin
+        - object: OBJ
+          fields:
+            some_value:
+                - EvalPlugin.add:
+                    - 1
+                    - EvalPlugin.sub:
+                        - 5
+                        - 3
+        """
+        with StringIO() as s:
+            output_stream = JSONOutputStream(s)
+            generate(StringIO(yaml), {}, output_stream)
+            output_stream.close()
+            assert eval(s.getvalue())[0]["some_value"] == 3
 
 
 class PluginThatNeedsState(SnowfakeryPlugin):

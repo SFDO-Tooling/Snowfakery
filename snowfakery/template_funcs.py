@@ -177,12 +177,12 @@ class StandardFuncs(SnowfakeryPlugin):
                 raise ValueError("No choices supplied!")
 
             if getattr(choices[0], "function_name", None) == "choice":
-                choices = [self.context.evaluate(choice) for choice in choices]
+                choices = [self.context.evaluate_raw(choice) for choice in choices]
                 rc = weighted_choice(choices)
             else:
                 rc = random.choice(choices)
             if hasattr(rc, "render"):
-                rc = self.context.evaluate(rc)
+                rc = self.context.evaluate_raw(rc)
             return rc
 
         @lazy
@@ -218,7 +218,7 @@ class StandardFuncs(SnowfakeryPlugin):
             if not choices:
                 raise ValueError("No choices supplied!")
 
-            choices = [self.context.evaluate(choice) for choice in choices]
+            choices = [self.context.evaluate_raw(choice) for choice in choices]
             for when, choice in choices[:-1]:
                 if when is None:
                     raise SyntaxError(
@@ -231,7 +231,7 @@ class StandardFuncs(SnowfakeryPlugin):
             )
             rc = next(true_choices, choices[-1][-1])  # default to last choice
             if hasattr(rc, "render"):
-                rc = self.context.evaluate(rc)
+                rc = self.context.evaluate_raw(rc)
             return rc
 
     setattr(Functions, "if", Functions.if_)

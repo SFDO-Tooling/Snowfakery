@@ -1155,7 +1155,14 @@ expose a namespace that other code can access through dot-notation. PluginResult
 initialized with either a dict or an object that exposes the namespace through Python
 getattr().
 
-In the rare event that a plugin has a function which need its arguments to be passed to it unevaluated, for later (perhaps conditional) evaluation, you can use the `@snowfakery.lazy decorator`. Then you can evaluate the arguments with `self.context.evaluate()`.
+If your plugin generates some special kind of data value
+which should be serializable as a primitive type (usually a string),
+subclass PluginResult and add a `simplify` method to your PluginResult.That method should return a Python primitive value.
+
+In the rare event that a plugin has a function which need its arguments
+to be passed to it unevaluated, for later (perhaps conditional)
+evaluation, you can use the `@snowfakery.lazy decorator`. Then you can
+evaluate the arguments with `self.context.evaluate()`.
 
 For example:
 
@@ -1191,7 +1198,12 @@ This would output an `OBJ` row with values:
   {'id': 1, 'some_value': 'abc : abc', 'some_value_2': '1 : 2'})
 ```
 
-## Using Snowfakery within CumulusC
+Occasionally you might write a plugin which needs to evaluate its
+parameters lazily but doesn't care about the internals of the values
+because it just returns it to some parent context. In that case,
+use `context.evaluate_raw` instead of `context.evaluate`.
+
+## Using Snowfakery within CumulusCI
 
 You can verify that a Snowfakery-compatible version of CumulusCI is installed like this:
 
