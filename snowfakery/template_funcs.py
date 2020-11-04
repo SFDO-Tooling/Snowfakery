@@ -24,7 +24,7 @@ fake = Faker()
 # Python 3.6 is out of the support matrix.
 
 
-def parse_weight_str(context: PluginContext, weight_value) -> int:
+def parse_weight_str(context: PluginContext, weight_value) -> float:
     """For constructs like:
 
     - choice:
@@ -36,10 +36,10 @@ def parse_weight_str(context: PluginContext, weight_value) -> int:
     weight_str = context.evaluate(weight_value)
     if isinstance(weight_str, str):
         weight_str = weight_str.rstrip("%")
-    return int(weight_str)
+    return float(weight_str)
 
 
-def weighted_choice(choices: List[Tuple[int, object]]):
+def weighted_choice(choices: List[Tuple[float, object]]):
     """Selects from choices based on their weights"""
     weights = [weight for weight, value in choices]
     options = [value for weight, value in choices]
@@ -146,7 +146,7 @@ class StandardFuncs(SnowfakeryPlugin):
             return target
 
         @lazy
-        def random_choice(self, *choices):
+        def random_choice(self, *choices, **kwchoices):
             """Template helper for random choices.
 
             Supports structures like this:
@@ -173,16 +173,27 @@ class StandardFuncs(SnowfakeryPlugin):
 
             Pick-items are lazily evaluated.
             """
-            if not choices:
+            if not choices and not kwchoices:
                 raise ValueError("No choices supplied!")
+            elif choices and kwchoices:
+                raise ValueError("Both choices and probabilities supplied!")
 
-            if getattr(choices[0], "function_name", None) == "choice":
-                choices = [self.context.evaluate_raw(choice) for choice in choices]
+            if choices:
+                if getattr(choices[0], "function_name", None) == "choice":
+                    choices = [self.context.evaluate_raw(choice) for choice in choices]
+                    rc = weighted_choice(choices)
+                else:
+                    rc = random.choice(choices)
+                if hasattr(rc, "render"):
+                    rc = self.context.evaluate_raw(rc)
+            elif kwchoices:
+                choices = [
+                    (parse_weight_str(self.context, value), key)
+                    for key, value in kwchoices.items()
+                ]
                 rc = weighted_choice(choices)
-            else:
-                rc = random.choice(choices)
-            if hasattr(rc, "render"):
-                rc = self.context.evaluate_raw(rc)
+
+            assert rc
             return rc
 
         @lazy
