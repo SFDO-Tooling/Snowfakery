@@ -1,0 +1,26 @@
+- object: Duke
+  nickname: Leto I
+  fields:
+    name: Leto I Atreides
+    son:
+      reference: Muad'Dib
+    wife:
+      reference: Lady Jessica
+
+- object: Duke
+  nickname: Muad'Dib
+  fields:
+    name: Paul Atreides
+    father:
+      reference: Leto I
+    mother:
+      reference: Lady Jessica
+
+- object: Lady
+  nickname: Lady Jessica
+  fields:
+    name: Lady Jessica
+    husband:
+      reference: Leto I
+    son:
+      reference: Muad'Dib

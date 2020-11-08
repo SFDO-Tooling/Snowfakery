@@ -6,6 +6,7 @@ from snowfakery.output_streams import (
     JSONOutputStream,
     CSVOutputStream,
     ImageOutputStream,
+    GraphvizOutputStream,
     MultiplexOutputStream,
 )
 from snowfakery.data_gen_exceptions import DataGenError
@@ -143,7 +144,7 @@ def generate_cli(
             * a database identified by --dburl (e.g. --dburl sqlite:////tmp/foo.db)
             * or to a directory as a set of CSV files (--output-format=csv --output-folder=csvfiles)
 
-        Diagram output depends on the installation of pygraphviz ("pip install pygraphviz")
+        Diagram output depends on the installation of graphviz (https://www.graphviz.org/download/)
 
         Full documentation here:
 
@@ -228,6 +229,8 @@ def configure_output_stream(
                 output_streams.append(JSONOutputStream(path))
             elif format == "txt":
                 output_streams.append(DebugOutputStream(path))
+            elif format == "dot":
+                output_streams.append(GraphvizOutputStream(path))
             else:
                 output_streams.append(ImageOutputStream(path, format))
 
