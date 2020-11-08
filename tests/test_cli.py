@@ -172,6 +172,16 @@ class TestGenerateFromCLI:
                 output = f.read()
             assert len(re.findall(r"Account\(", output)) == 5
 
+    def test_from_cli__unknown_extension(self, capsys):
+        with pytest.raises(ClickException) as e:
+            generate_cli.callback(
+                yaml_file=str(sample_yaml),
+                target_number=("Account", 5),
+                output_format="xyzzy",
+                output_files=["foo.txt"],
+            )
+        assert "xyzzy" in str(e.value)
+
     def test_from_cli__continuation(self, capsys):
         with TemporaryDirectory() as t:
             mapping_file_path = Path(t) / "mapping.yml"
