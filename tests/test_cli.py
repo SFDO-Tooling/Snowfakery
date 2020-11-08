@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 from io import StringIO
 import json
 import re
+import sys
 from tests.utils import named_temporary_file_path
 
 import yaml
@@ -324,7 +325,8 @@ class TestGenerateFromCLI:
             assert "--cci-mapping-file" in str(e.value)
 
     def test_module_main(self, capsys):
-        with pytest.raises(SystemExit):
+        _ = sys  # shut up linter
+        with pytest.raises(SystemExit), mock.patch("sys.argv", ["snowfakery"]):
             main()
 
         assert "Usage:" in capsys.readouterr().err
@@ -370,6 +372,19 @@ class TestGenerateFromCLI:
                 standalone_mode=False,
             )
             assert Path(tempdir, "foo", "Account.csv").exists()
+
+    def test_output_folder__eror(self):
+        with TemporaryDirectory() as tempdir, pytest.raises(ClickException):
+            generate_cli.main(
+                [
+                    str(sample_yaml),
+                    "--output-folder",
+                    tempdir,
+                    "--output-format",
+                    "json",
+                ],
+                standalone_mode=False,
+            )
 
 
 class TestCLIOptionChecking:
