@@ -890,7 +890,29 @@ Options:
 
 ```
 
-## CSV Output
+### Scaling up recipe execution
+
+From the command line you can control how many rows a recipe generates. You do this by specifying a "target count" and a "target tablename", like this:
+
+```bash
+snowfakery accounts.yml --target-number 1000 Account
+```
+
+The counting works like this:
+
+- Snowfakery always executes a *complete* recipe. It never stops halfway through.
+  
+- At the end of executing a recipe, it checks whether it has
+    created enough of the object type defined by ``target-number``
+  
+- If so, it finishes. If not, it runs the recipe again.
+
+So if your recipe creates 10 Accounts, 5 Contacts and 15 Opportunities,
+then when you run the command above it will run the recipe
+100 times (1000/10=100) which will generate 1000 Accounts, 500 Contacts
+and 1500 Opportunites.
+
+### CSV Output
 
 You create a CSV directory like this:
 
