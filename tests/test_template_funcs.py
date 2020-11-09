@@ -1,4 +1,5 @@
 from io import StringIO
+import pytest
 import unittest
 from unittest import mock
 
@@ -34,17 +35,28 @@ class TestTemplateFuncs(unittest.TestCase):
     @mock.patch(write_row_path)
     def test_unweighted_random_choice_object(self, write_row):
         yaml = """
-        - object : A
+        - object : Task
           fields:
-            b:
+            who:
                 random_choice:
-                  - object: C
-                  - object: D
-                  - object: E
+                  - object: Contact
+                    fields:
+                        FirstName: Bart
+                        LastName: Simpson
+                  - object: Lead
+                    fields:
+                        FirstName: Marge
+                        LastName: Simpson
         """
-        generate(StringIO(yaml), {}, None)
-        assert len(write_row.mock_calls) == 2, write_row.mock_calls
-        # TODO CHECK MORE
+
+        with mock.patch("random.choice", lambda x: x[-1]):
+            generate(StringIO(yaml), {}, None)
+
+            assert len(write_row.mock_calls) == 2, write_row.mock_calls
+
+        assert write_row.mock_calls[0] == mock.call(
+            "Lead", {"id": 1, "FirstName": "Marge", "LastName": "Simpson"}
+        )
 
     @mock.patch(write_row_path)
     def test_weighted_random_choice(self, write_row):
@@ -69,6 +81,35 @@ class TestTemplateFuncs(unittest.TestCase):
         generate(StringIO(yaml), {}, None)
         assert len(write_row.mock_calls) == 2, write_row.mock_calls
         # TODO CHECK MORE
+
+    @mock.patch(write_row_path)
+    def test_weighted_random_choice_strings(self, write_row):
+        yaml = """
+        - object : A
+          fields:
+            b:
+                random_choice:
+                    A: 80%
+                    B: 10%
+                    C: 10%
+        """
+        generate(StringIO(yaml))
+        assert len(write_row.mock_calls) == 1, write_row.mock_calls
+
+    @mock.patch(write_row_path)
+    def test_weighted_random_choice_strings_computed_percentages(self, write_row):
+        yaml = """
+        - object : A
+          fields:
+            __a_percent: 60
+            b:
+                random_choice:
+                    A: ${{__a_percent}}%
+                    B: ${{__a_percent / 2}}%
+                    C: ${{100 - (__a_percent * 1.5)}}%
+        """
+        generate(StringIO(yaml))
+        assert len(write_row.mock_calls) == 1, write_row.mock_calls
 
     @mock.patch(write_row_path)
     def test_conditional_is_lazy(self, write_row):
@@ -224,3 +265,43 @@ class TestTemplateFuncs(unittest.TestCase):
         """
         generate(StringIO(yaml), {}, None)
         assert write_row.mock_calls[3][1][1]["num"] == 2
+
+    def test_random_choice_error_args_and_kwargs(self):
+        yaml = """
+        - object: A
+          fields:
+            num: ${{random_choice(1,2,a=10,b=20)}}
+        """
+        with pytest.raises(DataGenError):
+            generate(StringIO(yaml))
+
+    @mock.patch(write_row_path)
+    def test_random_choice_error_no_choices(self, write_row):
+        yaml = """
+        - object: A
+          fields:
+            num: ${{random_choice()}}
+        """
+        with pytest.raises(DataGenError):
+            generate(StringIO(yaml))
+
+    @mock.patch(write_row_path)
+    def test_random_choice_error_no_choices_2(self, write_row):
+        yaml = """
+        - object: A
+          fields:
+            num:
+                random_choice:
+        """
+        with pytest.raises(DataGenError):
+            generate(StringIO(yaml))
+
+    @mock.patch(write_row_path)
+    def test_if_error_no_choices(self, write_row):
+        yaml = """
+        - object: A
+          fields:
+            num: ${{if()}}
+        """
+        with pytest.raises(DataGenError):
+            generate(StringIO(yaml))
