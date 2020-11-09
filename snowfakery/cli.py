@@ -279,7 +279,7 @@ def validate_options(
         and not (output_files or output_format == "csv")
     ):
         raise click.ClickException(
-            "--output-folder can only be used if files are going to be output"
+            "--output-folder can only be used with --output-file=<something> or --output-format=csv"
         )
 
 
