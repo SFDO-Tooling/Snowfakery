@@ -44,6 +44,26 @@ class TestGenerateFromCLI:
     def test_counts(self, write_row):
         generate_cli.callback(
             yaml_file=sample_yaml,
+            target_number=(2, "Account"),
+            option={},
+            debug_internals=None,
+            generate_cci_mapping_file=None,
+        )
+        assert write_row.mock_calls == [
+            mock.call(
+                "Account",
+                {"id": 1, "name": "Default Company Name", "ShippingCountry": "Canada"},
+            ),
+            mock.call(
+                "Account",
+                {"id": 2, "name": "Default Company Name", "ShippingCountry": "Canada"},
+            ),
+        ]
+
+    @mock.patch(write_row_path)
+    def test_counts_backwards(self, write_row):
+        generate_cli.callback(
+            yaml_file=sample_yaml,
             target_number=("Account", 2),
             option={},
             debug_internals=None,

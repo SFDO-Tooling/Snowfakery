@@ -884,7 +884,29 @@ Options:
   
 ```
 
-## CSV Output
+### Scaling up recipe execution
+
+From the command line you can control how many rows a recipe generates. You do this by specifying a "target count" and a "target tablename", like this:
+
+```bash
+snowfakery accounts.yml --target-number 1000 Account
+```
+
+The counting works like this:
+
+- Snowfakery always executes a *complete* recipe. It never stops halfway through.
+  
+- At the end of executing a recipe, it checks whether it has
+    created enough of the object type defined by ``target-number``
+  
+- If so, it finishes. If not, it runs the recipe again.
+
+So if your recipe creates 10 Accounts, 5 Contacts and 15 Opportunities,
+then when you run the command above it will run the recipe
+100 times (1000/10=100) which will generate 1000 Accounts, 500 Contacts
+and 1500 Opportunites.
+
+### CSV Output
 
 You create a CSV directory like this:
 
@@ -1143,6 +1165,10 @@ expose a namespace that other code can access through dot-notation. PluginResult
 initialized with either a dict or an object that exposes the namespace through Python 
 getattr().
 
+If your plugin generates some special kind of data value which should be serializable
+as a primitive type (usually a string), subclass PluginResult and add a `simplify`
+method to your PluginResult. That method should return a Python primitive value.
+
 In the rare event that a plugin has a function which need its arguments to be passed to it unevaluated, for later (perhaps conditional) evaluation, you can use the `@snowfakery.lazy decorator`. Then you can evaluate the arguments with `self.context.evaluate()`. 
 
 For example:
@@ -1179,7 +1205,12 @@ This would output an `OBJ` row with values:
   {'id': 1, 'some_value': 'abc : abc', 'some_value_2': '1 : 2'})
 ```
 
-## Using Snowfakery within CumulusC
+Occasionally you might write a plugin which needs to evaluate its
+parameters lazily but doesn't care about the internals of the values
+because it just returns it to some parent context. In that case,
+use `context.evaluate_raw` instead of `context.evaluate`.
+
+## Using Snowfakery within CumulusCI
 
 You can verify that a Snowfakery-compatible version of CumulusCI is installed like this:
 

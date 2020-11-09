@@ -1,10 +1,9 @@
 from collections import defaultdict
-from datetime import date, datetime
+from datetime import date
 from contextlib import contextmanager
 from enum import Enum, auto
 
-from typing import Optional, Dict, List, Sequence, Mapping, NamedTuple, Union
-from numbers import Number
+from typing import Optional, Dict, List, Sequence, Mapping, NamedTuple
 
 import jinja2
 import yaml
@@ -625,9 +624,3 @@ def output_batches(
         continuing = bool(continuation_data)
         interpreter.loop_over_templates_until_finished(runtimecontext, continuing)
         return interpreter.globals
-
-
-Scalar = Union[str, Number, date, datetime, None]
-FieldValue = Union[
-    None, Scalar, ObjectRow, tuple, NicknameSlot, snowfakery.plugins.PluginResult
-]

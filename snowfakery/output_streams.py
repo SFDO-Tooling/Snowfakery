@@ -70,6 +70,11 @@ class OutputStream(ABC):
             return self.flatten(sourcetable, field_name, row, field_value)
         else:
             encoder = self.encoders.get(type(field_value))
+            if not encoder and hasattr(field_value, "simplify"):
+
+                def encoder(field_value):
+                    return field_value.simplify()
+
             if not encoder:
                 raise TypeError(
                     f"No encoder found for {type(field_value)} in {self.__class__.__name__} "
