@@ -1,0 +1,8 @@
+- object : A
+  fields:
+    __a_percent: 60
+    b:
+        random_choice:
+            A: ${{__a_percent}}%
+            B: ${{__a_percent / 2}}%
+            C: ${{100 - (__a_percent * 1.5)}}%

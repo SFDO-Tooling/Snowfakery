@@ -1,5 +1,4 @@
 from io import StringIO
-import unittest
 from unittest import mock
 
 import pytest
@@ -54,7 +53,7 @@ reference_from_friend = """             #1
 write_row_path = "snowfakery.output_streams.DebugOutputStream.write_single_row"
 
 
-class TestReferences(unittest.TestCase):
+class TestReferences:
     @mock.patch(write_row_path)
     def test_simple_parent(self, write_row):
         generate(StringIO(simple_parent), {}, None)
@@ -205,3 +204,19 @@ class TestReferences(unittest.TestCase):
 
         assert "Bob" in str(e.value)
         assert "Bill" in str(e.value)
+
+    def test_random_reference(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 10                   #4
+      - object: B                   #5
+        count: 2                    #6
+        fields:                     #7
+            A_ref:                  #8
+              random_reference: A   #9
+    """
+        with mock.patch("random.randint") as randint:
+            randint.side_effect = [8, 3]
+            generate(StringIO(yaml))
+        assert generated_rows.row_values(10, "A_ref") == "A(8)"
+        assert generated_rows.row_values(11, "A_ref") == "A(3)"

@@ -273,3 +273,16 @@ class TestRecordTypes:
         mapping = mapping_from_recipe_templates(summary)
 
         assert mapping["Insert Bar"]["lookups"]["child"]["key_field"] == "child"
+
+    def test_random_reference_lookups(self):
+        yaml = """
+            - object: Target
+            - object: Ref
+              fields:
+                targ:
+                  random_reference: Target
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert mapping["Insert Ref"]["lookups"]["targ"]["table"] == "Target"

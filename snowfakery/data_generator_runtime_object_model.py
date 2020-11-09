@@ -1,10 +1,9 @@
 from abc import abstractmethod, ABC
 from .data_generator_runtime import (
     evaluate_function,
-    ObjectRow,
     RuntimeContext,
-    NicknameSlot,
 )
+from .object_rows import ObjectRow, ObjectReference
 from contextlib import contextmanager
 from typing import Union, Dict, Sequence, Optional, cast
 from .utils.template_utils import look_for_number
@@ -23,7 +22,7 @@ from .plugins import Scalar, PluginResult
 # objects that represent the hierarchy of a data generator.
 # roughly similar to the YAML structure but with domain-specific objects
 Definition = Union["ObjectTemplate", "SimpleValue", "StructuredValue"]
-FieldValue = Union[None, Scalar, ObjectRow, tuple, NicknameSlot, PluginResult]
+FieldValue = Union[None, Scalar, ObjectRow, tuple, PluginResult, ObjectReference]
 
 
 class FieldDefinition(ABC):
@@ -173,7 +172,7 @@ class ObjectTemplate:
     ) -> None:
         """Before serializing we need to convert objects to flat ID integers."""
         for fieldname, fieldvalue in row.items():
-            if isinstance(fieldvalue, ObjectRow):
+            if isinstance(fieldvalue, (ObjectRow, ObjectReference)):
                 context.register_intertable_reference(
                     self.tablename, fieldvalue._tablename, fieldname
                 )

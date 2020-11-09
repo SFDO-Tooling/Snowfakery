@@ -14,9 +14,9 @@ from .data_gen_exceptions import DataGenError
 
 import snowfakery.data_generator_runtime  # noqa
 from snowfakery.plugins import SnowfakeryPlugin, PluginContext, lazy
+from snowfakery.object_rows import ObjectRow, ObjectReference
 
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
-ObjectRow = "snowfakery.data_generator_runtime.ObjectRow"
 
 fake = Faker()
 
@@ -197,7 +197,7 @@ class StandardFuncs(SnowfakeryPlugin):
                 probability = parse_weight_str(self.context, probability)
             return probability or when, pick
 
-        def random_reference(self, sobject: str, scope: str = "local"):
+        def random_reference(self, tablename: str, scope: str = "local"):
             """Select a random, already-created row from 'sobject'
 
             - object: Owner
@@ -228,21 +228,21 @@ class StandardFuncs(SnowfakeryPlugin):
 
             # TODO: Implement scope
 
-            globals = self.context.interpreter.globals
-            last_object = globals.object_names.get(sobject)
+            globls = self.context.interpreter.globals
+            last_object = globls.object_names.get(tablename)
             if last_object:
                 last_id = last_object.id
                 if scope == "global":
                     first_id = 1
                 elif scope == "local":
-                    first_id = globals.orig_used_ids[sobject]
+                    first_id = globls.orig_used_ids[tablename]
                 else:
                     raise DataGenError(f"Scope must be 'local' or 'global' not {scope}")
-                return random.randint(first_id, last_id)
-            elif sobject in globals.nicknamed_objects:
+                return ObjectReference(tablename, random.randint(first_id, last_id))
+            elif tablename in globls.nicknamed_objects:
                 raise DataGenError("Nicknames cannot be used in random_reference")
             else:
-                raise DataGenError(f"There is no table named {sobject}")
+                raise DataGenError(f"There is no table named {tablename}")
 
         @lazy
         def if_(self, *choices: FieldDefinition):
