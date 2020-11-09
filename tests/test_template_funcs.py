@@ -1,4 +1,5 @@
 from io import StringIO
+import pytest
 import unittest
 from unittest import mock
 
@@ -264,3 +265,43 @@ class TestTemplateFuncs(unittest.TestCase):
         """
         generate(StringIO(yaml), {}, None)
         assert write_row.mock_calls[3][1][1]["num"] == 2
+
+    def test_random_choice_error_args_and_kwargs(self):
+        yaml = """
+        - object: A
+          fields:
+            num: ${{random_choice(1,2,a=10,b=20)}}
+        """
+        with pytest.raises(DataGenError):
+            generate(StringIO(yaml))
+
+    @mock.patch(write_row_path)
+    def test_random_choice_error_no_choices(self, write_row):
+        yaml = """
+        - object: A
+          fields:
+            num: ${{random_choice()}}
+        """
+        with pytest.raises(DataGenError):
+            generate(StringIO(yaml))
+
+    @mock.patch(write_row_path)
+    def test_random_choice_error_no_choices_2(self, write_row):
+        yaml = """
+        - object: A
+          fields:
+            num:
+                random_choice:
+        """
+        with pytest.raises(DataGenError):
+            generate(StringIO(yaml))
+
+    @mock.patch(write_row_path)
+    def test_if_error_no_choices(self, write_row):
+        yaml = """
+        - object: A
+          fields:
+            num: ${{if()}}
+        """
+        with pytest.raises(DataGenError):
+            generate(StringIO(yaml))
