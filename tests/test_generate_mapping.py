@@ -13,7 +13,7 @@ from snowfakery.data_gen_exceptions import DataGenError
 from snowfakery.data_generator_runtime import Dependency
 
 
-class TestGenerateMapping(unittest.TestCase):
+class TestGenerateMapping:
     def test_simple_parent_child_reference(self):
         yaml = """
             - object: Parent

@@ -138,7 +138,7 @@ class ObjectTemplate:
         row = {"id": id}
         sobj = ObjectRow(self.tablename, row, index)
 
-        context.register_object(sobj, self.nickname)
+        context.register_object(sobj, self.nickname, self.just_once)
 
         self._generate_fields(context, row)
 

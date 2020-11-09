@@ -211,22 +211,9 @@ class StandardFuncs(SnowfakeryPlugin):
                     random_reference:
                         Owner
 
-            The term 'already-created' has important implications.
-
-            Let's say your Snowfakery recipe generates 10 `Owner` rows
-            and you execute it with a command line which generates 200
-            Owners and Pets. So the Snowfakery recipe must be executed
-            20 times.
-
-            The first 10 owners will be included in the set that
-            random_reference selects from 20 different times. The last
-            10 will be included in a selection set only once. The chances
-            of an early Owner having at least one pet is extremely high.
-            The chances of a late Owner having a pet is very low
-            (roughly 1/20).
+            The term 'already-created' has important implications and
+            relates to the 'scope' parameter. See the docs for more info.
             """
-
-            # TODO: Implement scope
 
             globls = self.context.interpreter.globals
             last_object = globls.object_names.get(tablename)

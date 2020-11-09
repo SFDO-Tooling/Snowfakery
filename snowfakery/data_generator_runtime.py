@@ -114,6 +114,19 @@ yaml.SafeDumper.add_representer(
 )
 
 
+class Transients:
+    def __init__(self, nicknames_and_tables: Mapping[str, str], id_manager: IdManager):
+        self.nicknamed_objects = {}
+        self.last_seen_obj_by_table = {}
+        self.named_slots = {
+            name: NicknameSlot(table, id_manager)
+            for name, table in nicknames_and_tables.items()
+        }
+        self.orig_used_ids = defaultdict(
+            lambda: 1, {k: v + 1 for k, v in id_manager.last_used_ids.items()}
+        )
+
+
 class Globals(yaml.YAMLObject):
     """Globally named objects and other aspects of global scope
 
@@ -132,35 +145,48 @@ class Globals(yaml.YAMLObject):
         today: date = None,
         name_slots: Mapping[str, str] = None,
     ):
-        # list starts empty and is filled. Survives continuations.
-        self.nicknamed_objects = {}
+        # these lists start empty and are filled.
+        # They survive iterations and continuations.
+        self.persistent_nicknames = {}
+        self.persistent_objects_by_table = {}
 
         self.id_manager = IdManager(start_ids)
-        self.last_seen_obj_of_type = {}
         self.intertable_dependencies = set()
         self.today = today or date.today()
         self.nicknames_and_tables = name_slots or {}
-        self.reset_slots()
-        self.orig_used_ids = defaultdict(lambda: 1)
+        self.transients = Transients(self.nicknames_and_tables, self.id_manager)
 
-    def register_object(self, obj, nickname: str = None):
+        self.reset_slots()
+
+    def register_object(
+        self, obj: ObjectRow, nickname: Optional[str], persistent_object: bool
+    ):
         """Register an object for lookup by object type and (optionally) Nickname"""
         if nickname:
-            self.nicknamed_objects[nickname] = obj
-        self.last_seen_obj_of_type[obj._tablename] = obj
+            if persistent_object:
+                self.persistent_nicknames[nickname] = obj
+            else:
+                self.transients.nicknamed_objects[nickname] = obj
+        if persistent_object:
+            self.persistent_objects_by_table[obj._tablename] = obj
+        else:
+            self.transients.last_seen_obj_by_table[obj._tablename] = obj
 
     @property
     def object_names(self):
         """The globally named objects"""
-        # the order is important: later overrides earlie
+        # the order is important: later overrides earlier
+        # i.e. fulfilled names override "slots"
         return {
-            **self.named_slots,  # potential forward or backwards references
-            **self.nicknamed_objects,  # nicknames that have been fulfilled
-            **self.last_seen_obj_of_type,  # tablenames that have been fulfilled
+            **self.transients.named_slots,  # potential forward or backwards references
+            **self.persistent_nicknames,  # long-lived nicknames
+            **self.persistent_objects_by_table,  # long-lived objects
+            **self.transients.nicknamed_objects,  # local nicknames that have been fulfilled
+            **self.transients.last_seen_obj_by_table,  # local tablenames that have been fulfilled
         }
 
     def generate_id_for_nickname(self, nickname: str):
-        slot = self.named_slots.get(nickname)
+        slot = self.transients.named_slots.get(nickname)
         if slot and slot.status == SlotState.ALLOCATED:
             return slot.consume_slot()
 
@@ -172,16 +198,13 @@ class Globals(yaml.YAMLObject):
         )
 
     def reset_slots(self):
-        "At the beginning of every execution, reset the forward reference slots"
-        self.named_slots = {
-            name: NicknameSlot(table, self.id_manager)
-            for name, table in self.nicknames_and_tables.items()
-        }
+        "At the beginning of every iteration, reset the forward reference slots"
+        self.transients = Transients(self.nicknames_and_tables, self.id_manager)
 
     def check_slots_filled(self):
         not_filled = [
             name
-            for name, slot in self.named_slots.items()
+            for name, slot in self.transients.named_slots.items()
             if slot.status == SlotState.ALLOCATED
         ]
         if not_filled:
@@ -192,20 +215,30 @@ class Globals(yaml.YAMLObject):
                 None,
             )
 
+    @property
+    def orig_used_ids(self):
+        return self.transients.orig_used_ids
+
     def __getstate__(self):
-        state = self.__dict__.copy()
-        del state["intertable_dependencies"]
-        del state["named_slots"]
-        del state["orig_used_ids"]
+        state = {
+            "persistent_nicknames": self.persistent_nicknames,
+            "persistent_objects_by_table": self.persistent_objects_by_table,
+            "id_manager": self.id_manager,
+            "today": self.today,
+            "nicknames_and_tables": self.nicknames_and_tables,
+            "intertable_dependencies": list(self.intertable_dependencies),
+        }
         return state
 
     def __setstate__(self, state):
-        self.last_seen_obj_of_type = {}
+        self.last_seen_obj_by_table = {}
         for slot, value in state.items():
             setattr(self, slot, value)
-        self.orig_used_ids = self.last_seen_obj_of_type
-        self.intertable_dependencies = set()
-        self.reset_slots()
+        self.intertable_dependencies = getattr(self, "intertable_dependencies", [])
+        self.intertable_dependencies = set(
+            Dependency(*dep) for dep in self.intertable_dependencies
+        )
+        self.transients = Transients(self.nicknames_and_tables, self.id_manager)
 
 
 class JinjaTemplateEvaluatorFactory:
@@ -287,7 +320,6 @@ class Interpreter:
         name_slots.update(
             {template.tablename: template.tablename for template in templates}
         )
-        # print("XXXX", name_slots, globals)
 
         self.globals = globals or Globals(name_slots=name_slots)
 
@@ -301,12 +333,17 @@ class Interpreter:
 
         self.templates = templates
 
-    def loop_over_templates_until_finished(self, runtimecontext, continuing):
+    # TODO: move this into the interpreter object
+    def loop_over_templates_until_finished(self, continuing):
         finished = False
+        # TODO: make a fresh runtime context per execution to avoid
+        #       risk of data leakage
+        runtimecontext = RuntimeContext(interpreter=self)
         while not finished:
             self.loop_over_templates_once(runtimecontext, continuing)
             finished = runtimecontext.check_if_finished()
             continuing = True
+            self.globals.reset_slots()
 
     def loop_over_templates_once(self, runtimecontext, continuing):
         for template in self.templates:
@@ -354,6 +391,7 @@ class RuntimeContext:
         else:
             self._context_vars = {}
 
+    # TODO: move this into the interpreter object
     def check_if_finished(self):
         "Have we iterated over the script enough times?"
         # check that every forward reference was resolved
@@ -374,16 +412,16 @@ class RuntimeContext:
         rc = rc or self.interpreter.globals.generate_id_for_nickname(
             self.current_table_name
         )
-        # othewise just create a new one
+        # otherwise just create a new one
         rc = rc or self.interpreter.globals.id_manager.generate_id(
             self.current_table_name
         )
         return rc
 
-    def register_object(self, obj, name=None):
-        "Keep track of this object in case its children refer to it."
+    def register_object(self, obj, name: Optional[str], persistent: bool):
+        "Keep track of this object in case other objects refer to it."
         self.obj = obj
-        self.interpreter.globals.register_object(obj, name)
+        self.interpreter.globals.register_object(obj, name, persistent)
 
     def register_intertable_reference(self, table_name_from, table_name_to, fieldname):
         "Keep track of a dependency between two tables. e.g. for mapping file generation"
@@ -535,7 +573,6 @@ def output_batches(
         templates=templates,
     ) as interpreter:
 
-        runtimecontext = RuntimeContext(interpreter=interpreter)
         continuing = bool(continuation_data)
-        interpreter.loop_over_templates_until_finished(runtimecontext, continuing)
+        interpreter.loop_over_templates_until_finished(continuing)
         return interpreter.globals

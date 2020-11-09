@@ -449,6 +449,86 @@ StageName:
 
 You can do more sophisticated randomness with features that will be discussed in the section [Random Weights That Are Not Percentages](#random-weights-that-are-not-percentages).
 
+#### `random_reference`
+
+Select a random, already-created row from some table
+
+```yaml
+- object: Owner
+  count: 10
+  fields:
+    name: fake.name
+- object: Pet
+  count: 10
+  fields:
+    ownedBy:
+        random_reference: Owner
+```
+
+The term 'already-created' has important implications and
+relates to the optional 'scope' argument.
+
+In the simple case above, the scope is "local" (the default).
+So it is the same as:
+
+```yaml
+- object: Owner
+  count: 10
+  fields:
+    name: fake.name
+- object: Pet
+  count: 10
+  fields:
+    ownedBy:
+        random_reference:
+          tablename: Owner
+          scope: local
+```
+
+This means that if you run this Snowfakery file in a context
+where it is asked to loop 20 times and generate 200 Owners,
+each Pet will refer to an Owner that was created in the same
+iteration (one of the ten most recently created
+owners).
+
+Scope 'global' means to look beyond the most recent iteration.
+
+```yaml
+- object: Pet
+  count: 10
+  fields:
+    ownedBy:
+        random_reference:
+          tablename: Owner
+          scope: local
+```
+
+If you care about the statistical distrbution of your
+data then you should consider the distinction between
+'global' and 'local' carefully. If not, then don't
+worry about it.
+
+The statistics work like this:
+
+Still assuming we ran this in a context where we are generating
+200 Owners: if you use scope 'global', the first 10 Owners will be
+included in the set that random_reference selects from 20
+different times. The last 10 will be included in a selection
+set only once. The chances of an early Owner having at
+least one Pet is extremely high.
+The chances of a late Owner having a Pet is very low
+(roughly 1/20).
+
+If you use scope 'local' then first-iteration Owners will
+be connected to first-iteration Pets, second-iteration Owners
+will be connected to second-iteration Pets and so forth. This
+will guarantee a more "fair" distribution of owners and pets.
+
+In some cases that fairness may be what you want. In others you
+might want to model a real system that is less "fair" and you
+might prefer for the connections to be more broad and less
+constrained. And most of the time it doesn't matter either way!
+
 ### `fake`
 
 Generate fake data using functions from the [faker](https://github.com/joke2k/faker) library:

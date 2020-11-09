@@ -3,7 +3,7 @@ from unittest import mock
 
 import pytest
 
-from snowfakery.data_generator import generate
+from snowfakery.data_generator import generate, StoppingCriteria
 from test_parse_samples import find_row
 from snowfakery.data_gen_exceptions import DataGenError
 
@@ -205,7 +205,38 @@ class TestReferences:
         assert "Bob" in str(e.value)
         assert "Bill" in str(e.value)
 
-    def test_random_reference(self, generated_rows):
+    def test_forward_reference__iterations(self, generated_rows):
+        yaml = """
+            - object: A
+              fields:
+                B_ref:
+                  reference:
+                    B
+            - object: B
+              fields:
+                A_ref:
+                  reference:
+                    A
+              """
+        generate(StringIO(yaml), {}, stopping_criteria=StoppingCriteria("A", 3))
+        assert generated_rows.mock_calls == [
+            mock.call("A", {"id": 1, "B_ref": "B(1)"}),
+            mock.call("B", {"id": 1, "A_ref": "A(1)"}),
+            mock.call("A", {"id": 2, "B_ref": "B(2)"}),
+            mock.call("B", {"id": 2, "A_ref": "A(2)"}),
+            mock.call("A", {"id": 3, "B_ref": "B(3)"}),
+            mock.call("B", {"id": 3, "A_ref": "A(3)"}),
+        ]
+
+    def test_forward_reference__nickname__iterations(self, generated_rows):
+        # TODO
+        ...
+
+    def test_forward_reference__iterations__with_just_once(self, generated_rows):
+        # TODO
+        ...
+
+    def test_random_reference_simple(self, generated_rows):
         yaml = """                  #1
       - object: A                   #2
         count: 10                   #4
@@ -220,3 +251,38 @@ class TestReferences:
             generate(StringIO(yaml))
         assert generated_rows.row_values(10, "A_ref") == "A(8)"
         assert generated_rows.row_values(11, "A_ref") == "A(3)"
+
+    def test_random_reference_local(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 10                   #4
+      - object: B                   #5
+        fields:                     #7
+            A_ref:                  #8
+              random_reference:     #9
+                tablename: A        #10
+                scope: local        #11
+    """
+        with mock.patch("random.randint") as randint:
+            randint.side_effect = [8, 12]
+            generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 2))
+            assert randint.mock_calls == [mock.call(1, 10), mock.call(11, 20)]
+        assert generated_rows.table_values("B", 2, "A_ref") == "A(12)"
+
+    def test_random_reference_global(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 10                   #4
+      - object: B                   #5
+        count: 2                    #6
+        fields:                     #7
+            A_ref:                  #8
+              random_reference:
+                tablename: A   #9
+                scope: global
+    """
+        with mock.patch("random.randint") as randint:
+            randint.side_effect = [8, 3, 8, 3]
+            generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 4))
+        assert generated_rows.row_values(22, "A_ref") == "A(8)"
+        assert generated_rows.row_values(23, "A_ref") == "A(3)"

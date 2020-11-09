@@ -1,11 +1,10 @@
-import unittest
 from unittest import mock
 from io import StringIO
 
 from snowfakery.data_generator import generate
 
 
-class TestRestart(unittest.TestCase):
+class TestRestart:
     @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
     def test_nicknames_persist(self, write_row):
         yaml = """
@@ -40,11 +39,27 @@ class TestRestart(unittest.TestCase):
 
         assert write_row.mock_calls[-1][1][1]["id"] == 10
 
+    def test_forward_references_work_after_restart(self, generated_rows):
+        yaml = """
+            - object: Foo
+              fields:
+                bar:
+                    reference: Bar
+            - object: Bar
+            """
+        continuation_file = StringIO()
+        generate(StringIO(yaml), generate_continuation_file=continuation_file)
+        generate(
+            StringIO(yaml), continuation_file=StringIO(continuation_file.getvalue())
+        )
+
+        assert generated_rows.table_values("Foo", 2, "bar") == "Bar(2)"
+
     @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
     def test_faker_dates_work(self, write_row):
         yaml = """
             - object: foo
-              count: 50
+              just_once: True
               fields:
                 a_date:
                     date_between:

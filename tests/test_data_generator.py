@@ -61,11 +61,6 @@ id_manager: !snowfakery_ids
   last_used_ids:
     foo: 41
     bar: 1000
-last_seen_obj_of_type:
-  foo:
-    id: 41
-  bar:
-    id: 1000
 nicknames_and_tables: {}
                 """
         generate(

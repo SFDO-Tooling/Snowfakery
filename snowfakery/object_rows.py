@@ -96,4 +96,4 @@ class NicknameSlot(ObjectReference):
             return SlotState.CONSUMED
 
     def __repr__(self):
-        return f"<NicknameSlot {vars(self)}>"
+        return f"<NicknameSlot {self._tablename} {self.status} {self.allocated_id}>"
