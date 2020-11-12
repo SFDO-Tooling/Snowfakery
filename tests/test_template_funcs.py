@@ -286,15 +286,17 @@ class TestTemplateFuncs(unittest.TestCase):
             generate(StringIO(yaml))
 
     @mock.patch(write_row_path)
-    def test_random_choice_error_no_choices_2(self, write_row):
+    def test_random_choice_can_generate_None(self, write_row):
         yaml = """
         - object: A
           fields:
-            num:
+            void:
                 random_choice:
+                    -
+                    -
         """
-        with pytest.raises(DataGenError):
-            generate(StringIO(yaml))
+        generate(StringIO(yaml))
+        write_row.mock_calls[0][1][1]["void"] is None
 
     @mock.patch(write_row_path)
     def test_if_error_no_choices(self, write_row):

@@ -173,12 +173,18 @@ class StandardFuncs(SnowfakeryPlugin):
 
             Pick-items are lazily evaluated.
             """
-            if not choices and not kwchoices:
-                raise ValueError("No choices supplied!")
-            elif choices and kwchoices:
-                raise ValueError("Both choices and probabilities supplied!")
 
-            if choices:
+            # very occasionally single-item choices are useful
+            use_choices = len(choices) >= 1
+
+            # very occasionally single-item choices are useful
+            use_kwchoices = len(kwchoices) >= 1
+
+            if not (use_choices or use_kwchoices):
+                raise ValueError("No choices supplied!")
+            elif use_choices and use_kwchoices:
+                raise ValueError("Both choices and probabilities supplied!")
+            elif use_choices:
                 if getattr(choices[0], "function_name", None) == "choice":
                     choices = [self.context.evaluate_raw(choice) for choice in choices]
                     rc = weighted_choice(choices)
@@ -186,14 +192,14 @@ class StandardFuncs(SnowfakeryPlugin):
                     rc = random.choice(choices)
                 if hasattr(rc, "render"):
                     rc = self.context.evaluate_raw(rc)
-            elif kwchoices:
+            else:
+                assert use_kwchoices and not use_choices
                 choices = [
                     (parse_weight_str(self.context, value), key)
                     for key, value in kwchoices.items()
                 ]
                 rc = weighted_choice(choices)
 
-            assert rc
             return rc
 
         @lazy
