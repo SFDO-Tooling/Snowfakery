@@ -568,7 +568,14 @@ class ObjectRow(yaml.YAMLObject):
         return f"<ObjectRow {self._tablename} {self.id}>"
 
     def __getstate__(self):
-        return {"_tablename": self._tablename, "_values": self._values}
+        """Get the state of this ObjectRow for serialization.
+
+        Do not include related ObjectRows because circular
+        references in serialization formats cause problems."""
+        values = [
+            (k, v) for k, v in self._values.items() if not isinstance(v, ObjectRow)
+        ]
+        return {"_tablename": self._tablename, "_values": values}
 
     def __setstate__(self, state):
         for slot, value in state.items():
