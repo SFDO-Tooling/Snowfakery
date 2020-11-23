@@ -584,6 +584,30 @@ age:
     max: 95
 ```
 
+If the number should be divsible by some other number (e.g. only multiples
+of 10) then you can supply a "step".
+
+```yaml
+age:
+  random_number:
+    min: 10
+    max: 90
+    step: 10
+```
+
+As the name `step` implies, and to be a bit more precise, the output
+number minus `min` will be a multiple of the step. So this would
+generate one of 12, 17 or 22:
+
+```yaml
+age:
+  random_number:
+    min: 12
+    max: 23
+    step: 5
+```
+
+
 `random_number` can also be used as a function in formulas:
 
 ```yaml
