@@ -228,8 +228,12 @@ def configure_output_stream(
                 output_streams.append(JSONOutputStream(path))
             elif format == "txt":
                 output_streams.append(DebugOutputStream(path))
-            else:
+            elif format in file_extensions:
                 output_streams.append(ImageOutputStream(path, format))
+            else:
+                raise click.ClickException(
+                    f"Unknown format or file extension: {format}"
+                )
 
     if len(output_streams) == 0:
         output_stream = DebugOutputStream()
@@ -244,6 +248,7 @@ def configure_output_stream(
             try:
                 messages = output_stream.close()
             except Exception as e:
+                messages = None
                 click.echo(f"Could not close {output_stream}: {str(e)}", err=True)
             if messages:
                 for message in messages:
