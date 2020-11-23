@@ -1,9 +1,10 @@
 from io import StringIO
-import unittest
 from unittest import mock
 
 from snowfakery.data_generator import generate
 from snowfakery.data_gen_exceptions import DataGenError
+
+import pytest
 
 write_row_path = "snowfakery.output_streams.DebugOutputStream.write_row"
 
@@ -12,7 +13,7 @@ def row_values(write_row_mock, index, value):
     return write_row_mock.mock_calls[index][1][1][value]
 
 
-class TestTemplateFuncs(unittest.TestCase):
+class TestTemplateFuncs:
     @mock.patch(write_row_path)
     def test_inline_reference(self, write_row_mock):
         yaml = """
@@ -124,9 +125,9 @@ class TestTemplateFuncs(unittest.TestCase):
                         when: ${{b}}
                         pick: BBB
         """
-        with self.assertRaises(DataGenError) as e:
+        with pytest.raises(DataGenError) as e:
             generate(StringIO(yaml), {}, None)
-        assert "when" in str(e.exception)
+        assert "when" in str(e.value)
 
     @mock.patch(write_row_path)
     def test_conditional_fallthrough(self, write_row):
@@ -224,3 +225,13 @@ class TestTemplateFuncs(unittest.TestCase):
         """
         generate(StringIO(yaml), {}, None)
         assert write_row.mock_calls[3][1][1]["num"] == 2
+
+    def test_random_number_with_step(self, generated_rows):
+        yaml = """
+        - object : A
+          fields:
+            number: ${{random_number(min=15, max=200, step=5)}}
+        """
+        generate(StringIO(yaml), {}, None)
+        assert 15 <= int(generated_rows.row_values(0, "number")) <= 200
+        assert int(generated_rows.row_values(0, "number")) % 5 == 0
