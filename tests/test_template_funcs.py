@@ -235,3 +235,12 @@ class TestTemplateFuncs:
         generate(StringIO(yaml), {}, None)
         assert 15 <= int(generated_rows.row_values(0, "number")) <= 200
         assert int(generated_rows.row_values(0, "number")) % 5 == 0
+
+    def test_random_number_with_step_odd(self, generated_rows):
+        yaml = """
+        - object : A
+          fields:
+            number: ${{random_number(min=12, max=22, step=5)}}
+        """
+        generate(StringIO(yaml), {}, None)
+        assert int(generated_rows.row_values(0, "number")) in (12, 17, 22)
