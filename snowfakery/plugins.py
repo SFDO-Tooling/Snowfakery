@@ -1,11 +1,18 @@
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, Union
 from importlib import import_module
+from datetime import date, datetime
 
 import yaml
 from yaml.representer import Representer
 from faker.providers import BaseProvider as FakerProvider
 
 import snowfakery.data_gen_exceptions as exc
+from .utils.yaml_utils import SnowfakeryDumper
+
+from numbers import Number
+
+
+Scalar = Union[str, Number, date, datetime, None]
 
 
 class SnowfakeryPlugin:
@@ -74,8 +81,19 @@ class PluginContext:
             self.plugin.__class__.__name__
         )
 
-    def evaluate(self, field_definition):
+    def evaluate_raw(self, field_definition):
+        """Evaluate the contents of a field definition"""
         return field_definition.render(self.interpreter.current_context)
+
+    def evaluate(self, field_definition):
+        """Evaluate the contents of a field definition and simplify to a primitive value."""
+        rc = self.evaluate_raw(field_definition)
+        if isinstance(rc, Scalar.__args__):
+            return rc
+        elif hasattr(rc, "simplify"):
+            return rc.simplify()
+        else:
+            raise f"Cannot simplify {field_definition}. Perhaps should have used evaluate_raw?"
 
 
 def lazy(func: Any) -> Callable:
@@ -112,7 +130,7 @@ class PluginResult:
 
     PluginResults can be initialized with a dict or dict-like object.
 
-    PluginResults are serialized to contniuation files as dicts."""
+    PluginResults are serialized to continuation files as dicts."""
 
     def __init__(self, result: Mapping):
         self.result = result
@@ -123,9 +141,14 @@ class PluginResult:
     def __reduce__(self):
         return (self.__class__, (dict(self.result),))
 
+    def __repr__(self):
+        return f"<{self.__class__} {repr(self.result)}>"
+
+    def __str__(self):
+        return str(self.result)
 
 # round-trip PluginResult objects through continuation YAML if needed.
-yaml.SafeDumper.add_representer(PluginResult, Representer.represent_object)
+SnowfakeryDumper.add_representer(PluginResult, Representer.represent_object)
 yaml.SafeLoader.add_constructor(
     "tag:yaml.org,2002:python/object/apply:snowfakery.plugins.PluginResult",
     lambda loader, node: PluginResult(loader.construct_sequence(node)[0]),

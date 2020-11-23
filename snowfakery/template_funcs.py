@@ -24,7 +24,7 @@ fake = Faker()
 # Python 3.6 is out of the support matrix.
 
 
-def parse_weight_str(context: PluginContext, weight_value) -> int:
+def parse_weight_str(context: PluginContext, weight_value) -> float:
     """For constructs like:
 
     - choice:
@@ -36,10 +36,10 @@ def parse_weight_str(context: PluginContext, weight_value) -> int:
     weight_str = context.evaluate(weight_value)
     if isinstance(weight_str, str):
         weight_str = weight_str.rstrip("%")
-    return int(weight_str)
+    return float(weight_str)
 
 
-def weighted_choice(choices: List[Tuple[int, object]]):
+def weighted_choice(choices: List[Tuple[float, object]]):
     """Selects from choices based on their weights"""
     weights = [weight for weight, value in choices]
     options = [value for weight, value in choices]
@@ -146,7 +146,7 @@ class StandardFuncs(SnowfakeryPlugin):
             return target
 
         @lazy
-        def random_choice(self, *choices):
+        def random_choice(self, *choices, **kwchoices):
             """Template helper for random choices.
 
             Supports structures like this:
@@ -173,16 +173,33 @@ class StandardFuncs(SnowfakeryPlugin):
 
             Pick-items are lazily evaluated.
             """
-            if not choices:
-                raise ValueError("No choices supplied!")
 
-            if getattr(choices[0], "function_name", None) == "choice":
-                choices = [self.context.evaluate(choice) for choice in choices]
-                rc = weighted_choice(choices)
+            # very occasionally single-item choices are useful
+            use_choices = len(choices) >= 1
+
+            # very occasionally single-item choices are useful
+            use_kwchoices = len(kwchoices) >= 1
+
+            if not (use_choices or use_kwchoices):
+                raise ValueError("No choices supplied!")
+            elif use_choices and use_kwchoices:
+                raise ValueError("Both choices and probabilities supplied!")
+            elif use_choices:
+                if getattr(choices[0], "function_name", None) == "choice":
+                    choices = [self.context.evaluate_raw(choice) for choice in choices]
+                    rc = weighted_choice(choices)
+                else:
+                    rc = random.choice(choices)
+                if hasattr(rc, "render"):
+                    rc = self.context.evaluate_raw(rc)
             else:
-                rc = random.choice(choices)
-            if hasattr(rc, "render"):
-                rc = self.context.evaluate(rc)
+                assert use_kwchoices and not use_choices
+                choices = [
+                    (parse_weight_str(self.context, value), key)
+                    for key, value in kwchoices.items()
+                ]
+                rc = weighted_choice(choices)
+
             return rc
 
         @lazy
@@ -218,7 +235,7 @@ class StandardFuncs(SnowfakeryPlugin):
             if not choices:
                 raise ValueError("No choices supplied!")
 
-            choices = [self.context.evaluate(choice) for choice in choices]
+            choices = [self.context.evaluate_raw(choice) for choice in choices]
             for when, choice in choices[:-1]:
                 if when is None:
                     raise SyntaxError(
@@ -231,7 +248,7 @@ class StandardFuncs(SnowfakeryPlugin):
             )
             rc = next(true_choices, choices[-1][-1])  # default to last choice
             if hasattr(rc, "render"):
-                rc = self.context.evaluate(rc)
+                rc = self.context.evaluate_raw(rc)
             return rc
 
     setattr(Functions, "if", Functions.if_)

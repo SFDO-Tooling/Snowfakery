@@ -1,15 +1,15 @@
 from collections import defaultdict
-from datetime import date, datetime
+from datetime import date
 from contextlib import contextmanager
 from enum import Enum, auto
 
-from typing import Optional, Dict, List, Sequence, Mapping, NamedTuple, Union
-from numbers import Number
+from typing import Optional, Dict, List, Sequence, Mapping, NamedTuple
 
 import jinja2
 import yaml
 
 from .utils.template_utils import FakerTemplateLibrary
+from .utils.yaml_utils import SnowfakeryDumper, hydrate
 
 from .template_funcs import StandardFuncs
 from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError
@@ -73,18 +73,12 @@ class FinishedChecker:
         self.target_progress_id = last_used_id
 
 
-class IdManager(yaml.YAMLObject):
+class IdManager:
     """Keep track of the most recent ID per Object type"""
-
-    yaml_loader = yaml.SafeLoader
-    yaml_dumper = yaml.SafeDumper
-    yaml_tag = "!snowfakery_ids"
 
     def __init__(self, start_ids: Optional[Dict[str, int]] = None):
         start_ids = start_ids or {}
         self.last_used_ids = defaultdict(lambda: 0)
-        for name, value in start_ids.items():
-            self.last_used_ids[name] = value - 1
 
     def generate_id(self, table_name: str) -> int:
         self.last_used_ids[table_name] += 1
@@ -93,18 +87,17 @@ class IdManager(yaml.YAMLObject):
     def __getitem__(self, table_name: str) -> int:
         return self.last_used_ids[table_name]
 
+    def __getstate__(self):
+        return {"last_used_ids": dict(self.last_used_ids)}
+
     def __setstate__(self, state):
         self.last_used_ids = defaultdict(lambda: 0, state["last_used_ids"])
 
 
-yaml.SafeDumper.add_representer(defaultdict, yaml.SafeDumper.represent_dict)
+SnowfakeryDumper.add_representer(defaultdict, SnowfakeryDumper.represent_dict)
 
 
 class Dependency(NamedTuple):
-    yaml_loader = yaml.SafeLoader
-    yaml_dumper = yaml.SafeDumper
-    yaml_tag = "!snowfakery_dependency"
-
     table_name_from: str
     table_name_to: str
     field_name: str
@@ -163,7 +156,7 @@ class NicknameSlot:
         return f"<NicknameSlot {vars(self)}>"
 
 
-class Globals(yaml.YAMLObject):
+class Globals:
     """Globally named objects and other aspects of global scope
 
     This object is designed to be persisted to allow long-running
@@ -171,20 +164,15 @@ class Globals(yaml.YAMLObject):
     do not persist. For example, it isn't possible to persist a database
     handle in an output_stream."""
 
-    yaml_loader = yaml.SafeLoader
-    yaml_dumper = yaml.SafeDumper
-    yaml_tag = "!snowfakery_globals"
-
     def __init__(
         self,
-        start_ids: Optional[Dict[str, id]] = None,
         today: date = None,
         name_slots: Mapping[str, str] = None,
     ):
         # list starts empty and is filled. Survives continuations.
         self.nicknamed_objects = {}
 
-        self.id_manager = IdManager(start_ids)
+        self.id_manager = IdManager()
         self.last_seen_obj_of_type = {}
         self.intertable_dependencies = set()
         self.today = today or date.today()
@@ -241,16 +229,38 @@ class Globals(yaml.YAMLObject):
             )
 
     def __getstate__(self):
-        state = self.__dict__.copy()
-        del state["intertable_dependencies"]
-        del state["named_slots"]
-        return state
+        id_manager = self.id_manager
+        last_seen_obj_of_type = {
+            k: v.__getstate__() for k, v in self.last_seen_obj_of_type.items()
+        }
+        nicknamed_objects = {
+            k: v.__getstate__() for k, v in self.nicknamed_objects.items()
+        }
+        nicknames_and_tables = {k: v for k, v in self.nicknames_and_tables.items()}
+        today = self.today
+        intertable_dependencies = [
+            dict(v._asdict()) for v in self.intertable_dependencies
+        ]  # converts ordered-dict to dict for Python 3.6 and 3.7
+        return {
+            "id_manager": id_manager.__getstate__(),
+            "last_seen_obj_of_type": last_seen_obj_of_type,
+            "nicknamed_objects": nicknamed_objects,
+            "nicknames_and_tables": nicknames_and_tables,
+            "today": today,
+            "intertable_dependencies": intertable_dependencies,
+        }
 
-    def __setstate__(self, state):
-        self.last_seen_obj_of_type = {}
-        for slot, value in state.items():
-            setattr(self, slot, value)
-        self.intertable_dependencies = set()
+    def __setstate__(self, dct):
+        self.id_manager = hydrate(IdManager, dct["id_manager"])
+        self.last_seen_obj_of_type = {
+            k: v for k, v in dct["last_seen_obj_of_type"].items()
+        }
+        self.nicknamed_objects = {k: v for k, v in dct["last_seen_obj_of_type"].items()}
+        self.nicknames_and_tables = dct["nicknames_and_tables"]
+        self.today = dct["today"]
+        self.intertable_dependencies = set(
+            Dependency(**x) for x in dct.get("intertable_dependencies", ())
+        )
         self.reset_slots()
 
 
@@ -535,7 +545,7 @@ class ObjectRow(yaml.YAMLObject):
     Uses __getattr__ so that the template evaluator can use dot-notation."""
 
     yaml_loader = yaml.SafeLoader
-    yaml_dumper = yaml.SafeDumper
+    yaml_dumper = SnowfakeryDumper
     yaml_tag = "!snowfakery_objectrow"
 
     __slots__ = ["_tablename", "_values", "_child_index"]
@@ -558,7 +568,14 @@ class ObjectRow(yaml.YAMLObject):
         return f"<ObjectRow {self._tablename} {self.id}>"
 
     def __getstate__(self):
-        return {"_tablename": self._tablename, "_values": self._values}
+        """Get the state of this ObjectRow for serialization.
+
+        Do not include related ObjectRows because circular
+        references in serialization formats cause problems."""
+        values = [
+            (k, v) for k, v in self._values.items() if not isinstance(v, ObjectRow)
+        ]
+        return {"_tablename": self._tablename, "_values": values}
 
     def __setstate__(self, state):
         for slot, value in state.items():
@@ -625,9 +642,3 @@ def output_batches(
         continuing = bool(continuation_data)
         interpreter.loop_over_templates_until_finished(runtimecontext, continuing)
         return interpreter.globals
-
-
-Scalar = Union[str, Number, date, datetime, None]
-FieldValue = Union[
-    None, Scalar, ObjectRow, tuple, NicknameSlot, snowfakery.plugins.PluginResult
-]

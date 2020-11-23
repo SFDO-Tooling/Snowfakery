@@ -3,8 +3,7 @@ from .data_generator_runtime import (
     evaluate_function,
     ObjectRow,
     RuntimeContext,
-    FieldValue,
-    Scalar,
+    NicknameSlot,
 )
 from contextlib import contextmanager
 from typing import Union, Dict, Sequence, Optional, cast
@@ -19,10 +18,12 @@ from .data_gen_exceptions import (
     DataGenValueError,
     fix_exception,
 )
+from .plugins import Scalar, PluginResult
 
 # objects that represent the hierarchy of a data generator.
 # roughly similar to the YAML structure but with domain-specific objects
 Definition = Union["ObjectTemplate", "SimpleValue", "StructuredValue"]
+FieldValue = Union[None, Scalar, ObjectRow, tuple, NicknameSlot, PluginResult]
 
 
 class FieldDefinition(ABC):
