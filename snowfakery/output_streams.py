@@ -1,7 +1,10 @@
 from abc import abstractmethod, ABC
 import json
 import csv
+from sys import stderr
 import datetime
+from logging import getLogger
+from logging import StreamHandler
 from pathlib import Path
 from collections import namedtuple, defaultdict
 from typing import Dict, Union, Optional, Mapping, Callable, Sequence
@@ -33,10 +36,20 @@ def noop(x):
     return x
 
 
+def default_logger():
+    logger = getLogger("snowfakery.output")
+    handler = StreamHandler(stderr)
+    handler.setLevel("INFO")
+    logger.addHandler(handler)
+    logger.setLevel("INFO")
+    return logger
+
+
 class OutputStream(ABC):
     count = 1
     flush_limit = 1000
     commit_limit = 10000
+    report_frequency = 5000
     encoders: Mapping[type, Callable] = {
         str: str,
         int: int,
@@ -46,6 +59,10 @@ class OutputStream(ABC):
         type(None): noop,
         bool: int,
     }
+
+    def __init__(self, *, logger=None, report_frequency=None):
+        self.logger = logger or default_logger()
+        self.report_frequency = report_frequency or self.report_frequency
 
     def create_or_validate_tables(self, tables: Dict[str, TableInfo]) -> None:
         pass
@@ -98,10 +115,16 @@ class OutputStream(ABC):
         if self.count % self.flush_limit == 0:
             self.flush()
 
+        if self.count % self.report_frequency == 0:
+            self.report()
+
         if self.count % self.commit_limit == 0:
             self.commit()
 
         self.count += 1
+
+    def report(self):
+        self.logger.info("Generated %s records", self.count)
 
     @abstractmethod
     def write_single_row(self, tablename: str, row: Dict) -> None:
@@ -119,7 +142,7 @@ class OutputStream(ABC):
 class FileOutputStream(OutputStream):
     mode = "wt"
 
-    def __init__(self, stream_or_path=None):
+    def __init__(self, stream_or_path=None, *, logger=None, report_frequency=None):
         if hasattr(stream_or_path, "write"):
             self.owns_stream = False
             self.stream = stream_or_path
@@ -131,6 +154,7 @@ class FileOutputStream(OutputStream):
             self.stream = None  # sys.stdout
         else:  # noqa
             assert False, f"stream_or_path is {stream_or_path}"
+        super().__init__(logger=logger, report_frequency=report_frequency)
 
     def close(self):
         if self.owns_stream:
@@ -156,8 +180,8 @@ CSVContext = namedtuple("CSVContext", ["dictwriter", "file"])
 
 
 class CSVOutputStream(OutputStream):
-    def __init__(self, output_folder):
-        super().__init__()
+    def __init__(self, output_folder, *, logger=None, report_frequency=None):
+        super().__init__(logger=logger, report_frequency=report_frequency)
         self.target_path = Path(output_folder)
         if not Path.exists(self.target_path):
             Path.mkdir(self.target_path, exist_ok=True)
@@ -204,9 +228,9 @@ class JSONOutputStream(FileOutputStream):
         datetime.datetime: str,
     }
 
-    def __init__(self, file):
+    def __init__(self, file, **kwargs):
         assert file
-        super().__init__(file)
+        super().__init__(file, **kwargs)
         self.first_row = True
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
@@ -228,7 +252,7 @@ class SqlOutputStream(OutputStream):
     mappings = None
     should_close_session = False
 
-    def __init__(self, engine: Engine, mappings: Optional[Dict]):
+    def __init__(self, engine: Engine, mappings: Optional[Dict], **kwargs):
         self.buffered_rows = defaultdict(list)
         self.table_info = {}
         self.mappings = mappings
@@ -236,6 +260,7 @@ class SqlOutputStream(OutputStream):
         self.session = create_session(bind=self.engine, autocommit=False)
         self.metadata = MetaData(bind=self.engine)
         self.base = automap_base(bind=engine, metadata=self.metadata)
+        super().__init__(**kwargs)
 
     @classmethod
     def from_url(cls, db_url: str, mappings: Optional[Dict] = None):
@@ -327,7 +352,7 @@ def create_tables_from_inferred_fields(tables, engine, metadata):
 
 
 class GraphvizOutputStream(FileOutputStream):
-    def __init__(self, path):
+    def __init__(self, path, **kwargs):
         super().__init__(path)
         import pygraphviz
 
@@ -339,6 +364,7 @@ class GraphvizOutputStream(FileOutputStream):
         self.G.node_attr["height"] = "0.75"
         self.G.node_attr["width"] = "0.75"
         self.G.node_attr["widshapeth"] = "circle"
+        super().__init__(**kwargs)
 
     def flatten(
         self,
@@ -381,18 +407,19 @@ class ImageOutputStream(GraphvizOutputStream):
 
     mode = "wb"
 
-    def __init__(self, path, format):
+    def __init__(self, path, format, **kwargs):
         self.path = path
         self.format = format
-        super().__init__(path)
+        super().__init__(path, **kwargs)
 
     def close(self) -> None:
         self.G.draw(path=self.stream, prog="dot", format=self.format)
 
 
 class MultiplexOutputStream(OutputStream):
-    def __init__(self, outputstreams):
+    def __init__(self, outputstreams, **kwargs):
         self.outputstreams = outputstreams
+        super().__init__(**kwargs)
 
     def create_or_validate_tables(self, tables: Dict[str, TableInfo]) -> None:
         for stream in self.outputstreams:
