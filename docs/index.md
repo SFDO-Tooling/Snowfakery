@@ -449,6 +449,24 @@ StageName:
 
 You can do more sophisticated randomness with features that will be discussed in the section [Random Weights That Are Not Percentages](#random-weights-that-are-not-percentages).
 
+A more elaborate form of `random_choice` can also be used to
+select randomly among potential child or friend objects.
+
+```yaml
+- object : Task
+  fields:
+    who:
+        random_choice:
+          - object: Contact
+            fields:
+                FirstName: Bart
+                LastName: Simpson
+          - object: Lead
+            fields:
+                FirstName: Marge
+                LastName: Simpson
+```
+
 ### `fake`
 
 Generate fake data using functions from the [faker](https://github.com/joke2k/faker) library:
