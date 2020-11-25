@@ -133,7 +133,7 @@ class StandardFuncs(SnowfakeryPlugin):
                 obj = self.context.field_vars().get(x)
                 if not obj:
                     raise DataGenError(f"Cannot find an object named {x}", None, None)
-                if not getattr(obj, "id"):
+                if not getattr(obj, "id", None):
                     raise DataGenError(
                         f"Reference to incorrect object type {obj}", None, None
                     )

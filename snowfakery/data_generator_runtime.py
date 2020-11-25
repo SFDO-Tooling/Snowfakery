@@ -207,12 +207,18 @@ class Globals:
             Dependency(table_name_from, table_name_to, fieldname)
         )
 
-    def reset_slots(self):
+    def reset_slots(self, nicknamed_objects: Dict = None):
         "At the beginning of every execution, reset the forward reference slots"
         self.named_slots = {
             name: NicknameSlot(table, self.id_manager)
             for name, table in self.nicknames_and_tables.items()
         }
+        if nicknamed_objects:
+            nicknames_with_slots = set(nicknamed_objects.keys()).intersection(
+                self.named_slots.keys()
+            )
+            for name in nicknames_with_slots:
+                self.named_slots[name].consume_slot()
 
     def check_slots_filled(self):
         not_filled = [
@@ -230,9 +236,6 @@ class Globals:
 
     def __getstate__(self):
         id_manager = self.id_manager
-        last_seen_obj_of_type = {
-            k: v.__getstate__() for k, v in self.last_seen_obj_of_type.items()
-        }
         nicknamed_objects = {
             k: v.__getstate__() for k, v in self.nicknamed_objects.items()
         }
@@ -243,7 +246,6 @@ class Globals:
         ]  # converts ordered-dict to dict for Python 3.6 and 3.7
         return {
             "id_manager": id_manager.__getstate__(),
-            "last_seen_obj_of_type": last_seen_obj_of_type,
             "nicknamed_objects": nicknamed_objects,
             "nicknames_and_tables": nicknames_and_tables,
             "today": today,
@@ -252,16 +254,17 @@ class Globals:
 
     def __setstate__(self, dct):
         self.id_manager = hydrate(IdManager, dct["id_manager"])
-        self.last_seen_obj_of_type = {
-            k: v for k, v in dct["last_seen_obj_of_type"].items()
+        self.last_seen_obj_of_type = {}
+        self.nicknamed_objects = {
+            k: hydrate(ObjectRow, v)
+            for k, v in dct.get("nicknamed_objects", {}).items()
         }
-        self.nicknamed_objects = {k: v for k, v in dct["last_seen_obj_of_type"].items()}
         self.nicknames_and_tables = dct["nicknames_and_tables"]
         self.today = dct["today"]
         self.intertable_dependencies = set(
             Dependency(**x) for x in dct.get("intertable_dependencies", ())
         )
-        self.reset_slots()
+        self.reset_slots(self.nicknamed_objects)
 
 
 class JinjaTemplateEvaluatorFactory:
@@ -565,16 +568,17 @@ class ObjectRow(yaml.YAMLObject):
         return str(self.id)
 
     def __repr__(self):
-        return f"<ObjectRow {self._tablename} {self.id}>"
+        try:
+            return f"<ObjectRow {self._tablename} {self.id}>"
+        except Exception:
+            return super().__repr__()
 
     def __getstate__(self):
         """Get the state of this ObjectRow for serialization.
 
         Do not include related ObjectRows because circular
         references in serialization formats cause problems."""
-        values = [
-            (k, v) for k, v in self._values.items() if not isinstance(v, ObjectRow)
-        ]
+        values = {k: v for k, v in self._values.items() if not isinstance(v, ObjectRow)}
         return {"_tablename": self._tablename, "_values": values}
 
     def __setstate__(self, state):
