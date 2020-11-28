@@ -121,9 +121,9 @@ class StandardFuncs(SnowfakeryPlugin):
             func = getattr(faker, fake)
             return func()
 
-        def random_number(self, min: int, max: int) -> int:
+        def random_number(self, min: int, max: int, step: int = 1) -> int:
             """Pick a random number between min and max like Python's randint."""
-            return random.randint(min, max)
+            return random.randrange(min, max + 1, step)
 
         def reference(self, x: Union[ObjectRow, str]):
             """YAML-embeddable function to Reference another object."""
@@ -133,7 +133,7 @@ class StandardFuncs(SnowfakeryPlugin):
                 obj = self.context.field_vars().get(x)
                 if not obj:
                     raise DataGenError(f"Cannot find an object named {x}", None, None)
-                if not getattr(obj, "id"):
+                if not getattr(obj, "id", None):
                     raise DataGenError(
                         f"Reference to incorrect object type {obj}", None, None
                     )
