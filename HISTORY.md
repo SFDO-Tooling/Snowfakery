@@ -4,6 +4,21 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 1.3
+
+`random_number` can now accept a "step" argument as descrbed in the docs.
+
+The continuation file format changed. Do not upgrade Snowfakery while
+running a long-running Snowfakery process. The new configuration file
+should be less prone to issues relating to failures to serialize results.
+
+The command line interface gives better error messages about unknown
+file extensions.
+
+Allow a short-form random_choice syntax that matches the docs.
+
+The --target-number value now allows its two sub-arguments to be specified in either order: Tablename then number or number then tablename.
+
 ## Snowfakery 1.2
 
 Improvements to plugin API: add `evaluate_raw` and `simplify`
