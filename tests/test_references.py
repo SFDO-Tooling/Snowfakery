@@ -1,5 +1,4 @@
 from io import StringIO
-import unittest
 from unittest import mock
 
 import pytest
@@ -54,7 +53,7 @@ reference_from_friend = """             #1
 write_row_path = "snowfakery.output_streams.DebugOutputStream.write_single_row"
 
 
-class TestReferences(unittest.TestCase):
+class TestReferences:
     @mock.patch(write_row_path)
     def test_simple_parent(self, write_row):
         generate(StringIO(simple_parent), {}, None)
@@ -205,3 +204,62 @@ class TestReferences(unittest.TestCase):
 
         assert "Bob" in str(e.value)
         assert "Bill" in str(e.value)
+
+    def test_dotted_references(self, generated_rows):
+        yaml = """
+        - object: A
+          fields:
+            num: 5
+        - object: B
+          fields:
+            A:
+              reference: A
+        - object: C
+          fields:
+            BRef:
+              reference: B
+            D:
+              reference: BRef.A
+        """
+        generate(StringIO(yaml), {}, None)
+        assert generated_rows.row_values(2, "D") == "A(1)"
+
+    def test_dotted_references_broken(self, generated_rows):
+        yaml = """
+        - object: A
+          fields:
+            num: 5
+        - object: B
+          fields:
+            A:
+              reference: A
+        - object: C
+          fields:
+            BRef:
+              reference: B
+            D:
+              reference: QQQ.A
+        """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml), {}, None)
+        assert "QQQ.A" in str(e.value)
+
+    def test_dotted_references_broken_2(self, generated_rows):
+        yaml = """
+        - object: A
+          fields:
+            num: 5
+        - object: B
+          fields:
+            A:
+              reference: A
+        - object: C
+          fields:
+            BRef:
+              reference: B
+            D:
+              reference: BRef.QQQ
+        """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml), {}, None)
+        assert "BRef.QQQ" in str(e.value)

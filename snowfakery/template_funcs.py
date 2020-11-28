@@ -130,14 +130,26 @@ class StandardFuncs(SnowfakeryPlugin):
             if hasattr(x, "id"):  # reference to an object with an id
                 target = x
             elif isinstance(x, str):  # name of an object
-                obj = self.context.field_vars().get(x)
-                if not obj:
+                # allows dotted paths
+                parts = x.split(".")
+                target = self.context.field_vars().get(parts.pop(0))
+
+                for part in parts:
+                    try:
+                        target = getattr(target, part)
+                    except AttributeError:
+                        raise DataGenError(
+                            f"Expression cannot be evaluated `{x}``. Problem before `{part}`: {target}",
+                            None,
+                            None,
+                        )
+
+                if not target:
                     raise DataGenError(f"Cannot find an object named {x}", None, None)
-                if not getattr(obj, "id", None):
+                if not getattr(target, "id", None):
                     raise DataGenError(
-                        f"Reference to incorrect object type {obj}", None, None
+                        f"Reference to incorrect object type {target}", None, None
                     )
-                target = obj
             else:
                 raise DataGenError(
                     f"Can't get reference to object of type {type(x)}: {x}", None, None

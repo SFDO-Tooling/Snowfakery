@@ -418,6 +418,30 @@ nickname or tablename, that object is the target reference.
 Otherwise, the reference can be to an object that has not been created yet. Snowfakery will generate an ID for the object so that the current row can be generated. No other properties of the other object can be referred to, because
 it does not exist yet.
 
+If the referenced name contains dots then Snowfakery will follow
+field names to get to the final name. The first name before the first "." could be either a field name or an object-name.
+
+```yaml
+- object: cat
+  nickname: Fluffy
+  fields:
+    color: black
+
+- object: fiance
+  nickname: sam
+  fields:
+    pet:
+      reference: Fluffy
+
+- object: betrothed
+  fields:
+    spouse:
+      reference: sam
+    pet:
+      reference: spouse.pet
+    color: ${{pet.color}}
+```
+
 Snowfakery (and CumulusCI) allow one to loop over a recipe many times to
 generate multiple rows. In this case, references are always to objects
 created within the current "batch" of a recipe and never to a previous
