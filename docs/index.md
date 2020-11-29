@@ -826,6 +826,8 @@ To group several fields together, create a "hidden" object.
           fake: state
 ```
 
+The `debug` function can be used to output values to stderr for debugging.
+
 ## Include Files
 
 The `include_file` feature pulls in all declarations from the declared file. The file can itself include other files.
