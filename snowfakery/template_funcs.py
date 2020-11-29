@@ -340,6 +340,12 @@ class StandardFuncs(SnowfakeryPlugin):
         def _unique_alpha_code(self):
             return self._unique_id_generator.default_alpha_code_generator.unique_id
 
+        def debug(self, *values):
+            sys.stderr.write("DEBUG")
+            sys.stderr.write(repr(values))
+            sys.stderr.write("\n")
+            return values[0]
+
     setattr(Functions, "if", Functions.if_)
     setattr(Functions, "relativedelta", relativedelta)
     setattr(Functions, "NULL", None)

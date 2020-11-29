@@ -35,6 +35,15 @@ class LineTracker(NamedTuple):
     line_num: int
 
 
+class ScalarLike:
+    @abstractmethod
+    def simplify(self):
+        return self.__str__()
+
+
+Scalar = Union[str, Number, date, datetime, None, ScalarLike]
+
+
 class SnowfakeryPlugin:
     """Base class for all plugins.
 

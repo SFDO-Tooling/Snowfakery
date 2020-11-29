@@ -904,6 +904,8 @@ To group several fields together, create a "hidden" object.
           fake: state
 ```
 
+The `debug` function can be used to output values to stderr for debugging.
+
 ## Include Files
 
 The `include_file` feature pulls in all declarations from the declared file. The file can itself include other files.
@@ -2036,26 +2038,26 @@ Snowfakery is a domain-specific programming language with access to most of the 
       - object: woman
         count: 7
         fields:
-          husband: 
+          husband:
             reference: man
           luggage:
             - object: sack
               count: 7
               fields:
-                holder: 
+                holder:
                   reference: woman
                 contents:
                   - object: cat
                     count: 7
                     fields:
-                      container: 
+                      container:
                         reference: sack
                       offspring:
-                      - object: kit
-                        count: 7
-                        fields:
-                          parent: 
-                            reference: cat
+                        - object: kit
+                          count: 7
+                          fields:
+                            parent:
+                              reference: cat
 - object: stats
   fields:
     num_narrators: ${{ man.id }}
