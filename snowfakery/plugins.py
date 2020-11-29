@@ -1,5 +1,6 @@
 from typing import Any, Callable, Mapping, Union
 from importlib import import_module
+from abc import abstractmethod
 from datetime import date, datetime
 
 import yaml
@@ -12,7 +13,13 @@ from .utils.yaml_utils import SnowfakeryDumper
 from numbers import Number
 
 
-Scalar = Union[str, Number, date, datetime, None]
+class ScalarLike:
+    @abstractmethod
+    def simplify(self):
+        return self.__str__()
+
+
+Scalar = Union[str, Number, date, datetime, None, ScalarLike]
 
 
 class SnowfakeryPlugin:
@@ -151,6 +158,7 @@ class PluginResult:
 
     def __str__(self):
         return str(self.result)
+
 
 # round-trip PluginResult objects through continuation YAML if needed.
 SnowfakeryDumper.add_representer(PluginResult, Representer.represent_object)

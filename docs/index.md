@@ -715,6 +715,7 @@ from `dateutil` is available for use in calculations like this:
 ${{ date(Date_Established__c) + relativedelta(months=child_index) }}
 ```
 
+The `debug` function can be used to output values to stderr for debugging.
 ## Macros
 
 Macros allow you to re-use groups of fields instead of repeating them manually.

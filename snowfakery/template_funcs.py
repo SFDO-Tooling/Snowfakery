@@ -1,3 +1,4 @@
+import sys
 import random
 from functools import lru_cache
 from datetime import date, datetime
@@ -250,6 +251,12 @@ class StandardFuncs(SnowfakeryPlugin):
             if hasattr(rc, "render"):
                 rc = self.context.evaluate_raw(rc)
             return rc
+
+        def debug(self, *values):
+            sys.stderr.write("DEBUG")
+            sys.stderr.write(repr(values))
+            sys.stderr.write("\n")
+            return values[0]
 
     setattr(Functions, "if", Functions.if_)
     setattr(Functions, "relativedelta", relativedelta)
