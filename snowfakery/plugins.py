@@ -2,6 +2,7 @@ import sys
 
 from typing import Any, Callable, Mapping, Union, NamedTuple, List, Tuple
 from importlib import import_module
+from abc import abstractmethod
 from datetime import date, datetime
 from pathlib import Path
 from unittest.mock import patch
@@ -26,6 +27,15 @@ ObjectRow = "snowfakery.object_rows.ObjectRow"
 class LineTracker(NamedTuple):
     filename: str
     line_num: int
+
+
+class ScalarLike:
+    @abstractmethod
+    def simplify(self):
+        return self.__str__()
+
+
+Scalar = Union[str, Number, date, datetime, None, ScalarLike]
 
 
 class SnowfakeryPlugin:

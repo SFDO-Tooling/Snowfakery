@@ -782,6 +782,10 @@ Macros can include other macros. In fact, macros are especially powerful if you 
 .. note::
 `fields` or `friends` declared in the macros listed later override those listed earlier. `fields` or `friends` declared in the Object Template override those declared in macros.
 
+### Debug
+
+The `debug` function can be used to output values to stderr for debugging.
+
 ## Define Variables
 
 To generate a value shared by multiple templates, create a variable with `var`.
@@ -1954,26 +1958,26 @@ Snowfakery is a domain-specific programming language with access to most of the 
       - object: woman
         count: 7
         fields:
-          husband: 
+          husband:
             reference: man
           luggage:
             - object: sack
               count: 7
               fields:
-                holder: 
+                holder:
                   reference: woman
                 contents:
                   - object: cat
                     count: 7
                     fields:
-                      container: 
+                      container:
                         reference: sack
                       offspring:
-                      - object: kit
-                        count: 7
-                        fields:
-                          parent: 
-                            reference: cat
+                        - object: kit
+                          count: 7
+                          fields:
+                            parent:
+                              reference: cat
 - object: stats
   fields:
     num_narrators: ${{ man.id }}

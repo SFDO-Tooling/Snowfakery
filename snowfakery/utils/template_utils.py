@@ -1,11 +1,11 @@
-from typing import Sequence
 import string
+from typing import Sequence
+
 from snowfakery.fakedata.fake_data_generator import FakeData
+from snowfakery.plugins import PluginContext, ScalarLike
 
-from snowfakery.plugins import PluginContext
 
-
-class StringGenerator:
+class StringGenerator(ScalarLike):
     """Sometimes in templates you want a reference to a variable to
     call a function.
 
@@ -39,11 +39,6 @@ class StringGenerator:
 
     def simplify(self):
         return str(self)
-        # TODO: UNIT TESTS do not require this function, so the
-        # unit tests are incomplete
-        #
-        # The "evaluate" function that plugins use has not been
-        # tested with a loose StringGenerator
 
 
 class FakerTemplateLibrary:

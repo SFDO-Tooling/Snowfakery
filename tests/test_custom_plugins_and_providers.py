@@ -40,6 +40,17 @@ class SimpleTestPlugin(SnowfakeryPlugin):
         def double(self, value):
             return value * 2
 
+        def noop(self, value):
+            return value
+
+        @lazy
+        def lazynoop(self, value):
+            return self.context.evaluate(value)
+
+        @lazy
+        def lazyrawnoop(self, value):
+            return self.context.evaluate_raw(value)
+
 
 class DoubleVisionPlugin(SnowfakeryPlugin):
     class Functions:
@@ -429,3 +440,49 @@ class TestContextVars:
         with pytest.raises(DataGenError) as e:
             generate(StringIO(yaml))
         assert 4 < e.value.line_num <= 10
+
+    def test_string_generator_and_plugins(self, generated_rows):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.DoubleVisionPlugin
+        - plugin: tests.test_custom_plugins_and_providers.SimpleTestPlugin       # 3
+        - object: B                                                        # 4
+          fields:                                                          # 5
+            A:
+                - DoubleVisionPlugin.do_it_twice:
+                    - ${{fake.random_digit}}
+            A1:
+                - DoubleVisionPlugin.do_it_twice:
+                    - fake: random_digit
+            B:
+                - SimpleTestPlugin.noop:
+                    - ${{fake.random_digit}}
+            B1:
+                - SimpleTestPlugin.noop:
+                    - fake: random_digit
+            C:
+                - SimpleTestPlugin.lazynoop:
+                    - ${{fake.random_digit}}
+            C1:
+                - SimpleTestPlugin.lazynoop:
+                    - fake: random_digit
+            D:
+                - SimpleTestPlugin.lazyrawnoop:
+                    - ${{fake.random_digit}}
+            D1:
+                - SimpleTestPlugin.lazyrawnoop:
+                    - fake: random_digit
+
+        """
+        with mock.patch(
+            "faker.providers.BaseProvider.random_digit", wraps=lambda: "5"
+        ) as rand:
+            generate(StringIO(yaml))
+        assert len(rand.mock_calls) == 10
+        assert generated_rows.row_values(0, "A") == "5 : 5"
+        assert generated_rows.row_values(0, "A1") == "5 : 5"
+        assert generated_rows.row_values(0, "B") == "5"
+        assert generated_rows.row_values(0, "B1") == "5"
+        assert generated_rows.row_values(0, "C") == "5"
+        assert generated_rows.row_values(0, "C1") == "5"
+        assert generated_rows.row_values(0, "D") == "5"
+        assert generated_rows.row_values(0, "D1") == "5"
