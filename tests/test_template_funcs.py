@@ -232,6 +232,16 @@ class TestTemplateFuncs:
         assert write_row.mock_calls[0][1][1]["a"] == "2012-01-01"
 
     @mock.patch(write_row_path)
+    def test_date_from_datetime(self, write_row):
+        yaml = """
+        - object : A
+          fields:
+            a: ${{date(datetime(year=2012, month=1, day=1))}}
+        """
+        generate(StringIO(yaml), {}, None)
+        assert write_row.mock_calls[0][1][1]["a"] == "2012-01-01"
+
+    @mock.patch(write_row_path)
     def test_old_syntax(self, write_row):
         yaml = """
         - object : A
