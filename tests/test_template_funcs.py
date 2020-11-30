@@ -254,7 +254,7 @@ class TestTemplateFuncs:
         assert "1" in write_row.mock_calls[0][1][1]["number"]
 
     @mock.patch(write_row_path)
-    def test_date_between(self, write_row):
+    def test_date_between_error_handling(self, write_row):
         yaml = """
         - object : A
           fields:
