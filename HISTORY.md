@@ -19,6 +19,8 @@ Allow a short-form random_choice syntax that matches the docs.
 
 The --target-number value now allows its two sub-arguments to be specified in either order: Tablename then number or number then tablename.
 
+`date` now casts datetimes to dates instead of returning them unchanged.
+
 ## Snowfakery 1.2
 
 Improvements to plugin API: add `evaluate_raw` and `simplify`
