@@ -145,7 +145,9 @@ class PluginContext:
             return rc.simplify()
         else:
             raise exc.DataGenError(
-                f"Cannot simplify {field_definition}. Perhaps should have used evaluate_raw?"
+                f"Cannot simplify {field_definition}. Perhaps should have used evaluate_raw?",
+                None,
+                None,
             )
 
     @property

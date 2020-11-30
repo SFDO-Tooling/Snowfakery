@@ -512,6 +512,13 @@ class TestContextVars:
             generate(StringIO(yaml))
         assert 4 < e.value.line_num <= 10
 
+    def test_weird_input_types(self, generated_rows):
+        field_definition = mock.Mock()
+        field_definition.render.return_value = map
+        plugin = DoubleVisionPlugin(mock.Mock())
+        with pytest.raises(DataGenError):
+            PluginContext(plugin).evaluate(field_definition)
+
     def test_string_generator_and_plugins(self, generated_rows):
         yaml = """
         - plugin: tests.test_custom_plugins_and_providers.DoubleVisionPlugin
