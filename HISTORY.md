@@ -6,20 +6,21 @@ And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” an
 
 ## Snowfakery 1.3
 
-`random_number` can now accept a "step" argument as descrbed in the docs.
+`random_number` can now accept a "step" argument as described in the docs.
+
+Allow a short-form random_choice syntax that matches the docs.
+
+`date` now casts datetimes to dates instead of returning them unchanged.
+
+The --target-number value now allows its two sub-arguments to be specified in either order: Tablename then number or number then tablename.
+
+The command line interface gives better error messages about unknown
+file extensions.
 
 The continuation file format changed. Do not upgrade Snowfakery while
 running a long-running Snowfakery process. The new configuration file
 should be less prone to issues relating to failures to serialize results.
 
-The command line interface gives better error messages about unknown
-file extensions.
-
-Allow a short-form random_choice syntax that matches the docs.
-
-The --target-number value now allows its two sub-arguments to be specified in either order: Tablename then number or number then tablename.
-
-`date` now casts datetimes to dates instead of returning them unchanged.
 
 ## Snowfakery 1.2
 
