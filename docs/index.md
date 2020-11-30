@@ -217,6 +217,8 @@ persons_of_interest.yml
 
 In this case, there will be 6 Persons in the Person table (or file), 3 with age between 0 and 12 and 3 with age between 12 and 95.
 
+### Friends
+
 Sometimes you want to obey a rule like “For every Person I create, I’d like to create 2 animals” (maybe you really like animals).
 
 You would use the `friends` property to do that.
@@ -256,6 +258,8 @@ Animal(id=6, name=Kimberly)
 <img src='images/img2.png' id='PJUACAveFpc' alt='Relationship diagram' width='800' height='34'>
 
 There is no explicit relationship between the animals and the people in this case, but sometimes you do want such an implicit “relationship” between the number of one object created and the number of the other.
+
+You can also use this feature for [Many to One](#many-to-one-relationships).
 
 ## Relationships
 
@@ -973,7 +977,7 @@ for all of the CSV files.
 
 ## Advanced Features
 
-### Hidden Fields and objects
+### Hidden Fields and Objects
 
 As described earlier, fields can refer to each other. For example field `c` could be the sum of fields `a` and `b`. Or perhaps you only want to output PersonLastName if PersonFirstName was set, and PersonFirstName is set randomly.
 
@@ -981,7 +985,26 @@ If you want to create a value which will be used in computations but **not** out
 
 You can even do this with Object Templates to generate “objects” which are never saved as rows to your database, Salesforce org or output file.
 
-### Random Weights That are not percentages
+examples/hidden_fields.yml:
+
+```yaml
+- object: Dates
+  fields:
+    __total_months: 48
+    __first_month: ${{today - relativedelta(months=__total_months)}}
+    __end_of_first_quarter: ${{date(__first_month) + relativedelta(months=3)}}
+    ProgramStartDate: ${{__first_month}}
+    FirstEvent:
+      date_between:
+        start_date: ${{__first_month}}
+        end_date: ${{__end_of_first_quarter}}
+    ProgramEndDate: ${{date(__first_month) + relativedelta(months=12)}}
+```
+Which would output:
+
+```Dates(id=1, ProgramStartDate=2016-11-30, FirstEvent=2017-02-24, ProgramEndDate=2017-11-30)```
+
+### Random Weights that are not Percentages
 
 Consider the following field definition:
 
@@ -1006,6 +1029,91 @@ You include either Plugins or Providers in a Snowfakery file like this:
 ```
 
 To write a new Provider, please refer to the documentation for Faker at https://faker.readthedocs.io/en/master/#providers
+
+#### Many to One relationships
+
+In relational databases, child records typically have a reference to
+their parent record but the opposite is not true. For example, if
+a Company object (record) relates to many Employee objects (records)
+you would model it like this:
+
+```yaml
+# examples/company.yml
+- object: Company
+  fields:
+    Name:
+      fake: company
+
+- object: Employee
+  nickname: Employee 1
+  fields:
+    Name:
+      fake: name
+    EmployedBy:
+      - object: Company
+
+- object: Employee
+  nickname: Employee 1
+  fields:
+    Name:
+      fake: name
+    EmployedBy:
+      - object: Company
+```
+
+Which generates:
+
+```javascript
+Company(id=1, Name=Nelson-Singleton)
+Company(id=2)
+Employee(id=1, Name=Julie Turner, EmployedBy=Company(2))
+Company(id=3)
+Employee(id=2, Name=Amanda Martin, EmployedBy=Company(3))
+```
+
+Now what if you want to generate 10 companies with 100 employees per company?
+It's actually really easy, using either the "friends" feature of Snowfakery
+OR the hidden field feature.
+
+Here's how to use the "friends" feature in this case:
+
+```yaml
+# examples/company2.yml
+- object: Company
+  count: 10
+  fields:
+    Name:
+      fake: company
+  friends:
+    - object: Employee
+      count: 100
+      nickname: Employee 1
+      fields:
+        Name:
+          fake: name
+        EmployedBy:
+          reference: Company
+```
+
+And here's how to use the "hidden fields"([#hidden-fields-and-objects]) feature:
+
+```yaml
+# examples/company3.yml
+- object: Company
+  count: 10
+  fields:
+    Name:
+      fake: company
+    __employees:
+      - object: Employee
+        count: 100
+        nickname: Employee 1
+        fields:
+          Name:
+            fake: name
+          EmployedBy:
+            reference: Company
+```
 
 ### Built-in Plugins
 
