@@ -49,10 +49,11 @@ def weighted_choice(choices: List[Tuple[float, object]]):
 
 @lru_cache(maxsize=512)
 def parse_date(d: Union[str, datetime, date]) -> date:
-    if isinstance(d, date):
-        return d
-    elif isinstance(d, datetime):
+    if isinstance(d, datetime):
         return d.date()
+    elif isinstance(d, date):
+        return d
+
     return dateutil.parser.parse(d).date()
 
 
