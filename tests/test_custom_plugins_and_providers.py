@@ -1,22 +1,21 @@
-from io import StringIO
 import math
 import operator
 import time
 from base64 import b64decode
+from io import StringIO
 
-from snowfakery import SnowfakeryPlugin, lazy
-from snowfakery.plugins import PluginResult, PluginOption, memorable
-
+from snowfakery import SnowfakeryPlugin, generate_data, lazy
 from snowfakery.data_gen_exceptions import (
     DataGenError,
-    DataGenTypeError,
     DataGenImportError,
+    DataGenTypeError,
 )
-from snowfakery import generate_data
+from snowfakery.plugins import PluginContext, PluginOption, PluginResult, memorable
 
 generate = generate_data
 
 from unittest import mock
+
 import pytest
 
 write_row_path = "snowfakery.output_streams.DebugOutputStream.write_row"
@@ -65,7 +64,6 @@ class DoubleVisionPlugin(SnowfakeryPlugin):
 class WrongTypePlugin(SnowfakeryPlugin):
     class Functions:
         def return_bad_type(self, value):
-            "Evaluates its argument twice into a string"
             return int  # function
 
 
@@ -440,6 +438,13 @@ class TestContextVars:
         with pytest.raises(DataGenError) as e:
             generate(StringIO(yaml))
         assert 4 < e.value.line_num <= 10
+
+    def test_weird_input_types(self, generated_rows):
+        field_definition = mock.Mock()
+        field_definition.render.return_value = map
+        plugin = DoubleVisionPlugin(mock.Mock())
+        with pytest.raises(DataGenError):
+            PluginContext(plugin).evaluate(field_definition)
 
     def test_string_generator_and_plugins(self, generated_rows):
         yaml = """
