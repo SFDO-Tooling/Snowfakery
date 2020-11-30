@@ -4,7 +4,7 @@ import operator
 
 from snowfakery.data_generator import generate
 from snowfakery import SnowfakeryPlugin, lazy
-from snowfakery.plugins import PluginResult
+from snowfakery.plugins import PluginResult, PluginContext
 from snowfakery.data_gen_exceptions import (
     DataGenError,
     DataGenTypeError,
@@ -53,7 +53,6 @@ class DoubleVisionPlugin(SnowfakeryPlugin):
 class WrongTypePlugin(SnowfakeryPlugin):
     class Functions:
         def return_bad_type(self, value):
-            "Evaluates its argument twice into a string"
             return int  # function
 
 
@@ -290,6 +289,13 @@ class TestContextVars:
         with pytest.raises(DataGenError) as e:
             generate(StringIO(yaml))
         assert 4 < e.value.line_num <= 10
+
+    def test_weird_input_types(self, generated_rows):
+        field_definition = mock.Mock()
+        field_definition.render.return_value = map
+        plugin = DoubleVisionPlugin(mock.Mock())
+        with pytest.raises(DataGenError):
+            PluginContext(plugin).evaluate(field_definition)
 
     def test_string_generator_and_plugins(self, generated_rows):
         yaml = """
