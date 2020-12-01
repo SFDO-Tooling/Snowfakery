@@ -52,8 +52,6 @@ $ snowfakery docs/examples/simple_static.yml
 ...
 ```
 
-(this example does not represent the final command line interface nor how to use [Advanced Features](#advanced-features)))
-
 This simple example will generate a single record that looks like this:
 
 ```json
