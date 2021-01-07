@@ -1,0 +1,11 @@
+- object: Dates
+  fields:
+    __total_months: 48
+    __first_month: ${{today - relativedelta(months=__total_months)}}
+    __end_of_first_quarter: ${{date(__first_month) + relativedelta(months=3)}}
+    ProgramStartDate: ${{__first_month}}
+    FirstEvent:
+      date_between:
+        start_date: ${{__first_month}}
+        end_date: ${{__end_of_first_quarter}}
+    ProgramEndDate: ${{date(__first_month) + relativedelta(months=12)}}
