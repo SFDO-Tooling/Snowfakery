@@ -41,11 +41,10 @@
       fake: last_name
     Salutation:
       random_choice:
-        - Mr.
-        - Ms.
-        - Mrs.
-        - Dr.
-        - Prof.
+        Mr.: 40%
+        Ms.: 40%
+        Dr.: 10%
+        Prof.: 10%
     OtherStreet:
       fake.text:
         max_nb_chars: 100
