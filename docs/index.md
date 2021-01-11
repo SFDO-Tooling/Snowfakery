@@ -52,8 +52,6 @@ $ snowfakery docs/examples/simple_static.yml
 ...
 ```
 
-(this example does not represent the final command line interface nor how to use [Advanced Features](#advanced-features)))
-
 This simple example will generate a single record that looks like this:
 
 ```json
@@ -217,6 +215,8 @@ persons_of_interest.yml
 
 In this case, there will be 6 Persons in the Person table (or file), 3 with age between 0 and 12 and 3 with age between 12 and 95.
 
+### Friends
+
 Sometimes you want to obey a rule like “For every Person I create, I’d like to create 2 animals” (maybe you really like animals).
 
 You would use the `friends` property to do that.
@@ -256,6 +256,8 @@ Animal(id=6, name=Kimberly)
 <img src='images/img2.png' id='PJUACAveFpc' alt='Relationship diagram' width='800' height='34'>
 
 There is no explicit relationship between the animals and the people in this case, but sometimes you do want such an implicit “relationship” between the number of one object created and the number of the other.
+
+You can also use this feature for [Many to One](#many-to-one-relationships).
 
 ## Relationships
 
@@ -449,6 +451,24 @@ StageName:
 
 You can do more sophisticated randomness with features that will be discussed in the section [Random Weights That Are Not Percentages](#random-weights-that-are-not-percentages).
 
+A more elaborate form of `random_choice` can also be used to
+select randomly among potential child or friend objects.
+
+```yaml
+- object : Task
+  fields:
+    who:
+        random_choice:
+          - object: Contact
+            fields:
+                FirstName: Bart
+                LastName: Simpson
+          - object: Lead
+            fields:
+                FirstName: Marge
+                LastName: Simpson
+```
+
 ### `fake`
 
 Generate fake data using functions from the [faker](https://github.com/joke2k/faker) library:
@@ -583,6 +603,30 @@ age:
     min: 12
     max: 95
 ```
+
+If the number should be divsible by some other number (e.g. only multiples
+of 10) then you can supply a "step".
+
+```yaml
+age:
+  random_number:
+    min: 10
+    max: 90
+    step: 10
+```
+
+As the name `step` implies, and to be a bit more precise, the output
+number minus `min` will be a multiple of the step. So this would
+generate one of 12, 17 or 22:
+
+```yaml
+age:
+  random_number:
+    min: 12
+    max: 23
+    step: 5
+```
+
 
 `random_number` can also be used as a function in formulas:
 
@@ -884,7 +928,29 @@ Options:
   
 ```
 
-## CSV Output
+### Scaling up recipe execution
+
+From the command line you can control how many rows a recipe generates. You do this by specifying a "target count" and a "target tablename", like this:
+
+```bash
+snowfakery accounts.yml --target-number 1000 Account
+```
+
+The counting works like this:
+
+- Snowfakery always executes a *complete* recipe. It never stops halfway through.
+  
+- At the end of executing a recipe, it checks whether it has
+    created enough of the object type defined by ``target-number``
+  
+- If so, it finishes. If not, it runs the recipe again.
+
+So if your recipe creates 10 Accounts, 5 Contacts and 15 Opportunities,
+then when you run the command above it will run the recipe
+100 times (1000/10=100) which will generate 1000 Accounts, 500 Contacts
+and 1500 Opportunites.
+
+### CSV Output
 
 You create a CSV directory like this:
 
@@ -909,7 +975,7 @@ for all of the CSV files.
 
 ## Advanced Features
 
-### Hidden Fields and objects
+### Hidden Fields and Objects
 
 As described earlier, fields can refer to each other. For example field `c` could be the sum of fields `a` and `b`. Or perhaps you only want to output PersonLastName if PersonFirstName was set, and PersonFirstName is set randomly.
 
@@ -917,7 +983,26 @@ If you want to create a value which will be used in computations but **not** out
 
 You can even do this with Object Templates to generate “objects” which are never saved as rows to your database, Salesforce org or output file.
 
-### Random Weights That are not percentages
+examples/hidden_fields.yml:
+
+```yaml
+- object: Dates
+  fields:
+    __total_months: 48
+    __first_month: ${{today - relativedelta(months=__total_months)}}
+    __end_of_first_quarter: ${{date(__first_month) + relativedelta(months=3)}}
+    ProgramStartDate: ${{__first_month}}
+    FirstEvent:
+      date_between:
+        start_date: ${{__first_month}}
+        end_date: ${{__end_of_first_quarter}}
+    ProgramEndDate: ${{date(__first_month) + relativedelta(months=12)}}
+```
+Which would output:
+
+```Dates(id=1, ProgramStartDate=2016-11-30, FirstEvent=2017-02-24, ProgramEndDate=2017-11-30)```
+
+### Random Weights that are not Percentages
 
 Consider the following field definition:
 
@@ -942,6 +1027,91 @@ You include either Plugins or Providers in a Snowfakery file like this:
 ```
 
 To write a new Provider, please refer to the documentation for Faker at https://faker.readthedocs.io/en/master/#providers
+
+#### Many to One relationships
+
+In relational databases, child records typically have a reference to
+their parent record but the opposite is not true. For example, if
+a Company object (record) relates to many Employee objects (records)
+you would model it like this:
+
+```yaml
+# examples/company.yml
+- object: Company
+  fields:
+    Name:
+      fake: company
+
+- object: Employee
+  nickname: Employee 1
+  fields:
+    Name:
+      fake: name
+    EmployedBy:
+      - object: Company
+
+- object: Employee
+  nickname: Employee 1
+  fields:
+    Name:
+      fake: name
+    EmployedBy:
+      - object: Company
+```
+
+Which generates:
+
+```javascript
+Company(id=1, Name=Nelson-Singleton)
+Company(id=2)
+Employee(id=1, Name=Julie Turner, EmployedBy=Company(2))
+Company(id=3)
+Employee(id=2, Name=Amanda Martin, EmployedBy=Company(3))
+```
+
+Now what if you want to generate 10 companies with 100 employees per company?
+It's actually really easy, using either the "friends" feature of Snowfakery
+OR the hidden field feature.
+
+Here's how to use the "friends" feature in this case:
+
+```yaml
+# examples/company2.yml
+- object: Company
+  count: 10
+  fields:
+    Name:
+      fake: company
+  friends:
+    - object: Employee
+      count: 100
+      nickname: Employee 1
+      fields:
+        Name:
+          fake: name
+        EmployedBy:
+          reference: Company
+```
+
+And here's how to use the "hidden fields"([#hidden-fields-and-objects]) feature:
+
+```yaml
+# examples/company3.yml
+- object: Company
+  count: 10
+  fields:
+    Name:
+      fake: company
+    __employees:
+      - object: Employee
+        count: 100
+        nickname: Employee 1
+        fields:
+          Name:
+            fake: name
+          EmployedBy:
+            reference: Company
+```
 
 ### Built-in Plugins
 

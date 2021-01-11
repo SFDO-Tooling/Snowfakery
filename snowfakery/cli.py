@@ -10,6 +10,7 @@ from snowfakery.output_streams import (
 )
 from snowfakery.data_gen_exceptions import DataGenError
 from snowfakery.data_generator import generate, StoppingCriteria
+
 import sys
 from pathlib import Path
 from contextlib import contextmanager
@@ -47,15 +48,26 @@ def eval_arg(arg):
 
 
 # don't add a type signature to this function.
-# typeguard and click will interfer with each other.
-def string_int_tuple(ctx, param, value=None):
-    """Works around Click bug
+# typeguard and click will interfere with each other.
+def int_string_tuple(ctx, param, value=None):
+    """
+    Parse a pair of strings that represent a string and a number.
 
-    https://github.com/pallets/click/issues/789#issuecomment-535121714"""
+    Either number, string or string, number is allowed as input."""
     if not value:
         return None
-    else:
-        return value[0], int(value[1])
+    assert len(value) == 2
+
+    try:
+        number, string = int(value[0]), value[1]
+    except ValueError:
+        try:
+            string, number = value[0], int(value[1])
+        except ValueError:
+            raise click.BadParameter(
+                "This parameter must be of the form 'number Name'. For example '50 Account'"
+            )
+    return string, number
 
 
 @click.command()
@@ -81,8 +93,8 @@ def string_int_tuple(ctx, param, value=None):
 @click.option(
     "--target-number",
     nargs=2,
-    help="Target options for the recipe YAML.",
-    callback=string_int_tuple,  # noqa  https://github.com/pallets/click/issues/789#issuecomment-535121714
+    help="Target options for the recipe YAML in the form of 'number tablename'. For example: '50 Account'.",
+    callback=int_string_tuple,  # noqa  https://github.com/pallets/click/issues/789#issuecomment-535121714
 )
 @click.option(
     "--debug-internals/--no-debug-internals", "debug_internals", default=False
@@ -132,9 +144,13 @@ def generate_cli(
             * or to a directory as a set of CSV files (--output-format=csv --output-folder=csvfiles)
 
         Diagram output depends on the installation of pygraphviz ("pip install pygraphviz")
+
+        Full documentation here:
+
+            * https://snowfakery.readthedocs.io/en/docs/
     """
     output_files = list(output_files) if output_files else []
-    stopping_criteria = StoppingCriteria(*target_number) if target_number else None
+    stopping_criteria = stopping_criteria_from_target_number(target_number)
     output_format = output_format.lower() if output_format else None
     validate_options(
         yaml_file,
@@ -212,8 +228,12 @@ def configure_output_stream(
                 output_streams.append(JSONOutputStream(path))
             elif format == "txt":
                 output_streams.append(DebugOutputStream(path))
-            else:
+            elif format in file_extensions:
                 output_streams.append(ImageOutputStream(path, format))
+            else:
+                raise click.ClickException(
+                    f"Unknown format or file extension: {format}"
+                )
 
     if len(output_streams) == 0:
         output_stream = DebugOutputStream()
@@ -228,6 +248,7 @@ def configure_output_stream(
             try:
                 messages = output_stream.close()
             except Exception as e:
+                messages = None
                 click.echo(f"Could not close {output_stream}: {str(e)}", err=True)
             if messages:
                 for message in messages:
@@ -263,8 +284,20 @@ def validate_options(
         and not (output_files or output_format == "csv")
     ):
         raise click.ClickException(
-            "--output-folder can only be used if files are going to be output"
+            "--output-folder can only be used with --output-file=<something> or --output-format=csv"
         )
+
+
+def stopping_criteria_from_target_number(target_number):
+    "Deconstruct a tuple of 'str number' or 'number str' and make a StoppingCriteria"
+
+    # 'number str' is the official format so the other one can be deprecated one day.
+    if target_number:
+        if isinstance(target_number[0], int):
+            target_number = target_number[1], target_number[0]
+        return StoppingCriteria(*target_number)
+
+    return None
 
 
 def main():

@@ -1,9 +1,10 @@
 from io import StringIO
-import unittest
 from unittest import mock
 
 from snowfakery.data_generator import generate
 from snowfakery.data_gen_exceptions import DataGenError
+
+import pytest
 
 write_row_path = "snowfakery.output_streams.DebugOutputStream.write_row"
 
@@ -12,7 +13,7 @@ def row_values(write_row_mock, index, value):
     return write_row_mock.mock_calls[index][1][1][value]
 
 
-class TestTemplateFuncs(unittest.TestCase):
+class TestTemplateFuncs:
     @mock.patch(write_row_path)
     def test_inline_reference(self, write_row_mock):
         yaml = """
@@ -34,17 +35,28 @@ class TestTemplateFuncs(unittest.TestCase):
     @mock.patch(write_row_path)
     def test_unweighted_random_choice_object(self, write_row):
         yaml = """
-        - object : A
+        - object : Task
           fields:
-            b:
+            who:
                 random_choice:
-                  - object: C
-                  - object: D
-                  - object: E
+                  - object: Contact
+                    fields:
+                        FirstName: Bart
+                        LastName: Simpson
+                  - object: Lead
+                    fields:
+                        FirstName: Marge
+                        LastName: Simpson
         """
-        generate(StringIO(yaml), {}, None)
-        assert len(write_row.mock_calls) == 2, write_row.mock_calls
-        # TODO CHECK MORE
+
+        with mock.patch("random.choice", lambda x: x[-1]):
+            generate(StringIO(yaml), {}, None)
+
+            assert len(write_row.mock_calls) == 2, write_row.mock_calls
+
+        assert write_row.mock_calls[0] == mock.call(
+            "Lead", {"id": 1, "FirstName": "Marge", "LastName": "Simpson"}
+        )
 
     @mock.patch(write_row_path)
     def test_weighted_random_choice(self, write_row):
@@ -69,6 +81,35 @@ class TestTemplateFuncs(unittest.TestCase):
         generate(StringIO(yaml), {}, None)
         assert len(write_row.mock_calls) == 2, write_row.mock_calls
         # TODO CHECK MORE
+
+    @mock.patch(write_row_path)
+    def test_weighted_random_choice_strings(self, write_row):
+        yaml = """
+        - object : A
+          fields:
+            b:
+                random_choice:
+                    A: 80%
+                    B: 10%
+                    C: 10%
+        """
+        generate(StringIO(yaml))
+        assert len(write_row.mock_calls) == 1, write_row.mock_calls
+
+    @mock.patch(write_row_path)
+    def test_weighted_random_choice_strings_computed_percentages(self, write_row):
+        yaml = """
+        - object : A
+          fields:
+            __a_percent: 60
+            b:
+                random_choice:
+                    A: ${{__a_percent}}%
+                    B: ${{__a_percent / 2}}%
+                    C: ${{100 - (__a_percent * 1.5)}}%
+        """
+        generate(StringIO(yaml))
+        assert len(write_row.mock_calls) == 1, write_row.mock_calls
 
     @mock.patch(write_row_path)
     def test_conditional_is_lazy(self, write_row):
@@ -124,9 +165,9 @@ class TestTemplateFuncs(unittest.TestCase):
                         when: ${{b}}
                         pick: BBB
         """
-        with self.assertRaises(DataGenError) as e:
+        with pytest.raises(DataGenError) as e:
             generate(StringIO(yaml), {}, None)
-        assert "when" in str(e.exception)
+        assert "when" in str(e.value)
 
     @mock.patch(write_row_path)
     def test_conditional_fallthrough(self, write_row):
@@ -191,6 +232,16 @@ class TestTemplateFuncs(unittest.TestCase):
         assert write_row.mock_calls[0][1][1]["a"] == "2012-01-01"
 
     @mock.patch(write_row_path)
+    def test_date_from_datetime(self, write_row):
+        yaml = """
+        - object : A
+          fields:
+            a: ${{date(datetime(year=2012, month=1, day=1))}}
+        """
+        generate(StringIO(yaml), {}, None)
+        assert write_row.mock_calls[0][1][1]["a"] == "2012-01-01"
+
+    @mock.patch(write_row_path)
     def test_old_syntax(self, write_row):
         yaml = """
         - object : A
@@ -224,3 +275,64 @@ class TestTemplateFuncs(unittest.TestCase):
         """
         generate(StringIO(yaml), {}, None)
         assert write_row.mock_calls[3][1][1]["num"] == 2
+
+    def test_random_number_with_step(self, generated_rows):
+        yaml = """
+        - object : A
+          fields:
+            number: ${{random_number(min=15, max=200, step=5)}}
+        """
+        generate(StringIO(yaml), {}, None)
+        assert 15 <= int(generated_rows.row_values(0, "number")) <= 200
+        assert int(generated_rows.row_values(0, "number")) % 5 == 0
+
+    def test_random_number_with_step_odd(self, generated_rows):
+        yaml = """
+        - object : A
+          fields:
+            number: ${{random_number(min=12, max=22, step=5)}}
+        """
+        generate(StringIO(yaml), {}, None)
+        assert int(generated_rows.row_values(0, "number")) in (12, 17, 22)
+
+    def test_random_choice_error_args_and_kwargs(self):
+        yaml = """
+        - object: A
+          fields:
+            num: ${{random_choice(1,2,a=10,b=20)}}
+        """
+        with pytest.raises(DataGenError):
+            generate(StringIO(yaml))
+
+    @mock.patch(write_row_path)
+    def test_random_choice_error_no_choices(self, write_row):
+        yaml = """
+        - object: A
+          fields:
+            num: ${{random_choice()}}
+        """
+        with pytest.raises(DataGenError):
+            generate(StringIO(yaml))
+
+    @mock.patch(write_row_path)
+    def test_random_choice_can_generate_None(self, write_row):
+        yaml = """
+        - object: A
+          fields:
+            void:
+                random_choice:
+                    -
+                    -
+        """
+        generate(StringIO(yaml))
+        write_row.mock_calls[0][1][1]["void"] is None
+
+    @mock.patch(write_row_path)
+    def test_if_error_no_choices(self, write_row):
+        yaml = """
+        - object: A
+          fields:
+            num: ${{if()}}
+        """
+        with pytest.raises(DataGenError):
+            generate(StringIO(yaml))

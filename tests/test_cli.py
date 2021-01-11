@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 from io import StringIO
 import json
 import re
+import sys
 from tests.utils import named_temporary_file_path
 
 import yaml
@@ -42,6 +43,26 @@ class TestGenerateFromCLI:
 
     @mock.patch(write_row_path)
     def test_counts(self, write_row):
+        generate_cli.callback(
+            yaml_file=sample_yaml,
+            target_number=(2, "Account"),
+            option={},
+            debug_internals=None,
+            generate_cci_mapping_file=None,
+        )
+        assert write_row.mock_calls == [
+            mock.call(
+                "Account",
+                {"id": 1, "name": "Default Company Name", "ShippingCountry": "Canada"},
+            ),
+            mock.call(
+                "Account",
+                {"id": 2, "name": "Default Company Name", "ShippingCountry": "Canada"},
+            ),
+        ]
+
+    @mock.patch(write_row_path)
+    def test_counts_backwards(self, write_row):
         generate_cli.callback(
             yaml_file=sample_yaml,
             target_number=("Account", 2),
@@ -171,6 +192,16 @@ class TestGenerateFromCLI:
             with t.open() as f:
                 output = f.read()
             assert len(re.findall(r"Account\(", output)) == 5
+
+    def test_from_cli__unknown_extension(self, capsys):
+        with pytest.raises(ClickException) as e:
+            generate_cli.callback(
+                yaml_file=str(sample_yaml),
+                target_number=("Account", 5),
+                output_format="xyzzy",
+                output_files=["foo.txt"],
+            )
+        assert "xyzzy" in str(e.value)
 
     def test_from_cli__continuation(self, capsys):
         with TemporaryDirectory() as t:
@@ -304,7 +335,8 @@ class TestGenerateFromCLI:
             assert "--cci-mapping-file" in str(e.value)
 
     def test_module_main(self, capsys):
-        with pytest.raises(SystemExit):
+        _ = sys  # shut up linter
+        with pytest.raises(SystemExit), mock.patch("sys.argv", ["snowfakery"]):
             main()
 
         assert "Usage:" in capsys.readouterr().err
@@ -350,6 +382,19 @@ class TestGenerateFromCLI:
                 standalone_mode=False,
             )
             assert Path(tempdir, "foo", "Account.csv").exists()
+
+    def test_output_folder__eror(self):
+        with TemporaryDirectory() as tempdir, pytest.raises(ClickException):
+            generate_cli.main(
+                [
+                    str(sample_yaml),
+                    "--output-folder",
+                    tempdir,
+                    "--output-format",
+                    "json",
+                ],
+                standalone_mode=False,
+            )
 
 
 class TestCLIOptionChecking:
