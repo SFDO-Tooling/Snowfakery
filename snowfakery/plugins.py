@@ -7,6 +7,7 @@ from yaml.representer import Representer
 from faker.providers import BaseProvider as FakerProvider
 
 import snowfakery.data_gen_exceptions as exc
+from .utils.yaml_utils import SnowfakeryDumper
 
 from numbers import Number
 
@@ -148,9 +149,8 @@ class PluginResult:
     def __str__(self):
         return str(self.result)
 
-
 # round-trip PluginResult objects through continuation YAML if needed.
-yaml.SafeDumper.add_representer(PluginResult, Representer.represent_object)
+SnowfakeryDumper.add_representer(PluginResult, Representer.represent_object)
 yaml.SafeLoader.add_constructor(
     "tag:yaml.org,2002:python/object/apply:snowfakery.plugins.PluginResult",
     lambda loader, node: PluginResult(loader.construct_sequence(node)[0]),
