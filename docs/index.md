@@ -1118,14 +1118,16 @@ And here's how to use the "hidden fields"([#hidden-fields-and-objects]) feature:
 #### Advanced Math
 
 Snowfakery has a "Math" plugin which gives you access to all features from Python's
-[math](https://docs.python.org/3/library/math.html) module. For example:
+[`math`](https://docs.python.org/3/library/math.html) module plus
+[`min`](https://docs.python.org/3/library/functions.html#min),
+[`max`](https://docs.python.org/3/library/functions.html#max) and [`round`](https://docs.python.org/3/library/functions.html#round). For example:
 
 ```yaml
   - plugin: snowfakery.standard_plugins.Math
   - object: OBJ
     fields:
       twelve:
-          Math.sqrt: 144
+          Math.sqrt: ${{Math.min(144, 169)}}
 ```
 
 Or:
