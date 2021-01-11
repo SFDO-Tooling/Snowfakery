@@ -19,9 +19,9 @@ class TestEmbedding:
         with TemporaryDirectory() as t:
             outfile = Path(t) / "foo.txt"
             generate_data(
-                yaml_file="tests/gender_conditional.yml",
+                yaml_file="examples/company.yml",
                 option=[("A", "B")],
-                target_number=(20, "A"),
+                target_number=(20, "Employee"),
                 debug_internals=True,
                 output_format="json",
                 output_file=outfile,
