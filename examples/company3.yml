@@ -1,0 +1,14 @@
+- object: Company
+  count: 10
+  fields:
+    Name:
+      fake: company
+    __employees:
+      - object: Employee
+        count: 100
+        nickname: Employee 1
+        fields:
+          Name:
+            fake: name
+          EmployedBy:
+            reference: Company
