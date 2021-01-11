@@ -1,8 +1,9 @@
-# To run this code:
+## NPSP Contacts Example
+
+# To run this code against a fresh scratch org called ("qa"):
 #
 # cci flow run npsp:install_prod --org qa
-# sh examples/salesforce/scripts/test_contacts_npsp.sh
-# look in that file to see the underlying CCI command line
+# cci task run generate_and_load_from_yaml -o generator_yaml examples/npsp/Contact_npsp.recipe.yml -o num_records 300 -o num_records_tablename Contact --org qa
 
 # Look at examples/salesforce/Contact.recipe.yml for more examples.
 - include_file: ../salesforce/standard_objs.recipe.yml

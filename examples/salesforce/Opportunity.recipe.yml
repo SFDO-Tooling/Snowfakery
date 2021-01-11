@@ -1,8 +1,10 @@
-# To run this code:
-#
-# examples/salesforce/scripts/test_opportunities_npsp.sh
+## Salesforce Opportunities Examples
 
-# hard-coded values
+# To run this code against an org named 'qa':
+#
+# cci task run generate_and_load_from_yaml -o generator_yaml examples/npsp/Opportunity_npsp.recipe.yml -o num_records 300 -o num_records_tablename Opportunity --org qa
+
+## hard-coded values
 
 - object: Opportunity
   fields:
@@ -12,7 +14,8 @@
     StageName: Qualification
     CloseDate: 2020-12-31
 
-# randomized values
+## randomized values
+
 - object: Opportunity
   fields:
     AccountId:
@@ -44,7 +47,7 @@
         min: 1
         max: 100000
 
-# almost all fields
+## almost all fields
 
 # include other objects so we have something to refer to.
 - include_file: standard_objs.recipe.yml

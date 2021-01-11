@@ -1,9 +1,9 @@
+## NPSP Opportunities Example
+
 # TODO: record types
-# To run this code:
+# To run this code against an org called 'qa':
 #
-# examples/salesforce/scripts/test_opportunities_npsp.sh
-#
-# Look in that file to see the underlying CCI command
+# cci task run generate_and_load_from_yaml -o generator_yaml examples/npsp/Opportunity_npsp.recipe.yml -o num_records 300 -o num_records_tablename Opportunity --org qa
 #
 # Look at examples/salesforce/Opportunity.recipe.yml for more examples.
 

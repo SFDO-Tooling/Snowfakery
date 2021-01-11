@@ -8,6 +8,20 @@
 - include_file: standard_npsp_objs_recipe.yml
 
 - object: Account
+  nickname: A Household
+  fields:
+    name:
+      fake: company
+    RecordType: HH_Account
+
+- object: Account
+  nickname: A Company
+  fields:
+    name:
+      fake: last_name
+    RecordType: Organization
+
+- object: Account
   fields:
     name:
       fake: company

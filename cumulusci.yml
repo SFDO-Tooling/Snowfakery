@@ -45,6 +45,18 @@ tasks:
             generator_yaml: examples/npsp/Opportunity_npsp.recipe.yml
             num_records: 100
             num_records_tablename: Opportunity
+    generate_opportunity_contact_roles:
+        class_path: cumulusci.tasks.bulkdata.generate_and_load_data_from_yaml.GenerateAndLoadDataFromYaml
+        options:
+            generator_yaml: examples/salesforce/OpportunityContactRole.recipe.yml
+            num_records: 100
+            num_records_tablename: Opportunity
+    generate_opportunities_and_contacts:
+        class_path: cumulusci.tasks.bulkdata.generate_and_load_data_from_yaml.GenerateAndLoadDataFromYaml
+        options:
+            generator_yaml: examples/salesforce/OpportunityAndContact.recipe.yml
+            num_records: 100
+            num_records_tablename: Opportunity
 
 flows:
     test_everything:
@@ -63,3 +75,7 @@ flows:
                 task: generate_npsp_contacts
             7:
                 task: generate_npsp_opportunities
+            8:
+                task: generate_opportunity_contact_roles
+            9:
+                task: generate_opportunities_and_contacts

@@ -1,12 +1,8 @@
-### Overview
+## Salesforce Contact Example
 
-# To run this code:
+# To run this code against an org called 'qa':
 #
-# $ sh examples/salesforce/scripts/test_contacts.sh
-#
-# look in that file to see the underlying CCI command line
-
-### Examples
+# cci task run generate_and_load_from_yaml -o generator_yaml examples/salesforce/Contact.recipe.yml -o num_records 300 -o num_records_tablename Contact --org qa
 
 # hard-coded values
 

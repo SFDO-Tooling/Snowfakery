@@ -1,0 +1,52 @@
+## Show how to create OpportunityContactRoles
+## in context of other major objects
+
+# To run this code against an org named 'qa':
+#
+# cci task run generate_and_load_from_yaml -o generator_yaml examples/salesforce/OpportunityContactRole.recipe.yml -o num_records 300 -o num_records_tablename Opportunity --org qa
+
+- object: Account
+  fields:
+    name:
+      fake: company
+  friends:
+    - object: Contact
+      count: 2 #   2 contacts for every account
+      fields:
+        Firstname:
+          fake: first_name
+        Lastname:
+          fake: last_name
+        AccountId:
+          reference: Account
+      friends:
+        - object: Opportunity
+          count: # between 1 and 3 Opportunities per Contact
+            random_number:
+              min: 1
+              max: 3
+          fields:
+            Stagename:
+              random_choice:
+                Prospecting: 50%
+                Qualification: 50%
+            CloseDate: 2022-01-01
+            ContactId:
+              reference: Contact
+            AccountId:
+              reference: Account
+            name: The ${{Contact.Lastname}} Opportunity
+          friends:
+            - object: OpportunityContactRole
+              fields:
+                OpportunityId:
+                  reference: Opportunity
+                ContactId:
+                  reference: Contact
+                Role:
+                  random_choice:
+                    Business User: 20%
+                    Decision Maker: 20%
+                    Economic Buyer: 20%
+                    Economic Decision Maker: 20%
+                    Evaluator: 20%
