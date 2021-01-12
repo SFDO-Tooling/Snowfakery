@@ -1,5 +1,6 @@
 from pathlib import Path
-from typing import Tuple, List, Union, Optional
+from typing import Tuple, Union, Optional, Dict, TextIO
+from contextlib import ExitStack
 
 from .plugins import SnowfakeryPlugin, lazy  # noqa
 
@@ -15,7 +16,8 @@ with version_file.open() as f:
 
 def generate_data(
     yaml_file: Union[Path, str],
-    option: List[Tuple[str, str]] = [],
+    *,
+    user_options: Dict[str, str] = None,
     dburl: str = None,
     target_number: Optional[Tuple[int, str]] = None,
     debug_internals: bool = False,
@@ -23,6 +25,7 @@ def generate_data(
     output_file: Path = None,
     output_folder: Path = None,
     continuation_file: Path = None,
+    generate_continuation_file: Union[TextIO, Path] = None,
 ):
     from .cli import generate_cli
 
@@ -31,15 +34,22 @@ def generate_data(
 
     dburls = [dburl] if dburl else []
     output_files = [output_file] if output_file else []
+    options_sequence = list(user_options.items()) if user_options else ()
 
-    return generate_cli.callback(
-        yaml_file=yaml_file,
-        option=option,
-        dburls=dburls,
-        target_number=target_number,
-        debug_internals=debug_internals,
-        output_format=output_format,
-        output_files=output_files,
-        output_folder=output_folder,
-        continuation_file=continuation_file,
-    )
+    with ExitStack() as stack:
+        if hasattr(generate_continuation_file, "open"):
+            generate_continuation_file = generate_continuation_file.open(mode="w")
+            stack.enter_context(generate_continuation_file)
+
+        return generate_cli.callback(
+            yaml_file=yaml_file,
+            option=options_sequence,
+            dburls=dburls,
+            target_number=target_number,
+            debug_internals=debug_internals,
+            output_format=output_format,
+            output_files=output_files,
+            output_folder=output_folder,
+            continuation_file=continuation_file,
+            generate_continuation_file=generate_continuation_file,
+        )

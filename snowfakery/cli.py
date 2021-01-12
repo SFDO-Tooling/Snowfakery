@@ -128,7 +128,6 @@ def generate_cli(
     output_format=None,
     output_files=None,
     output_folder=None,
-    nickname_ids=None,
     continuation_file=None,
     generate_continuation_file=None,
 ):
