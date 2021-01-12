@@ -102,8 +102,8 @@ def int_string_tuple(ctx, param, value=None):
 @click.option("--cci-mapping-file", "mapping_file", type=click.Path(exists=True))
 @click.option(
     "--generate-cci-mapping-file",
-    "generate_cci_mapping_file",
-    type=click.Path(exists=False),
+    type=click.File("w"),
+    help="Generate a CumulusCI mapping file for the dataset",
 )
 @click.option(
     "--generate-continuation-file",
@@ -128,7 +128,6 @@ def generate_cli(
     output_format=None,
     output_files=None,
     output_folder=None,
-    nickname_ids=None,
     continuation_file=None,
     generate_continuation_file=None,
 ):
@@ -182,10 +181,11 @@ def generate_cli(
                 )
                 sys.stderr.write(debuginfo)
             if generate_cci_mapping_file:
-                with click.open_file(generate_cci_mapping_file, "w") as f:
-                    yaml.safe_dump(
-                        mapping_from_recipe_templates(summary), f, sort_keys=False
-                    )
+                yaml.safe_dump(
+                    mapping_from_recipe_templates(summary),
+                    generate_cci_mapping_file,
+                    sort_keys=False,
+                )
         except DataGenError as e:
             if debug_internals:
                 raise e
