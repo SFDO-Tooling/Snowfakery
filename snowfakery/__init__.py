@@ -26,6 +26,7 @@ def generate_data(
     output_folder: Path = None,
     continuation_file: Path = None,
     generate_continuation_file: Union[TextIO, Path] = None,
+    generate_cci_mapping_file: Union[TextIO, Path] = None,
 ):
     from .cli import generate_cli
 
@@ -37,9 +38,19 @@ def generate_data(
     options_sequence = list(user_options.items()) if user_options else ()
 
     with ExitStack() as stack:
-        if hasattr(generate_continuation_file, "open"):
-            generate_continuation_file = generate_continuation_file.open(mode="w")
-            stack.enter_context(generate_continuation_file)
+
+        def open_if_necessary_and_close_later(file_like, mode):
+            if hasattr(file_like, "open"):
+                file_like = file_like.open(mode)
+                stack.enter_context(file_like)
+            return file_like
+
+        generate_continuation_file = open_if_necessary_and_close_later(
+            generate_continuation_file, "w"
+        )
+        generate_cci_mapping_file = open_if_necessary_and_close_later(
+            generate_cci_mapping_file, "w"
+        )
 
         return generate_cli.callback(
             yaml_file=yaml_file,
@@ -52,4 +63,5 @@ def generate_data(
             output_folder=output_folder,
             continuation_file=continuation_file,
             generate_continuation_file=generate_continuation_file,
+            generate_cci_mapping_file=generate_cci_mapping_file,
         )

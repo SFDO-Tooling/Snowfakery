@@ -37,16 +37,21 @@ class TestEmbedding:
     def test_continuation_as_open_file(self):
         with TemporaryDirectory() as t:
             outfile = Path(t) / "foo.json"
-            continuation = Path(t) / "out.yml"
-            with open(continuation, "w") as cont:
+            continuation = Path(t) / "cont.yml"
+            mapping_file = Path(t) / "mapping.yml"
+            with open(continuation, "w") as cont, open(mapping_file, "w") as mapf:
                 generate_data(
                     yaml_file="examples/company.yml",
                     target_number=(20, "Employee"),
                     debug_internals=False,
                     output_file=outfile,
                     generate_continuation_file=cont,
+                    generate_cci_mapping_file=mapf,
                 )
             assert outfile.exists()
             assert continuation.exists()
             with continuation.open() as f:
+                assert yaml.safe_load(f)
+            assert mapping_file.exists()
+            with mapping_file.open() as f:
                 assert yaml.safe_load(f)
