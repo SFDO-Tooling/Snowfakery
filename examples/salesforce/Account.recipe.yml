@@ -1,0 +1,205 @@
+## Salesforce Account Example
+
+# To run this code:
+#
+# cci task run generate_and_load_from_yaml -o generator_yaml Account.recipe.yml -o num_records 300 -o num_records_tablename Account --org qa
+
+# hard-coded values
+- object: Account
+  nickname: bluth_co
+  fields:
+    Name: The Bluth Company
+    Description: Solid as a rock
+    NumberOfEmployees: 6
+
+# randomized values
+- object: Account
+  fields:
+    Name:
+      fake: company
+    Description:
+      fake: catch_phrase
+    NumberOfEmployees:
+      random_number:
+        min: 0
+        max: 200000
+
+# every standard field
+- object: Account
+  fields:
+    Name:
+      fake: name
+    Type:
+      random_choice:
+        - Prospect
+        - Customer - Direct
+        - Customer - Channel
+        - Channel Partner / Reseller
+        - Installation Partner
+        - Technology Partner
+        - Other
+    BillingStreet:
+      fake.text:
+        max_nb_chars: 100
+    BillingCity:
+      fake: city
+    BillingState:
+      fake: state
+    BillingPostalCode:
+      fake: postalcode
+    BillingCountry:
+      fake: country
+    BillingLatitude:
+      fake: latitude
+    BillingLongitude:
+      fake: longitude
+    BillingGeocodeAccuracy:
+      random_choice:
+        - Address
+        - NearAddress
+        - Block
+        - Street
+        - ExtendedZip
+        - Zip
+        - Neighborhood
+        - City
+        - County
+        - State
+        - Unknown
+    ShippingStreet:
+      fake.text:
+        max_nb_chars: 100
+    ShippingCity:
+      fake: city
+    ShippingState:
+      fake: state
+    ShippingPostalCode:
+      fake: postalcode
+    ShippingCountry:
+      fake: country
+    ShippingLatitude:
+      fake: latitude
+    ShippingLongitude:
+      fake: longitude
+    ShippingGeocodeAccuracy:
+      random_choice:
+        - Address
+        - NearAddress
+        - Block
+        - Street
+        - ExtendedZip
+        - Zip
+        - Neighborhood
+        - City
+        - County
+        - State
+        - Unknown
+    Phone:
+      fake: phone_number
+    Fax:
+      fake: phone_number
+    AccountNumber:
+      fake.text:
+        max_nb_chars: 40
+    Website:
+      fake: url
+    Sic:
+      fake: postalcode
+    Industry:
+      random_choice:
+        - Agriculture
+        - Apparel
+        - Banking
+        - Biotechnology
+        - Chemicals
+        - Communications
+        - Construction
+        - Consulting
+        - Education
+        - Electronics
+        - Energy
+        - Engineering
+        - Entertainment
+        - Environmental
+        - Finance
+        - Food & Beverage
+        - Government
+        - Healthcare
+        - Hospitality
+        - Insurance
+        - Machinery
+        - Manufacturing
+        - Media
+        - Not For Profit
+        - Recreation
+        - Retail
+        - Shipping
+        - Technology
+        - Telecommunications
+        - Transportation
+        - Utilities
+        - Other
+    AnnualRevenue:
+      random_number:
+        min: 1
+        max: 100000
+    NumberOfEmployees:
+      random_number:
+        min: 1
+        max: 100000
+    Ownership:
+      random_choice:
+        - Public
+        - Private
+        - Subsidiary
+        - Other
+    TickerSymbol:
+      fake.text:
+        max_nb_chars: 20
+    Description:
+      fake.text:
+        max_nb_chars: 100
+    Rating:
+      random_choice:
+        - Hot
+        - Warm
+        - Cold
+    Site:
+      fake.text:
+        max_nb_chars: 80
+    Jigsaw:
+      fake.text:
+        max_nb_chars: 20
+    CleanStatus:
+      random_choice:
+        - Matched
+        - Different
+        - Acknowledged
+        - NotFound
+        - Inactive
+        - Pending
+        # - SelectMatch  # causes problems sometimes
+        - Skipped
+    AccountSource:
+      random_choice:
+        - Web
+        - Phone Inquiry
+        - Partner Referral
+        - Purchased List
+        - Other
+    DunsNumber:
+      fake.text:
+        max_nb_chars: 9
+    Tradestyle:
+      fake.text:
+        max_nb_chars: 100
+    NaicsCode:
+      fake: postalcode
+    NaicsDesc:
+      fake.text:
+        max_nb_chars: 100
+    YearStarted:
+      fake: year
+    SicDesc:
+      fake.text:
+        max_nb_chars: 80

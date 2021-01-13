@@ -885,10 +885,13 @@ And then you pass that option like this:
 
 ## Command Line Interface
 
-```yaml
+You can learn the list of options available in the latest version
+like this:
+
+```bash
 $ snowfakery --help
 
-  Usage: snowfakery [OPTIONS] YAML_FILE
+Usage: snowfakery [OPTIONS] YAML_FILE
 
       Generates records from a YAML file
 
@@ -902,6 +905,10 @@ $ snowfakery --help
       Diagram output depends on the installation of pygraphviz ("pip install
       pygraphviz")
 
+      Full documentation here:
+
+          * https://snowfakery.readthedocs.io/en/docs/
+
 Options:
   --dburl TEXT                    URL for database to save data to. Use
                                   sqlite:///foo.db if you don't have one set
@@ -911,7 +918,10 @@ Options:
   --output-folder PATH
   -o, --output-file PATH
   --option EVAL_ARG...            Options to send to the recipe YAML.
-  --target-number TEXT...         Target options for the recipe YAML.
+  --target-number TEXT...         Target options for the recipe YAML in the
+                                  form of 'number tablename'. For example: '50
+                                  Account'.
+
   --debug-internals / --no-debug-internals
   --cci-mapping-file PATH
   --generate-cci-mapping-file PATH
@@ -925,7 +935,6 @@ Options:
 
   --version                       Show the version and exit.
   --help                          Show this message and exit.
-  
 ```
 
 ### Scaling up recipe execution
@@ -1360,39 +1369,49 @@ parameters lazily but doesn't care about the internals of the values
 because it just returns it to some parent context. In that case,
 use `context.evaluate_raw` instead of `context.evaluate`.
 
-## Using Snowfakery within CumulusCI
+## Using Snowfakery with Salesforce
 
-You can verify that a Snowfakery-compatible version of CumulusCI is installed like this:
-
-```bash
-$ cci task info generate_and_load_from_yaml
-...
-```
-
-or
-
-```bash
-$ cci task run generate_and_load_from_yaml
-...
-```
-
-If its properly configured, you can use the built-in documentation to invoke Snowfakery options through their CumulusCI names. But for example, you would often run it like this:
-
-```bash
-$ cci task run generate_and_load_from_yaml -o generator_yaml datasets/some_snowfakery_yaml -o num_records 1000 -o num_records_tablename Account —org dev
-...
-```
-
-Options (tbd):
-
-• generator_yaml (required): A generator YAML file to use
-• num_records: How many times to instantiate the template.
-• mapping: A mapping YAML file to use (optional)
-• database_url: A path to put a copy of the sqlite database (for debugging) Default: sqlite:////tmp/test_data_2.db
-• vars: Pass values to override options in the format VAR1:foo,VAR2:bar or as a Yaml dict (in
-• generate_mapping_file: A path to put a mapping file inferred from the generator_yaml Default: /tmp/temp_mapping.yml
+Snowfakery recipes that generate Salesforce records are just like any
+other Snowfakery recipes. You use SObject names for the 'objects'.
+There are several examples [in the Snowfakery repository](https://github.com/SFDO-Tooling/Snowfakery/tree/master/examples/snowfakery)
 
 To specify a record type for a record, just put the Record Type’s API Name in a field named RecordType.
+
+The process of actually generating the data into a Salesforce
+org happens through CumulusCI as described below.
+
+## Using Snowfakery within CumulusCI
+
+[CumulusCI](http://www.github.com/SFDO-Tooling/CumulusCI) is a
+tool and framework for building portable automation for
+Salesforce projects. It is created by the same team that
+creates Snowfakery.
+
+The easiest way to learn about CumulusCI (and to learn how to
+install it) is with its [Trailhead Trail](https://trailhead.salesforce.com/en/content/learn/trails/build-applications-with-cumulusci).
+
+CumulusCI's documentation [describes](https://cumulusci.readthedocs.io/en/latest/cookbook.html#large-volume-data-synthesis-with-snowfakery)
+how to use it with Snowfakery. Here is a short example:
+
+```bash
+$ cci task run generate_and_load_from_yaml -o generator_yaml examples/salesforce/Contact.recipe.yml -o num_records 300 -o num_records_tablename Contact --org qa
+...
+```
+
+You can (and more often will) use generate_and_load_from_yaml from
+within a flow captured in in a `cumulusci.yml`, like the one in
+the [Snowfakery repo](https://github.com/SFDO-Tooling/Snowfakery/tree/master/cumulusci.yml).
+
+If you have CumulusCI configured and you would like to test this,
+you can do so like this (the Snowfakery repo itself has a
+`cumulusci.yml`):
+
+```bash
+$ git clone https://github.com/SFDO-Tooling/Snowfakery.git
+$ cd Snowfakery
+$ cci task run generate_opportunities_and_contacts
+$ cci flow run test_everything
+```
 
 ## Snowfakery Glossary
 

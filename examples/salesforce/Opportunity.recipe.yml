@@ -1,0 +1,108 @@
+## Salesforce Opportunities Examples
+
+# To run this code against an org named 'qa':
+#
+# cci task run generate_and_load_from_yaml -o generator_yaml examples/npsp/Opportunity_npsp.recipe.yml -o num_records 300 -o num_records_tablename Opportunity --org qa
+
+## hard-coded values
+
+- object: Opportunity
+  fields:
+    Name: Opportunity Name
+    Description: An Opportunity
+    Amount: 100
+    StageName: Qualification
+    CloseDate: 2020-12-31
+
+## randomized values
+
+- object: Opportunity
+  fields:
+    AccountId:
+      reference: Account # you need to have declared an account elsewhere
+    Name:
+      fake: name
+    CloseDate:
+      date_between:
+        start_date: -1y
+        end_date: today
+    Description:
+      fake.text:
+        max_nb_chars: 100
+    StageName:
+      random_choice:
+        - Prospecting
+        - Qualification
+        - Needs Analysis
+        - Value Proposition
+        - Id. Decision Makers
+        - Perception Analysis
+        - Proposal/Price Quote
+        - Negotiation/Review
+        - Closed Won
+        - Closed Lost
+        - Pledged
+    Amount:
+      random_number:
+        min: 1
+        max: 100000
+
+## almost all fields
+
+# include other objects so we have something to refer to.
+- include_file: standard_objs.recipe.yml
+
+- object: Opportunity
+  fields:
+    AccountId:
+      reference: Account
+    Name:
+      fake: name
+    Description:
+      fake.text:
+        max_nb_chars: 100
+    StageName:
+      random_choice:
+        - Prospecting
+        - Qualification
+        - Needs Analysis
+        - Value Proposition
+        - Id. Decision Makers
+        - Perception Analysis
+        - Proposal/Price Quote
+        - Negotiation/Review
+        - Closed Won
+        - Closed Lost
+        - Pledged
+    Amount:
+      random_number:
+        min: 1
+        max: 100000
+    TotalOpportunityQuantity:
+      random_number:
+        min: 1
+        max: 100000
+    CloseDate:
+      date_between:
+        start_date: -1y
+        end_date: today
+    Type:
+      random_choice:
+        - Existing Customer - Upgrade
+        - Existing Customer - Replacement
+        - Existing Customer - Downgrade
+        - New Customer
+    NextStep:
+      fake.text:
+        max_nb_chars: 100
+    LeadSource:
+      random_choice:
+        - Web
+        - Phone Inquiry
+        - Partner Referral
+        - Purchased List
+        - Other
+    CampaignId:
+      reference: Campaign
+    ContactId:
+      reference: Contact

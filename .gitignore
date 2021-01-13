@@ -36,3 +36,9 @@ pip-wheel-metadata
 .cci
 results_junit.xml
 test_results.json
+
+# Salesforce / SFDX / CCI
+.cci
+.sfdx
+/src.orig
+/src
