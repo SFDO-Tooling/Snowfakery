@@ -1,3 +1,5 @@
+- option: A # used for a pytest
+  default: AA
 - object: Company
   fields:
     Name:

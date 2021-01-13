@@ -1421,6 +1421,41 @@ $ cci flow run test_everything
 - Recipe: A Snowfakery YAML file instructing Snowfakery on what to generate.
 - YAML: YAML is a relatively simple, human-readable format. You can learn more about it at [yaml.org](http://yaml.org/). But you can also just pick up the basics of it by reading along.
 
+## Using Snowfakery within Python
+
+You can embed Snowfakery in a Python application like this:
+
+```python
+from snowfakery import generate_data
+
+generate_data(
+    yaml_file="examples/company.yml",
+    option=[("A", "B")],
+    target_number=(20, "Employee"),
+    debug_internals=True,
+    output_format="json",
+    output_file=outfile,
+)
+```
+
+The parameters to the function closely mirror the arguments to the
+[Command Line Interface](#commmand-line-interface). Their type signatures
+are:
+
+```python
+generate_data(
+    yaml_file: Union[Path, str],
+    option: List[Tuple[str, str]] = [],
+    dburl: str = None,
+    target_number: Optional[Tuple[int, str]] = None,
+    debug_internals: bool = False,
+    output_format: str = None,
+    output_file: Path = None,
+    output_folder: Path = None,
+    continuation_file: Path = None,
+)
+```
+
 ## Internal Software Architecture
 
 |Filename	                        |Purpose	|
