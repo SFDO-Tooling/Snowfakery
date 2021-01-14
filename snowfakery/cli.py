@@ -24,9 +24,7 @@ if __name__ == "__main__":  # pragma: no cover
     sys.path.append(str(Path(__file__).parent.parent))
 
 
-file_extensions = [
-    "JSON",
-    "json",
+graphic_file_extensions = [
     "PNG",
     "png",
     "SVG",
@@ -36,9 +34,14 @@ file_extensions = [
     "jpg",
     "ps",
     "dot",
+]
+
+file_extensions = [
+    "JSON",
+    "json",
     "txt",
     "csv",
-]
+] + graphic_file_extensions
 
 
 def eval_arg(arg):
@@ -103,8 +106,8 @@ def int_string_tuple(ctx, param, value=None):
 @click.option("--cci-mapping-file", "mapping_file", type=click.Path(exists=True))
 @click.option(
     "--generate-cci-mapping-file",
-    "generate_cci_mapping_file",
-    type=click.Path(exists=False),
+    type=click.File("w"),
+    help="Generate a CumulusCI mapping file for the dataset",
 )
 @click.option(
     "--generate-continuation-file",
@@ -129,7 +132,6 @@ def generate_cli(
     output_format=None,
     output_files=None,
     output_folder=None,
-    nickname_ids=None,
     continuation_file=None,
     generate_continuation_file=None,
 ):
@@ -183,10 +185,11 @@ def generate_cli(
                 )
                 sys.stderr.write(debuginfo)
             if generate_cci_mapping_file:
-                with click.open_file(generate_cci_mapping_file, "w") as f:
-                    yaml.safe_dump(
-                        mapping_from_recipe_templates(summary), f, sort_keys=False
-                    )
+                yaml.safe_dump(
+                    mapping_from_recipe_templates(summary),
+                    generate_cci_mapping_file,
+                    sort_keys=False,
+                )
         except DataGenError as e:
             if debug_internals:
                 raise e
@@ -231,8 +234,12 @@ def configure_output_stream(
                 output_streams.append(DebugOutputStream(path))
             elif format == "dot":
                 output_streams.append(GraphvizOutputStream(path))
-            else:
+            elif format in graphic_file_extensions:
                 output_streams.append(ImageOutputStream(path, format))
+            else:
+                raise click.ClickException(
+                    f"Unknown format or file extension: {format}"
+                )
 
     if len(output_streams) == 0:
         output_stream = DebugOutputStream()
@@ -247,6 +254,7 @@ def configure_output_stream(
             try:
                 messages = output_stream.close()
             except Exception as e:
+                messages = None
                 click.echo(f"Could not close {output_stream}: {str(e)}", err=True)
             if messages:
                 for message in messages:
@@ -282,7 +290,7 @@ def validate_options(
         and not (output_files or output_format == "csv")
     ):
         raise click.ClickException(
-            "--output-folder can only be used if files are going to be output"
+            "--output-folder can only be used with --output-file=<something> or --output-format=csv"
         )
 
 

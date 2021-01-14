@@ -1,0 +1,22 @@
+- option: A # used for a pytest
+  default: AA
+- object: Company
+  fields:
+    Name:
+      fake: company
+
+- object: Employee
+  nickname: Employee 1
+  fields:
+    Name:
+      fake: name
+    EmployedBy:
+      - object: Company
+
+- object: Employee
+  nickname: Employee 1
+  fields:
+    Name:
+      fake: name
+    EmployedBy:
+      - object: Company

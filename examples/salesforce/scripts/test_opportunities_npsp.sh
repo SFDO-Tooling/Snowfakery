@@ -1,0 +1,1 @@
+cci task run generate_and_load_from_yaml -o generator_yaml examples/npsp/Opportunity_npsp.recipe.yml -o num_records 300 -o num_records_tablename Opportunity --org qa

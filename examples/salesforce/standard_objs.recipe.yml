@@ -1,0 +1,16 @@
+- object: Account
+  just_once: True
+  fields:
+    name: The Account
+
+- object: Contact
+  nickname: BossContact
+  just_once: True
+  fields:
+    FirstName: Da
+    LastName: Boss
+
+- object: Campaign
+  just_once: True
+  fields:
+    name: The Campaign
