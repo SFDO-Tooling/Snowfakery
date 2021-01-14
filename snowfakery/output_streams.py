@@ -115,7 +115,7 @@ class OutputStream(ABC):
 
         Do not close file handles which were passed in!
 
-        Return a list of error strings in case there are warnings.
+        Return a list of messages to print out.
         """
         pass
 
@@ -332,11 +332,17 @@ def create_tables_from_inferred_fields(tables, engine, metadata):
 
 
 def find_name_in_dict(d):
+    "Try to find a key that is semantically a 'name' for diagramming purposes."
     keys = {k.lower().replace("_", ""): k for k in d.keys()}
     if "name" in keys:
         return d[keys["name"]]
-    elif "firstname" in keys and "lastname" in keys:
-        return f"{d[keys['firstname']]} {d[keys['lastname']]}"
+    elif "firstname" in keys or "lastname" in keys:
+        firstname = d[keys.get("firstname")] if keys.get("firstname") else ""
+        lastname = d[keys.get("lastname")] if keys.get("lastname") else ""
+        return " ".join([firstname, lastname])
+    elif "name" in str(" ".join(d.keys())):
+        namekey = [k for k in d.keys() if "name" in k][0]
+        return d[namekey]
     elif "id" in keys:
         return d[keys["id"]]
 

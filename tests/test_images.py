@@ -10,7 +10,7 @@ from snowfakery.cli import generate_cli
 from snowfakery.output_streams import GraphvizOutputStream
 from snowfakery.data_generator import generate
 
-sample_yaml = Path(__file__).parent.parent / "examples/family.yml"
+sample_yaml = Path(__file__).parent.parent / "examples/family.recipe.yml"
 
 
 class MockGraph(gvgen.GvGen):
@@ -58,23 +58,22 @@ class TestGraphvizOutputStream:
             # print(mock_graph_class())
             generate(yaml, {}, output_stream)
             output_stream.close()
-            print(mock_graph.links)
             assert mock_graph.nodes == [
                 "Duke(1, Leto I Atreides)",
-                "Duke(2, Paul Atreides)",
+                "Duke(2, Muad'Dib)",
                 "Lady(1, Lady Jessica)",
             ]
             assert mock_graph.links == [
-                ("Duke(1, Leto I Atreides)", "Duke(2, Paul Atreides)"),
+                ("Duke(1, Leto I Atreides)", "Duke(2, Muad'Dib)"),
                 ("Duke(1, Leto I Atreides)", "Lady(1, Lady Jessica)"),
-                ("Duke(2, Paul Atreides)", "Duke(1, Leto I Atreides)"),
-                ("Duke(2, Paul Atreides)", "Lady(1, Lady Jessica)"),
+                ("Duke(2, Muad'Dib)", "Duke(1, Leto I Atreides)"),
+                ("Duke(2, Muad'Dib)", "Lady(1, Lady Jessica)"),
                 ("Lady(1, Lady Jessica)", "Duke(1, Leto I Atreides)"),
-                ("Lady(1, Lady Jessica)", "Duke(2, Paul Atreides)"),
+                ("Lady(1, Lady Jessica)", "Duke(2, Muad'Dib)"),
             ]
             assert mock_graph.properties == [
                 (
-                    ("Duke(1, Leto I Atreides)", "Duke(2, Paul Atreides)"),
+                    ("Duke(1, Leto I Atreides)", "Duke(2, Muad'Dib)"),
                     "label",
                     "son",
                 ),
@@ -84,12 +83,12 @@ class TestGraphvizOutputStream:
                     "wife",
                 ),
                 (
-                    ("Duke(2, Paul Atreides)", "Duke(1, Leto I Atreides)"),
+                    ("Duke(2, Muad'Dib)", "Duke(1, Leto I Atreides)"),
                     "label",
                     "father",
                 ),
                 (
-                    ("Duke(2, Paul Atreides)", "Lady(1, Lady Jessica)"),
+                    ("Duke(2, Muad'Dib)", "Lady(1, Lady Jessica)"),
                     "label",
                     "mother",
                 ),
@@ -98,7 +97,7 @@ class TestGraphvizOutputStream:
                     "label",
                     "husband",
                 ),
-                (("Lady(1, Lady Jessica)", "Duke(2, Paul Atreides)"), "label", "son"),
+                (("Lady(1, Lady Jessica)", "Duke(2, Muad'Dib)"), "label", "son"),
             ]
 
 
