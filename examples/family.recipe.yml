@@ -19,7 +19,8 @@
 - object: Lady
   nickname: Lady Jessica
   fields:
-    name: Lady Jessica
+    FirstName: Lady
+    LastName: Jessica
     husband:
       reference: Leto I
     son:
