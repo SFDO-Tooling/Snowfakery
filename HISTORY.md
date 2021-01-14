@@ -4,6 +4,16 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 1.4
+
+Adds Salesforce Example Files.
+
+Adds an official API for embedding in Python.
+
+Updates dependencies including Faker, which has Salesforce-contributed optimizations.
+
+Adds min, max, round to the math plugin.
+
 ## Snowfakery 1.3
 
 `random_number` can now accept a "step" argument as described in the docs.
@@ -20,7 +30,6 @@ file extensions.
 The continuation file format changed. Do not upgrade Snowfakery while
 running a long-running Snowfakery process. The new configuration file
 should be less prone to issues relating to failures to serialize results.
-
 
 ## Snowfakery 1.2
 
