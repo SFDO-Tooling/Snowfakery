@@ -1129,7 +1129,10 @@ And here's how to use the "hidden fields"([#hidden-fields-and-objects]) feature:
 Snowfakery has a "Math" plugin which gives you access to all features from Python's
 [`math`](https://docs.python.org/3/library/math.html) module plus
 [`min`](https://docs.python.org/3/library/functions.html#min),
-[`max`](https://docs.python.org/3/library/functions.html#max) and [`round`](https://docs.python.org/3/library/functions.html#round). For example:
+[`max`](https://docs.python.org/3/library/functions.html#max) and
+[`round`](https://docs.python.org/3/library/functions.html#round).
+
+For example:
 
 ```yaml
   - plugin: snowfakery.standard_plugins.Math
@@ -1373,7 +1376,7 @@ use `context.evaluate_raw` instead of `context.evaluate`.
 
 Snowfakery recipes that generate Salesforce records are just like any
 other Snowfakery recipes. You use SObject names for the 'objects'.
-There are several examples [in the Snowfakery repository](https://github.com/SFDO-Tooling/Snowfakery/tree/master/examples/snowfakery)
+There are several examples [in the Snowfakery repository](https://github.com/SFDO-Tooling/Snowfakery/tree/master/examples/salesforce)
 
 To specify a record type for a record, just put the Record Type’s API Name in a field named RecordType.
 
