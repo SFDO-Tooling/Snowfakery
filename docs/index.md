@@ -902,8 +902,8 @@ Usage: snowfakery [OPTIONS] YAML_FILE
           * a database identified by --dburl (e.g. --dburl sqlite:////tmp/foo.db)
           * or to a directory as a set of CSV files (--output-format=csv --output-folder=csvfiles)
 
-      Diagram output depends on the installation of pygraphviz ("pip install
-      pygraphviz")
+      Diagram output depends on the installation of graphviz 
+      (https://www.graphviz.org/download/)
 
       Full documentation here:
 
