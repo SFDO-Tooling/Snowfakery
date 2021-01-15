@@ -1376,7 +1376,7 @@ use `context.evaluate_raw` instead of `context.evaluate`.
 
 Snowfakery recipes that generate Salesforce records are just like any
 other Snowfakery recipes. You use SObject names for the 'objects'.
-There are several examples [in the Snowfakery repository](https://github.com/SFDO-Tooling/Snowfakery/tree/master/examples/snowfakery)
+There are several examples [in the Snowfakery repository](https://github.com/SFDO-Tooling/Snowfakery/tree/master/examples/salesforce)
 
 To specify a record type for a record, just put the Record Type’s API Name in a field named RecordType.
 
