@@ -3,7 +3,7 @@
   fields:
     gender: Male
     name:
-      fake:
+      fake: first_name
 - object: Person
   count: 5
   fields:
