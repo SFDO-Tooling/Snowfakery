@@ -1,6 +1,7 @@
 from enum import Enum, auto
 
 import yaml
+from .utils.yaml_utils import SnowfakeryDumper
 
 IdManager = "snowfakery.data_generator_runtime.IdManager"
 
@@ -11,7 +12,7 @@ class ObjectRow(yaml.YAMLObject):
     Uses __getattr__ so that the template evaluator can use dot-notation."""
 
     yaml_loader = yaml.SafeLoader
-    yaml_dumper = yaml.SafeDumper
+    yaml_dumper = SnowfakeryDumper
     yaml_tag = "!snowfakery_objectrow"
 
     __slots__ = ["_tablename", "_values", "_child_index"]
@@ -31,10 +32,18 @@ class ObjectRow(yaml.YAMLObject):
         return str(self.id)
 
     def __repr__(self):
-        return f"<ObjectRow {self._tablename} {self.id}>"
+        try:
+            return f"<ObjectRow {self._tablename} {self.id}>"
+        except Exception:
+            return super().__repr__()
 
     def __getstate__(self):
-        return {"_tablename": self._tablename, "_values": self._values}
+        """Get the state of this ObjectRow for serialization.
+
+        Do not include related ObjectRows because circular
+        references in serialization formats cause problems."""
+        values = {k: v for k, v in self._values.items() if not isinstance(v, ObjectRow)}
+        return {"_tablename": self._tablename, "_values": values}
 
     def __setstate__(self, state):
         for slot, value in state.items():

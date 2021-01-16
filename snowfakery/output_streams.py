@@ -1,6 +1,8 @@
 from abc import abstractmethod, ABC
 import json
+from tempfile import TemporaryDirectory
 import csv
+import subprocess
 import datetime
 from pathlib import Path
 from collections import namedtuple, defaultdict
@@ -108,10 +110,12 @@ class OutputStream(ABC):
         """Write a single row to the stream"""
         pass
 
-    def close(self) -> None:
+    def close(self) -> Optional[Sequence[str]]:
         """Close any resources the stream opened.
 
         Do not close file handles which were passed in!
+
+        Return a list of messages to print out.
         """
         pass
 
@@ -132,9 +136,10 @@ class FileOutputStream(OutputStream):
         else:  # noqa
             assert False, f"stream_or_path is {stream_or_path}"
 
-    def close(self):
+    def close(self) -> Optional[Sequence[str]]:
         if self.owns_stream:
             self.stream.close()
+            return [f"Generated {self.stream.name}"]
 
 
 class DebugOutputStream(FileOutputStream):
@@ -177,7 +182,7 @@ class CSVOutputStream(OutputStream):
     def write_single_row(self, tablename: str, row: Dict) -> None:
         self.writers[tablename].dictwriter.writerow(row)
 
-    def close(self) -> Sequence[str]:
+    def close(self) -> Optional[Sequence[str]]:
         messages = []
         for context in self.writers.values():
             context.file.close()
@@ -218,10 +223,10 @@ class JSONOutputStream(FileOutputStream):
         values = {"_table": tablename, **row}
         self.stream.write(json.dumps(values))
 
-    def close(self) -> None:
+    def close(self) -> Optional[Sequence[str]]:
         if not self.first_row:
             self.stream.write("]\n")
-        super().close()
+        return super().close()
 
 
 class SqlOutputStream(OutputStream):
@@ -273,7 +278,7 @@ class SqlOutputStream(OutputStream):
         self.flush()
         self.session.commit()
 
-    def close(self) -> None:
+    def close(self) -> Optional[Sequence[str]]:
         self.commit()
         self.session.close()
 
@@ -326,19 +331,38 @@ def create_tables_from_inferred_fields(tables, engine, metadata):
                     )
 
 
+def find_name_in_dict(d):
+    "Try to find a key that is semantically a 'name' for diagramming purposes."
+    keys = {k.lower().replace("_", ""): k for k in d.keys()}
+    if "name" in keys:
+        return d[keys["name"]]
+    elif "firstname" in keys or "lastname" in keys:
+        firstname = d[keys.get("firstname")] if keys.get("firstname") else ""
+        lastname = d[keys.get("lastname")] if keys.get("lastname") else ""
+        return " ".join([firstname, lastname])
+    elif "name" in str(" ".join(d.keys())):
+        namekey = [k for k in d.keys() if "name" in k][0]
+        return d[namekey]
+    elif "id" in keys:
+        return d[keys["id"]]
+
+
 class GraphvizOutputStream(FileOutputStream):
     def __init__(self, path):
-        super().__init__(path)
-        import pygraphviz
+        import gvgen
 
-        self.G = pygraphviz.AGraph(strict=False, directed=True)
-        self.G.edge_attr["fontsize"] = "10"
-        self.G.node_attr["style"] = "filled"
-        self.G.node_attr["fillcolor"] = "#1798c1"
-        self.G.node_attr["fontcolor"] = "#FFFFFF"
-        self.G.node_attr["height"] = "0.75"
-        self.G.node_attr["width"] = "0.75"
-        self.G.node_attr["widshapeth"] = "circle"
+        super().__init__(path)
+
+        self.nodes = {}
+        self.links = []
+        self.G = gvgen.GvGen()
+        self.G.styleDefaultAppend("fontsize", "10")
+        self.G.styleDefaultAppend("style", "filled")
+        self.G.styleDefaultAppend("fillcolor", "#1798c1")
+        self.G.styleDefaultAppend("fontcolor", "#FFFFFF")
+        self.G.styleDefaultAppend("height", "0.75")
+        self.G.styleDefaultAppend("width", "0.75")
+        self.G.styleDefaultAppend("widshapeth", "circle")
 
     def flatten(
         self,
@@ -347,17 +371,9 @@ class GraphvizOutputStream(FileOutputStream):
         source_row_dict: Dict,
         target_object_row: Union[ObjectRow, ObjectReference],
     ) -> Union[str, int]:
-        source_node_name = self.generate_node_name(
-            sourcetable, source_row_dict.get("name"), source_row_dict.get("id")
-        )
-        target_node_name = self.generate_node_name(
-            target_object_row._tablename,
-            getattr(target_object_row, "name"),
-            target_object_row.id,
-        )
-        self.G.add_edge(
-            source_node_name, target_node_name, fieldname, label=f"    {fieldname}     "
-        )
+        source = (sourcetable, source_row_dict["id"])
+        target = (target_object_row._tablename, target_object_row.id)
+        self.links.append((fieldname, source, target))
         return ""
 
     def generate_node_name(
@@ -368,15 +384,39 @@ class GraphvizOutputStream(FileOutputStream):
         return f"{tablename}({id}{separator}{rowname})"
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
-        node_name = self.generate_node_name(tablename, row.get("name"), row["id"])
-        self.G.add_node(node_name)
+        node_name = self.generate_node_name(
+            tablename, find_name_in_dict(row), row["id"]
+        )
+        self.nodes[tablename, row["id"]] = self.G.newItem(node_name)
 
-    def close(self) -> None:
-        self.stream.write(self.G.string())
-        super().close()
+    def close(self) -> Optional[Sequence[str]]:
+        for fieldname, source, target in self.links:
+            mylink = self.G.newLink(self.nodes[source], self.nodes[target])
+            self.G.propertyAppend(mylink, "label", fieldname)
+        self.G.dot(self.stream)
+        return super().close()
 
 
-class ImageOutputStream(GraphvizOutputStream):
+DOT_MISSING_MESSAGE = """
+Could not find `dot` executable.
+
+Please install graphviz and ensure that the command `dot` is available.
+For example, on Mac you could try `brew install graphviz`
+On Windows you could try `winget install graphviz` or `choco install graphviz`
+Other installation options are here: http://www.graphviz.org/download/
+
+If you have installed graphviz but Snowfakery cannot find it, perhaps you
+will need to use Snowfakery to generate a dotfile (--output-file=out.dot)
+and then you can convert it to another format yourself as described here:
+https://stackoverflow.com/a/1494495/113477
+
+If your data is not private, you could even use one of the online
+converters that you can find by searching the Web for
+"convert dot file to png online".
+"""
+
+
+class ImageOutputStream(OutputStream):
     """Output an Image file in a graphviz supported format."""
 
     mode = "wb"
@@ -384,10 +424,37 @@ class ImageOutputStream(GraphvizOutputStream):
     def __init__(self, path, format):
         self.path = path
         self.format = format
-        super().__init__(path)
+        self.tempdir = TemporaryDirectory()
+        self.dotfile = Path(self.tempdir.name) / "temp.dot"
+        self.gv_os = GraphvizOutputStream(self.dotfile)
 
-    def close(self) -> None:
-        self.G.draw(path=self.stream, prog="dot", format=self.format)
+    def write_single_row(self, *args, **kwargs):
+        return self.gv_os.write_single_row(*args, **kwargs)
+
+    def flatten(self, *args, **kwargs):
+        return self.gv_os.flatten(*args, **kwargs)
+
+    def close(self) -> Optional[Sequence[str]]:
+        self.gv_os.close()
+        assert self.dotfile.exists()
+        rc = self._render(self.dotfile, self.path)
+        self.tempdir.cleanup()
+        return rc or [f"Generated {self.path}"]
+
+    def _render(self, dotfile, outfile):
+        assert dotfile.exists()
+        try:
+            out = subprocess.Popen(
+                ["dot", "-T" + self.format, dotfile, "-o" + str(outfile)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+            stdout, stderr = out.communicate()
+            stdout = [stdout.decode("ASCII")] if stdout else []
+            stderr = [stderr.decode("ASCII")] if stderr else []
+        except FileNotFoundError:
+            return [DOT_MISSING_MESSAGE]
+        return stdout + stderr
 
 
 class MultiplexOutputStream(OutputStream):
@@ -402,7 +469,7 @@ class MultiplexOutputStream(OutputStream):
         for stream in self.outputstreams:
             stream.write_row(tablename, row_with_references)
 
-    def close(self) -> None:
+    def close(self) -> Optional[Sequence[str]]:
         for stream in self.outputstreams:
             stream.close()
 

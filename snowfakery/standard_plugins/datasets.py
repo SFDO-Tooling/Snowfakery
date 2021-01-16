@@ -8,10 +8,10 @@ from sqlalchemy import create_engine, MetaData
 from sqlalchemy.sql.expression import func, select
 from sqlalchemy.sql.elements import quoted_name
 
-import yaml
 from yaml.representer import Representer
 
 from snowfakery.plugins import SnowfakeryPlugin, PluginResult
+from snowfakery.utils.yaml_utils import SnowfakeryDumper
 
 
 def _open_db(db_url):
@@ -221,4 +221,4 @@ def chdir(path):
         os.chdir(cwd)
 
 
-yaml.SafeDumper.add_representer(quoted_name, Representer.represent_str)
+SnowfakeryDumper.add_representer(quoted_name, Representer.represent_str)

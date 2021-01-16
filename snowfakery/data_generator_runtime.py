@@ -8,6 +8,7 @@ import jinja2
 import yaml
 
 from .utils.template_utils import FakerTemplateLibrary
+from .utils.yaml_utils import SnowfakeryDumper, hydrate
 
 from .template_funcs import StandardFuncs
 from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError
@@ -72,18 +73,12 @@ class FinishedChecker:
         self.target_progress_id = last_used_id
 
 
-class IdManager(yaml.YAMLObject):
+class IdManager:
     """Keep track of the most recent ID per Object type"""
-
-    yaml_loader = yaml.SafeLoader
-    yaml_dumper = yaml.SafeDumper
-    yaml_tag = "!snowfakery_ids"
 
     def __init__(self, start_ids: Optional[Dict[str, int]] = None):
         start_ids = start_ids or {}
         self.last_used_ids = defaultdict(lambda: 0)
-        for name, value in start_ids.items():
-            self.last_used_ids[name] = value - 1
 
     def generate_id(self, table_name: str) -> int:
         self.last_used_ids[table_name] += 1
@@ -92,18 +87,17 @@ class IdManager(yaml.YAMLObject):
     def __getitem__(self, table_name: str) -> int:
         return self.last_used_ids[table_name]
 
+    def __getstate__(self):
+        return {"last_used_ids": dict(self.last_used_ids)}
+
     def __setstate__(self, state):
         self.last_used_ids = defaultdict(lambda: 0, state["last_used_ids"])
 
 
-yaml.SafeDumper.add_representer(defaultdict, yaml.SafeDumper.represent_dict)
+SnowfakeryDumper.add_representer(defaultdict, SnowfakeryDumper.represent_dict)
 
 
 class Dependency(NamedTuple):
-    yaml_loader = yaml.SafeLoader
-    yaml_dumper = yaml.SafeDumper
-    yaml_tag = "!snowfakery_dependency"
-
     table_name_from: str
     table_name_to: str
     field_name: str
@@ -127,7 +121,7 @@ class Transients:
         )
 
 
-class Globals(yaml.YAMLObject):
+class Globals:
     """Globally named objects and other aspects of global scope
 
     This object is designed to be persisted to allow long-running
@@ -135,13 +129,8 @@ class Globals(yaml.YAMLObject):
     do not persist. For example, it isn't possible to persist a database
     handle in an output_stream."""
 
-    yaml_loader = yaml.SafeLoader
-    yaml_dumper = yaml.SafeDumper
-    yaml_tag = "!snowfakery_globals"
-
     def __init__(
         self,
-        start_ids: Optional[Dict[str, id]] = None,
         today: date = None,
         name_slots: Mapping[str, str] = None,
     ):
@@ -150,7 +139,8 @@ class Globals(yaml.YAMLObject):
         self.persistent_nicknames = {}
         self.persistent_objects_by_table = {}
 
-        self.id_manager = IdManager(start_ids)
+        self.id_manager = IdManager()
+        self.last_seen_obj_of_type = {}
         self.intertable_dependencies = set()
         self.today = today or date.today()
         self.nicknames_and_tables = name_slots or {}
@@ -220,25 +210,44 @@ class Globals(yaml.YAMLObject):
         return self.transients.orig_used_ids
 
     def __getstate__(self):
+        persistent_nicknames = {
+            k: v.__getstate__() for k, v in self.persistent_nicknames.items()
+        }
+        nicknames_and_tables = {k: v for k, v in self.nicknames_and_tables.items()}
+        intertable_dependencies = [
+            dict(v._asdict()) for v in self.intertable_dependencies
+        ]
+
         state = {
-            "persistent_nicknames": self.persistent_nicknames,
+            "persistent_nicknames": persistent_nicknames,
             "persistent_objects_by_table": self.persistent_objects_by_table,
-            "id_manager": self.id_manager,
+            "id_manager": self.id_manager.__getstate__(),
             "today": self.today,
-            "nicknames_and_tables": self.nicknames_and_tables,
-            "intertable_dependencies": list(self.intertable_dependencies),
+            "nicknames_and_tables": nicknames_and_tables,
+            "intertable_dependencies": intertable_dependencies,
         }
         return state
 
     def __setstate__(self, state):
         self.last_seen_obj_by_table = {}
-        for slot, value in state.items():
-            setattr(self, slot, value)
-        self.intertable_dependencies = getattr(self, "intertable_dependencies", [])
+        self.nicknamed_objects = {
+            k: hydrate(ObjectRow, v)
+            for k, v in state.get("nicknamed_objects", {}).items()
+        }
+        self.nicknames_and_tables = state["nicknames_and_tables"]
+        self.id_manager = hydrate(IdManager, state["id_manager"])
+        intertable_dependencies = getattr(state, "intertable_dependencies", [])
         self.intertable_dependencies = set(
-            Dependency(*dep) for dep in self.intertable_dependencies
+            Dependency(*dep) for dep in intertable_dependencies
         )
-        self.transients = Transients(self.nicknames_and_tables, self.id_manager)
+        self.persistent_nicknames = {
+            k: hydrate(ObjectRow, v)
+            for k, v in state.get("persistent_nicknames", {}).items()
+        }
+
+        self.today = state["today"]
+        self.persistent_objects_by_table = state.get("persistent_objects_by_table")
+        self.reset_slots()
 
 
 class JinjaTemplateEvaluatorFactory:
