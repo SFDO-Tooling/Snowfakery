@@ -267,6 +267,28 @@ class Globals:
         self.reset_slots(self.nicknamed_objects)
 
 
+class FieldEvaluator:
+    def __init__(self, compiled_template, dependencies):
+        self.compiled_template = compiled_template
+        self.dependencies = dependencies
+
+    def evaluate(self, context):
+        return self.compiled_template.render(context.field_vars())
+
+    __call__ = evaluate
+
+
+class NoopEvaluator:
+    def __init__(self, definition):
+        self.definition = definition
+        self.dependencies = []
+
+    def evaluate(self, context):
+        return self.definition
+
+    __call__ = evaluate
+
+
 class JinjaTemplateEvaluatorFactory:
     def __init__(self):
         self.compilers = [
@@ -297,12 +319,14 @@ class JinjaTemplateEvaluatorFactory:
 
         if compiler:
             try:
-                template = compiler.from_string(definition)
-                return lambda context: template.render(context.field_vars())
+                compiled_template = compiler.from_string(definition)
+                name_nodes = compiler.parse(definition).find_all(jinja2.nodes.Name)
+                names_referenced = [node.name for node in name_nodes]
+                return FieldEvaluator(compiled_template, names_referenced)
             except jinja2.exceptions.TemplateSyntaxError as e:
                 raise DataGenSyntaxError(str(e), None, None) from e
         else:
-            return lambda context: definition
+            return NoopEvaluator(definition)
 
 
 class Interpreter:
@@ -390,7 +414,7 @@ class RuntimeContext:
     but internally its mostly just proxying to other classes."""
 
     obj: Optional["ObjectRow"] = None
-    template_evaluator_recipe = JinjaTemplateEvaluatorFactory()
+    template_evaluator_factory = JinjaTemplateEvaluatorFactory()
     current_template = None
 
     def __init__(
@@ -471,7 +495,7 @@ class RuntimeContext:
         return self.interpreter.output_stream
 
     def get_evaluator(self, definition: str):
-        return self.template_evaluator_recipe.get_evaluator(definition)
+        return self.template_evaluator_factory.get_evaluator(definition)
 
     @property
     def evaluation_namespace(self):

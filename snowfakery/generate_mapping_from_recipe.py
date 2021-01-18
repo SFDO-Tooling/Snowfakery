@@ -109,6 +109,8 @@ def _table_is_free(table_name, dependencies, sorted_tables):
     return len(tables_this_table_depends_upon) == 0
 
 
+# if this algorithm ever needs major updates, it should be rewritten
+# with networkx similar to _sort_fields_by_dependencies
 def sort_dependencies(dependencies, tables):
     """"Sort the dependencies to output tables in the right order."""
     dependencies = deepcopy(dependencies)

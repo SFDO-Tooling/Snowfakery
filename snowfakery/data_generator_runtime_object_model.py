@@ -8,6 +8,7 @@ from .data_generator_runtime import (
 from contextlib import contextmanager
 from typing import Union, Dict, Sequence, Optional, cast
 from .utils.template_utils import look_for_number
+import networkx
 
 import jinja2
 
@@ -63,6 +64,8 @@ class ObjectTemplate:
       nickname: string
     """
 
+    _sorted_fields = None
+
     def __init__(
         self,
         tablename: str,
@@ -83,8 +86,32 @@ class ObjectTemplate:
         self.fields = fields
         self.friends = friends
 
+    def sorted_fields(self, fields: Sequence, context: RuntimeContext):
+        if not self._sorted_fields:
+            self._sorted_fields = self._sort_fields_by_dependencies(fields, context)
+        return self._sorted_fields
+
     def render(self, context: RuntimeContext) -> Optional[ObjectRow]:
         return self.generate_rows(context.output_stream, context)
+
+    def _sort_fields_by_dependencies(self, fields: Sequence, context: RuntimeContext):
+        graph = networkx.DiGraph()
+        fields_indexed = {f.name: f for f in fields}
+        for field in fields:
+            graph.add_node(field)
+            for dependency in field.field_dependencies(context):
+                target = fields_indexed.get(dependency)
+                if target:
+                    graph.add_edge(field, target)
+        cycles = list(networkx.simple_cycles(graph))
+        if cycles:
+            cycles = [[f.name for f in cycle] for cycle in cycles]
+            raise DataGenError(
+                f"Field cycles detected {cycles}", self.filename, self.line_num
+            )
+
+        sorted_fields = list(networkx.dfs_postorder_nodes(graph))
+        return sorted_fields
 
     def generate_rows(
         self, storage, parent_context: RuntimeContext
@@ -154,7 +181,7 @@ class ObjectTemplate:
 
     def _generate_fields(self, context: RuntimeContext, row: Dict) -> None:
         """Generate all of the fields of a row"""
-        for field in self.fields:
+        for field in self.sorted_fields(self.fields, context):
             with self.exception_handling("Problem rendering value"):
                 row[field.name] = field.generate_value(context)
                 self._check_type(field, row[field.name], context)
@@ -196,6 +223,13 @@ class SimpleValue(FieldDefinition):
         assert isinstance(filename, str)
         assert isinstance(line_num, int), line_num
         self._evaluator = None
+
+    def field_dependencies(self, context):
+        evaluator = self.evaluator(context)
+        if evaluator:
+            return evaluator.dependencies
+        else:
+            return []
 
     def evaluator(self, context):
         """Populate the evaluator property once."""
@@ -302,6 +336,11 @@ class StructuredValue(FieldDefinition):
 
         return value
 
+    def field_dependencies(self, *args, **kwargs):
+        # TODO: I guess this should really do a deep tree-traversal
+        #       lookiing for dependencies?
+        return []
+
     def __repr__(self):
         return (
             f"<StructuredValue: {self.function_name} (*{self.args}, **{self.kwargs})>"
@@ -328,6 +367,10 @@ class FieldFactory:
         self.filename = filename
         self.line_num = line_num
         self.definition = definition
+        if hasattr(self.definition, "field_dependencies"):
+            self.field_dependencies = self.definition.field_dependencies
+        else:
+            self.field_dependencies = lambda *args: []
 
     def generate_value(self, context) -> FieldValue:
         try:
