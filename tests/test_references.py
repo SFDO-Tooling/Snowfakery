@@ -228,13 +228,75 @@ class TestReferences:
             mock.call("B", {"id": 3, "A_ref": "A(3)"}),
         ]
 
+    def _generate_loop(self, yaml, iterations, num_per_iteration):
+        old_continuation_data = None
+        for i in range(0, iterations):
+            continuation_file = StringIO()
+            generate(
+                StringIO(yaml),
+                {},
+                stopping_criteria=StoppingCriteria("A", num_per_iteration),
+                continuation_file=old_continuation_data,
+                generate_continuation_file=continuation_file,
+            )
+            old_continuation_data = StringIO(continuation_file.getvalue())
+
     def test_forward_reference__nickname__iterations(self, generated_rows):
-        # TODO
-        ...
+        yaml = """
+            - object: A
+              fields:
+                B_ref:
+                  reference:
+                    B_nick
+            - object: B
+              nickname: B_nick
+              fields:
+                A_ref:
+                  reference:
+                    A
+              """
+        self._generate_loop(yaml, 3, 2)
+
+        assert generated_rows.mock_calls == [
+            mock.call("A", {"id": 1, "B_ref": "B(1)"}),
+            mock.call("B", {"id": 1, "A_ref": "A(1)"}),
+            mock.call("A", {"id": 2, "B_ref": "B(2)"}),
+            mock.call("B", {"id": 2, "A_ref": "A(2)"}),
+            mock.call("A", {"id": 3, "B_ref": "B(3)"}),
+            mock.call("B", {"id": 3, "A_ref": "A(3)"}),
+            mock.call("A", {"id": 4, "B_ref": "B(4)"}),
+            mock.call("B", {"id": 4, "A_ref": "A(4)"}),
+            mock.call("A", {"id": 5, "B_ref": "B(5)"}),
+            mock.call("B", {"id": 5, "A_ref": "A(5)"}),
+            mock.call("A", {"id": 6, "B_ref": "B(6)"}),
+            mock.call("B", {"id": 6, "A_ref": "A(6)"}),
+        ]
 
     def test_forward_reference__iterations__with_just_once(self, generated_rows):
-        # TODO
-        ...
+        yaml = """
+            - object: A
+              fields:
+                B_ref:
+                  reference:
+                    B_nick
+            - object: B
+              just_once: True
+              nickname: B_nick
+              fields:
+                A_ref:
+                  reference:
+                    A
+              """
+        self._generate_loop(yaml, 3, 2)
+        assert generated_rows.mock_calls == [
+            mock.call("A", {"id": 1, "B_ref": "B(1)"}),
+            mock.call("B", {"id": 1, "A_ref": "A(1)"}),
+            mock.call("A", {"id": 2, "B_ref": "B(1)"}),
+            mock.call("A", {"id": 3, "B_ref": "B(1)"}),
+            mock.call("A", {"id": 4, "B_ref": "B(1)"}),
+            mock.call("A", {"id": 5, "B_ref": "B(1)"}),
+            mock.call("A", {"id": 6, "B_ref": "B(1)"}),
+        ]
 
     def test_random_reference_simple(self, generated_rows):
         yaml = """                  #1
