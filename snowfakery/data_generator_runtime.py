@@ -575,17 +575,26 @@ class ObjectRow(yaml.YAMLObject):
     yaml_dumper = SnowfakeryDumper
     yaml_tag = "!snowfakery_objectrow"
 
-    __slots__ = ["_tablename", "_values", "_child_index"]
+    __slots__ = ["_tablename", "_values", "_child_index", "_lazy_evaluators"]
 
-    def __init__(self, tablename, values=(), index=0):
+    def __init__(
+        self, tablename, values: dict, index: int = 0, lazy_evaluators: dict = ()
+    ):
         self._tablename = tablename
         self._values = values
         self._child_index = index
+        self._lazy_evaluators = lazy_evaluators
 
     def __getattr__(self, name):
-        try:
-            return self._values[name]
-        except KeyError:
+        if name in self._values:
+            value = self._values[name]
+            if callable(value):
+                return value()
+            else:
+                return value
+        elif name in self._lazy_evaluators:
+            return self._lazy_evaluators[name].evaluate()
+        else:
             raise AttributeError(name)
 
     def __str__(self):
@@ -602,12 +611,16 @@ class ObjectRow(yaml.YAMLObject):
 
         Do not include related ObjectRows because circular
         references in serialization formats cause problems."""
+        # TODO: Flatten the other ObjectRows instead of filtering them out.
+        #       ObjectRow instances are essentially values, so duplicating
+        #       them has no bad consequence.
         values = {k: v for k, v in self._values.items() if not isinstance(v, ObjectRow)}
         return {"_tablename": self._tablename, "_values": values}
 
     def __setstate__(self, state):
         for slot, value in state.items():
             setattr(self, slot, value)
+        self._lazy_evaluators = ()
 
     @property
     def _name(self):

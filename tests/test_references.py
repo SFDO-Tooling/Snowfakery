@@ -111,7 +111,7 @@ class TestReferences(unittest.TestCase):
         - object: B
           nickname: Bob
           fields:
-            A:
+            a:
               reference: A
         """
         generate(StringIO(yaml), {}, None)
@@ -119,40 +119,40 @@ class TestReferences(unittest.TestCase):
         a_values = find_row("A", {}, write_row.mock_calls)
         b_values = find_row("B", {}, write_row.mock_calls)
         assert a_values["B"] == "B(1)"
-        assert b_values["A"] == "A(1)"
+        assert b_values["a"] == "A(1)"
 
     @mock.patch(write_row_path)
     def test_forward_reference__tablename(self, write_row):
         yaml = """
             - object: A
               fields:
-                B:
+                b:
                   reference:
                     B
             - object: B
               fields:
-                A:
+                a:
                   reference:
                     A
               """
         generate(StringIO(yaml), {}, None)
         a_values = find_row("A", {}, write_row.mock_calls)
         b_values = find_row("B", {}, write_row.mock_calls)
-        assert a_values["B"] == "B(1)"
-        assert b_values["A"] == "A(1)"
+        assert a_values["b"] == "B(1)"
+        assert b_values["a"] == "A(1)"
 
     @mock.patch(write_row_path)
     def test_forward_reference_not_fulfilled(self, write_row):
         yaml = """
         - object: A
           fields:
-            B:
+            b:
               reference: Bob
         - object: B
           count: 0
           nickname: Bob
           fields:
-            A:
+            a:
               reference: A
         """
         with pytest.raises(DataGenError) as e:
@@ -205,3 +205,18 @@ class TestReferences(unittest.TestCase):
 
         assert "Bob" in str(e.value)
         assert "Bill" in str(e.value)
+
+    def test_clashing_names_error(self):
+        yaml = """
+        - object: B
+          fields:
+            x: a
+        - object: A
+          fields:
+            B:
+              reference: B
+        """
+        with pytest.raises(
+            DataGenError, match="A reference should not be to a field name"
+        ):
+            generate(StringIO(yaml), {}, None)

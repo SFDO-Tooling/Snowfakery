@@ -164,7 +164,16 @@ class ObjectTemplate:
         """Generate an individual row"""
         id = context.generate_id(self.nickname)
         row = {"id": id}
-        sobj = ObjectRow(self.tablename, row, index)
+
+        # these allow lazy evaluations of fields
+        row.update(
+            {
+                field.name: lambda: self._generate_field(context, row, field)
+                for field in self.fields
+            }
+        )
+
+        sobj = ObjectRow(self.tablename, row, index, {})
 
         context.register_object(sobj, self.nickname)
 
@@ -183,8 +192,12 @@ class ObjectTemplate:
         """Generate all of the fields of a row"""
         for field in self.sorted_fields(self.fields, context):
             with self.exception_handling("Problem rendering value"):
-                row[field.name] = field.generate_value(context)
-                self._check_type(field, row[field.name], context)
+                self._generate_field(context, row, field)
+
+    def _generate_field(self, context, row, field):
+        row[field.name] = val = field.generate_value(context)
+        self._check_type(field, val, context)
+        return val
 
     def _check_type(self, field, generated_value, context: RuntimeContext):
         """Check the type of a field value"""
@@ -246,7 +259,7 @@ class SimpleValue(FieldDefinition):
         evaluator = self.evaluator(context)
         if evaluator:
             try:
-                val = evaluator(context)
+                val = evaluator.evaluate(context)
             except jinja2.exceptions.UndefinedError as e:
                 raise DataGenNameError(e.message, self.filename, self.line_num) from e
             except Exception as e:
@@ -335,11 +348,6 @@ class StructuredValue(FieldDefinition):
                 value = evaluate_function(func, self.args, self.kwargs, context)
 
         return value
-
-    def field_dependencies(self, *args, **kwargs):
-        # TODO: I guess this should really do a deep tree-traversal
-        #       lookiing for dependencies?
-        return []
 
     def __repr__(self):
         return (

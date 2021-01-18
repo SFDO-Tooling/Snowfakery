@@ -132,11 +132,15 @@ class StandardFuncs(SnowfakeryPlugin):
                 target = x
             elif isinstance(x, str):  # name of an object
                 obj = self.context.field_vars().get(x)
+                if callable(obj):
+                    raise DataGenError(
+                        f"A reference should not be to a field name: `{x}`", None, None
+                    )
                 if not obj:
-                    raise DataGenError(f"Cannot find an object named {x}", None, None)
+                    raise DataGenError(f"Cannot find an object named `{x}`", None, None)
                 if not getattr(obj, "id", None):
                     raise DataGenError(
-                        f"Reference to incorrect object type {obj}", None, None
+                        f"Reference to incorrect object type `{obj}`", None, None
                     )
                 target = obj
             else:

@@ -19,6 +19,20 @@ class TestFormulas:
         generate(StringIO(yaml), {})
         assert generated_rows.row_values(0, "total") == 60
 
+    def test_simple_math_fields_nested_not_ordered(self, generated_rows):
+        yaml = """
+        - object: parent
+          fields:
+            a: 10
+            total_obj:
+              - object: total
+                fields:
+                  t: ${{parent.a + parent.b}}
+            b: 20
+        """
+        generate(StringIO(yaml), {})
+        assert generated_rows.row_values(0, "t") == 30
+
     def test_self_reference__error(self):
         yaml = """
         - object: XXX
