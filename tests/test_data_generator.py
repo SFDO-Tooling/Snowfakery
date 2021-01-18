@@ -89,8 +89,7 @@ today: 2022-11-03
             mock.call("bar", {"id": 3}),
         ]
 
-    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
-    def test_stops_on_no_progress(self, write_row):
+    def test_stops_on_no_progress(self):
         yaml = """
         - object: foo
           just_once: True
@@ -98,3 +97,12 @@ today: 2022-11-03
         """
         with self.assertRaises(RuntimeError):
             generate(StringIO(yaml), stopping_criteria=StoppingCriteria("foo", 3))
+
+    def test_stops_on_misnamed_object(self):
+        yaml = """
+        - object: foo
+          just_once: True
+        - object: bar
+        """
+        with self.assertRaises(DataGenNameError, match="No template creating"):
+            generate(StringIO(yaml), stopping_criteria=StoppingCriteria("foot", 3))

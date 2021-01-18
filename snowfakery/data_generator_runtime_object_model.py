@@ -173,7 +173,7 @@ class ObjectTemplate:
             }
         )
 
-        sobj = ObjectRow(self.tablename, row, index, {})
+        sobj = ObjectRow(self.tablename, row, index)
 
         context.register_object(sobj, self.nickname)
 

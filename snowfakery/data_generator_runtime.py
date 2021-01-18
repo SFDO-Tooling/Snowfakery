@@ -575,15 +575,12 @@ class ObjectRow(yaml.YAMLObject):
     yaml_dumper = SnowfakeryDumper
     yaml_tag = "!snowfakery_objectrow"
 
-    __slots__ = ["_tablename", "_values", "_child_index", "_lazy_evaluators"]
+    __slots__ = ["_tablename", "_values", "_child_index"]
 
-    def __init__(
-        self, tablename, values: dict, index: int = 0, lazy_evaluators: dict = ()
-    ):
+    def __init__(self, tablename, values: dict, index: int = 0):
         self._tablename = tablename
         self._values = values
         self._child_index = index
-        self._lazy_evaluators = lazy_evaluators
 
     def __getattr__(self, name):
         if name in self._values:
@@ -592,8 +589,6 @@ class ObjectRow(yaml.YAMLObject):
                 return value()
             else:
                 return value
-        elif name in self._lazy_evaluators:
-            return self._lazy_evaluators[name].evaluate()
         else:
             raise AttributeError(name)
 
@@ -620,11 +615,6 @@ class ObjectRow(yaml.YAMLObject):
     def __setstate__(self, state):
         for slot, value in state.items():
             setattr(self, slot, value)
-        self._lazy_evaluators = ()
-
-    @property
-    def _name(self):
-        return self._values.get("name")
 
 
 def output_batches(

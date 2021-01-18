@@ -1,4 +1,4 @@
-from snowfakery.data_generator_runtime import ObjectRow
+from snowfakery.data_generator_runtime import ObjectRow, NicknameSlot
 
 
 class TestObjectRow:
@@ -20,3 +20,10 @@ class TestObjectRow:
 
         obj = ObjectRow("", {})
         assert repr(obj)
+
+
+class TestNicknameSlot:
+    def test_nickname_slot(self):
+        n = NicknameSlot("Foo", None)
+        repr(n)
+        str(n)
