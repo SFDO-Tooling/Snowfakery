@@ -2,7 +2,7 @@ from collections import defaultdict
 from datetime import date
 from contextlib import contextmanager
 
-from typing import Optional, Dict, List, Sequence, Mapping, NamedTuple
+from typing import Optional, Dict, List, Sequence, Mapping, NamedTuple, Set
 
 import jinja2
 import yaml
@@ -129,6 +129,15 @@ class Globals:
     do not persist. For example, it isn't possible to persist a database
     handle in an output_stream."""
 
+    persistent_nicknames: Dict[str, ObjectRow]  # nicknamed objects
+    persistent_objects_by_table: Dict[
+        str, ObjectRow
+    ]  # objects referencable by table name
+    id_manager: IdManager  # keeps track of used ids
+    intertable_dependencies: Set[Dependency]  # all intertable dependencies detected
+    today: date  # today's date
+    nicknames_and_tables: Mapping[str, str]  # what table does each nickname refer to?
+
     def __init__(
         self,
         today: date = None,
@@ -140,11 +149,9 @@ class Globals:
         self.persistent_objects_by_table = {}
 
         self.id_manager = IdManager()
-        self.last_seen_obj_of_type = {}
         self.intertable_dependencies = set()
         self.today = today or date.today()
         self.nicknames_and_tables = name_slots or {}
-        self.transients = Transients(self.nicknames_and_tables, self.id_manager)
 
         self.reset_slots()
 
@@ -210,43 +217,51 @@ class Globals:
         return self.transients.orig_used_ids
 
     def __getstate__(self):
-        persistent_nicknames = {
-            k: v.__getstate__() for k, v in self.persistent_nicknames.items()
-        }
-        nicknames_and_tables = {k: v for k, v in self.nicknames_and_tables.items()}
+        def serialize_dict_of_object_rows(dct):
+            return {k: v.__getstate__() for k, v in dct.items()}
+
+        persistent_nicknames = serialize_dict_of_object_rows(self.persistent_nicknames)
+        persistent_objects_by_table = serialize_dict_of_object_rows(
+            self.persistent_objects_by_table
+        )
         intertable_dependencies = [
             dict(v._asdict()) for v in self.intertable_dependencies
         ]
 
         state = {
             "persistent_nicknames": persistent_nicknames,
-            "persistent_objects_by_table": self.persistent_objects_by_table,
+            "persistent_objects_by_table": persistent_objects_by_table,
             "id_manager": self.id_manager.__getstate__(),
             "today": self.today,
-            "nicknames_and_tables": nicknames_and_tables,
+            "nicknames_and_tables": self.nicknames_and_tables,
             "intertable_dependencies": intertable_dependencies,
         }
         return state
 
     def __setstate__(self, state):
-        self.last_seen_obj_by_table = {}
-        self.nicknamed_objects = {
-            k: hydrate(ObjectRow, v)
-            for k, v in state.get("nicknamed_objects", {}).items()
-        }
+        def deserialize_dict_of_object_rows(dct):
+            return {k: hydrate(ObjectRow, v) for k, v in dct.items()}
+
+        self.nicknamed_objects = deserialize_dict_of_object_rows(
+            state.get("nicknamed_objects", {})
+        )
+        self.persistent_nicknames = deserialize_dict_of_object_rows(
+            state.get("persistent_nicknames", {})
+        )
         self.nicknames_and_tables = state["nicknames_and_tables"]
         self.id_manager = hydrate(IdManager, state["id_manager"])
-        intertable_dependencies = getattr(state, "intertable_dependencies", [])
+
         self.intertable_dependencies = set(
-            Dependency(*dep) for dep in intertable_dependencies
+            Dependency(*dep) for dep in getattr(state, "intertable_dependencies", [])
         )
-        self.persistent_nicknames = {
-            k: hydrate(ObjectRow, v)
-            for k, v in state.get("persistent_nicknames", {}).items()
-        }
 
         self.today = state["today"]
-        self.persistent_objects_by_table = state.get("persistent_objects_by_table")
+        persistent_objects_by_table = state.get("persistent_objects_by_table")
+        self.persistent_objects_by_table = (
+            deserialize_dict_of_object_rows(persistent_objects_by_table)
+            if persistent_objects_by_table
+            else {}
+        )
         self.reset_slots()
 
 
@@ -563,7 +578,6 @@ def output_batches(
         name_slots.update(
             {template.tablename: template.tablename for template in templates}
         )
-        # print("YYYY", name_slots)
 
         globals = Globals(name_slots=name_slots)
         # at one point start-ids were passed from the command line

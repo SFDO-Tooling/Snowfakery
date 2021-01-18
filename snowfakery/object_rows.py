@@ -6,7 +6,7 @@ from .utils.yaml_utils import SnowfakeryDumper
 IdManager = "snowfakery.data_generator_runtime.IdManager"
 
 
-class ObjectRow(yaml.YAMLObject):
+class ObjectRow:
     """Represents a single row
 
     Uses __getattr__ so that the template evaluator can use dot-notation."""
