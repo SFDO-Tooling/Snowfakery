@@ -104,5 +104,5 @@ today: 2022-11-03
           just_once: True
         - object: bar
         """
-        with self.assertRaises(DataGenNameError, match="No template creating"):
+        with pytest.raises(DataGenNameError, match="No template creating"):
             generate(StringIO(yaml), stopping_criteria=StoppingCriteria("foot", 3))
