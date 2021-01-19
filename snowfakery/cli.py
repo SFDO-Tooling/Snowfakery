@@ -75,6 +75,8 @@ def int_string_tuple(ctx, param, value=None):
 
 
 @click.command()
+# TODO: This should become type=click.File("r")
+#       For consistency and flexibility
 @click.argument("yaml_file", type=click.Path(exists=True))
 @click.option(
     "--dburl",
