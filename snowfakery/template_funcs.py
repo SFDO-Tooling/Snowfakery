@@ -18,7 +18,7 @@ from snowfakery.object_rows import ObjectRow, ObjectReference
 
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
 
-fake = Faker()
+fake = Faker(use_weighting=False)
 
 # It might make more sense to use context vars for context handling when
 # Python 3.6 is out of the support matrix.
@@ -118,7 +118,7 @@ class StandardFuncs(SnowfakeryPlugin):
             # swallow empty range errors per Python conventions
 
         def i18n_fake(self, locale: str, fake: str):
-            faker = Faker(locale)
+            faker = Faker(locale, use_weighting=False)
             func = getattr(faker, fake)
             return func()
 
