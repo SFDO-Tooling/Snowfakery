@@ -131,7 +131,8 @@ class StandardFuncs(SnowfakeryPlugin):
             if hasattr(x, "id"):  # reference to an object with an id
                 target = x
             elif isinstance(x, str):  # name of an object
-                obj = self.context.field_vars().get(x)
+                obj = self.context.object_names().get(x)
+                obj = obj or self.context.field_values.get(x)
                 if callable(obj):
                     raise DataGenError(
                         f"A reference should not be to a field name: `{x}`", None, None

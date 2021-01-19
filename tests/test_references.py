@@ -1,5 +1,4 @@
 from io import StringIO
-import unittest
 from unittest import mock
 
 import pytest
@@ -54,7 +53,7 @@ reference_from_friend = """             #1
 write_row_path = "snowfakery.output_streams.DebugOutputStream.write_single_row"
 
 
-class TestReferences(unittest.TestCase):
+class TestReferences:
     @mock.patch(write_row_path)
     def test_simple_parent(self, write_row):
         generate(StringIO(simple_parent), {}, None)
@@ -206,7 +205,7 @@ class TestReferences(unittest.TestCase):
         assert "Bob" in str(e.value)
         assert "Bill" in str(e.value)
 
-    def test_clashing_names_error(self):
+    def test_clashing_names_priority(self, generated_rows):
         yaml = """
         - object: B
           fields:
@@ -216,7 +215,21 @@ class TestReferences(unittest.TestCase):
             B:
               reference: B
         """
-        with pytest.raises(
-            DataGenError, match="A reference should not be to a field name"
-        ):
-            generate(StringIO(yaml), {}, None)
+        generate(StringIO(yaml), {}, None)
+        assert generated_rows.row_values(1, "B") == "B(1)", generated_rows
+
+    def test_indirect_references(self, generated_rows):
+        "Test backwards compatibility of accidental 'feature'"
+        yaml = """
+        - object: B
+          fields:
+            x: a
+        - object: A
+          fields:
+            B:
+              reference: B
+            C:
+              reference: B
+        """
+        generate(StringIO(yaml), {}, None)
+        assert generated_rows.row_values(1, "C") == "B(1)", generated_rows

@@ -81,6 +81,9 @@ class PluginContext:
             self.plugin.__class__.__name__
         )
 
+    def object_names(self):
+        return self.interpreter.current_context.object_names()
+
     def evaluate_raw(self, field_definition):
         """Evaluate the contents of a field definition"""
         return field_definition.render(self.interpreter.current_context)
@@ -146,6 +149,7 @@ class PluginResult:
 
     def __str__(self):
         return str(self.result)
+
 
 # round-trip PluginResult objects through continuation YAML if needed.
 SnowfakeryDumper.add_representer(PluginResult, Representer.represent_object)

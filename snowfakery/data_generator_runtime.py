@@ -510,6 +510,9 @@ class RuntimeContext:
     def context_vars(self, plugin_namespace):
         return self._context_vars.setdefault(plugin_namespace, {})
 
+    def object_names(self):
+        return self.evaluation_namespace.object_names()
+
 
 # NamedTuple because it is immutable, efficient and auto-generates init
 class EvaluationNamespace(NamedTuple):
@@ -553,6 +556,9 @@ class EvaluationNamespace(NamedTuple):
 
     def field_vars(self):
         return {**self.simple_field_vars(), **self.field_funcs()}
+
+    def object_names(self):
+        return self.runtime_context.interpreter.globals.object_names
 
 
 def evaluate_function(func, args: Sequence, kwargs: Mapping, context):
