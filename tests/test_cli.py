@@ -146,6 +146,19 @@ class TestGenerateFromCLI:
                 }
             ]
 
+    def test_jsonapi_output_file(self):
+        with TemporaryDirectory() as t:
+            generate_cli.main(
+                [
+                    str(sample_yaml),
+                    "--output-format",
+                    "jsonapi",
+                    "--output-file",
+                    Path(t) / "foo.json",
+                ],
+                standalone_mode=False,
+            )
+
     def test_json_output_file(self):
         with TemporaryDirectory() as t:
             generate_cli.main(

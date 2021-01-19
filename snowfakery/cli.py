@@ -4,6 +4,7 @@ from snowfakery.output_streams import (
     DebugOutputStream,
     SqlOutputStream,
     JSONOutputStream,
+    JsonApiOutputStream,
     CSVOutputStream,
     ImageOutputStream,
     GraphvizOutputStream,
@@ -39,6 +40,7 @@ graphic_file_extensions = [
 file_extensions = [
     "JSON",
     "json",
+    "jsonapi",
     "txt",
     "csv",
 ] + graphic_file_extensions
@@ -142,6 +144,7 @@ def generate_cli(
         Records can go to:
             * stdout (default)
             * JSON file (--output_format=json --output-file=foo.json)
+            * JSON file in JSON:API format (--output_format=jsonapi --output-file=foo.json)
             * diagram file (--output_format=png --output-file=foo.png)
             * a database identified by --dburl (e.g. --dburl sqlite:////tmp/foo.db)
             * or to a directory as a set of CSV files (--output-format=csv --output-folder=csvfiles)
@@ -219,6 +222,9 @@ def configure_output_stream(
     if output_format == "json" and not output_files:
         output_streams.append(JSONOutputStream(sys.stdout))
 
+    if output_format == "jsonapi":
+        output_streams.append(JsonApiOutputStream(sys.stdout))
+
     if output_format == "csv":
         output_streams.append(CSVOutputStream(output_folder))
 
@@ -230,6 +236,8 @@ def configure_output_stream(
 
             if format == "json":
                 output_streams.append(JSONOutputStream(path))
+            elif format == "jsonapi":
+                output_streams.append(JsonApiOutputStream(path))
             elif format == "txt":
                 output_streams.append(DebugOutputStream(path))
             elif format == "dot":

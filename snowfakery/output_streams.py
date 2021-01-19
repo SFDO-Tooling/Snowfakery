@@ -229,6 +229,33 @@ class JSONOutputStream(FileOutputStream):
         return super().close()
 
 
+class JsonApiOutputStream(FileOutputStream):
+    encoders: Mapping[type, Callable] = {
+        **OutputStream.encoders,
+        datetime.date: str,
+        datetime.datetime: str,
+    }
+
+    def __init__(self, file):
+        assert file
+        super().__init__(file)
+        self.first_row = True
+
+    def write_single_row(self, tablename: str, row: Dict) -> None:
+        if self.first_row:
+            self.stream.write('{"data":[')
+            self.first_row = False
+        else:
+            self.stream.write(",\n")
+        values = {"type": tablename, "id": row.get("id"), "attributes": {**row}}
+        self.stream.write(json.dumps(values))
+
+    def close(self) -> Optional[Sequence[str]]:
+        if not self.first_row:
+            self.stream.write("]}\n")
+        return super().close()
+
+
 class SqlOutputStream(OutputStream):
     mappings = None
     should_close_session = False

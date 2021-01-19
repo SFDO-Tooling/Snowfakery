@@ -13,7 +13,12 @@ import pytest
 
 from sqlalchemy import create_engine
 
-from snowfakery.output_streams import SqlOutputStream, JSONOutputStream, CSVOutputStream
+from snowfakery.output_streams import (
+    SqlOutputStream,
+    JSONOutputStream,
+    JsonApiOutputStream,
+    CSVOutputStream,
+)
 import snowfakery.data_gen_exceptions as exc
 
 from snowfakery.data_generator import generate
@@ -245,6 +250,86 @@ class TestJSONOutputStream(OutputCommonTests):
             """
         with StringIO() as s:
             output_stream = JSONOutputStream(s)
+            with pytest.raises(exc.DataGenYamlSyntaxError):
+                generate(StringIO(yaml), {}, output_stream)
+            output_stream.close()
+            assert s.getvalue() == ""
+
+
+class JsonApiTables:
+    def __init__(self, json_data, table_names):
+        self.raw = json_data
+        self.data = json.loads(json_data)
+        self.tables = {table_name: [] for table_name in table_names}
+        for row in self.data["data"]:
+            r = row.copy()
+            tablename = r.pop("type")
+            self.tables[tablename].append(r)
+
+    def __getitem__(self, name):
+        return self.tables[name]
+
+
+class TestJsonApiOutputStream(OutputCommonTests):
+    def do_output(self, yaml):
+        with StringIO() as s:
+            output_stream = JsonApiOutputStream(s)
+            results = generate(StringIO(yaml), {}, output_stream)
+            output_stream.close()
+            return JsonApiTables(s.getvalue(), results.tables.keys())
+
+    def test_jsonapi_output_real(self):
+        yaml = """
+        - object: foo
+          count: 15
+          fields:
+            a: b
+            c: 3
+        """
+
+        output_stream = JsonApiOutputStream(StringIO())
+        generate(StringIO(yaml), {}, output_stream)
+        output_stream.close()
+
+    def test_jsonapi_output_mocked(self):
+        yaml = """
+        - object: foo
+          count: 2
+          fields:
+            a: b
+            c: 3
+        """
+
+        stdout = StringIO()
+        output_stream = JsonApiOutputStream(stdout)
+        generate(StringIO(yaml), {}, output_stream)
+        output_stream.close()
+        assert json.loads(stdout.getvalue()) == {
+            "data": [
+                {"type": "foo", "id": 1, "attributes": {"a": "b", "c": 3.0}},
+                {"type": "foo", "id": 2, "attributes": {"a": "b", "c": 3.0}},
+            ]
+        }
+
+    def test_null(self):
+        yaml = """
+        - object: foo
+          fields:
+            is_null:
+            """
+        output = self.do_output(yaml)
+        assert "null" in output.raw
+        values = output["foo"][0]
+        assert values["is_null"] is None
+
+    def test_error_generates_empty_string(self):
+        yaml = """
+        - object: foo
+          fields: bar: baz: jaz
+            is_null:
+            """
+        with StringIO() as s:
+            output_stream = JsonApiOutputStream(s)
             with pytest.raises(exc.DataGenYamlSyntaxError):
                 generate(StringIO(yaml), {}, output_stream)
             output_stream.close()
