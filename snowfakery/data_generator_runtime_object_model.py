@@ -84,6 +84,7 @@ class ObjectTemplate:
         self.filename = filename
         self.line_num = line_num
         self.fields = fields
+        self.fields_by_name = {field.name: field for field in fields}
         self.friends = friends
 
     def sorted_fields(self, fields: Sequence, context: RuntimeContext):
@@ -165,15 +166,11 @@ class ObjectTemplate:
         id = context.generate_id(self.nickname)
         row = {"id": id}
 
-        # these allow lazy evaluations of fields
-        row.update(
-            {
-                field.name: lambda: self._generate_field(context, row, field)
-                for field in self.fields
-            }
-        )
+        def fallback_func(name):
+            field = self.fields_by_name[name]  # KeyError is okay
+            return self._generate_field(context, row, field)
 
-        sobj = ObjectRow(self.tablename, row, index)
+        sobj = ObjectRow(self.tablename, row, index, fallback_func)
 
         context.register_object(sobj, self.nickname)
 

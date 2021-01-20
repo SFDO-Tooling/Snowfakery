@@ -581,21 +581,23 @@ class ObjectRow(yaml.YAMLObject):
     yaml_dumper = SnowfakeryDumper
     yaml_tag = "!snowfakery_objectrow"
 
-    __slots__ = ["_tablename", "_values", "_child_index"]
+    __slots__ = ["_tablename", "_values", "_child_index", "_fallback_func"]
 
-    def __init__(self, tablename, values: dict, index: int = 0):
+    def __init__(self, tablename, values: dict, index: int = 0, fallback_func=None):
         self._tablename = tablename
         self._values = values
         self._child_index = index
+        self._fallback_func = fallback_func or (lambda x: None)
 
     def __getattr__(self, name):
-        if name in self._values:
-            value = self._values[name]
-            if callable(value):
-                return value()
-            else:
-                return value
-        else:
+        try:
+            return self._values[name]
+        except KeyError:
+            pass
+
+        try:
+            return self._fallback_func(name)
+        except KeyError:
             raise AttributeError(name)
 
     def __str__(self):

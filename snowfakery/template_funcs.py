@@ -133,10 +133,6 @@ class StandardFuncs(SnowfakeryPlugin):
             elif isinstance(x, str):  # name of an object
                 obj = self.context.object_names().get(x)
                 obj = obj or self.context.field_values.get(x)
-                if callable(obj):
-                    raise DataGenError(
-                        f"A reference should not be to a field name: `{x}`", None, None
-                    )
                 if not obj:
                     raise DataGenError(f"Cannot find an object named `{x}`", None, None)
                 if not getattr(obj, "id", None):
