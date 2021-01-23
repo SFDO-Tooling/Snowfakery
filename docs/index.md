@@ -451,9 +451,27 @@ StageName:
 
 You can do more sophisticated randomness with features that will be discussed in the section [Random Weights That Are Not Percentages](#random-weights-that-are-not-percentages).
 
+A more elaborate form of `random_choice` can also be used to
+select randomly among potential child objects.
+
+```yaml
+- object : Task
+  fields:
+    person_doing_the_task:
+        random_choice:
+          - object: Contact
+            fields:
+                FirstName: Bart
+                LastName: Simpson
+          - object: Lead
+            fields:
+                FirstName: Marge
+                LastName: Simpson
+```
+
 #### `random_reference`
 
-Select a random, already-created row from some table
+Create a reference to a random, already-created row from some table.
 
 ```yaml
 - object: Owner
@@ -467,87 +485,19 @@ Select a random, already-created row from some table
         random_reference: Owner
 ```
 
-The term 'already-created' has important implications and
-relates to the optional 'scope' argument.
+The selected row could be any one that matches the object
+type and was already created in the current iteration of
+the recipe. For example, the recipe above was executed
+20 times (iterations) to generate 200 Pets and Owners,
+the selected rows in the first iteration would be one
+of the first 10 Owners and the ones picked in the last
+iteration would be one of the last 10.
 
-In the simple case above, the scope is "local" (the default).
-So it is the same as:
-
-```yaml
-- object: Owner
-  count: 10
-  fields:
-    name: fake.name
-- object: Pet
-  count: 10
-  fields:
-    ownedBy:
-        random_reference:
-          tablename: Owner
-          scope: local
-```
-
-This means that if you run this Snowfakery file in a context
-where it is asked to loop 20 times and generate 200 Owners,
-each Pet will refer to an Owner that was created in the same
-iteration (one of the ten most recently created
-owners).
-
-Scope 'global' means to look beyond the most recent iteration.
-
-```yaml
-- object: Pet
-  count: 10
-  fields:
-    ownedBy:
-        random_reference:
-          tablename: Owner
-          scope: local
-```
-
-If you care about the statistical distrbution of your
-data then you should consider the distinction between
-'global' and 'local' carefully. If not, then don't
-worry about it.
-
-The statistics work like this:
-
-Still assuming we ran this in a context where we are generating
-200 Owners: if you use scope 'global', the first 10 Owners will be
-included in the set that random_reference selects from 20
-different times. The last 10 will be included in a selection
-set only once. The chances of an early Owner having at
-least one Pet is extremely high.
-The chances of a late Owner having a Pet is very low
-(roughly 1/20).
-
-If you use scope 'local' then first-iteration Owners will
-be connected to first-iteration Pets, second-iteration Owners
-will be connected to second-iteration Pets and so forth. This
-will guarantee a more "fair" distribution of owners and pets.
-
-In some cases that fairness may be what you want. In others you
-might want to model a real system that is less "fair" and you
-might prefer for the connections to be more broad and less
-constrained. And most of the time it doesn't matter either way!
-
-A more elaborate form of `random_choice` can also be used to
-select randomly among potential child objects.
-
-```yaml
-- object : Task
-  fields:
-    who:
-        random_choice:
-          - object: Contact
-            fields:
-                FirstName: Bart
-                LastName: Simpson
-          - object: Lead
-            fields:
-                FirstName: Marge
-                LastName: Simpson
-```
+Snowfakery cannot currently generate a random reference
+based on a nickname or to a row created in a previous
+or future iteration of the recipe. If you need these
+features, contact the Snowfakery team through a
+github issue.
 
 ### `fake`
 
@@ -926,7 +876,7 @@ In theory you could use Jinja keywords like `${% if` (as opposed to `{% if`) but
 
 Hard-coding the exact number of records to create into a template file is not always the ideal thing.
 
-You can pass options (numbers, strings, booleans) to your generator script from a command line.
+You can pass options (numbers, strings, booleans) to your generator recipe from a command line.
 
 The first step is to declare the options in your template file:
 
@@ -937,7 +887,7 @@ The first step is to declare the options in your template file:
 
 If you do not specify a default, the option is required and the template will not be processed without it.
 
-In your script, you use the value by referring to it in a formula:
+In your recipe, you use the value by referring to it in a formula:
 
 ```yaml
 - object: Account

@@ -2,6 +2,7 @@ import random
 from functools import lru_cache
 from datetime import date, datetime
 import dateutil.parser
+import warnings
 from dateutil.relativedelta import relativedelta
 from ast import literal_eval
 
@@ -229,8 +230,7 @@ class StandardFuncs(SnowfakeryPlugin):
                     random_reference:
                         Owner
 
-            The term 'already-created' has important implications and
-            relates to the 'scope' parameter. See the docs for more info.
+            See the docs for more info.
             """
 
             globls = self.context.interpreter.globals
@@ -239,6 +239,7 @@ class StandardFuncs(SnowfakeryPlugin):
                 last_id = last_object.id
                 if scope == "global":
                     first_id = 1
+                    warnings.warn("Global scope is an exprimental feature.")
                 elif scope == "local":
                     first_id = globls.orig_used_ids[tablename]
                 else:
