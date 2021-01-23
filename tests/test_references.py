@@ -332,6 +332,7 @@ class TestReferences:
         assert generated_rows.table_values("B", 2, "A_ref") == "A(12)"
 
     def test_random_reference_global(self, generated_rows):
+        # undocumented experimental feature!
         yaml = """                  #1
       - object: A                   #2
         count: 10                   #4
@@ -343,8 +344,11 @@ class TestReferences:
                 tablename: A   #9
                 scope: global
     """
-        with mock.patch("random.randint") as randint:
+        with mock.patch("random.randint") as randint, mock.patch(
+            "warnings.warn"
+        ) as warn:
             randint.side_effect = [8, 3, 8, 3]
             generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 4))
         assert generated_rows.row_values(22, "A_ref") == "A(8)"
         assert generated_rows.row_values(23, "A_ref") == "A(3)"
+        assert "experimental" in str(warn.mock_calls)

@@ -239,7 +239,7 @@ class StandardFuncs(SnowfakeryPlugin):
                 last_id = last_object.id
                 if scope == "global":
                     first_id = 1
-                    warnings.warn("Global scope is an exprimental feature.")
+                    warnings.warn("Global scope is an experimental feature.")
                 elif scope == "local":
                     first_id = globls.orig_used_ids[tablename]
                 else:
