@@ -1,0 +1,14 @@
+- plugin: snowfakery.standard_plugins.salesforce.Salesforce
+- object: Contact
+  fields:
+    FirstName: Suzy
+    LastName: Salesforce
+    AccountId:
+      Salesforce.query_random: Account
+
+- object: Contact
+  fields:
+    FirstName: Sammy
+    LastName: Salesforce
+    AccountId:
+      Salesforce.query_record: Account
