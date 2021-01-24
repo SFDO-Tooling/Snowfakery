@@ -45,7 +45,7 @@ class FieldDefinition(ABC):
         try:
             yield
         except DataGenError as e:
-            raise fix_exception(message, self, e)
+            raise fix_exception(message, self, e) from e
         except Exception as e:
             message = message.format(*args, **kwargs)
             raise DataGenError(f"{message} : {str(e)}", self.filename, self.line_num)
@@ -335,7 +335,7 @@ class FieldFactory:
         except Exception as e:
             raise fix_exception(
                 f"Problem rendering field {self.name}:\n {str(e)}", self, e
-            )
+            ) from e
 
     def __repr__(self):
         return f"<{self.__class__.__name__, self.name, self.definition.__class__.__name__}>"

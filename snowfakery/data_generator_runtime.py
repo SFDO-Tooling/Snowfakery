@@ -346,7 +346,6 @@ class Interpreter:
         name_slots.update(
             {template.tablename: template.tablename for template in templates}
         )
-        # print("XXXX", name_slots, globals)
 
         self.globals = globals or Globals(name_slots=name_slots)
 
@@ -623,7 +622,6 @@ def output_batches(
         name_slots.update(
             {template.tablename: template.tablename for template in templates}
         )
-        # print("YYYY", name_slots)
 
         globals = Globals(name_slots=name_slots)
         # at one point start-ids were passed from the command line
