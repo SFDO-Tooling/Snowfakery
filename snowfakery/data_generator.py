@@ -43,7 +43,9 @@ class ExecutionSummary:
         return self.intertable_dependencies, self.templates
 
 
-def merge_options(option_definitions: List, user_options: Mapping) -> Tuple[Dict, set]:
+def merge_options(
+    option_definitions: List, user_options: Mapping, plugin_options: Mapping = None
+) -> Tuple[Dict, set]:
     """Merge/compare options specified by end-user to those declared in YAML file.
 
     Takes options passed in from the command line or a config file and
@@ -61,7 +63,7 @@ def merge_options(option_definitions: List, user_options: Mapping) -> Tuple[Dict
     anything in the YAML generator file. The caller may want to warn the
     user about them or throw an error.
     """
-    options = {}
+    options = plugin_options.copy() if plugin_options else {}
     for option in option_definitions:
         name = option["option"]
         if user_options.get(name):
@@ -111,10 +113,12 @@ def process_plugins(plugins: List) -> Tuple[List[object], Mapping[str, object]]:
 def generate(
     open_yaml_file: IO[str],
     user_options: dict = None,
+    #  *,   TODO: fix test suite so these can be keyword-only arguments
     output_stream: OutputStream = None,
     stopping_criteria: StoppingCriteria = None,
     generate_continuation_file: FileLike = None,
     continuation_file: TextIO = None,
+    plugin_options: dict = None,
 ) -> ExecutionSummary:
     """The main entry point to the package for Python applications."""
     user_options = user_options or {}
@@ -125,8 +129,14 @@ def generate(
     # parse the YAML and any it refers to
     parse_result = parse_recipe(open_yaml_file)
 
+    faker_providers, snowfakery_plugins = process_plugins(parse_result.plugins)
+
+    process_plugins_options(snowfakery_plugins, plugin_options or {})
+
     # figure out how it relates to CLI-supplied generation variables
-    options, extra_options = merge_options(parse_result.options, user_options)
+    options, extra_options = merge_options(
+        parse_result.options, user_options, plugin_options
+    )
 
     if extra_options:
         warnings.warn(f"Warning: unknown options: {extra_options}")
@@ -136,8 +146,6 @@ def generate(
     continuation_data = (
         load_continuation_yaml(continuation_file) if continuation_file else None
     )
-
-    faker_providers, snowfakery_plugins = process_plugins(parse_result.plugins)
 
     try:
         # now do the output
@@ -163,6 +171,18 @@ def generate(
         save_continuation_yaml(runtime_context, generate_continuation_file)
 
     return ExecutionSummary(parse_result, runtime_context)
+
+
+def process_plugins_options(plugins: dict, plugin_options: dict):
+    # replace option short names with fully qualified names
+    for name, plugin in plugins.items():
+        options = getattr(plugin, "allowed_options", ())
+        for option in options:
+            option_short_name = option.name.rsplit(".", 1)[-1]
+            if option_short_name in plugin_options:
+                plugin_options[option.name] = plugin_options.get(option_short_name)
+            if option.name in plugin_options:
+                option.convert([plugin_options[option.name]])
 
 
 if __name__ == "__main__":  # pragma: no cover
