@@ -92,9 +92,9 @@ def int_string_tuple(ctx, param, value=None):
 @click.option(
     "--option",
     nargs=2,
-    type=eval_arg,  # TODO: test this more
+    type=eval_arg,
     multiple=True,
-    help="Options to send to the recipe YAML.",
+    help="Option to send to the recipe YAML in a format like 'OptName OptValue'. Specify multiple times if needed.",
 )
 @click.option(
     "--target-number",
@@ -122,6 +122,13 @@ def int_string_tuple(ctx, param, value=None):
     type=click.File("r"),
     help="Continue generating a dataset where 'continuation-file' left off",
 )
+@click.option(
+    "--plugin-option",
+    nargs=2,
+    type=eval_arg,
+    multiple=True,
+    help="Option to send to a plugin in a format like 'OptName OptValue'. Specify multiple times if needed.",
+)  # options passed by an API instead of CLI
 @click.version_option(version=version, prog_name="snowfakery")
 def generate_cli(
     yaml_file,
@@ -136,6 +143,7 @@ def generate_cli(
     output_folder=None,
     continuation_file=None,
     generate_continuation_file=None,
+    plugin_option=None,
 ):
     """
         Generates records from a YAML file
@@ -180,6 +188,7 @@ def generate_cli(
                     stopping_criteria=stopping_criteria,
                     generate_continuation_file=generate_continuation_file,
                     continuation_file=continuation_file,
+                    plugin_options=dict(plugin_option or []),
                 )
             if debug_internals:
                 debuginfo = yaml.dump(

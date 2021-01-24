@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Tuple, Union, Optional, Dict, TextIO
+from typing import Tuple, Union, Optional, Dict, TextIO, Any
 from contextlib import ExitStack
 
 from .plugins import SnowfakeryPlugin, lazy  # noqa
@@ -14,10 +14,12 @@ with version_file.open() as f:
     version = f.read().strip()
 
 
+# TODO: allow passing open file objects as well
 def generate_data(
     yaml_file: Union[Path, str],
     *,
     user_options: Dict[str, str] = None,
+    plugin_options: Dict[str, Any] = None,
     dburl: str = None,
     target_number: Optional[Tuple[int, str]] = None,
     debug_internals: bool = False,
@@ -36,7 +38,7 @@ def generate_data(
     dburls = [dburl] if dburl else []
     output_files = [output_file] if output_file else []
     options_sequence = list(user_options.items()) if user_options else ()
-
+    plugin_options_sequence = list(plugin_options.items()) if plugin_options else ()
     with ExitStack() as stack:
 
         def open_if_necessary_and_close_later(file_like, mode):
@@ -55,6 +57,7 @@ def generate_data(
         return generate_cli.callback(
             yaml_file=yaml_file,
             option=options_sequence,
+            plugin_option=plugin_options_sequence,
             dburls=dburls,
             target_number=target_number,
             debug_internals=debug_internals,

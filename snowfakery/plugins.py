@@ -147,6 +147,22 @@ class PluginResult:
     def __str__(self):
         return str(self.result)
 
+
+class PluginOption:
+    def __init__(self, name, typ):
+        self.name = name
+        self.type = typ
+
+    def convert(self, value):
+        try:
+            return self.type(value)
+        except TypeError as e:
+            raise TypeError(
+                f"{self.name} option is wrong type {type(value)} rather than {self.type}",
+                *e.args,
+            )
+
+
 # round-trip PluginResult objects through continuation YAML if needed.
 SnowfakeryDumper.add_representer(PluginResult, Representer.represent_object)
 yaml.SafeLoader.add_constructor(
