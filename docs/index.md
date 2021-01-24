@@ -1122,9 +1122,9 @@ And here's how to use the "hidden fields"([#hidden-fields-and-objects]) feature:
             reference: Company
 ```
 
-### Built-in Plugins
+## Built-in Plugins
 
-#### Advanced Math
+### Advanced Math
 
 Snowfakery has a "Math" plugin which gives you access to all features from Python's
 [`math`](https://docs.python.org/3/library/math.html) module plus
@@ -1151,11 +1151,11 @@ Or:
       twelve: ${Math.sqrt}
 ```
 
-#### External datasets
+### External datasets
 
 Snowfakery can incorporate data from external CSV files or databases as datasets.
 
-##### Iterating over CSV datasets
+#### Iterating over CSV datasets
 
 Here is an example of a simple CSV-based dataset:
 
@@ -1213,7 +1213,7 @@ Person(id=9, Name=Austin Wong, StreetAddress=422 Kingsway Road, City=Richmond)
 Person(id=10, Name=Kelly Jones, StreetAddress=420 Kings Ave, City=Burnaby)
 ```
 
-##### Iterating over SQL database datasets
+#### Iterating over SQL database datasets
 
 If the reference to a dataset is a URL instead, Snowfakery will attempt to use
 it as a reference to a database. Out of the box  Snowfakery supports
@@ -1240,7 +1240,7 @@ to use like this:
         table: addresses
 ```
 
-##### Shuffling Data
+#### Shuffling Data
 
 If you would rather the rows be pulled out in random order, you
 have two options. The simplest thing is to shuffle it in your
@@ -1253,7 +1253,7 @@ Snowfakery recipe like this:
 ```
 
 
-##### Shuffling data in advance
+#### Shuffling data in advance
 
 If you experience performance or memory usage problems with big datasets,
 you might want to shuffle your data into a random order  before using it
@@ -1371,6 +1371,13 @@ Occasionally you might write a plugin which needs to evaluate its
 parameters lazily but doesn't care about the internals of the values
 because it just returns it to some parent context. In that case,
 use `context.evaluate_raw` instead of `context.evaluate`.
+
+Plugins that need some form of configuration can get it
+through `PluginOptions` objects like this:
+
+```
+ TODO
+```
 
 ## Using Snowfakery with Salesforce
 
