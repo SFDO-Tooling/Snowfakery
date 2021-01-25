@@ -272,28 +272,6 @@ class TestGenerateFromCLI:
                 )
                 assert "Table already exists" in str(e.value)
 
-    def test_image_outputs(self):
-        pytest.importorskip("pygraphviz")
-        with TemporaryDirectory() as t:
-            png = Path(t) / "out.png"
-            svg = Path(t) / "out.svg"
-            txt = Path(t) / "out.txt"
-            generate_cli.main(
-                [
-                    str(sample_yaml),
-                    "--output-file",
-                    png,
-                    "--output-file",
-                    svg,
-                    "--output-file",
-                    txt,
-                ],
-                standalone_mode=False,
-            )
-            assert png.exists()
-            assert svg.exists()
-            assert txt.exists()
-
     def test_cli_errors__mutex(self):
         with pytest.raises(ClickException) as e:
             generate_cli.main(

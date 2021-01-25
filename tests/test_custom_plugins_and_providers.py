@@ -158,10 +158,16 @@ class TestCustomPlugin:
         - plugin: snowfakery.standard_plugins.Math
         - object: OBJ
           fields:
-            twelve: ${{Math.sqrt(144)}}
+            sqrt: ${{Math.sqrt(144)}}
+            max: ${{Math.max(144, 200, 100)}}
+            eleven: ${{Math.round(10.7)}}
+            min: ${{Math.min(144, 200, 100)}}
         """
         generate(StringIO(yaml), {})
-        assert row_values(write_row_mock, 0, "twelve") == 12
+        assert row_values(write_row_mock, 0, "sqrt") == 12
+        assert row_values(write_row_mock, 0, "max") == 200
+        assert row_values(write_row_mock, 0, "eleven") == 11
+        assert row_values(write_row_mock, 0, "min") == 100
 
     @mock.patch(write_row_path)
     def test_math_deconstructed(self, write_row_mock):
@@ -170,7 +176,7 @@ class TestCustomPlugin:
         - object: OBJ
           fields:
             twelve:
-                Math.sqrt: 144
+                Math.sqrt: ${{Math.min(144, 169)}}
         """
         generate(StringIO(yaml), {})
         assert row_values(write_row_mock, 0, "twelve") == 12

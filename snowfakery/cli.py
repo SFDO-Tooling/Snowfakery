@@ -6,6 +6,7 @@ from snowfakery.output_streams import (
     JSONOutputStream,
     CSVOutputStream,
     ImageOutputStream,
+    GraphvizOutputStream,
     MultiplexOutputStream,
 )
 from snowfakery.data_gen_exceptions import DataGenError
@@ -23,9 +24,7 @@ if __name__ == "__main__":  # pragma: no cover
     sys.path.append(str(Path(__file__).parent.parent))
 
 
-file_extensions = [
-    "JSON",
-    "json",
+graphic_file_extensions = [
     "PNG",
     "png",
     "SVG",
@@ -35,9 +34,14 @@ file_extensions = [
     "jpg",
     "ps",
     "dot",
+]
+
+file_extensions = [
+    "JSON",
+    "json",
     "txt",
     "csv",
-]
+] + graphic_file_extensions
 
 
 def eval_arg(arg):
@@ -71,6 +75,8 @@ def int_string_tuple(ctx, param, value=None):
 
 
 @click.command()
+# TODO: This should become type=click.File("r")
+#       For consistency and flexibility
 @click.argument("yaml_file", type=click.Path(exists=True))
 @click.option(
     "--dburl",
@@ -102,8 +108,8 @@ def int_string_tuple(ctx, param, value=None):
 @click.option("--cci-mapping-file", "mapping_file", type=click.Path(exists=True))
 @click.option(
     "--generate-cci-mapping-file",
-    "generate_cci_mapping_file",
-    type=click.Path(exists=False),
+    type=click.File("w"),
+    help="Generate a CumulusCI mapping file for the dataset",
 )
 @click.option(
     "--generate-continuation-file",
@@ -128,7 +134,6 @@ def generate_cli(
     output_format=None,
     output_files=None,
     output_folder=None,
-    nickname_ids=None,
     continuation_file=None,
     generate_continuation_file=None,
 ):
@@ -138,12 +143,12 @@ def generate_cli(
     \b
         Records can go to:
             * stdout (default)
-            * JSON file (--output_format=json --output-file=foo.json)
-            * diagram file (--output_format=png --output-file=foo.png)
+            * JSON file (--output-format=json --output-file=foo.json)
+            * diagram file (--output-format=png --output-file=foo.png)
             * a database identified by --dburl (e.g. --dburl sqlite:////tmp/foo.db)
             * or to a directory as a set of CSV files (--output-format=csv --output-folder=csvfiles)
 
-        Diagram output depends on the installation of pygraphviz ("pip install pygraphviz")
+        Diagram output depends on the installation of graphviz (https://www.graphviz.org/download/)
 
         Full documentation here:
 
@@ -182,10 +187,11 @@ def generate_cli(
                 )
                 sys.stderr.write(debuginfo)
             if generate_cci_mapping_file:
-                with click.open_file(generate_cci_mapping_file, "w") as f:
-                    yaml.safe_dump(
-                        mapping_from_recipe_templates(summary), f, sort_keys=False
-                    )
+                yaml.safe_dump(
+                    mapping_from_recipe_templates(summary),
+                    generate_cci_mapping_file,
+                    sort_keys=False,
+                )
         except DataGenError as e:
             if debug_internals:
                 raise e
@@ -228,7 +234,9 @@ def configure_output_stream(
                 output_streams.append(JSONOutputStream(path))
             elif format == "txt":
                 output_streams.append(DebugOutputStream(path))
-            elif format in file_extensions:
+            elif format == "dot":
+                output_streams.append(GraphvizOutputStream(path))
+            elif format in graphic_file_extensions:
                 output_streams.append(ImageOutputStream(path, format))
             else:
                 raise click.ClickException(

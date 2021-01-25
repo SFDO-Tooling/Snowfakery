@@ -239,7 +239,7 @@ class TestTemplateFuncs:
             a: ${{date(datetime(year=2012, month=1, day=1))}}
         """
         generate(StringIO(yaml), {}, None)
-        assert write_row.mock_calls[0][1][1]["a"] == "2012-01-01"
+        assert str(write_row.mock_calls[0][1][1]["a"]) == "2012-01-01"
 
     @mock.patch(write_row_path)
     def test_old_syntax(self, write_row):
@@ -262,6 +262,19 @@ class TestTemplateFuncs:
         generate(StringIO(yaml), {}, None)
         assert "2012" in write_row.mock_calls[0][1][1]["wedding"]
         assert "1" in write_row.mock_calls[0][1][1]["number"]
+
+    @mock.patch(write_row_path)
+    def test_date_between_error_handling(self, write_row):
+        yaml = """
+        - object : A
+          fields:
+            date:
+                date_between:
+                    start_date: "2040-13-13"
+                    end_date: "2040-13-13"
+        """
+        with pytest.raises(DataGenError):
+            generate(StringIO(yaml), {}, None)
 
     @mock.patch(write_row_path)
     def test_child_index(self, write_row):

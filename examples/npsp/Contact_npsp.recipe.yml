@@ -1,0 +1,258 @@
+## NPSP Contacts Example
+
+# To run this code against a fresh scratch org called ("qa"):
+#
+# cci flow run npsp:install_prod --org qa
+# cci task run generate_and_load_from_yaml -o generator_yaml examples/npsp/Contact_npsp.recipe.yml -o num_records 300 -o num_records_tablename Contact --org qa
+
+# Look at examples/salesforce/Contact.recipe.yml for more examples.
+- include_file: ../salesforce/standard_objs.recipe.yml
+- include_file: standard_npsp_objs_recipe.yml
+
+- object: Contact
+  fields:
+    AccountId:
+      reference: Household
+    FirstName:
+      fake: last_name
+    LastName:
+      fake: first_name
+    npe01__AlternateEmail__c:
+      fake: email
+    npe01__HomeEmail__c:
+      fake: email
+    npe01__Primary_Address_Type__c:
+      random_choice:
+        - Home
+        - Work
+        - Other
+    npe01__Secondary_Address_Type__c:
+      random_choice:
+        - Home
+        - Work
+        - Other
+    npe01__WorkEmail__c:
+      fake: email
+    npe01__WorkPhone__c:
+      fake: phone_number
+    npo02__Best_Gift_Year_Total__c:
+      random_number:
+        min: 1
+        max: 100000
+    npo02__Best_Gift_Year__c:
+      fake: year
+    npo02__FirstCloseDate__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npo02__Household_Naming_Order__c:
+      random_number:
+        min: 1
+        max: 100000
+    npo02__LastCloseDate__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npo02__LastMembershipDate__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npo02__LastMembershipLevel__c:
+      fake.text:
+        max_nb_chars: 100
+    npo02__LastMembershipOrigin__c:
+      fake.text:
+        max_nb_chars: 100
+    npo02__MembershipEndDate__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npo02__MembershipJoinDate__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npo02__Naming_Exclusions__c:
+      random_choice:
+        - Household__c.Name
+        - Household__c.Formal_Greeting__c
+        - Household__c.Informal_Greeting__c
+    npo02__Soft_Credit_Last_Year__c:
+      random_number:
+        min: 1
+        max: 100000
+    npo02__Soft_Credit_This_Year__c:
+      random_number:
+        min: 1
+        max: 100000
+    npo02__Soft_Credit_Total__c:
+      random_number:
+        min: 1
+        max: 100000
+    npo02__Soft_Credit_Two_Years_Ago__c:
+      random_number:
+        min: 1
+        max: 100000
+    npo02__SystemHouseholdProcessor__c:
+      random_choice:
+        - All Individual Contacts
+        - All New or Edited Contacts
+        - No Contacts
+    npsp__Current_Address__c:
+      reference: npsp__Address__c
+    npsp__First_Soft_Credit_Amount__c:
+      random_number:
+        min: 1
+        max: 100000
+    npsp__First_Soft_Credit_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npsp__Largest_Soft_Credit_Amount__c:
+      random_number:
+        min: 1
+        max: 100000
+    npsp__Largest_Soft_Credit_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npsp__Last_Soft_Credit_Amount__c:
+      random_number:
+        min: 1
+        max: 100000
+    npsp__Number_of_Soft_Credits_Last_N_Days__c:
+      random_number:
+        min: 1
+        max: 100000
+    npsp__Number_of_Soft_Credits_Last_Year__c:
+      random_number:
+        min: 1
+        max: 100000
+    npsp__Number_of_Soft_Credits_This_Year__c:
+      random_number:
+        min: 1
+        max: 100000
+    npsp__Number_of_Soft_Credits_Two_Years_Ago__c:
+      random_number:
+        min: 1
+        max: 100000
+    npsp__Number_of_Soft_Credits__c:
+      random_number:
+        min: 1
+        max: 100000
+    # npsp__Primary_Affiliation__c:
+    #   reference: Organization # you need to have defined an Account with the nickname Organization
+    Salutation:
+      random_choice:
+        - Mr.
+        - Ms.
+        - Mrs.
+        - Dr.
+        - Prof.
+    OtherStreet:
+      fake.text:
+        max_nb_chars: 100
+    OtherCity:
+      fake: city
+    OtherState:
+      fake: state
+    OtherPostalCode:
+      fake: postalcode
+    OtherCountry:
+      fake: country
+    OtherLatitude:
+      fake: latitude
+    OtherLongitude:
+      fake: longitude
+    OtherGeocodeAccuracy:
+      random_choice:
+        - Address
+        - NearAddress
+        - Block
+        - Street
+        - ExtendedZip
+        - Zip
+        - Neighborhood
+        - City
+        - County
+        - State
+        - Unknown
+    MailingStreet:
+      fake.text:
+        max_nb_chars: 100
+    MailingCity:
+      fake: city
+    MailingState:
+      fake: state
+    MailingPostalCode:
+      fake: postalcode
+    MailingCountry:
+      fake: country
+    MailingLatitude:
+      fake: latitude
+    MailingLongitude:
+      fake: longitude
+    MailingGeocodeAccuracy:
+      random_choice:
+        - Address
+        - NearAddress
+        - Block
+        - Street
+        - ExtendedZip
+        - Zip
+        - Neighborhood
+        - City
+        - County
+        - State
+        - Unknown
+    Phone:
+      fake: phone_number
+    Fax:
+      fake: phone_number
+    MobilePhone:
+      fake: phone_number
+    HomePhone:
+      fake: phone_number
+    OtherPhone:
+      fake: phone_number
+    AssistantPhone:
+      fake: phone_number
+    # ReportsToId:
+    #   reference: BossContact # you need to have defined this Contact elsewhere
+    Email:
+      fake: email
+    Title:
+      fake.text:
+        max_nb_chars: 100
+    Department:
+      fake.text:
+        max_nb_chars: 80
+    AssistantName:
+      fake: name
+    LeadSource:
+      random_choice:
+        - Web
+        - Phone Inquiry
+        - Partner Referral
+        - Purchased List
+        - Other
+    Birthdate:
+      date_between:
+        start_date: -1y
+        end_date: today
+    Description:
+      fake.text:
+        max_nb_chars: 100
+    EmailBouncedReason:
+      fake.text:
+        max_nb_chars: 100
+    EmailBouncedDate: <<fake.date>>T<<fake.time>>Z
+    CleanStatus:
+      random_choice:
+        - Matched
+        - Different
+        - Acknowledged
+        - NotFound
+        - Inactive
+        - Pending
+        # - SelectMatch  # causes problems
+        - Skipped

@@ -52,8 +52,6 @@ $ snowfakery docs/examples/simple_static.yml
 ...
 ```
 
-(this example does not represent the final command line interface nor how to use [Advanced Features](#advanced-features)))
-
 This simple example will generate a single record that looks like this:
 
 ```json
@@ -217,6 +215,8 @@ persons_of_interest.yml
 
 In this case, there will be 6 Persons in the Person table (or file), 3 with age between 0 and 12 and 3 with age between 12 and 95.
 
+### Friends
+
 Sometimes you want to obey a rule like “For every Person I create, I’d like to create 2 animals” (maybe you really like animals).
 
 You would use the `friends` property to do that.
@@ -256,6 +256,8 @@ Animal(id=6, name=Kimberly)
 <img src='images/img2.png' id='PJUACAveFpc' alt='Relationship diagram' width='800' height='34'>
 
 There is no explicit relationship between the animals and the people in this case, but sometimes you do want such an implicit “relationship” between the number of one object created and the number of the other.
+
+You can also use this feature for [Many to One](#many-to-one-relationships).
 
 ## Relationships
 
@@ -884,10 +886,13 @@ And then you pass that option like this:
 
 ## Command Line Interface
 
-```yaml
+You can learn the list of options available in the latest version
+like this:
+
+```bash
 $ snowfakery --help
 
-  Usage: snowfakery [OPTIONS] YAML_FILE
+Usage: snowfakery [OPTIONS] YAML_FILE
 
       Generates records from a YAML file
 
@@ -898,8 +903,12 @@ $ snowfakery --help
           * a database identified by --dburl (e.g. --dburl sqlite:////tmp/foo.db)
           * or to a directory as a set of CSV files (--output-format=csv --output-folder=csvfiles)
 
-      Diagram output depends on the installation of pygraphviz ("pip install
-      pygraphviz")
+      Diagram output depends on the installation of graphviz 
+      (https://www.graphviz.org/download/)
+
+      Full documentation here:
+
+          * https://snowfakery.readthedocs.io/en/docs/
 
 Options:
   --dburl TEXT                    URL for database to save data to. Use
@@ -910,7 +919,10 @@ Options:
   --output-folder PATH
   -o, --output-file PATH
   --option EVAL_ARG...            Options to send to the recipe YAML.
-  --target-number TEXT...         Target options for the recipe YAML.
+  --target-number TEXT...         Target options for the recipe YAML in the
+                                  form of 'number tablename'. For example: '50
+                                  Account'.
+
   --debug-internals / --no-debug-internals
   --cci-mapping-file PATH
   --generate-cci-mapping-file PATH
@@ -924,7 +936,6 @@ Options:
 
   --version                       Show the version and exit.
   --help                          Show this message and exit.
-  
 ```
 
 ### Scaling up recipe execution
@@ -974,7 +985,7 @@ for all of the CSV files.
 
 ## Advanced Features
 
-### Hidden Fields and objects
+### Hidden Fields and Objects
 
 As described earlier, fields can refer to each other. For example field `c` could be the sum of fields `a` and `b`. Or perhaps you only want to output PersonLastName if PersonFirstName was set, and PersonFirstName is set randomly.
 
@@ -982,7 +993,26 @@ If you want to create a value which will be used in computations but **not** out
 
 You can even do this with Object Templates to generate “objects” which are never saved as rows to your database, Salesforce org or output file.
 
-### Random Weights That are not percentages
+examples/hidden_fields.yml:
+
+```yaml
+- object: Dates
+  fields:
+    __total_months: 48
+    __first_month: ${{today - relativedelta(months=__total_months)}}
+    __end_of_first_quarter: ${{date(__first_month) + relativedelta(months=3)}}
+    ProgramStartDate: ${{__first_month}}
+    FirstEvent:
+      date_between:
+        start_date: ${{__first_month}}
+        end_date: ${{__end_of_first_quarter}}
+    ProgramEndDate: ${{date(__first_month) + relativedelta(months=12)}}
+```
+Which would output:
+
+```Dates(id=1, ProgramStartDate=2016-11-30, FirstEvent=2017-02-24, ProgramEndDate=2017-11-30)```
+
+### Random Weights that are not Percentages
 
 Consider the following field definition:
 
@@ -1008,19 +1038,109 @@ You include either Plugins or Providers in a Snowfakery file like this:
 
 To write a new Provider, please refer to the documentation for Faker at https://faker.readthedocs.io/en/master/#providers
 
+#### Many to One relationships
+
+In relational databases, child records typically have a reference to
+their parent record but the opposite is not true. For example, if
+a Company object (record) relates to many Employee objects (records)
+you would model it like this:
+
+```yaml
+# examples/company.yml
+- object: Company
+  fields:
+    Name:
+      fake: company
+
+- object: Employee
+  nickname: Employee 1
+  fields:
+    Name:
+      fake: name
+    EmployedBy:
+      - object: Company
+
+- object: Employee
+  nickname: Employee 1
+  fields:
+    Name:
+      fake: name
+    EmployedBy:
+      - object: Company
+```
+
+Which generates:
+
+```javascript
+Company(id=1, Name=Nelson-Singleton)
+Company(id=2)
+Employee(id=1, Name=Julie Turner, EmployedBy=Company(2))
+Company(id=3)
+Employee(id=2, Name=Amanda Martin, EmployedBy=Company(3))
+```
+
+Now what if you want to generate 10 companies with 100 employees per company?
+It's actually really easy, using either the "friends" feature of Snowfakery
+OR the hidden field feature.
+
+Here's how to use the "friends" feature in this case:
+
+```yaml
+# examples/company2.yml
+- object: Company
+  count: 10
+  fields:
+    Name:
+      fake: company
+  friends:
+    - object: Employee
+      count: 100
+      nickname: Employee 1
+      fields:
+        Name:
+          fake: name
+        EmployedBy:
+          reference: Company
+```
+
+And here's how to use the "hidden fields"([#hidden-fields-and-objects]) feature:
+
+```yaml
+# examples/company3.yml
+- object: Company
+  count: 10
+  fields:
+    Name:
+      fake: company
+    __employees:
+      - object: Employee
+        count: 100
+        nickname: Employee 1
+        fields:
+          Name:
+            fake: name
+          EmployedBy:
+            reference: Company
+```
+
 ### Built-in Plugins
 
 #### Advanced Math
 
 Snowfakery has a "Math" plugin which gives you access to all features from Python's
-[math](https://docs.python.org/3/library/math.html) module. For example:
+[`math`](https://docs.python.org/3/library/math.html) module plus
+[`min`](https://docs.python.org/3/library/functions.html#min),
+[`max`](https://docs.python.org/3/library/functions.html#max) and
+[`round`](https://docs.python.org/3/library/functions.html#round).
+
+For example:
 
 ```yaml
   - plugin: snowfakery.standard_plugins.Math
   - object: OBJ
     fields:
       twelve:
-          Math.sqrt: 144
+          Math.sqrt: ${{Math.min(144, 169)}}
 ```
 
 Or:
@@ -1253,39 +1373,49 @@ parameters lazily but doesn't care about the internals of the values
 because it just returns it to some parent context. In that case,
 use `context.evaluate_raw` instead of `context.evaluate`.
 
-## Using Snowfakery within CumulusCI
+## Using Snowfakery with Salesforce
 
-You can verify that a Snowfakery-compatible version of CumulusCI is installed like this:
-
-```bash
-$ cci task info generate_and_load_from_yaml
-...
-```
-
-or
-
-```bash
-$ cci task run generate_and_load_from_yaml
-...
-```
-
-If its properly configured, you can use the built-in documentation to invoke Snowfakery options through their CumulusCI names. But for example, you would often run it like this:
-
-```bash
-$ cci task run generate_and_load_from_yaml -o generator_yaml datasets/some_snowfakery_yaml -o num_records 1000 -o num_records_tablename Account —org dev
-...
-```
-
-Options (tbd):
-
-• generator_yaml (required): A generator YAML file to use
-• num_records: How many times to instantiate the template.
-• mapping: A mapping YAML file to use (optional)
-• database_url: A path to put a copy of the sqlite database (for debugging) Default: sqlite:////tmp/test_data_2.db
-• vars: Pass values to override options in the format VAR1:foo,VAR2:bar or as a Yaml dict (in
-• generate_mapping_file: A path to put a mapping file inferred from the generator_yaml Default: /tmp/temp_mapping.yml
+Snowfakery recipes that generate Salesforce records are just like any
+other Snowfakery recipes. You use SObject names for the 'objects'.
+There are several examples [in the Snowfakery repository](https://github.com/SFDO-Tooling/Snowfakery/tree/master/examples/salesforce)
 
 To specify a record type for a record, just put the Record Type’s API Name in a field named RecordType.
+
+The process of actually generating the data into a Salesforce
+org happens through CumulusCI as described below.
+
+## Using Snowfakery within CumulusCI
+
+[CumulusCI](http://www.github.com/SFDO-Tooling/CumulusCI) is a
+tool and framework for building portable automation for
+Salesforce projects. It is created by the same team that
+creates Snowfakery.
+
+The easiest way to learn about CumulusCI (and to learn how to
+install it) is with its [Trailhead Trail](https://trailhead.salesforce.com/en/content/learn/trails/build-applications-with-cumulusci).
+
+CumulusCI's documentation [describes](https://cumulusci.readthedocs.io/en/latest/cookbook.html#large-volume-data-synthesis-with-snowfakery)
+how to use it with Snowfakery. Here is a short example:
+
+```bash
+$ cci task run generate_and_load_from_yaml -o generator_yaml examples/salesforce/Contact.recipe.yml -o num_records 300 -o num_records_tablename Contact --org qa
+...
+```
+
+You can (and more often will) use generate_and_load_from_yaml from
+within a flow captured in in a `cumulusci.yml`, like the one in
+the [Snowfakery repo](https://github.com/SFDO-Tooling/Snowfakery/tree/master/cumulusci.yml).
+
+If you have CumulusCI configured and you would like to test this,
+you can do so like this (the Snowfakery repo itself has a
+`cumulusci.yml`):
+
+```bash
+$ git clone https://github.com/SFDO-Tooling/Snowfakery.git
+$ cd Snowfakery
+$ cci task run generate_opportunities_and_contacts
+$ cci flow run test_everything
+```
 
 ## Snowfakery Glossary
 
@@ -1294,6 +1424,41 @@ To specify a record type for a record, just put the Record Type’s API Name in 
 - Rows: Rows (often also called “records”) in a database are a unit of related information. For example in Salesforce (which includes a database) a “Contact” has a first name, last name, phone number, etc. Each Contact is a row. “Contact” is the type of each of those rows. Rows represent real-world Objects. See “Objects” above for more information.
 - Recipe: A Snowfakery YAML file instructing Snowfakery on what to generate.
 - YAML: YAML is a relatively simple, human-readable format. You can learn more about it at [yaml.org](http://yaml.org/). But you can also just pick up the basics of it by reading along.
+
+## Using Snowfakery within Python
+
+You can embed Snowfakery in a Python application like this:
+
+```python
+from snowfakery import generate_data
+
+generate_data(
+    yaml_file="examples/company.yml",
+    option=[("A", "B")],
+    target_number=(20, "Employee"),
+    debug_internals=True,
+    output_format="json",
+    output_file=outfile,
+)
+```
+
+The parameters to the function closely mirror the arguments to the
+[Command Line Interface](#commmand-line-interface). Their type signatures
+are:
+
+```python
+generate_data(
+    yaml_file: Union[Path, str],
+    option: List[Tuple[str, str]] = [],
+    dburl: str = None,
+    target_number: Optional[Tuple[int, str]] = None,
+    debug_internals: bool = False,
+    output_format: str = None,
+    output_file: Path = None,
+    output_folder: Path = None,
+    continuation_file: Path = None,
+)
+```
 
 ## Internal Software Architecture
 

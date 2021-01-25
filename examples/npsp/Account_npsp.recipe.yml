@@ -1,0 +1,126 @@
+# Look at examples/salesforce/Account.recipe.yml for more examples.
+
+# Run this like this:
+
+# cci task run generate_and_load_from_yaml -o generator_yaml examples/npsp/Account_npsp.recipe.yml -o num_records 300 -o num_records_tablename Account --org qa
+
+- include_file: ../salesforce/standard_objs.recipe.yml
+- include_file: standard_npsp_objs_recipe.yml
+
+- object: Account
+  nickname: A Household
+  fields:
+    name:
+      fake: company
+    RecordType: HH_Account
+
+- object: Account
+  nickname: A Company
+  fields:
+    name:
+      fake: last_name
+    RecordType: Organization
+
+- object: Account
+  fields:
+    name:
+      fake: company
+    Description:
+      fake: catch_phrase
+    NumberOfEmployees:
+      random_number:
+        min: 0
+        max: 200000
+    npe01__SYSTEM_AccountType__c:
+      fake.text:
+        max_nb_chars: 100
+    npo02__Best_Gift_Year_Total__c:
+      random_number:
+        min: 1
+        max: 100000
+    npo02__Best_Gift_Year__c:
+      fake: year
+    npo02__FirstCloseDate__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npo02__Formal_Greeting__c:
+      fake.text:
+        max_nb_chars: 100
+    npo02__HouseholdPhone__c:
+      fake: phone_number
+    npo02__Informal_Greeting__c:
+      fake.text:
+        max_nb_chars: 100
+    npo02__LastCloseDate__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npo02__LastMembershipDate__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npo02__LastMembershipLevel__c:
+      fake.text:
+        max_nb_chars: 100
+    npo02__LastMembershipOrigin__c:
+      fake.text:
+        max_nb_chars: 100
+    npo02__MembershipEndDate__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npo02__MembershipJoinDate__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npo02__SYSTEM_CUSTOM_NAMING__c:
+      random_choice:
+        - Name
+        - Formal_Greeting__c
+        - Informal_Greeting__c
+    npsp__Funding_Focus__c:
+      random_choice:
+        - Animal Welfare
+        - Arts and Culture
+        - Capacity Building
+        - Education
+        - Environmental
+        - Health Services
+        - Human Services
+    npsp__Matching_Gift_Administrator_Name__c:
+      fake: name
+    npsp__Matching_Gift_Amount_Max__c:
+      random_number:
+        min: 1
+        max: 100000
+    npsp__Matching_Gift_Amount_Min__c:
+      random_number:
+        min: 1
+        max: 100000
+    npsp__Matching_Gift_Annual_Employee_Max__c:
+      random_number:
+        min: 1
+        max: 100000
+    npsp__Matching_Gift_Comments__c:
+      fake.text:
+        max_nb_chars: 100
+    npsp__Matching_Gift_Email__c:
+      fake: email
+    npsp__Matching_Gift_Info_Updated__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npsp__Matching_Gift_Percent__c:
+      random_number:
+        min: 1
+        max: 100
+    npsp__Matching_Gift_Phone__c:
+      fake: phone_number
+    npsp__Matching_Gift_Request_Deadline__c:
+      fake.text:
+        max_nb_chars: 100
+    npsp__Number_of_Household_Members__c:
+      random_number:
+        min: 1
+        max: 100000

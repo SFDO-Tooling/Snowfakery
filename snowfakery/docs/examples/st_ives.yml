@@ -14,17 +14,26 @@
       - object: woman
         count: 7
         fields:
+          husband: 
+            reference: man
           luggage:
             - object: sack
               count: 7
               fields:
+                holder: 
+                  reference: woman
                 contents:
                   - object: cat
                     count: 7
                     fields:
+                      container: 
+                        reference: sack
                       offspring:
                       - object: kit
                         count: 7
+                        fields:
+                          parent: 
+                            reference: cat
 - object: stats
   fields:
     num_narrators: ${{ man.id }}
