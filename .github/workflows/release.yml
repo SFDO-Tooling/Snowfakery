@@ -6,7 +6,7 @@ on:
     branches:
     - master
     paths:
-    - snowfakery/version.py
+    - snowfakery/version.txt
 
 jobs:
   publish-to-pypi:

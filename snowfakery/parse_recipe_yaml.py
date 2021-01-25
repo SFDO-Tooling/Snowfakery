@@ -1,3 +1,4 @@
+from os import fsdecode
 from numbers import Number
 from datetime import date
 from contextlib import contextmanager
@@ -8,8 +9,9 @@ from typing import IO, List, Dict, Union, Tuple, Any, Iterable, Sequence, Mappin
 import yaml
 from yaml.composer import Composer
 from yaml.constructor import SafeConstructor
+from yaml.error import YAMLError
 
-from .data_generator_runtime_dom import (
+from .data_generator_runtime_object_model import (
     ObjectTemplate,
     FieldFactory,
     SimpleValue,
@@ -17,22 +19,21 @@ from .data_generator_runtime_dom import (
     ReferenceValue,
 )
 
-from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError, DataGenError
+from snowfakery.plugins import resolve_plugin
+import snowfakery.data_gen_exceptions as exc
 
 SHARED_OBJECT = "#SHARED_OBJECT"
 
 TemplateLike = Union[ObjectTemplate, StructuredValue]
 
 ###
-#   The entry point to this is parse_factory
+#   The entry point to this is parse_recipe
 
 LineTracker = namedtuple("LineTracker", ["filename", "line_num"])
 
 
 class ParseResult:
-    def __init__(
-        self, options, tables: Mapping, templates, plugins: Sequence[str] = ()
-    ):
+    def __init__(self, options, tables: Mapping, templates, plugins: Sequence = ()):
         self.options = options
         self.tables = tables
         self.templates = templates
@@ -106,10 +107,10 @@ class ParseContext:
         self.current_parent_object = obj
         try:
             yield
-        except DataGenError:
+        except exc.DataGenError:
             raise
         except Exception as e:
-            raise DataGenSyntaxError(str(e), **self.line_num()) from e
+            raise exc.DataGenSyntaxError(str(e), **self.line_num()) from e
         finally:
             self.current_parent_object = _old_parsed_template
 
@@ -163,11 +164,11 @@ def parse_structured_value(
     """
     top_level = removeline_numbers(field).items()
     if not top_level:
-        raise DataGenSyntaxError(
+        raise exc.DataGenSyntaxError(
             f"Strange datastructure ({field})", **context.line_num(field)
         )
     elif len(top_level) > 1:
-        raise DataGenSyntaxError(
+        raise exc.DataGenSyntaxError(
             f"Extra keys for field {name} : {top_level}", **context.line_num(field)
         )
     [[function_name, args]] = top_level
@@ -193,7 +194,7 @@ def parse_field_value(
         # a mistake and we can infer their real meaning
         return parse_field_value(name, field[0], context)
     else:
-        raise DataGenSyntaxError(
+        raise exc.DataGenSyntaxError(
             f"Unknown field {type(field)} type for {name}. Should be a string or 'object': \n {field} ",
             **(context.line_num(field) or context.line_num()),
         )
@@ -211,7 +212,7 @@ def parse_field(name: str, definition, context: ParseContext) -> FieldFactory:
 def parse_fields(fields: Dict, context: ParseContext) -> List[FieldFactory]:
     with context.change_current_parent_object(fields):
         if not isinstance(fields, dict):
-            raise DataGenSyntaxError(
+            raise exc.DataGenSyntaxError(
                 "Fields should be a dictionary (should not start with -) ",
                 **context.line_num(),
             )
@@ -231,28 +232,44 @@ def parse_count_expression(yaml_sobj: Dict, sobj_def: Dict, context: ParseContex
 
 
 def include_macro(
-    name: str, context: ParseContext
+    name: str, context: ParseContext, parent_macros=()
 ) -> Tuple[List[FieldFactory], List[TemplateLike]]:
     macro = context.macros.get(name)
     if not macro:
-        raise DataGenNameError(f"Cannot find macro named {name}", **context.line_num())
+        raise exc.DataGenNameError(
+            f"Cannot find macro named {name}", **context.line_num()
+        )
     parsed_macro = parse_element(
-        macro, "macro", {}, {"fields": Dict, "friends": List}, context
+        macro, "macro", {}, {"fields": Dict, "friends": List, "include": str}, context
     )
     fields = parsed_macro.fields or {}
     friends = parsed_macro.friends or []
-    return parse_fields(fields, context), parse_friends(friends, context)
+    fields, friends = parse_fields(fields, context), parse_friends(friends, context)
+    if name in parent_macros:
+        idx = parent_macros.index(name)
+        raise exc.DataGenError(
+            f"Macro `{name}` calls `{'` which calls `'.join(parent_macros[idx+1:])}` which calls `{name}`",
+            **context.line_num(macro),
+        )
+    parse_inclusions(macro, fields, friends, context, parent_macros + (name,))
+    return fields, friends
 
 
 def parse_inclusions(
-    yaml_sobj: Dict, fields: List, friends: List, context: ParseContext
+    yaml_sobj: Dict,
+    fields: List,
+    friends: List,
+    context: ParseContext,
+    parent_macros=(),
 ) -> None:
     inclusions: Iterable[str] = [
         x.strip() for x in yaml_sobj.get("include", "").split(",")
     ]
     inclusions = filter(None, inclusions)
     for inclusion in inclusions:
-        include_fields, include_friends = include_macro(inclusion, context)
+        include_fields, include_friends = include_macro(
+            inclusion, context, parent_macros
+        )
         fields.extend(include_fields)
         friends.extend(include_friends)
 
@@ -366,11 +383,13 @@ def parse_element(
         for key in dct:
             key_definition = expected_keys.get(key)
             if not key_definition:
-                raise DataGenError(f"Unexpected key: {key}", **context.line_num(key))
+                raise exc.DataGenError(
+                    f"Unexpected key: {key}", **context.line_num(key)
+                )
             else:
                 value = dct[key]
                 if not isinstance(value, key_definition):
-                    raise DataGenError(
+                    raise exc.DataGenError(
                         f"Expected `{key}` to be of type {key_definition} instead of {type(value)}.",
                         **context.line_num(dct),
                     )
@@ -379,7 +398,7 @@ def parse_element(
 
         missing_keys = set(mandatory_keys) - set(dct.keys())
         if missing_keys:
-            raise DataGenError(
+            raise exc.DataGenError(
                 f"Expected to see `{missing_keys}` in `{element_type}``.",
                 **context.line_num(dct),
             )
@@ -408,7 +427,7 @@ def parse_included_file(
     inclusion_path = parent_path.parent / relpath
     # someday add a check that we don't go outside of the project dir
     if not inclusion_path.exists():
-        raise DataGenError(
+        raise exc.DataGenError(
             f"Cannot load include file {inclusion_path}", **linenum._asdict()
         )
     with inclusion_path.open() as f:
@@ -437,7 +456,7 @@ def categorize_top_level_objects(data: List, context: ParseContext):
     assert isinstance(data, list)
     for obj in data:
         if not isinstance(obj, dict):
-            raise DataGenSyntaxError(
+            raise exc.DataGenSyntaxError(
                 f"Top level elements in a data generation template should all be dictionaries, not {obj}",
                 **context.line_num(data),
             )
@@ -445,7 +464,7 @@ def categorize_top_level_objects(data: List, context: ParseContext):
         for collection in top_level_collections:
             if obj.get(collection):
                 if parent_collection:
-                    raise DataGenError(
+                    raise exc.DataGenError(
                         f"Top level element seems to match two name patterns: {collection, parent_collection}",
                         **context.line_num(obj),
                     )
@@ -453,7 +472,9 @@ def categorize_top_level_objects(data: List, context: ParseContext):
         if parent_collection:
             top_level_collections[parent_collection].append(obj)
         else:
-            raise DataGenError(f"Unknown object type {obj}", **context.line_num(obj))
+            raise exc.DataGenError(
+                f"Unknown object type {obj}", **context.line_num(obj)
+            )
     return top_level_collections
 
 
@@ -463,7 +484,12 @@ def parse_top_level_elements(path: Path, data: List, context: ParseContext):
     templates.extend(parse_included_files(path, data, context))
     context.options.extend(top_level_objects["option"])
     context.macros.update({obj["macro"]: obj for obj in top_level_objects["macro"]})
-    context.plugins.extend([obj["plugin"] for obj in top_level_objects["plugin"]])
+    context.plugins.extend(
+        [
+            resolve_plugin(obj["plugin"], obj["__line__"])
+            for obj in top_level_objects["plugin"]
+        ]
+    )
     templates.extend(top_level_objects["object"])
     return templates
 
@@ -471,14 +497,21 @@ def parse_top_level_elements(path: Path, data: List, context: ParseContext):
 def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
     stream_name = getattr(stream, "name", None)
     if stream_name:
-        path = Path(stream.name).absolute()
+        path = Path(fsdecode(stream.name)).absolute()
     else:
         path = Path("<stream>")
-    data, line_numbers = yaml_safe_load_with_line_numbers(stream, str(path))
+    try:
+        data, line_numbers = yaml_safe_load_with_line_numbers(stream, str(path))
+    except YAMLError as y:
+        raise exc.DataGenYamlSyntaxError(
+            str(y),
+            str(path),
+            y.problem_mark.line + 1,
+        )
     context.line_numbers.update(line_numbers)
 
     if not isinstance(data, list):
-        raise DataGenSyntaxError(
+        raise exc.DataGenSyntaxError(
             "Generator file should be a list (use '-' on top-level lines)",
             stream_name,
             1,
@@ -489,7 +522,7 @@ def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
     return templates
 
 
-def parse_factory(stream: IO[str]) -> ParseResult:
+def parse_recipe(stream: IO[str]) -> ParseResult:
     context = ParseContext()
     objects = parse_file(stream, context)
     templates = parse_object_template_list(objects, context)

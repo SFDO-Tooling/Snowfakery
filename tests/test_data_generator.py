@@ -56,16 +56,12 @@ class TestDataGenerator(unittest.TestCase):
             """
 
         continuation_yaml = """
-!snowfakery_globals
-id_manager: !snowfakery_ids
+id_manager:
   last_used_ids:
     foo: 41
     bar: 1000
-last_seen_obj_of_type:
-  foo:
-    id: 41
-  bar:
-    id: 1000
+nicknames_and_tables: {}
+today: 2022-11-03
                 """
         generate(
             StringIO(yaml),

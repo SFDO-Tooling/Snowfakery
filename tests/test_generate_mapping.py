@@ -4,8 +4,8 @@ from io import StringIO
 import pytest
 
 from snowfakery.data_generator import generate
-from snowfakery.generate_mapping_from_factory import (
-    mapping_from_factory_templates,
+from snowfakery.generate_mapping_from_recipe import (
+    mapping_from_recipe_templates,
     build_dependencies,
     _table_is_free,
 )
@@ -22,7 +22,7 @@ class TestGenerateMapping(unittest.TestCase):
                   - object: Child
               """
         summary = generate(StringIO(yaml), {}, None)
-        mapping = mapping_from_factory_templates(summary)
+        mapping = mapping_from_recipe_templates(summary)
         assert len(mapping) == 2
         assert "Insert Parent" in mapping
         assert "Insert Child" in mapping
@@ -43,7 +43,7 @@ class TestGenerateMapping(unittest.TestCase):
                           Parent
               """
         summary = generate(StringIO(yaml), {}, None)
-        mapping = mapping_from_factory_templates(summary)
+        mapping = mapping_from_recipe_templates(summary)
         assert len(mapping) == 2
         assert "Insert Parent" in mapping
         assert "Insert Child" in mapping
@@ -64,7 +64,7 @@ class TestGenerateMapping(unittest.TestCase):
                     bubba
               """
         summary = generate(StringIO(yaml), {}, None)
-        mapping = mapping_from_factory_templates(summary)
+        mapping = mapping_from_recipe_templates(summary)
         assert len(mapping) == 2
         assert "Insert Target" in mapping
         assert "Insert Referrer" in mapping
@@ -73,7 +73,7 @@ class TestGenerateMapping(unittest.TestCase):
         assert mapping["Insert Referrer"]["fields"] == {"food": "food"}
         assert mapping["Insert Referrer"]["lookups"]["shrimpguy"]["table"] == "Target"
 
-    def test_forward_reference(self):
+    def test_forward_reference__nickname(self):
         yaml = """
             - object: A
               nickname: alpha
@@ -88,8 +88,9 @@ class TestGenerateMapping(unittest.TestCase):
                   reference:
                     alpha
               """
-        with self.assertRaises(DataGenError):
-            generate(StringIO(yaml), {}, None)
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+        assert mapping
 
     def test_circular_table_reference(self):
         yaml = """
@@ -104,7 +105,7 @@ class TestGenerateMapping(unittest.TestCase):
               """
         summary = generate(StringIO(yaml), {}, None)
         with pytest.warns(UserWarning, match="Circular"):
-            mapping_from_factory_templates(summary)
+            mapping_from_recipe_templates(summary)
 
     def test_cats_and_dogs(self):
         yaml = """
@@ -126,7 +127,7 @@ class TestGenerateMapping(unittest.TestCase):
                                 reference: CatFood
 """
         summary = generate(StringIO(yaml), {}, None)
-        mapping = mapping_from_factory_templates(summary)
+        mapping = mapping_from_recipe_templates(summary)
         assert len(mapping) == 3
         assert "Insert Person" in mapping
         assert "Insert PetFood" in mapping
@@ -164,7 +165,7 @@ class TestGenerateMapping(unittest.TestCase):
 """
         summary = generate(StringIO(yaml), {}, None)
         with pytest.warns(UserWarning, match="Circular"):
-            mapping_from_factory_templates(summary)
+            mapping_from_recipe_templates(summary)
 
 
 class TestBuildDependencies(unittest.TestCase):
@@ -236,7 +237,7 @@ class TestRecordTypes:
                 RecordType: Bar
               """
         summary = generate(StringIO(yaml), {}, None)
-        mapping = mapping_from_factory_templates(summary)
+        mapping = mapping_from_recipe_templates(summary)
 
         assert mapping["Insert Bar"]["filters"][0] == "RecordType = 'Bar'"
         assert mapping["Insert Obj"]["filters"][0] == "RecordType is NULL"
@@ -249,7 +250,7 @@ class TestRecordTypes:
               """
         summary = generate(StringIO(yaml), {}, None)
         with pytest.raises(DataGenError):
-            mapping_from_factory_templates(summary)
+            mapping_from_recipe_templates(summary)
 
         yaml = """
             - object: Obj
@@ -258,7 +259,7 @@ class TestRecordTypes:
               """
         summary = generate(StringIO(yaml), {}, None)
         with pytest.raises(DataGenError):
-            mapping_from_factory_templates(summary)
+            mapping_from_recipe_templates(summary)
 
     def test_recordtypes_and_lookups(self):
         yaml = """
@@ -269,6 +270,6 @@ class TestRecordTypes:
                 - object: Child
               """
         summary = generate(StringIO(yaml), {}, None)
-        mapping = mapping_from_factory_templates(summary)
+        mapping = mapping_from_recipe_templates(summary)
 
         assert mapping["Insert Bar"]["lookups"]["child"]["key_field"] == "child"

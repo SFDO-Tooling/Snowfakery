@@ -1,26 +1,24 @@
 import warnings
 from typing import IO, Tuple, Mapping, List, Dict, TextIO, Union
-from importlib import import_module
+
+import yaml
+from faker.providers import BaseProvider as FakerProvider
 from click.utils import LazyFile
 
-from yaml import safe_dump, safe_load
-from faker.providers import BaseProvider as FakerProvider
-
 from .data_gen_exceptions import DataGenNameError
-from .output_streams import (
-    DebugOutputStream,
-    OutputStream,
-)
-from .parse_factory_yaml import parse_factory
+from .output_streams import DebugOutputStream, OutputStream
+from .parse_recipe_yaml import parse_recipe
 from .data_generator_runtime import output_batches, StoppingCriteria, Globals
+from .data_gen_exceptions import DataGenError
 from . import SnowfakeryPlugin
+from .utils.yaml_utils import SnowfakeryDumper, hydrate
 
 
 # This tool is essentially a three stage interpreter.
 #
 # 1. Yaml parsing into Python data structures.
 # 2. Walking the tree, sorting things into groups like macros, file inclusions,
-#    etc., and doing the file inclusions (parse_factory_yaml.parse_factory)
+#    etc., and doing the file inclusions (parse_recipe_yaml.parse_recipe)
 # 2 a) merge options informtion from the parse with options from the
 #      environment
 # 3. Generating the objects top to bottom (including evaluating Jinja) in
@@ -28,6 +26,9 @@ from . import SnowfakeryPlugin
 #
 # The function generate at the bottom of this file is the entry point to all
 # of it.
+
+
+FileLike = Union[TextIO, LazyFile]
 
 
 class ExecutionSummary:
@@ -76,41 +77,32 @@ def merge_options(option_definitions: List, user_options: Mapping) -> Tuple[Dict
     return options, extra_options
 
 
-def load_continuation_yaml(continuation_file: TextIO):
+def load_continuation_yaml(continuation_file: FileLike):
     """Load a continuation file from YAML."""
-    return safe_load(continuation_file)
+    return hydrate(Globals, yaml.safe_load(continuation_file))
 
 
-def save_continuation_yaml(continuation_data: Globals, continuation_file: TextIO):
-    safe_dump(continuation_data, continuation_file)
+def save_continuation_yaml(continuation_data: Globals, continuation_file: FileLike):
+    """Save the global interpreter state from Globals into a continuation_file"""
+    yaml.dump(
+        continuation_data.__getstate__(),
+        continuation_file,
+        Dumper=SnowfakeryDumper,
+    )
 
 
-def resolve_plugin(plugin: str) -> object:
-    "Resolve a plugin to a class"
-    module_name, class_name = plugin.rsplit(".", 1)
-    module = import_module(module_name)
-    cls = getattr(module, class_name)
-    if issubclass(cls, FakerProvider):
-        return (FakerProvider, cls)
-    elif issubclass(cls, SnowfakeryPlugin):
-        return (SnowfakeryPlugin, cls)
-    else:
-        raise TypeError(f"{cls} is not a Faker Provider nor Snowfakery Plugin")
-
-
-def process_plugins(plugins: List[str]) -> Tuple[List[object], Mapping[str, object]]:
+def process_plugins(plugins: List) -> Tuple[List[object], Mapping[str, object]]:
     """Resolve a list of names for SnowfakeryPlugins and Faker Providers to objects
 
     The Providers are returned as a list of objects.
     The Plugins are a mapping of ClassName:object so they can be namespaced.
     """
-    plugin_classes = [resolve_plugin(plugin) for plugin in plugins]
     faker_providers = [
-        provider for baseclass, provider in plugin_classes if baseclass == FakerProvider
+        provider for baseclass, provider in plugins if baseclass == FakerProvider
     ]
     snowfakery_plugins = {
         plugin.__name__: plugin
-        for baseclass, plugin in plugin_classes
+        for baseclass, plugin in plugins
         if baseclass == SnowfakeryPlugin
     }
     return (faker_providers, snowfakery_plugins)
@@ -121,7 +113,7 @@ def generate(
     user_options: dict = None,
     output_stream: OutputStream = None,
     stopping_criteria: StoppingCriteria = None,
-    generate_continuation_file: Union[TextIO, LazyFile] = None,
+    generate_continuation_file: FileLike = None,
     continuation_file: TextIO = None,
 ) -> ExecutionSummary:
     """The main entry point to the package for Python applications."""
@@ -131,7 +123,7 @@ def generate(
     output_stream = output_stream or DebugOutputStream()
 
     # parse the YAML and any it refers to
-    parse_result = parse_factory(open_yaml_file)
+    parse_result = parse_recipe(open_yaml_file)
 
     # figure out how it relates to CLI-supplied generation variables
     options, extra_options = merge_options(parse_result.options, user_options)
@@ -147,20 +139,27 @@ def generate(
 
     faker_providers, snowfakery_plugins = process_plugins(parse_result.plugins)
 
-    # now do the output
-    runtime_context = output_batches(
-        output_stream,
-        parse_result.templates,
-        options,
-        stopping_criteria=stopping_criteria,
-        continuation_data=continuation_data,
-        tables=parse_result.tables,
-        snowfakery_plugins=snowfakery_plugins,
-        faker_providers=faker_providers,
-    )
+    try:
+        # now do the output
+        runtime_context = output_batches(
+            output_stream,
+            parse_result.templates,
+            options,
+            stopping_criteria=stopping_criteria,
+            continuation_data=continuation_data,
+            tables=parse_result.tables,
+            snowfakery_plugins=snowfakery_plugins,
+            faker_providers=faker_providers,
+        )
+    except DataGenError as e:
+        if e.filename:
+            raise
+        else:
+            e.filename = getattr(open_yaml_file, "name", None)
+            raise
 
     if generate_continuation_file:
-        safe_dump(runtime_context, generate_continuation_file)
+        save_continuation_yaml(runtime_context, generate_continuation_file)
 
     return ExecutionSummary(parse_result, runtime_context)
 

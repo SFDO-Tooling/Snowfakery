@@ -7,21 +7,21 @@ from jinja2 import Template
 
 
 class StringGenerator:
-    """ Sometimes in templates you want a reference to a variable to
-        call a function.
+    """Sometimes in templates you want a reference to a variable to
+    call a function.
 
-        For example:
+    For example:
 
-        >>> x = template_utils.StringGenerator(datetime.today().isoformat)
-        >>> print(f"{x}")
-        2019-09-23T11:49:01.994453
+    >>> x = template_utils.StringGenerator(datetime.today().isoformat)
+    >>> print(f"{x}")
+    2019-09-23T11:49:01.994453
 
-        >>> x = template_utils.StringGenerator(lambda:str(random.random()))
-        >>> print(f"{x}")
-        0.795273959965055
-        >>> print(f"{x}")
-        0.053061903749985206
-         """
+    >>> x = template_utils.StringGenerator(lambda:str(random.random()))
+    >>> print(f"{x}")
+    0.795273959965055
+    >>> print(f"{x}")
+    0.053061903749985206
+    """
 
     def __init__(self, func):
         self.func = func
@@ -32,13 +32,19 @@ class StringGenerator:
     def __call__(self, *args, **kwargs):
         return self.func(*args, **kwargs)
 
+    def __add__(self, other):
+        return str(self) + str(other)
+
+    def __radd__(self, other):
+        return str(other) + str(self)
+
 
 class FakerTemplateLibrary:
     """A Jinja template library to add the faker.xyz objects to templates"""
 
     def __init__(self, faker_providers: Sequence[object], locale=None):
         self.locale = locale
-        self.faker = Faker(self.locale)
+        self.faker = Faker(self.locale, use_weighting=False)
         for provider in faker_providers:
             self.faker.add_provider(provider)
 
@@ -62,7 +68,12 @@ def look_for_number(arg):
         if char not in number_chars:
             return arg
         if char == ".":
-            looks_like_float = True
+            if looks_like_float:
+                # we already saw a ".", so this string must be
+                # of the form ###.###.### like a euro-phone #
+                return arg
+            else:
+                looks_like_float = True
     if looks_like_float:
         return float(arg)
     else:

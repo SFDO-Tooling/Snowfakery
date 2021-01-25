@@ -11,8 +11,8 @@ structured_values_with_templates = """  #1
     A: 5                                 #5
     B:                                  #5
      random_number:                      #6
-       min: <<this.A - 3>>                      #7
-       max: <<this.A + 3>>                      #7
+       min: ${{this.A - 3}}                      #7
+       max: ${{this.A + 3}}                      #7
 """
 
 

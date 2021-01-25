@@ -1,8 +1,17 @@
 from io import StringIO
 import math
+import operator
 
 from snowfakery.data_generator import generate
 from snowfakery import SnowfakeryPlugin, lazy
+from snowfakery.plugins import PluginResult
+from snowfakery.data_gen_exceptions import (
+    DataGenError,
+    DataGenTypeError,
+    DataGenImportError,
+)
+from snowfakery.output_streams import JSONOutputStream
+
 
 from unittest import mock
 import pytest
@@ -30,6 +39,45 @@ class DoubleVisionPlugin(SnowfakeryPlugin):
             return rc
 
 
+class WrongTypePlugin(SnowfakeryPlugin):
+    class Functions:
+        def return_bad_type(self, value):
+            "Evaluates its argument twice into a string"
+            return int  # function
+
+
+class MyEvaluator(PluginResult):
+    def __init__(self, operator, *operands):
+        super().__init__({"operator": operator, "operands": operands})
+
+    def _eval(self):
+        op = getattr(operator, self.result["operator"])
+        vals = self.result["operands"]
+        rc = op(*vals)
+        return self.result.setdefault("value", str(rc))
+
+    def __str__(self):
+        return str(self._eval())
+
+    def simplify(self):
+        return int(self._eval())
+
+
+class EvalPlugin(SnowfakeryPlugin):
+    class Functions:
+        @lazy
+        def add(self, val1, val2):
+            return MyEvaluator(
+                "add", self.context.evaluate(val1), self.context.evaluate(val2)
+            )
+
+        @lazy
+        def sub(self, val1, val2):
+            return MyEvaluator(
+                "sub", self.context.evaluate(val1), self.context.evaluate(val2)
+            )
+
+
 class TestCustomFakerProvider:
     @mock.patch(write_row_path)
     def test_custom_faker_provider(self, write_row_mock):
@@ -53,9 +101,10 @@ class TestCustomPlugin:
           fields:
             service_name: saascrmlightning
         """
-        with pytest.raises(TypeError) as e:
+        with pytest.raises(DataGenTypeError) as e:
             generate(StringIO(yaml), {})
         assert "TestCustomPlugin" in str(e.value)
+        assert ":2" in str(e.value)
 
     def test_missing_plugin(self):
         yaml = """
@@ -64,7 +113,7 @@ class TestCustomPlugin:
           fields:
             service_name: saascrmlightning
         """
-        with pytest.raises(ImportError) as e:
+        with pytest.raises(DataGenImportError) as e:
             generate(StringIO(yaml), {})
         assert "xyzzy" in str(e.value)
 
@@ -76,7 +125,7 @@ class TestCustomPlugin:
           fields:
             four:
                 SimpleTestPlugin.double: 2
-            six: <<SimpleTestPlugin.double(3)>>
+            six: ${{SimpleTestPlugin.double(3)}}
         """
         generate(StringIO(yaml), {})
         assert row_values(write_row_mock, 0, "four") == 4
@@ -88,7 +137,7 @@ class TestCustomPlugin:
         - plugin: snowfakery.standard_plugins.Math
         - object: OBJ
           fields:
-            pi: <<Math.pi>>
+            pi: ${{Math.pi}}
         """
         generate(StringIO(yaml), {})
         assert row_values(write_row_mock, 0, "pi") == math.pi
@@ -99,10 +148,16 @@ class TestCustomPlugin:
         - plugin: snowfakery.standard_plugins.Math
         - object: OBJ
           fields:
-            twelve: <<Math.sqrt(144)>>
+            sqrt: ${{Math.sqrt(144)}}
+            max: ${{Math.max(144, 200, 100)}}
+            eleven: ${{Math.round(10.7)}}
+            min: ${{Math.min(144, 200, 100)}}
         """
         generate(StringIO(yaml), {})
-        assert row_values(write_row_mock, 0, "twelve") == 12
+        assert row_values(write_row_mock, 0, "sqrt") == 12
+        assert row_values(write_row_mock, 0, "max") == 200
+        assert row_values(write_row_mock, 0, "eleven") == 11
+        assert row_values(write_row_mock, 0, "min") == 100
 
     @mock.patch(write_row_path)
     def test_math_deconstructed(self, write_row_mock):
@@ -111,10 +166,29 @@ class TestCustomPlugin:
         - object: OBJ
           fields:
             twelve:
-                Math.sqrt: 144
+                Math.sqrt: ${{Math.min(144, 169)}}
         """
         generate(StringIO(yaml), {})
         assert row_values(write_row_mock, 0, "twelve") == 12
+
+    @mock.patch(write_row_path)
+    def test_stringification(self, write_row):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.EvalPlugin
+        - object: OBJ
+          fields:
+            some_value:
+                - EvalPlugin.add:
+                    - 1
+                    - EvalPlugin.sub:
+                        - 5
+                        - 3
+        """
+        with StringIO() as s:
+            output_stream = JSONOutputStream(s)
+            generate(StringIO(yaml), {}, output_stream)
+            output_stream.close()
+            assert eval(s.getvalue())[0]["some_value"] == 3
 
 
 class PluginThatNeedsState(SnowfakeryPlugin):
@@ -143,21 +217,21 @@ class TestContextVars:
         - object: OBJ
           fields:
             name: OBJ1
-            path: <<PluginThatNeedsState.object_path()>>
+            path: ${{PluginThatNeedsState.object_path()}}
             child:
                 - object: OBJ
                   fields:
                     name: OBJ2
-                    path: <<PluginThatNeedsState.object_path()>>
+                    path: ${{PluginThatNeedsState.object_path()}}
         - object: OBJ
           fields:
             name: OBJ3
-            path: <<PluginThatNeedsState.object_path()>>
+            path: ${{PluginThatNeedsState.object_path()}}
             child:
                 - object: OBJ
                   fields:
                     name: OBJ4
-                    path: <<PluginThatNeedsState.object_path()>>
+                    path: ${{PluginThatNeedsState.object_path()}}
         """
         generate(StringIO(yaml), {})
 
@@ -178,9 +252,21 @@ class TestContextVars:
                     - abc
             some_value_2:
                 - DoubleVisionPlugin.do_it_twice:
-                    - <<PluginThatNeedsState.count()>>
+                    - ${{PluginThatNeedsState.count()}}
         """
         generate(StringIO(yaml), {})
 
         assert row_values(write_row, 0, "some_value") == "abc : abc"
         assert row_values(write_row, 0, "some_value_2") == "1 : 2"
+
+    def test_weird_types(self):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.WrongTypePlugin  # 2
+        - object: B                             #3
+          fields:                               #4
+            foo:                                #5
+                WrongTypePlugin.return_bad_type: 5  #6
+        """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert 6 > e.value.line_num >= 3

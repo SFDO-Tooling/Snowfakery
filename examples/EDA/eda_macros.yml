@@ -1,0 +1,744 @@
+# Account, Contact, Opportunity, etcs.
+- include_file: ../salesforce/standard_objs.recipe.yml
+
+- macro: incl_hed__Address__c
+  fields:
+    hed__Geolocation__Latitude__s:
+      fake: latitude
+    hed__Geolocation__Longitude__s:
+      fake: longitude
+    hed__Latest_End_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Latest_Start_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__MailingCity__c:
+      fake: city
+    hed__MailingCountry__c:
+      fake: country
+    hed__MailingCounty__c:
+      fake.text:
+        max_nb_chars: 80
+    hed__MailingPostalCode__c:
+      fake: postalcode
+    hed__MailingState__c:
+      fake: state
+    hed__MailingStreet2__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__MailingStreet__c:
+      fake: street_address
+    __hed__Parent_Account__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Account']"
+    __hed__Parent_Contact__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Contact']"
+    hed__Seasonal_End_Day__c:
+      random_choice:
+        - "1"
+        - "2"
+        - "3"
+        - "4"
+        - "5"
+        - "6"
+        - "7"
+        - "8"
+        - "9"
+        - "10"
+        - "11"
+        - "12"
+        - "13"
+        - "14"
+        - "15"
+        - "16"
+        - "17"
+        - "18"
+        - "19"
+        - "20"
+        - "21"
+        - "22"
+        - "23"
+        - "24"
+        - "25"
+        - "26"
+        - "27"
+        - "28"
+        - "29"
+        - "30"
+        - "31"
+    hed__Seasonal_End_Month__c:
+      random_choice:
+        - "1"
+        - "2"
+        - "3"
+        - "4"
+        - "5"
+        - "6"
+        - "7"
+        - "8"
+        - "9"
+        - "10"
+        - "11"
+        - "12"
+    hed__Seasonal_End_Year__c:
+      random_number:
+        min: 1
+        max: 10000
+    hed__Seasonal_Start_Day__c:
+      random_choice:
+        - "1"
+        - "2"
+        - "3"
+        - "4"
+        - "5"
+        - "6"
+        - "7"
+        - "8"
+        - "9"
+        - "10"
+        - "11"
+        - "12"
+        - "13"
+        - "14"
+        - "15"
+        - "16"
+        - "17"
+        - "18"
+        - "19"
+        - "20"
+        - "21"
+        - "22"
+        - "23"
+        - "24"
+        - "25"
+        - "26"
+        - "27"
+        - "28"
+        - "29"
+        - "30"
+        - "31"
+    hed__Seasonal_Start_Month__c:
+      random_choice:
+        - "1"
+        - "2"
+        - "3"
+        - "4"
+        - "5"
+        - "6"
+        - "7"
+        - "8"
+        - "9"
+        - "10"
+        - "11"
+        - "12"
+    hed__Seasonal_Start_Year__c:
+      random_number:
+        min: 1
+        max: 10000
+- macro: incl_hed__Affiliation__c
+  fields:
+    __hed__Account__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Account']"
+    __hed__Contact__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Contact']"
+    hed__Description__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__EndDate__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Role__c:
+      random_choice:
+        - Student
+        - Prospect
+        - Applicant
+        - Faculty
+        - Employee
+    hed__StartDate__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    Related_Opportunity_Contact_Role__c:
+      random_choice:
+        - Soft Credit
+        - Solicitor
+- macro: incl_hed__Affl_Mappings__c
+  fields:
+    Name:
+      fake: name
+    __SetupOwnerId__disabled:
+      "OPTIONAL REFERENCE SKIPPED: ['Organization', 'Profile',
+      'User']"
+    hed__Account_Record_Type__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Auto_Program_Enrollment_Role__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Auto_Program_Enrollment_Status__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Primary_Affl_Field__c:
+      fake.text:
+        max_nb_chars: 100
+- macro: incl_hed__Application__c
+  fields:
+    hed__Applicant_Decision_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    __hed__Applicant__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Contact']"
+    hed__Application_Date__c: <<fake.date>>T<<fake.time>>Z
+    hed__Application_Decision_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Application_Status__c:
+      random_choice:
+        - Submitted
+        - Incomplete
+        - Received
+        - In Review
+        - Waitlist
+        - Admit
+        - Admit with Conditions
+        - Deny
+        - Deferred Offer
+        - Accepted Offer
+        - Declined Offer
+    hed__Application_Type__c:
+      random_choice:
+        - Graduate
+        - Transfer
+        - Undergraduate
+    __hed__Applying_To__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Account']"
+    __hed__Preparer__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Contact']"
+    __hed__Term__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Term__c']"
+- macro: incl_hed__Attendance_Event__c
+  fields:
+    hed__Arrival_Time__c:
+      fake: time
+    hed__Attendance_Type__c:
+      random_choice:
+        - Class Absence
+        - Class Tardy
+        - Day Absence
+        - Day Tardy
+    __hed__Contact__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Contact']"
+    __hed__Course_Connection__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Course_Enrollment__c']"
+    hed__Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__End_Time__c:
+      fake: time
+    hed__Reason_Description__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Reason__c:
+      random_choice:
+        - Family
+        - Medical
+        - Other
+        - Religious
+    hed__Start_Time__c:
+      fake: time
+- macro: incl_hed__Attribute__c
+  fields:
+    Name:
+      fake: name
+    __RecordTypeId__disabled: "OPTIONAL REFERENCE SKIPPED: ['RecordType']"
+    __hed__Agency__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Account']"
+    hed__Attribute_Type__c:
+      random_choice:
+        - Certification
+        - Endorsement
+        - Licensure
+        - Accommodation
+        - Asylee
+        - Economically Disadvantaged
+        - English Learners
+        - Family Consideration
+        - Foster Care
+        - Free Lunch
+        - Homeless
+        - Immigrant
+        - International Student
+        - Other
+        - Parent in Military
+        - Pregnant
+        - Reduced Price Lunch
+        - Refugee
+        - Section 504 Handicapped
+    __hed__Contact__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Contact']"
+    hed__Description__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__End_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Start_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Subject_Area__c:
+      random_choice:
+        - Biology
+        - Career and Technical Education
+        - Economics
+        - English Language Arts
+        - Fine and Performing Arts
+        - Foreign Language
+        - History
+        - Life and Physical Sciences
+        - Mathematics
+        - Other
+        - Physical, Health, and Safety Education
+        - Physics
+        - Psychology
+        - Science
+        - Social Studies
+        - Sociology
+- macro: incl_hed__Behavior_Involvement__c
+  fields:
+    __hed__Case__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Case']"
+    __hed__Contact__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Contact']"
+    hed__Description__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Role__c:
+      random_choice:
+        - Perpetrator
+        - Reporter
+        - Victim
+        - Witness
+        - Other
+- macro: incl_hed__Behavior_Response__c
+  fields:
+    __hed__Behavior_Involvement__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Behavior_Involvement__c']"
+    hed__Description__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__End_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Start_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Status__c:
+      random_choice:
+        - Completed
+        - In Progress
+        - Postponed
+        - Other
+    hed__Type__c:
+      random_choice:
+        - Academic Probation
+        - Expulsion
+        - Other
+- macro: incl_hed__Contact_Language__c
+  fields:
+    hed__Contact__c:
+      reference: Contact
+    hed__Fluency__c:
+      random_choice:
+        - Fluent
+        - Intermediate
+        - Beginner
+    hed__Language_Details__c:
+      fake.text:
+        max_nb_chars: 100
+    __hed__Language__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Language__c']"
+- macro: incl_hed__Course_Enrollment__c
+  fields:
+    __RecordTypeId__disabled: "OPTIONAL REFERENCE SKIPPED: ['RecordType']"
+    __hed__Account__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Account']"
+    __hed__Affiliation__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Affiliation__c']"
+    __hed__Contact__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Contact']"
+    __hed__Course_Offering__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Course_Offering__c']"
+    hed__Credits_Attempted__c:
+      random_number:
+        min: 1
+        max: 1000
+    hed__Credits_Earned__c:
+      random_number:
+        min: 1
+        max: 1000
+    hed__Grade__c:
+      random_number:
+        min: 1
+        max: 10000
+    __hed__Program_Enrollment__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Program_Enrollment__c']"
+- macro: incl_hed__Course_Offering_Schedule__c
+  fields:
+    __hed__Course_Offering__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Course_Offering__c']"
+    hed__End_Time__c:
+      fake: time
+    __hed__Facility__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Facility__c']"
+    hed__Start_Time__c:
+      fake: time
+    __hed__Time_Block__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Time_Block__c']"
+- macro: incl_hed__Course_Offering__c
+  fields:
+    Name:
+      fake.text:
+        max_nb_chars: 80
+    hed__Course__c:
+      reference:
+        - object: hed__Course__c
+          include: incl_hed__Course__c
+          fields: {}
+    hed__Term__c:
+      reference:
+        - object: hed__Term__c
+          include: incl_hed__Term__c
+          fields: {}
+    hed__Capacity__c:
+      random_number:
+        min: 1
+        max: 1000000000000000000
+    hed__End_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    __hed__Facility__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Facility__c']"
+    __hed__Faculty__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Contact']"
+    hed__Section_ID__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Start_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    __hed__Time_Block__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Time_Block__c']"
+- macro: incl_hed__Course__c
+  fields:
+    Name:
+      fake: name
+    hed__Account__c:
+      reference: Account
+    hed__Course_ID__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Credit_Hours__c:
+      random_number:
+        min: 1
+        max: 1000
+    hed__Description__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Extended_Description__c:
+      fake.text:
+        max_nb_chars: 100
+- macro: incl_hed__Facility__c
+  fields:
+    Name:
+      fake: name
+    __hed__Account__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Account']"
+    hed__Capacity__c:
+      random_number:
+        min: 1
+        max: 1000000000000000000
+    hed__Description__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Facility_Type__c:
+      random_choice:
+        - Building
+        - Cafeteria/Food Hall
+        - Classroom
+        - Computer Lab
+        - Gymnasium
+        - Health Center
+        - Laboratory
+        - Lecture Hall
+        - Library
+    __hed__Parent_Facility__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Facility__c']"
+- macro: incl_hed__Language__c
+  fields:
+    Name:
+      fake: name
+- macro: incl_hed__Plan_Requirement__c
+  fields:
+    Name:
+      fake: name
+    hed__Category__c:
+      random_choice:
+        - Required
+        - Optional
+    __hed__Course__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Course__c']"
+    hed__Credits__c:
+      random_number:
+        min: 1
+        max: 1000
+    hed__Description__c:
+      fake.text:
+        max_nb_chars: 100
+    __hed__Plan_Requirement__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Plan_Requirement__c']"
+    __hed__Program_Plan__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Program_Plan__c']"
+    hed__Sequence__c:
+      random_number:
+        min: 1
+        max: 10
+- macro: incl_hed__Program_Enrollment__c
+  fields:
+    __hed__Account__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Account']"
+    hed__Admission_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    __hed__Affiliation__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Affiliation__c']"
+    hed__Application_Submitted_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Class_Standing__c:
+      random_choice:
+        - Freshman
+        - Sophomore
+        - Junior
+        - Senior
+    __hed__Contact__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Contact']"
+    hed__Credits_Attempted__c:
+      random_number:
+        min: 1
+        max: 1000
+    hed__Credits_Earned__c:
+      random_number:
+        min: 1
+        max: 1000
+    hed__End_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Enrollment_Status__c:
+      random_choice:
+        - Full-time
+        - Half-time
+        - Less than half-time
+    hed__GPA__c:
+      random_number:
+        min: 1
+        max: 10
+    hed__Graduation_Year__c:
+      fake: year
+    __hed__Program_Plan__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Program_Plan__c']"
+    hed__Start_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+- macro: incl_hed__Program_Plan__c
+  fields:
+    Name:
+      fake: name
+    __hed__Account__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Account']"
+    hed__Description__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__End_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Start_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Total_Required_Credits__c:
+      random_number:
+        min: 1
+        max: 1000
+    hed__Version__c:
+      fake.text:
+        max_nb_chars: 25
+- macro: incl_hed__Relationship_Auto_Create__c
+  fields:
+    Name:
+      fake: name
+    __SetupOwnerId__disabled:
+      "OPTIONAL REFERENCE SKIPPED: ['Organization', 'Profile',
+      'User']"
+    hed__Campaign_Types__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Field__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Object__c:
+      fake.text:
+        max_nb_chars: 50
+    hed__Relationship_Type__c:
+      fake.text:
+        max_nb_chars: 100
+- macro: incl_hed__Relationship_Lookup__c
+  fields:
+    Name:
+      fake: name
+    __SetupOwnerId__disabled:
+      "OPTIONAL REFERENCE SKIPPED: ['Organization', 'Profile',
+      'User']"
+    hed__Female__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Male__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Neutral__c:
+      fake.text:
+        max_nb_chars: 100
+- macro: incl_hed__Relationship__c
+  fields:
+    hed__Contact__c:
+      reference: Contact
+    hed__Description__c:
+      fake.text:
+        max_nb_chars: 100
+    __hed__ReciprocalRelationship__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Relationship__c']"
+    __hed__RelatedContact__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Contact']"
+    hed__Type__c:
+      random_choice:
+        - Friend
+        - Family
+        - Coworker
+        - Father
+        - Mother
+        - Parent
+        - Son
+        - Daughter
+        - Child
+        - Aunt
+        - Uncle
+        - Husband
+        - Wife
+        - Partner
+        - Cousin
+        - Grandmother
+        - Grandfather
+        - Grandparent
+        - Grandson
+        - Granddaughter
+        - Grandchild
+        - Employer
+        - Employee
+    Related_Opportunity_Contact_Role__c:
+      random_choice:
+        - Soft Credit
+        - Solicitor
+        - Tribute
+- macro: incl_hed__Term_Grade__c
+  fields:
+    __hed__Contact__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Contact']"
+    __hed__Course_Connection__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Course_Enrollment__c']"
+    __hed__Course_Offering__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Course_Offering__c']"
+    hed__Credits_Attempted__c:
+      random_number:
+        min: 1
+        max: 1000
+    hed__Credits_Earned__c:
+      random_number:
+        min: 1
+        max: 1000
+    hed__Letter_Grade__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Numerical_Grade__c:
+      random_number:
+        min: 1
+        max: 10000000000000
+    hed__Percent_Grade__c:
+      random_number:
+        min: 1
+        max: 100
+    hed__Result__c:
+      random_choice:
+        - Audit
+        - Dropped
+        - Fail
+        - Pass
+    hed__Term_Grade_Type__c:
+      random_choice:
+        - Exam Grade
+        - Final Grade
+        - Grading Period
+        - Mid-Term Grade
+    __hed__Term__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Term__c']"
+- macro: incl_hed__Term__c
+  fields:
+    Name:
+      fake: name
+    hed__Account__c:
+      reference: Account
+    hed__End_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Grading_Period_Sequence__c:
+      random_number:
+        min: 1
+        max: 1000000000000000000
+    hed__Instructional_Days__c:
+      random_number:
+        min: 1
+        max: 100000000000000
+    __hed__Parent_Term__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Term__c']"
+    hed__Start_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Type__c:
+      random_choice:
+        - Quarter
+        - Semester
+        - School Year
+        - Part of Term
+- macro: incl_hed__Test_Score__c
+  fields:
+    hed__Percentile__c:
+      random_number:
+        min: 1
+        max: 100
+    hed__Score__c:
+      random_number:
+        min: 1
+        max: 10000000000000
+    hed__Subject_Area__c:
+      random_choice:
+        - Language
+        - Mathematics
+        - Reading
+        - Science
+        - Writing
+        - Overall
+    __hed__Test__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['hed__Test__c']"
+- macro: incl_hed__Test__c
+  fields:
+    __hed__Contact__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Contact']"
+    hed__Date_Received__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Source__c:
+      random_choice:
+        - Self Reported
+        - Official
+    hed__Test_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Test_Type__c:
+      random_choice:
+        - SAT
+        - ACT
+        - GRE
+        - GMAT
+        - TOEFL
+- macro: incl_hed__Time_Block__c
+  fields:
+    Name:
+      fake: name
+    __hed__Educational_Institution__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Account']"
+    hed__End_Time__c:
+      fake: time
+    hed__Start_Time__c:
+      fake: time

@@ -7,18 +7,18 @@ import csv
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from contextlib import redirect_stdout
-from tests.utils import named_temporary_file_path
+
+
+import pytest
 
 from sqlalchemy import create_engine
 
-from snowfakery.output_streams import (
-    SqlOutputStream,
-    JSONOutputStream,
-    CSVOutputStream,
-)
+from snowfakery.output_streams import SqlOutputStream, JSONOutputStream, CSVOutputStream
+import snowfakery.data_gen_exceptions as exc
 
 from snowfakery.data_generator import generate
 from snowfakery.cli import generate_cli
+from tests.utils import named_temporary_file_path
 
 
 sample_yaml = Path(__file__).parent / "include_parent.yml"
@@ -31,14 +31,14 @@ def normalize(row):
 class OutputCommonTests(ABC):
     @abstractmethod
     def do_output(self, yaml):
-        raise NotImplementedError
+        raise NotImplementedError(f"do_output method on {self.__class__.__name__}")
 
     def test_dates(self):
         yaml = """
         - object: foo
           fields:
-            y2k: <<date(year=2000, month=1, day=1)>>
-            party: <<datetime(year=1999, month=12, day=31, hour=23, minute=59, second=59)>>
+            y2k: ${{date(year=2000, month=1, day=1)}}
+            party: ${{datetime(year=1999, month=12, day=31, hour=23, minute=59, second=59)}}
             randodate:
                 date_between:
                     start_date: 2000-02-02
@@ -173,7 +173,7 @@ class JSONTables:
         return self.tables[name]
 
 
-class TestJSONOutputStream(unittest.TestCase, OutputCommonTests):
+class TestJSONOutputStream(OutputCommonTests):
     def do_output(self, yaml):
         with StringIO() as s:
             output_stream = JSONOutputStream(s)
@@ -215,9 +215,7 @@ class TestJSONOutputStream(unittest.TestCase, OutputCommonTests):
     def test_from_cli(self):
         x = StringIO()
         with redirect_stdout(x):
-            generate_cli.callback(
-                yaml_file=sample_yaml, output_format="json",
-            )
+            generate_cli.callback(yaml_file=sample_yaml, output_format="json")
         data = json.loads(x.getvalue())
         assert data == [
             {
@@ -238,6 +236,19 @@ class TestJSONOutputStream(unittest.TestCase, OutputCommonTests):
         assert "null" in output.raw
         values = output["foo"][0]
         assert values["is_null"] is None
+
+    def test_error_generates_empty_string(self):
+        yaml = """
+        - object: foo
+          fields: bar: baz: jaz
+            is_null:
+            """
+        with StringIO() as s:
+            output_stream = JSONOutputStream(s)
+            with pytest.raises(exc.DataGenYamlSyntaxError):
+                generate(StringIO(yaml), {}, output_stream)
+            output_stream.close()
+            assert s.getvalue() == ""
 
 
 class TestCSVOutputStream(unittest.TestCase, OutputCommonTests):

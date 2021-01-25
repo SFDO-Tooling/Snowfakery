@@ -1,6 +1,7 @@
 from io import StringIO
 import unittest
 from unittest import mock
+from datetime import date
 
 from snowfakery.data_generator import generate
 
@@ -52,7 +53,7 @@ class TestFaker(unittest.TestCase):
         yaml = """
         - object: OBJ
           fields:
-            country: <<fake.country_code(representation='alpha-2')>>
+            country: ${{fake.country_code(representation='alpha-2')}}
         """
         generate(StringIO(yaml), {}, None)
         assert len(row_values(write_row_mock, 0, "country")) == 2
@@ -62,7 +63,7 @@ class TestFaker(unittest.TestCase):
         yaml = """
         - object: OBJ
           fields:
-            date: <<fake.date(pattern="%Y-%m-%d", end_datetime=None)>>
+            date: ${{fake.date(pattern="%Y-%m-%d", end_datetime=None)}}
         """
         generate(StringIO(yaml), {}, None)
         date = row_values(write_row_mock, 0, "date")
@@ -94,3 +95,18 @@ class TestFaker(unittest.TestCase):
         """
         generate(StringIO(yaml), {}, None)
         assert row_values(write_row_mock, 0, "date") is None
+
+    @mock.patch(write_row_path)
+    def test_months_past(self, write_row_mock):
+        yaml = """
+        - object: A
+          fields:
+            date:
+              date_between:
+                start_date: -4M
+                end_date: -3M
+        """
+        generate(StringIO(yaml), {}, None)
+        the_date = row_values(write_row_mock, 0, "date")
+        assert (date.today() - the_date).days > 80
+        assert (date.today() - the_date).days < 130

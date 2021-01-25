@@ -1,10 +1,12 @@
 import unittest
-from snowfakery.data_generator_runtime_dom import (
+from unittest import mock
+from snowfakery.data_generator_runtime_object_model import (
     FieldFactory,
     SimpleValue,
     StructuredValue,
     ObjectTemplate,
     DataGenError,
+    DataGenValueError,
 )
 
 from snowfakery.data_generator_runtime import RuntimeContext, Interpreter
@@ -20,14 +22,14 @@ line = {"filename": "abc.yml", "line_num": 42}
 
 def standard_runtime():
     output_stream = DebugOutputStream()
-    return RuntimeContext(Interpreter(output_stream=output_stream), "Foo")
+    return RuntimeContext(Interpreter(output_stream=output_stream))
 
 
 x = standard_runtime()
 
 
 class TestDataGeneratorRuntimeDom(unittest.TestCase):
-    def test_field_factory_string(self):
+    def test_field_recipe_string(self):
         definition = SimpleValue("abc", "abc.yml", 10)
         repr(definition)
         f = FieldFactory("field", definition, "abc.yml", 10)
@@ -35,7 +37,7 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
         x = f.generate_value(standard_runtime())
         assert x == "abc"
 
-    def test_field_factory_int(self):
+    def test_field_recipe_int(self):
         definition = SimpleValue(5, "abc.yml", 10)
         repr(definition)
         f = FieldFactory("field", definition, "abc.yml", 10)
@@ -43,8 +45,8 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
         x = f.generate_value(standard_runtime())
         assert x == 5
 
-    def test_field_factory_calculation(self):
-        definition = SimpleValue("<<5*3>>", "abc.yml", 10)
+    def test_field_recipe_calculation(self):
+        definition = SimpleValue("${{5*3}}", "abc.yml", 10)
         repr(definition)
         f = FieldFactory("field", definition, "abc.yml", 10)
         repr(f)
@@ -97,7 +99,7 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
                 fields=[
                     FieldFactory(
                         "x",
-                        SimpleValue("<<5()>>", filename="abc.yml", line_num=42),
+                        SimpleValue("${{5()}}", filename="abc.yml", line_num=42),
                         **line
                     )
                 ],
@@ -123,3 +125,18 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
             StructuredValue("this.abc", [], **line).render(standard_runtime())
         assert "Cannot find defini" in str(e.exception)
         assert "abc" in str(e.exception)
+
+    def test_old_jinja_syntax(self):
+        definition = SimpleValue("<<5*3>>", "abc.yml", 10)
+        repr(definition)
+        f = FieldFactory("field", definition, "abc.yml", 10)
+        repr(f)
+        x = f.generate_value(standard_runtime())
+        assert x == 15
+
+    def test_check_type(self):
+        o = ObjectTemplate("abcd", filename="abc.yml", line_num=10)
+        field = mock.MagicMock()
+        field.name = "foo"
+        with self.assertRaises(DataGenValueError):
+            o._check_type(field, int, standard_runtime())

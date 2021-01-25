@@ -3,17 +3,17 @@ from warnings import warn
 
 from snowfakery.data_generator import ExecutionSummary
 from snowfakery.data_gen_exceptions import DataGenNameError, DataGenError
-from snowfakery.parse_factory_yaml import TableInfo
+from snowfakery.parse_recipe_yaml import TableInfo
 from snowfakery.data_generator_runtime import Dependency
 
 
-def mapping_from_factory_templates(summary: ExecutionSummary):
-    """Use the outputs of the factory YAML and convert to Mapping.yml format"""
+def mapping_from_recipe_templates(summary: ExecutionSummary):
+    """Use the outputs of the recipe YAML and convert to Mapping.yml format"""
     record_types = generate_record_type_pseudo_tables(summary)
     dependencies, reference_fields = build_dependencies(summary.intertable_dependencies)
     tables = {**summary.tables, **record_types}
     table_order = sort_dependencies(dependencies, tables)
-    mappings = mappings_from_sorted_tables(tables, table_order, reference_fields,)
+    mappings = mappings_from_sorted_tables(tables, table_order, reference_fields)
     return mappings
 
 
@@ -30,7 +30,9 @@ def find_record_type_field(fields, context_name):
     if not record_type_fields:
         return None
     elif len(record_type_fields) > 1:
-        raise DataGenError(f"Only one RecordType field allowed: {context_name}")
+        raise DataGenError(
+            f"Only one RecordType field allowed: {context_name}", None, None
+        )
     elif record_type_fields[0].name != "RecordType":
         raise DataGenNameError(
             "Recordtype field needs this capitalization: RecordType", None, None
@@ -60,7 +62,7 @@ def generate_record_type_pseudo_tables(summary):
         record_type_pseudo_table.record_type = record_type_name
 
         # copy over the dependencies from the real table
-        for dependency in summary.intertable_dependencies.copy():
+        for dependency in sorted(summary.intertable_dependencies):
             if dependency.table_name_from == real_table_name:
                 summary.intertable_dependencies.add(
                     Dependency(record_type_name, *dependency[1:])
@@ -100,7 +102,7 @@ def _table_is_free(table_name, dependencies, sorted_tables):
     usage examples.
     """
     tables_this_table_depends_upon = dependencies.get(table_name, {})
-    for dependency in tables_this_table_depends_upon.copy():
+    for dependency in sorted(tables_this_table_depends_upon):
         if dependency.table_name_to in sorted_tables:
             tables_this_table_depends_upon.remove(dependency)
 
@@ -151,9 +153,9 @@ def mappings_from_sorted_tables(
 
         if "RecordType" in table.fields:
             fielddef = table.fields["RecordType"].definition
-            if not getattr(fielddef, "definition"):
+            if not getattr(fielddef, "definition", None):
                 raise DataGenError(
-                    "Record type definitions must be simple, not computed"
+                    "Record type definitions must be simple, not computed", None, None
                 )
             record_type = fielddef.definition
             filters = [f"RecordType = '{record_type}'"]
@@ -161,16 +163,12 @@ def mappings_from_sorted_tables(
             record_type = None
             # add a filter to avoid returning rows associated with record types
             filters = (
-                [f"RecordType is NULL"]
+                ["RecordType is NULL"]
                 if getattr(table, "has_record_types", False)
                 else []
             )
 
-        mapping = {
-            "sf_object": table.name,
-            "table": table.name,
-            "fields": fields,
-        }
+        mapping = {"sf_object": table.name, "table": table.name, "fields": fields}
         if record_type:
             mapping["record_type"] = record_type
         if filters:

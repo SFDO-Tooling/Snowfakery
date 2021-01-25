@@ -1,5 +1,10 @@
 [run]
     source=snowfakery
-
+omit =
+    snowfakery/standard_plugins/statistical_distributions.py
 [report]
 show_missing = True
+exclude_lines =
+    pragma: no cover
+    @abstract
+    raise NotImplementedError

@@ -14,24 +14,33 @@
       - object: woman
         count: 7
         fields:
+          husband: 
+            reference: man
           luggage:
             - object: sack
               count: 7
               fields:
+                holder: 
+                  reference: woman
                 contents:
                   - object: cat
                     count: 7
                     fields:
+                      container: 
+                        reference: sack
                       offspring:
                       - object: kit
                         count: 7
+                        fields:
+                          parent: 
+                            reference: cat
 - object: stats
   fields:
-    num_narrators: << man.id >>
-    num_men: << man.id >>
-    num_women: << woman.id >>
-    num_sack: << sack.id >>
-    num_cat: << cat.id >>
-    num_kittens: << kit.id >>
-    everyone: <<  num_men + num_narrators + num_women + num_sack + num_cat + num_kittens >>
-    going_to_st_ives: << num_narrators >>
+    num_narrators: ${{ man.id }}
+    num_men: ${{ man.id }}
+    num_women: ${{ woman.id }}
+    num_sack: ${{ sack.id }}
+    num_cat: ${{ cat.id }}
+    num_kittens: ${{ kit.id }}
+    everyone: ${{  num_men + num_narrators + num_women + num_sack + num_cat + num_kittens }}
+    going_to_st_ives: ${{ num_narrators }}

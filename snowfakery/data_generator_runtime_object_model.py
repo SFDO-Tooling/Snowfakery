@@ -1,9 +1,12 @@
 from abc import abstractmethod, ABC
-from datetime import date, datetime
-from .data_generator_runtime import evaluate_function, ObjectRow, RuntimeContext
+from .data_generator_runtime import (
+    evaluate_function,
+    ObjectRow,
+    RuntimeContext,
+    NicknameSlot,
+)
 from contextlib import contextmanager
 from typing import Union, Dict, Sequence, Optional, cast
-from numbers import Number
 from .utils.template_utils import look_for_number
 
 import jinja2
@@ -15,12 +18,12 @@ from .data_gen_exceptions import (
     DataGenValueError,
     fix_exception,
 )
+from .plugins import Scalar, PluginResult
 
 # objects that represent the hierarchy of a data generator.
 # roughly similar to the YAML structure but with domain-specific objects
-Scalar = Union[str, Number, date, datetime, None]
-FieldValue = Union[None, Scalar, ObjectRow, tuple]
 Definition = Union["ObjectTemplate", "SimpleValue", "StructuredValue"]
+FieldValue = Union[None, Scalar, ObjectRow, tuple, NicknameSlot, PluginResult]
 
 
 class FieldDefinition(ABC):
@@ -33,14 +36,19 @@ class FieldDefinition(ABC):
          fieldname: X
     """
 
-    def __init__(self):
-        self.definition = None
-        self.filename = None
-        self.line_num = None
-
     @abstractmethod
     def render(self, context: RuntimeContext) -> FieldValue:
         pass
+
+    @contextmanager
+    def exception_handling(self, message: str, *args, **kwargs):
+        try:
+            yield
+        except DataGenError as e:
+            raise fix_exception(message, self, e)
+        except Exception as e:
+            message = message.format(*args, **kwargs)
+            raise DataGenError(f"{message} : {str(e)}", self.filename, self.line_num)
 
 
 class ObjectTemplate:
@@ -83,11 +91,11 @@ class ObjectTemplate:
     ) -> Optional[ObjectRow]:
         """Generate several rows"""
         rc = None
-        with parent_context.child_context(self.tablename) as context:
+        with parent_context.child_context(self) as context:
             count = self._evaluate_count(context)
             with self.exception_handling(f"Cannot generate {self.name}"):
                 for i in range(count):
-                    rc = self._generate_row(storage, context)
+                    rc = self._generate_row(storage, context, i)
 
         return rc  # return last row
 
@@ -118,25 +126,28 @@ class ObjectTemplate:
     def name(self) -> str:
         name = self.tablename
         if self.nickname:
-            name += f" (self.nickname)"
+            name += " (self.nickname)"
         return name
 
-    def _generate_row(self, storage, context: RuntimeContext) -> ObjectRow:
+    @property
+    def id(self):
+        return id(self)
+
+    def _generate_row(self, storage, context: RuntimeContext, index: int) -> ObjectRow:
         """Generate an individual row"""
-        row = {"id": context.generate_id()}
-        sobj = ObjectRow(self.tablename, row)
+        id = context.generate_id(self.nickname)
+        row = {"id": id}
+        sobj = ObjectRow(self.tablename, row, index)
 
         context.register_object(sobj, self.nickname)
 
         self._generate_fields(context, row)
 
-        try:
+        with self.exception_handling("Cannot write row"):
             self.register_row_intertable_references(row, context)
             if not self.tablename.startswith("__"):
                 storage.write_row(self.tablename, row)
 
-        except Exception as e:
-            raise DataGenError(str(e), self.filename, self.line_num) from e
         for i, childobj in enumerate(self.friends):
             childobj.generate_rows(storage, context)
         return sobj
@@ -144,14 +155,13 @@ class ObjectTemplate:
     def _generate_fields(self, context: RuntimeContext, row: Dict) -> None:
         """Generate all of the fields of a row"""
         for field in self.fields:
-            with self.exception_handling(f"Problem rendering value"):
+            with self.exception_handling("Problem rendering value"):
                 row[field.name] = field.generate_value(context)
                 self._check_type(field, row[field.name], context)
 
     def _check_type(self, field, generated_value, context: RuntimeContext):
         """Check the type of a field value"""
-        allowed_types = (int, str, bool, date, float, type(None), ObjectRow)
-        if not isinstance(generated_value, allowed_types):
+        if not isinstance(generated_value, FieldValue.__args__):
             raise DataGenValueError(
                 f"Field '{field.name}' generated unexpected object: {generated_value} {type(generated_value)}",
                 self.filename,
@@ -175,7 +185,7 @@ class SimpleValue(FieldDefinition):
     - object: abc
       fields:
          fieldname: XXXXX
-         fieldname2: <<XXXXX>>
+         fieldname2: ${{XXXXX}}
          fieldname3: 42
     """
 
@@ -191,10 +201,8 @@ class SimpleValue(FieldDefinition):
         """Populate the evaluator property once."""
         if self._evaluator is None:
             if isinstance(self.definition, str):
-                try:
+                with self.exception_handling("Cannot parse value {}", self.definition):
                     self._evaluator = context.get_evaluator(self.definition)
-                except Exception as e:
-                    fix_exception(f"Cannot parse value {self.definition}", self, e)
             else:
                 self._evaluator = False
         return self._evaluator
@@ -220,19 +228,18 @@ class SimpleValue(FieldDefinition):
 class StructuredValue(FieldDefinition):
     """A value with substructure which will call a handler function.
 
-        - object: abc
-          fields:
-            fieldname:
-                - reference:
-                    foo
-            fieldname2:
-                - random_number:
-                    min: 10
-                    max: 20
-            fieldname3:
-                - reference:
-                    ...
-"""
+    - object: abc
+      fields:
+        fieldname:
+            - reference:
+                foo
+        fieldname2:
+            - random_number:
+                min: 10
+                max: 20
+        fieldname3:
+            - reference:
+                ..."""
 
     def __init__(self, function_name, args, filename, line_num):
         self.function_name = function_name
@@ -287,7 +294,11 @@ class StructuredValue(FieldDefinition):
                     self.filename,
                     self.line_num,
                 )
-            value = evaluate_function(func, self.args, self.kwargs, context)
+
+            with self.exception_handling(
+                "Cannot evaluate function {}", self.function_name
+            ):
+                value = evaluate_function(func, self.args, self.kwargs, context)
 
         return value
 
@@ -298,10 +309,10 @@ class StructuredValue(FieldDefinition):
 
 
 class ReferenceValue(StructuredValue):
-    """ - object: foo
-          fields:
-            - reference:
-                Y"""
+    """- object: foo
+    fields:
+      - reference:
+          Y"""
 
 
 class FieldFactory:

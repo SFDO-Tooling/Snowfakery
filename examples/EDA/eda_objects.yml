@@ -1,0 +1,535 @@
+# most of the declarations are actually in the macro file
+- include_file: eda_macros.yml
+
+# Account, Contact, Opportunity, etcs.
+- include_file: ../salesforce/standard_objs.recipe.yml
+
+- object: Account
+  fields:
+    name: ${{fake.first_name}} ${{fake.last_name}} Account
+
+- object: hed__Address__c
+  just_once: True
+  fields:
+    hed__Geolocation__Latitude__s:
+      fake: latitude
+    hed__Geolocation__Longitude__s:
+      fake: longitude
+    hed__Latest_End_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Latest_Start_Date__c:
+      date_between:
+        start_date: -3y
+        end_date: -2y
+    hed__MailingCity__c:
+      fake: city
+    hed__MailingCountry__c:
+      fake: country
+    hed__MailingPostalCode__c:
+      fake: postalcode
+    hed__MailingState__c:
+      fake: state
+    hed__MailingStreet__c:
+      fake: street_address
+    hed__Parent_Account__c:
+      reference: Account
+    hed__Parent_Contact__c:
+      reference: Contact
+    hed__Seasonal_End_Day__c:
+      random_number:
+        min: 1
+        max: 31
+    hed__Seasonal_End_Month__c:
+      random_number:
+        min: 1
+        max: 12
+    hed__Seasonal_End_Year__c:
+      random_number:
+        min: 2020
+        max: 2022
+    hed__Seasonal_Start_Day__c:
+      random_number:
+        min: 1
+        max: 31
+    hed__Seasonal_Start_Month__c:
+      random_number:
+        min: 1
+        max: 12
+    hed__Seasonal_Start_Year__c:
+      random_number:
+        min: 2000
+        max: 2010
+
+- object: hed__Affiliation__c
+  fields:
+    hed__Account__c:
+      reference: Account
+    hed__Contact__c:
+      reference: Contact
+    hed__Description__c:
+      fake: catch_phrase
+    hed__StartDate__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__EndDate__c:
+      date_between:
+        start_date: today
+        end_date: +1y
+    hed__Role__c:
+      random_choice:
+        - Student
+        - Prospect
+        - Applicant
+        - Faculty
+        - Employee
+    Related_Opportunity_Contact_Role__c:
+      random_choice:
+        - Soft Credit
+        - Solicitor
+
+- object: hed__Term__c
+  fields:
+    Name:
+      fake: name
+    hed__Account__c:
+      reference: Account
+    hed__End_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Grading_Period_Sequence__c:
+      random_number:
+        min: 1
+        max: 100
+    hed__Instructional_Days__c:
+      random_number:
+        min: 1
+        max: 100
+    hed__Start_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Type__c:
+      random_choice:
+        - Quarter
+        - Semester
+        - School Year
+        - Part of Term
+
+- object: hed__Application__c
+  fields:
+    hed__Applicant_Decision_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Applicant__c:
+      reference: Contact
+    hed__Application_Date__c: <<fake.date>>T<<fake.time>>Z
+    hed__Application_Decision_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Application_Status__c:
+      random_choice:
+        - Submitted
+        - Incomplete
+        - Received
+        - In Review
+        - Waitlist
+        - Admit
+        - Admit with Conditions
+        - Deny
+        - Deferred Offer
+        - Accepted Offer
+        - Declined Offer
+    hed__Application_Type__c:
+      random_choice:
+        - Graduate
+        - Transfer
+        - Undergraduate
+    hed__Applying_To__c:
+      reference: Account
+    hed__Preparer__c:
+      reference: Contact
+    hed__Term__c:
+      reference: hed__Term__c
+
+- object: hed__Attendance_Event__c
+  fields:
+    hed__Arrival_Time__c:
+      fake: time
+    hed__Attendance_Type__c:
+      random_choice:
+        - Class Absence
+        - Class Tardy
+        - Day Absence
+        - Day Tardy
+    hed__Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__End_Time__c:
+      fake: time #  https://github.com/SFDO-Tooling/Snowfakery/issues/105
+    hed__Reason_Description__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Reason__c:
+      random_choice:
+        - Family
+        - Medical
+        - Other
+        - Religious
+    hed__Start_Time__c:
+      fake: time
+
+- object: hed__Attribute__c
+  fields:
+    Name:
+      fake: name
+    hed__Attribute_Type__c:
+      random_choice:
+        - Certification
+        - Endorsement
+        - Licensure
+        - Accommodation
+        - Asylee
+        - Economically Disadvantaged
+        - English Learners
+        - Family Consideration
+        - Foster Care
+        - Free Lunch
+        - Homeless
+        - Immigrant
+        - International Student
+        - Other
+        - Parent in Military
+        - Pregnant
+        - Reduced Price Lunch
+        - Refugee
+        - Section 504 Handicapped
+    hed__Contact__c:
+      reference: Contact
+    hed__Description__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__End_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Start_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Subject_Area__c:
+      random_choice:
+        - Biology
+        - Career and Technical Education
+        - Economics
+        - English Language Arts
+        - Fine and Performing Arts
+        - Foreign Language
+        - History
+        - Life and Physical Sciences
+        - Mathematics
+        - Other
+        - Physical, Health, and Safety Education
+        - Physics
+        - Psychology
+        - Science
+        - Social Studies
+        - Sociology
+
+- object: hed__Behavior_Involvement__c
+  fields:
+    hed__Contact__c:
+      reference: Contact
+    hed__Description__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Role__c:
+      random_choice:
+        - Perpetrator
+        - Reporter
+        - Victim
+        - Witness
+        - Other
+
+- object: hed__Behavior_Response__c
+  fields:
+    hed__Behavior_Involvement__c:
+      reference: hed__Behavior_Involvement__c
+    hed__Description__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__End_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Start_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Status__c:
+      random_choice:
+        - Completed
+        - In Progress
+        - Postponed
+        - Other
+    hed__Type__c:
+      random_choice:
+        - Academic Probation
+        - Expulsion
+        - Other
+
+- object: hed__Language__c
+  nickname: English
+  fields:
+    Name: English
+
+- object: hed__Language__c
+  nickname: French
+  fields:
+    Name: French
+
+- object: hed__Language__c
+  nickname: Spanish
+  fields:
+    Name: Spanish
+
+- object: hed__Contact_Language__c
+  fields:
+    hed__Contact__c:
+      reference: Contact
+    hed__Fluency__c:
+      random_choice:
+        - Fluent
+        - Intermediate
+        - Beginner
+    hed__Language_Details__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Language__c:
+      random_choice:
+        - choice:
+            probability: 40%
+            pick:
+              - reference: English
+        - choice:
+            probability: 20%
+            pick:
+              - reference: French
+        - choice:
+            probability: 20%
+            pick:
+              - reference: Spanish
+
+- object: hed__Course__c
+  fields:
+    Name:
+      fake: name
+    hed__Account__c:
+      reference: Account
+    hed__Course_ID__c:
+      fake.random_number:
+        digits: 10
+    hed__Credit_Hours__c:
+      random_number:
+        min: 1
+        max: 10
+    hed__Description__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Extended_Description__c:
+      fake.text:
+        max_nb_chars: 100
+
+- object: hed__Facility__c
+  fields:
+    Name:
+      fake: name
+    hed__Account__c:
+      reference: Account
+    hed__Capacity__c:
+      random_number:
+        min: 1
+        max: 1000
+    hed__Description__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Facility_Type__c:
+      random_choice:
+        - Building
+        - Cafeteria/Food Hall
+        - Classroom
+        - Computer Lab
+        - Gymnasium
+        - Health Center
+        - Laboratory
+        - Lecture Hall
+        - Library
+
+- object: hed__Course_Offering__c
+  fields:
+    Name:
+      fake: catch_phrase
+    hed__Course__c:
+      reference: hed__Course__c
+    hed__Term__c:
+      reference: hed__Term__c
+    hed__Capacity__c:
+      random_number:
+        min: 1
+        max: 300
+    hed__End_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Facility__c:
+      reference: hed__Facility__c
+    hed__Faculty__c:
+      reference: Contact
+    hed__Section_ID__c:
+      fake.text:
+        max_nb_chars: 100
+    hed__Start_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+
+- object: hed__Program_Plan__c
+  include: incl_hed__Program_Plan__c
+
+- object: hed__Program_Enrollment__c
+  fields:
+    hed__GPA__c:
+      random_number:
+        min: 1
+        max: 4
+    hed__Account__c:
+      reference: Account
+    hed__Admission_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Affiliation__c:
+      reference: hed__Affiliation__c
+    hed__Application_Submitted_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Class_Standing__c:
+      random_choice:
+        - Freshman
+        - Sophomore
+        - Junior
+        - Senior
+    __hed__Contact__c: "OPTIONAL REFERENCE SKIPPED: ['Contact']"
+    hed__Credits_Attempted__c:
+      random_number:
+        min: 1
+        max: 1000
+    hed__Credits_Earned__c:
+      random_number:
+        min: 1
+        max: 1000
+    hed__End_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    hed__Enrollment_Status__c:
+      random_choice:
+        - Full-time
+        - Half-time
+        - Less than half-time
+    hed__Graduation_Year__c:
+      fake: year
+    hed__Program_Plan__c:
+      reference: hed__Program_Plan__c
+    hed__Start_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+
+- object: hed__Course_Enrollment__c
+  fields:
+    hed__Account__c:
+      reference: Account
+    hed__Affiliation__c:
+      reference: hed__Affiliation__c
+    hed__Contact__c:
+      reference: Contact
+    hed__Course_Offering__c:
+      reference: hed__Course_Offering__c
+    hed__Credits_Attempted__c:
+      random_number:
+        min: 1
+        max: 4
+    hed__Credits_Earned__c:
+      random_number:
+        min: 1
+        max: 4
+    hed__Grade__c:
+      random_number:
+        min: 1
+        max: 4
+    hed__Program_Enrollment__c:
+      reference: hed__Program_Enrollment__c
+
+- object: hed__Time_Block__c
+  fields:
+    Name:
+      fake: name
+    hed__Educational_Institution__c:
+      reference: Account
+    hed__Start_Time__c:
+      fake: time
+    hed__End_Time__c:
+      fake: time #  https://github.com/SFDO-Tooling/Snowfakery/issues/105
+
+- object: hed__Course_Offering_Schedule__c
+  fields:
+    hed__Course_Offering__c:
+      reference: hed__Course_Offering__c
+    hed__Time_Block__c:
+      reference: hed__Time_Block__c
+    hed__Start_Time__c: ${{hed__Time_Block__c.hed__Start_Time__c}}
+    hed__End_Time__c: ${{hed__Time_Block__c.hed__End_Time__c}}
+    hed__Facility__c:
+      reference: hed__Facility__c
+
+- object: hed__Plan_Requirement__c
+  include: incl_hed__Plan_Requirement__c
+
+- object: hed__Relationship_Auto_Create__c
+  include: incl_hed__Relationship_Auto_Create__c
+
+- object: hed__Relationship_Lookup__c
+  include: incl_hed__Relationship_Lookup__c
+
+- object: hed__Relationship__c
+  include: incl_hed__Relationship__c
+  fields:
+    hed__Contact__c:
+      reference: Contact
+    hed__RelatedContact__c:
+      reference: Contact
+
+- object: hed__Term_Grade__c
+  include: incl_hed__Term_Grade__c
+  fields:
+    hed__Course_Connection__c:
+      - object: hed__Course_Enrollment__c
+        fields:
+          hed__Contact__c:
+            reference: Contact
+          hed__Course_Offering__c:
+            reference: hed__Course_Offering__c
+
+- object: hed__Test_Score__c
+  include: incl_hed__Test_Score__c
+
+- object: hed__Test__c
+  include: incl_hed__Test__c
