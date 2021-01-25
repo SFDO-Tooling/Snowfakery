@@ -1,6 +1,6 @@
-from random import randint, shuffle, randrange
+from random import randint, shuffle
 
-from snowfakery import SnowfakeryPlugin
+from snowfakery.plugins import SnowfakeryPlugin, PluginResult
 
 
 def parts(total, step):
@@ -15,24 +15,25 @@ def parts(total, step):
     return pieces
 
 
-class Summation:
+class Summation(PluginResult):
     def __init__(self, total, step):
         self.total = total
         self.pieces = parts(total, step)
+        self.running_total = 0
+        super().__init__(None)
+
+    @property
+    def count(self, null=None):
+        return len(self.pieces)
+
+    @property
+    def next_amount(self):
+        rc = self.pieces.pop()
+        self.running_total += rc
+        return rc
 
 
 class SummationPlugin(SnowfakeryPlugin):
     class Functions:
-        def new_total(self, total, step):
-            self.context.context_vars()["summation"] = Summation(total, step)
-            return total
-
-        def count(self, null=None):
-            return len(self.context.context_vars()["summation"].pieces)
-
-        def amount(self, null=None):
-            summation = self.context.context_vars()["summation"]
-            return summation.pieces.pop()
-
-        def randrange(self, start, stop, step):
-            return randrange(start, stop, step)
+        def summer(self, total, step):
+            return Summation(total, step)

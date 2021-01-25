@@ -1319,7 +1319,7 @@ class PluginThatCounts(SnowfakeryPlugin):
             return context_vars["count"]
 ```
 
-Plugins also have access to a dictionary called `self.context.field_vars()` whic
+Plugins also have access to a dictionary called `self.context.field_vars()` which
 represents the values that would be available to a formula running in the same context.
 
 Plugins can return normal Python primitive types, datetime.date, `ObjectRow` or `PluginResult` objects. `ObjectRow` objects represent new output records/objects. `PluginResult` objects
@@ -1350,27 +1350,112 @@ Every second time this is called, it will evaluate its argument twice, and stick
 
 ```yaml
   - plugin: tests.test_custom_plugins_and_providers.DoubleVisionPlugin
-  - plugin: tests.test_custom_plugins_and_providers.PluginThatNeedsState
   - object: OBJ
     fields:
       some_value:
           - DoubleVisionPlugin.do_it_twice:
               - abc
-      some_value_2:
-          - DoubleVisionPlugin.do_it_twice:
-              - ${{PluginThatNeedsState.count()}}
 ```
 
 This would output an `OBJ` row with values:
 
 ```json
-  {'id': 1, 'some_value': 'abc : abc', 'some_value_2': '1 : 2'})
+  {"id": 1, "some_value": "abc : abc"})
 ```
 
 Occasionally you might write a plugin which needs to evaluate its
 parameters lazily but doesn't care about the internals of the values
 because it just returns it to some parent context. In that case,
 use `context.evaluate_raw` instead of `context.evaluate`.
+
+Plugins that require "memory" or "state" are possible using PluginResult
+objects or subclasses. Consider a plugin that generates child objects
+that include values that sum up values on child objects to a value specified on a parent:
+
+```yaml
+- plugin: examples.sum_totals.SummationPlugin
+
+- object: ParentObject__c
+  count: 10
+  fields:
+    MinimumChildObjectAmount__c: 10
+    MinimumStep: 5
+    __summer:
+      SummationPlugin.summer:
+        total: 100
+        step: 10
+    TotalAmount__c: ${{__summer.total}}
+  friends:
+    - object: ChildObject__c
+      count: ${{ParentObject__c.__summer.count}}
+      fields:
+        Parent__c:
+          reference: ParentObject__c
+        Amount__c: ${{ParentObject__c.__summer.next_amount}}
+        RunningTotal__c: ${{ParentObject__c.__summer.running_total}}
+```
+
+This would generate values like this:
+
+```json
+ParentObject__c(id=1, MinimumChildObjectAmount__c=10, MinimumStep=5, TotalAmount__c=100)
+ChildObject__c(id=1, Parent__c=ParentObject__c(1), Amount__c=60, RunningTotal__c=60)
+ChildObject__c(id=2, Parent__c=ParentObject__c(1), Amount__c=20, RunningTotal__c=80)
+ChildObject__c(id=3, Parent__c=ParentObject__c(1), Amount__c=20, RunningTotal__c=100)
+
+ParentObject__c(id=2, MinimumChildObjectAmount__c=10, MinimumStep=5, TotalAmount__c=100)
+ChildObject__c(id=4, Parent__c=ParentObject__c(2), Amount__c=40, RunningTotal__c=40)
+ChildObject__c(id=5, Parent__c=ParentObject__c(2), Amount__c=20, RunningTotal__c=60)
+ChildObject__c(id=6, Parent__c=ParentObject__c(2), Amount__c=40, RunningTotal__c=100)
+
+ParentObject__c(id=3, MinimumChildObjectAmount__c=10, MinimumStep=5, TotalAmount__c=100)
+ChildObject__c(id=7, Parent__c=ParentObject__c(3), Amount__c=10, RunningTotal__c=10)
+ChildObject__c(id=8, Parent__c=ParentObject__c(3), Amount__c=40, RunningTotal__c=50)
+ChildObject__c(id=9, Parent__c=ParentObject__c(3), Amount__c=10, RunningTotal__c=60)
+ChildObject__c(id=10, Parent__c=ParentObject__c(3), Amount__c=10, RunningTotal__c=70)
+ChildObject__c(id=11, Parent__c=ParentObject__c(3), Amount__c=30, RunningTotal__c=100)
+```
+
+Here is the plugin implementation:
+
+```python
+from random import randint, shuffle
+
+from snowfakery.plugins import SnowfakeryPlugin, PluginResult
+
+def parts(total, step):
+    assert total % step == 0
+    pieces = []
+
+    while sum(pieces) < total:
+        top = (total - sum(pieces)) / step
+        pieces.append(randint(1, top) * step)
+
+    shuffle(pieces)
+    return pieces
+
+class Summation(PluginResult):
+    def __init__(self, total, step):
+        self.total = total
+        self.pieces = parts(total, step)
+        self.running_total = 0
+        super().__init__(None)
+
+    @property
+    def count(self, null=None):
+        return len(self.pieces)
+
+    @property
+    def next_amount(self):
+        rc = self.pieces.pop()
+        self.running_total += rc
+        return rc
+
+class SummationPlugin(SnowfakeryPlugin):
+    class Functions:
+        def summer(self, total, step):
+            return Summation(total, step)
+```
 
 ## Using Snowfakery with Salesforce
 
