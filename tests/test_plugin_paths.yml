@@ -1,0 +1,10 @@
+- plugin: package1.plugin1.Plugin1_1
+- plugin: package1.plugin2.Plugin1_2
+- plugin: package2.plugin1.Plugin2_1
+- plugin: package2.plugin2.Plugin2_2
+- object: O
+  fields:
+    p1_1: ${{Plugin1_1.hello}}
+    p1_2: ${{Plugin1_2.hello}}
+    p2_1: ${{Plugin2_1.hello}}
+    p2_2: ${{Plugin2_2.hello}}
