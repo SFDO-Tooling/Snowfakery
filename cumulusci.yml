@@ -79,3 +79,18 @@ flows:
                 task: generate_opportunity_contact_roles
             9:
                 task: generate_opportunities_and_contacts
+
+    contacts_for_accounts:
+        steps:
+            1:
+                task: query
+                options:
+                    object: Account
+                    query: select Id from Account
+                    result_file: accounts.csv
+            2:
+                task: generate_and_load_from_yaml
+                options:
+                    generator_yaml: examples/salesforce/ContactsForAccounts.recipe.yml
+                    num_records: 100
+                    num_records_tablename: Contact
