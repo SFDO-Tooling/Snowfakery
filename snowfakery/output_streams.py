@@ -39,6 +39,8 @@ class OutputStream(ABC):
     count = 1
     flush_limit = 1000
     commit_limit = 10000
+    streamable = False
+    textual = False
     encoders: Mapping[type, Callable] = {
         str: str,
         int: int,

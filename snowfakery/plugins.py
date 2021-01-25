@@ -139,10 +139,15 @@ def resolve_plugin(plugin: str, lineinfo) -> object:
             f"Cannot find plugin: {e}", lineinfo.filename, lineinfo.line_num
         )
     cls = getattr(module, class_name)
+
+    from snowfakery.output_streams import OutputStream
+
     if issubclass(cls, FakerProvider):
         return (FakerProvider, cls)
     elif issubclass(cls, SnowfakeryPlugin):
         return (SnowfakeryPlugin, cls)
+    elif issubclass(cls, OutputStream):
+        return (OutputStream, cls)
     else:
         raise exc.DataGenTypeError(
             f"{cls} is not a Faker Provider nor Snowfakery Plugin",

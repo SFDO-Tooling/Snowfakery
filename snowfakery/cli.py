@@ -8,9 +8,11 @@ from snowfakery.output_streams import (
     ImageOutputStream,
     GraphvizOutputStream,
     MultiplexOutputStream,
+    OutputStream,
 )
 from snowfakery.data_gen_exceptions import DataGenError
 from snowfakery.data_generator import generate, StoppingCriteria
+from snowfakery.plugins import resolve_plugin, LineTracker
 
 import sys
 from pathlib import Path
@@ -86,7 +88,7 @@ def int_string_tuple(ctx, param, value=None):
     help="URL for database to save data to. "
     "Use sqlite:///foo.db if you don't have one set up.",
 )
-@click.option("--output-format", "output_format", type=click.Choice(file_extensions))
+@click.option("--output-format", "output_format", type=str)
 @click.option("--output-folder", "output_folder", type=click.Path(), default=".")
 @click.option("--output-file", "-o", "output_files", type=click.Path(), multiple=True)
 @click.option(
@@ -156,7 +158,7 @@ def generate_cli(
     """
     output_files = list(output_files) if output_files else []
     stopping_criteria = stopping_criteria_from_target_number(target_number)
-    output_format = output_format.lower() if output_format else None
+    output_format = output_format if output_format else None
     validate_options(
         yaml_file,
         option,
@@ -217,12 +219,28 @@ def configure_output_stream(
 
         output_streams.append(SqlOutputStream.from_url(dburl, mappings))
 
+    # TODO: resolve names to formats early and with fewer conditionals
+    #       treat every format as a plugin, basically.
+    #       Standardize the __init__ for OutputStreams.
+
+    # New properties: streamable and textual
+    #               if streamable and textual:
+    #                   outputstream(sys.stdout)
+
     # JSON is the only output format (other than debug) that can go on stdout
-    if output_format == "json" and not output_files:
+    if output_format.lower() == "json" and not output_files:
         output_streams.append(JSONOutputStream(sys.stdout))
 
-    if output_format == "csv":
+    if output_format.lower() == "csv":
         output_streams.append(CSVOutputStream(output_folder))
+
+    if "." in output_format:
+        cls, plugin = resolve_plugin(output_format, LineTracker(output_format, 0))
+        if not issubclass(cls, OutputStream):
+            raise click.ClickException(
+                f"Plugin is not an OutputStream: {output_format}"
+            )
+        output_streams.append(plugin(sys.stdout))
 
     if output_files:
         for path in output_files:
@@ -230,14 +248,21 @@ def configure_output_stream(
                 path = Path(output_folder, path)  # put the file in the output folder
             format = output_format or Path(path).suffix[1:]
 
-            if format == "json":
+            if format.lower() == "json":
                 output_streams.append(JSONOutputStream(path))
-            elif format == "txt":
+            elif format.lower() == "txt":
                 output_streams.append(DebugOutputStream(path))
-            elif format == "dot":
+            elif format.lower() == "dot":
                 output_streams.append(GraphvizOutputStream(path))
             elif format in graphic_file_extensions:
                 output_streams.append(ImageOutputStream(path, format))
+            elif "." in format:
+                cls, plugin = resolve_plugin(format, LineTracker(format, 0))
+                if not issubclass(cls, OutputStream):
+                    raise click.ClickException(
+                        f"Plugin is not an OutputStream: {format}"
+                    )
+                output_streams.append(plugin(path))
             else:
                 raise click.ClickException(
                     f"Unknown format or file extension: {format}"
@@ -289,7 +314,7 @@ def validate_options(
     if (
         output_folder
         and str(output_folder) != "."
-        and not (output_files or output_format == "csv")
+        and not (output_files or output_format.lower() == "csv")
     ):
         raise click.ClickException(
             "--output-folder can only be used with --output-file=<something> or --output-format=csv"
