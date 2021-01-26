@@ -9,7 +9,7 @@ from snowfakery.data_generator_runtime_object_model import (
     DataGenValueError,
 )
 
-from snowfakery.data_generator_runtime import RuntimeContext, Interpreter
+from snowfakery.data_generator_runtime import RuntimeContext, Interpreter, Globals
 
 from snowfakery.output_streams import DebugOutputStream
 
@@ -22,7 +22,7 @@ line = {"filename": "abc.yml", "line_num": 42}
 
 def standard_runtime():
     output_stream = DebugOutputStream()
-    return RuntimeContext(Interpreter(output_stream=output_stream))
+    return RuntimeContext(Interpreter(output_stream=output_stream, globals=Globals()))
 
 
 x = standard_runtime()

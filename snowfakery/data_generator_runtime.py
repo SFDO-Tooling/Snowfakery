@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, ChainMap
 from datetime import date
 from contextlib import contextmanager
 from enum import Enum, auto
@@ -16,7 +16,9 @@ from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError
 import snowfakery
 
 OutputStream = "snowfakery.output_streams.OutputStream"
+VariableDefinition = "snowfakery.data_generator_runtime_object_model.VariableDefinition"
 ObjectTemplate = "snowfakery.data_generator_runtime_object_model.ObjectTemplate"
+Statement = "snowfakery.data_generator_runtime_object_model.Statement"
 
 # Runtime objects and algorithms used during the generation of rows.
 
@@ -313,13 +315,13 @@ class Interpreter:
     def __init__(
         self,
         output_stream: OutputStream,
-        globals: Globals = None,
+        globals: Globals,
         options: Mapping = None,
         snowfakery_plugins: Optional[Mapping[str, callable]] = None,
         stopping_criteria: Optional[StoppingCriteria] = None,
         start_ids: Optional[Mapping[str, int]] = None,
         faker_providers: Sequence[object] = (),
-        templates: Sequence[ObjectTemplate] = (),
+        statements: Sequence[Statement] = (),
     ):
         self.output_stream = output_stream
         self.options = options or {}
@@ -334,21 +336,7 @@ class Interpreter:
         self.finished_checker = FinishedChecker(start_ids, stopping_criteria)
         self.faker_template_library = FakerTemplateLibrary(faker_providers)
 
-        # TODO: clean this duplicated code up
-        name_slots = {
-            template.nickname: template.tablename
-            for template in templates
-            if template.nickname
-        }
-
-        # table names are sort of nicknames for themselves too, because
-        # you can refer to them.
-        name_slots.update(
-            {template.tablename: template.tablename for template in templates}
-        )
-        # print("XXXX", name_slots, globals)
-
-        self.globals = globals or Globals(name_slots=name_slots)
+        self.globals = globals
 
         # inject context into the standard functions
         standard_funcs_obj = StandardFuncs(self).custom_functions()
@@ -358,20 +346,29 @@ class Interpreter:
             if not name.startswith("_") and name != "context"
         }
 
-        self.templates = templates
+        self.statements = statements
 
-    def loop_over_templates_until_finished(self, runtimecontext, continuing):
+    def loop_over_templates_until_finished(self, continuing):
         finished = False
         while not finished:
-            self.loop_over_templates_once(runtimecontext, continuing)
-            finished = runtimecontext.check_if_finished()
+            self.loop_over_templates_once(self.statements, continuing)
+            finished = self.current_context.check_if_finished()
             continuing = True
 
-    def loop_over_templates_once(self, runtimecontext, continuing):
-        for template in self.templates:
-            should_skip = template.just_once and continuing
-            if not should_skip:
-                template.generate_rows(self.output_stream, runtimecontext)
+    def loop_over_templates_once(self, statement_list, continuing: bool):
+        for statement in statement_list:
+            if statement.__class__.__name__ == "ObjectTemplate":
+                template = statement
+                should_skip = template.just_once and continuing
+                if not should_skip:
+                    template.generate_rows(self.output_stream, self.current_context)
+            elif statement.__class__.__name__ == "VariableDefinition":
+                vardef = statement
+                self.current_context.context_vars("vardefs")[
+                    vardef.varname
+                ] = vardef.evaluate(self.current_context)
+            else:
+                assert 0, statement  # pragma: no cover
 
     def __enter__(self, *args):
         return self
@@ -407,11 +404,9 @@ class RuntimeContext:
         self.interpreter.current_context = self
         self.parent = parent_context
         if self.parent:
-            self._context_vars = {
-                **self.parent._context_vars
-            }  # implements variable inheritance
+            self._plugin_context_vars = self.parent._plugin_context_vars.new_child()
         else:
-            self._context_vars = {}
+            self._plugin_context_vars = ChainMap()
 
     def check_if_finished(self):
         "Have we iterated over the script enough times?"
@@ -484,7 +479,12 @@ class RuntimeContext:
         return self.evaluation_namespace.field_vars()
 
     def context_vars(self, plugin_namespace):
-        return self._context_vars.setdefault(plugin_namespace, {})
+        local_plugin_vars = self._plugin_context_vars.get(plugin_namespace, {}).copy()
+        self._plugin_context_vars[plugin_namespace] = local_plugin_vars
+        return local_plugin_vars
+
+    def variable_definitions(self):
+        return self.context_vars("variable definitions")
 
 
 # NamedTuple because it is immutable, efficient and auto-generates init
@@ -510,6 +510,7 @@ class EvaluationNamespace(NamedTuple):
             **interpreter.globals.object_names,
             **(obj._values if obj else {}),
             **interpreter.plugin_function_libraries,
+            **self.runtime_context.context_vars("vardefs"),
         }
 
     def field_funcs(self):
@@ -592,7 +593,8 @@ class ObjectRow(yaml.YAMLObject):
 
 def output_batches(
     output_stream,
-    templates: List,
+    statements: List[Statement],
+    templates: List[ObjectTemplate],
     options: Dict,
     stopping_criteria: Optional[StoppingCriteria] = None,
     continuation_data: Globals = None,
@@ -620,10 +622,11 @@ def output_batches(
             for template in templates
             if template.nickname
         }
+        # table names are sort of nicknames for themselves too, because
+        # you can refer to them.
         name_slots.update(
             {template.tablename: template.tablename for template in templates}
         )
-        # print("YYYY", name_slots)
 
         globals = Globals(name_slots=name_slots)
         # at one point start-ids were passed from the command line
@@ -639,10 +642,10 @@ def output_batches(
         stopping_criteria=stopping_criteria,
         start_ids=start_ids,
         faker_providers=faker_providers,
-        templates=templates,
+        statements=statements,
     ) as interpreter:
 
-        runtimecontext = RuntimeContext(interpreter=interpreter)
+        interpreter.current_context = RuntimeContext(interpreter=interpreter)
         continuing = bool(continuation_data)
-        interpreter.loop_over_templates_until_finished(runtimecontext, continuing)
+        interpreter.loop_over_templates_until_finished(continuing)
         return interpreter.globals

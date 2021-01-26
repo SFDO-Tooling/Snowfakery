@@ -211,7 +211,7 @@ class PluginThatNeedsState(SnowfakeryPlugin):
 
 class TestContextVars:
     @mock.patch(write_row_path)
-    def test_context_vars(self, write_row):
+    def test_plugin_context_vars(self, write_row):
         yaml = """
         - plugin: tests.test_custom_plugins_and_providers.PluginThatNeedsState
         - object: OBJ
