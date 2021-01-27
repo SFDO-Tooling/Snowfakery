@@ -17,7 +17,7 @@ def generated_rows(request):
         index = index - 1  # use 1-based indexing like Snowfakery does
 
         # create and cache a dict of table names to lists of rows
-        if type(mockobj._index) != {}:
+        if type(mockobj._index) != dict:
             mockobj._index = {}
             for row in mockobj.mock_calls:
                 table = row[1][0]
