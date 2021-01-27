@@ -452,12 +452,12 @@ StageName:
 You can do more sophisticated randomness with features that will be discussed in the section [Random Weights That Are Not Percentages](#random-weights-that-are-not-percentages).
 
 A more elaborate form of `random_choice` can also be used to
-select randomly among potential child or friend objects.
+select randomly among potential child objects.
 
 ```yaml
 - object : Task
   fields:
-    who:
+    person_doing_the_task:
         random_choice:
           - object: Contact
             fields:
@@ -468,6 +468,36 @@ select randomly among potential child or friend objects.
                 FirstName: Marge
                 LastName: Simpson
 ```
+
+#### `random_reference`
+
+Create a reference to a random, already-created row from some table.
+
+```yaml
+- object: Owner
+  count: 10
+  fields:
+    name: fake.name
+- object: Pet
+  count: 10
+  fields:
+    ownedBy:
+        random_reference: Owner
+```
+
+The selected row could be any one that matches the object
+type and was already created in the current iteration of
+the recipe. For example, the recipe above was executed
+20 times (iterations) to generate 200 Pets and Owners,
+the selected rows in the first iteration would be one
+of the first 10 Owners and the ones picked in the last
+iteration would be one of the last 10.
+
+Snowfakery cannot currently generate a random reference
+based on a nickname or to a row created in a previous
+or future iteration of the recipe. If you need these
+features, contact the Snowfakery team through a
+github issue.
 
 ### `fake`
 
@@ -846,7 +876,7 @@ In theory you could use Jinja keywords like `${% if` (as opposed to `{% if`) but
 
 Hard-coding the exact number of records to create into a template file is not always the ideal thing.
 
-You can pass options (numbers, strings, booleans) to your generator script from a command line.
+You can pass options (numbers, strings, booleans) to your generator recipe from a command line.
 
 The first step is to declare the options in your template file:
 
@@ -857,7 +887,7 @@ The first step is to declare the options in your template file:
 
 If you do not specify a default, the option is required and the template will not be processed without it.
 
-In your script, you use the value by referring to it in a formula:
+In your recipe, you use the value by referring to it in a formula:
 
 ```yaml
 - object: Account
