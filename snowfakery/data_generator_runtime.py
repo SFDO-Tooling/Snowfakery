@@ -361,8 +361,6 @@ class Interpreter:
     # TODO: move this into the interpreter object
     def loop_over_templates_until_finished(self, continuing):
         finished = False
-        # TODO: make a fresh runtime context per execution to avoid
-        #       risk of data leakage
         runtimecontext = RuntimeContext(interpreter=self)
         while not finished:
             self.loop_over_templates_once(runtimecontext, continuing)
