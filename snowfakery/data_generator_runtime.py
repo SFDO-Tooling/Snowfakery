@@ -358,7 +358,6 @@ class Interpreter:
 
         self.templates = templates
 
-    # TODO: move this into the interpreter object
     def loop_over_templates_until_finished(self, continuing):
         finished = False
         runtimecontext = RuntimeContext(interpreter=self)
