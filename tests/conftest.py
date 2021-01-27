@@ -13,7 +13,7 @@ def generated_rows(request):
         return mockobj.mock_calls[index][1][1][value]
 
     def table_values(tablename, index, field=None):
-        "Look up a value from a table."
+        """Look up a value from a table."""
         index = index - 1  # use 1-based indexing like Snowfakery does
 
         # create and cache a dict of table names to lists of rows

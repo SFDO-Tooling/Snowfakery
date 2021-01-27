@@ -216,7 +216,7 @@ class StandardFuncs(SnowfakeryPlugin):
                 probability = parse_weight_str(self.context, probability)
             return probability or when, pick
 
-        def random_reference(self, tablename: str, scope: str = "local"):
+        def random_reference(self, tablename: str, scope: str = "current-iteration"):
             """Select a random, already-created row from 'sobject'
 
             - object: Owner
@@ -237,13 +237,17 @@ class StandardFuncs(SnowfakeryPlugin):
             last_object = globls.object_names.get(tablename)
             if last_object:
                 last_id = last_object.id
-                if scope == "global":
+                if scope == "prior-and-current-iterations":
                     first_id = 1
                     warnings.warn("Global scope is an experimental feature.")
-                elif scope == "local":
-                    first_id = globls.orig_used_ids[tablename]
+                elif scope == "current-iteration":
+                    first_id = globls.first_new_id(tablename)
                 else:
-                    raise DataGenError(f"Scope must be 'local' or 'global' not {scope}")
+                    raise DataGenError(
+                        f"Scope must be 'prior-and-current-iterations' or 'current-iteration' not {scope}",
+                        None,
+                        None,
+                    )
                 return ObjectReference(tablename, random.randint(first_id, last_id))
             elif tablename in globls.nicknamed_objects:
                 raise DataGenError("Nicknames cannot be used in random_reference")

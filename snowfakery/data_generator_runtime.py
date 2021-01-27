@@ -116,9 +116,11 @@ class Transients:
             name: NicknameSlot(table, id_manager)
             for name, table in nicknames_and_tables.items()
         }
-        self.orig_used_ids = defaultdict(
-            lambda: 1, {k: v + 1 for k, v in id_manager.last_used_ids.items()}
-        )
+
+        self.orig_used_ids = id_manager.last_used_ids.copy()
+
+    def first_new_id(self, tablename):
+        return self.orig_used_ids.get(tablename, 0) + 1
 
 
 class Globals:
@@ -212,9 +214,8 @@ class Globals:
                 None,
             )
 
-    @property
-    def orig_used_ids(self):
-        return self.transients.orig_used_ids
+    def first_new_id(self, tablename):
+        return self.transients.first_new_id(tablename)
 
     def __getstate__(self):
         def serialize_dict_of_object_rows(dct):
@@ -226,7 +227,7 @@ class Globals:
         )
         intertable_dependencies = [
             dict(v._asdict()) for v in self.intertable_dependencies
-        ]
+        ]  # converts ordered-dict to dict for Python 3.6 and 3.7
 
         state = {
             "persistent_nicknames": persistent_nicknames,

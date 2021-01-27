@@ -323,7 +323,7 @@ class TestReferences:
             A_ref:                  #8
               random_reference:     #9
                 tablename: A        #10
-                scope: local        #11
+                scope: current-iteration        #11
     """
         with mock.patch("random.randint") as randint:
             randint.side_effect = [8, 12]
@@ -342,7 +342,7 @@ class TestReferences:
             A_ref:                  #8
               random_reference:
                 tablename: A   #9
-                scope: global
+                scope: prior-and-current-iterations
     """
         with mock.patch("random.randint") as randint, mock.patch(
             "warnings.warn"
@@ -352,3 +352,17 @@ class TestReferences:
         assert generated_rows.row_values(22, "A_ref") == "A(8)"
         assert generated_rows.row_values(23, "A_ref") == "A(3)"
         assert "experimental" in str(warn.mock_calls)
+
+    def test_random_reference_wrong_scope(self, generated_rows):
+        # undocumented experimental feature!
+        yaml = """                  #1
+      - object: B                   #2
+        count: 2                    #3
+        fields:                     #4
+            A_ref:                  #5
+              random_reference:
+                tablename: A
+                scope: xyzzy
+    """
+        with pytest.raises(DataGenError):
+            generate(StringIO(yaml))
