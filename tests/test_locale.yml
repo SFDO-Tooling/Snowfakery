@@ -1,0 +1,8 @@
+- var: locale
+  value: fr_FR
+
+- object: foo
+  fields:
+    name:
+      fake: name
+    thelocale: ${{locale}}

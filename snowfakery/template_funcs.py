@@ -19,8 +19,6 @@ from snowfakery.object_rows import ObjectRow, ObjectReference
 
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
 
-fake = Faker(use_weighting=False)
-
 # It might make more sense to use context vars for context handling when
 # Python 3.6 is out of the support matrix.
 
@@ -68,6 +66,7 @@ def render_boolean(context: PluginContext, value: FieldDefinition) -> bool:
 class StandardFuncs(SnowfakeryPlugin):
     class Functions:
         int = int
+        _faker_for_dates = Faker(use_weighting=False)  # use ONLY for random_dates
 
         def date(
             self,
@@ -112,7 +111,7 @@ class StandardFuncs(SnowfakeryPlugin):
             end_date = try_parse_date(end_date)
 
             try:
-                return fake.date_between(start_date, end_date)
+                return self._faker_for_dates.date_between(start_date, end_date)
             except ValueError as e:
                 if "empty range" not in str(e):
                     raise

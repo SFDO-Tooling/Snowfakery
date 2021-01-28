@@ -324,6 +324,7 @@ class Interpreter:
     ):
         self.output_stream = output_stream
         self.options = options or {}
+        self.faker_providers = faker_providers
         snowfakery_plugins = snowfakery_plugins or {}
         self.plugin_instances = {
             name: plugin(self) for name, plugin in snowfakery_plugins.items()
@@ -333,7 +334,7 @@ class Interpreter:
             for name, plugin in self.plugin_instances.items()
         }
         self.finished_checker = FinishedChecker(start_ids, stopping_criteria)
-        self.faker_template_library = FakerTemplateLibrary(faker_providers)
+        self.faker_template_libraries = {}
 
         self.globals = globals
 
@@ -346,6 +347,13 @@ class Interpreter:
         }
 
         self.statements = statements
+
+    def faker_template_library(self, locale):
+        rc = self.faker_template_libraries.get(locale)
+        if not rc:
+            rc = FakerTemplateLibrary(self.faker_providers, locale)
+            self.faker_template_libraries[locale] = rc
+        return rc
 
     def loop_over_templates_until_finished(self, continuing):
         finished = False
@@ -365,7 +373,7 @@ class Interpreter:
                     template.generate_rows(self.output_stream, self.current_context)
             elif statement.__class__.__name__ == "VariableDefinition":
                 vardef = statement
-                self.current_context.context_vars("vardefs")[
+                self.current_context.variable_definitions()[
                     vardef.varname
                 ] = vardef.evaluate(self.current_context)
             else:
@@ -408,6 +416,8 @@ class RuntimeContext:
             self._plugin_context_vars = self.parent._plugin_context_vars.new_child()
         else:
             self._plugin_context_vars = ChainMap()
+        locale = self.variable_definitions().get("locale")
+        self.faker_template_library = self.interpreter.faker_template_library(locale)
 
     # TODO: move this into the interpreter object
     def check_if_finished(self):
@@ -506,13 +516,13 @@ class EvaluationNamespace(NamedTuple):
             "child_index": obj._child_index if obj else None,
             "this": obj,
             "today": interpreter.globals.today,
-            "fake": interpreter.faker_template_library,
+            "fake": self.runtime_context.faker_template_library,
             "template": self.runtime_context.current_template,
             **interpreter.options,
             **interpreter.globals.object_names,
             **(obj._values if obj else {}),
             **interpreter.plugin_function_libraries,
-            **self.runtime_context.context_vars("vardefs"),
+            **self.runtime_context.variable_definitions(),
         }
 
     def field_funcs(self):
@@ -526,9 +536,7 @@ class EvaluationNamespace(NamedTuple):
 
     # todo: remove this special case
     def fake(self, name):
-        return str(
-            getattr(self.runtime_context.interpreter.faker_template_library, name)
-        )
+        return str(getattr(self.runtime_context.faker_template_library, name))
 
     def field_vars(self):
         return {**self.simple_field_vars(), **self.field_funcs()}
