@@ -2,6 +2,7 @@ import random
 from functools import lru_cache
 from datetime import date, datetime
 import dateutil.parser
+import warnings
 from dateutil.relativedelta import relativedelta
 from ast import literal_eval
 
@@ -14,9 +15,9 @@ from .data_gen_exceptions import DataGenError
 
 import snowfakery.data_generator_runtime  # noqa
 from snowfakery.plugins import SnowfakeryPlugin, PluginContext, lazy
+from snowfakery.object_rows import ObjectRow, ObjectReference
 
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
-ObjectRow = "snowfakery.data_generator_runtime.ObjectRow"
 
 fake = Faker(use_weighting=False)
 
@@ -214,6 +215,44 @@ class StandardFuncs(SnowfakeryPlugin):
             if probability:
                 probability = parse_weight_str(self.context, probability)
             return probability or when, pick
+
+        def random_reference(self, tablename: str, scope: str = "current-iteration"):
+            """Select a random, already-created row from 'sobject'
+
+            - object: Owner
+              count: 10
+              fields:
+                name: fake.name
+            - object: Pet
+              count: 10
+              fields:
+                ownedBy:
+                    random_reference:
+                        Owner
+
+            See the docs for more info.
+            """
+
+            globls = self.context.interpreter.globals
+            last_object = globls.object_names.get(tablename)
+            if last_object:
+                last_id = last_object.id
+                if scope == "prior-and-current-iterations":
+                    first_id = 1
+                    warnings.warn("Global scope is an experimental feature.")
+                elif scope == "current-iteration":
+                    first_id = globls.first_new_id(tablename)
+                else:
+                    raise DataGenError(
+                        f"Scope must be 'prior-and-current-iterations' or 'current-iteration' not {scope}",
+                        None,
+                        None,
+                    )
+                return ObjectReference(tablename, random.randint(first_id, last_id))
+            elif tablename in globls.nicknamed_objects:
+                raise DataGenError("Nicknames cannot be used in random_reference")
+            else:
+                raise DataGenError(f"There is no table named {tablename}")
 
         @lazy
         def if_(self, *choices: FieldDefinition):
