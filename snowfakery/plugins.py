@@ -147,6 +147,7 @@ class PluginResult:
     def __str__(self):
         return str(self.result)
 
+
 # round-trip PluginResult objects through continuation YAML if needed.
 SnowfakeryDumper.add_representer(PluginResult, Representer.represent_object)
 yaml.SafeLoader.add_constructor(

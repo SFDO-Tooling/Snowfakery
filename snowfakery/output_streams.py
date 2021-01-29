@@ -4,6 +4,7 @@ from tempfile import TemporaryDirectory
 import csv
 import subprocess
 import datetime
+import sys
 from pathlib import Path
 from collections import namedtuple, defaultdict
 from typing import Dict, Union, Optional, Mapping, Callable, Sequence
@@ -117,10 +118,10 @@ class OutputStream(ABC):
 
         Return a list of messages to print out.
         """
-        pass
+        super().close()
 
 
-class FileOutputStream(OutputStream):
+class SmartStream:
     mode = "wt"
 
     def __init__(self, stream_or_path=None):
@@ -132,20 +133,27 @@ class FileOutputStream(OutputStream):
             self.owns_stream = True
         elif stream_or_path is None:
             self.owns_stream = False
-            self.stream = None  # sys.stdout
+            self.stream = sys.stdout
         else:  # noqa
             assert False, f"stream_or_path is {stream_or_path}"
 
-    def close(self) -> Optional[Sequence[str]]:
+    def write(self, data):
+        self.stream.write(data)
+
+    def close(self):
         if self.owns_stream:
             self.stream.close()
             return [f"Generated {self.stream.name}"]
 
 
+class FileOutputStream(OutputStream, SmartStream):
+    pass
+
+
 class DebugOutputStream(FileOutputStream):
     def write_single_row(self, tablename: str, row: Dict) -> None:
         values = ", ".join([f"{key}={value}" for key, value in row.items()])
-        print(f"{tablename}({values})", file=self.stream)
+        self.write(f"{tablename}({values})\n")
 
     def flatten(
         self,
@@ -216,20 +224,20 @@ class JSONOutputStream(FileOutputStream):
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
         if self.first_row:
-            self.stream.write("[")
+            self.write("[")
             self.first_row = False
         else:
-            self.stream.write(",\n")
+            self.write(",\n")
         values = {"_table": tablename, **row}
-        self.stream.write(json.dumps(values))
+        self.write(json.dumps(values))
 
     def close(self) -> Optional[Sequence[str]]:
         if not self.first_row:
-            self.stream.write("]\n")
-        return super().close()
+            self.write("]\n")
+        super().close()
 
 
-class SqlOutputStream(OutputStream):
+class SqlDbOutputStream(OutputStream):
     mappings = None
     should_close_session = False
 
@@ -301,6 +309,50 @@ class SqlOutputStream(OutputStream):
                     },
                 )
                 self.table_info[tablename].fallback_dict["id"] = None  # id is special
+
+
+class SqlTextOutputStream(FileOutputStream):
+    mode = "wt"
+
+    def __init__(self, stream_or_path=None):
+        self.text_output = SmartStream(stream_or_path)
+        self.tempdir = TemporaryDirectory()
+        self.sql_db = self._init_db()
+
+    def _init_db(self):
+        "Initialize a db through an owned output stream"
+        db_url = f"sqlite:///{self.tempdir.name}/tempdb.db"
+        engine = create_engine(db_url)
+        return SqlDbOutputStream(engine, None)
+
+    def write_single_row(self, tablename: str, row: Dict) -> None:
+        self.sql_db.write_single_row(tablename, row)
+        # it might seem logical to try and output the raw SQL here
+        # but it gets messy due to limitations of SQL Alchemy
+        # https://docs.sqlalchemy.org/en/13/faq/sqlexpressions.html#rendering-bound-parameters-inline
+        # in particular datetime values do not render properly without extra code
+        # perhaps there are other, similar, undiscovered limitations.
+
+    def create_or_validate_tables(self, tables: Dict[str, TableInfo]) -> None:
+        self.sql_db.create_or_validate_tables(tables)
+
+    def flush(self):
+        self.sql_db.flush()
+
+    def _dump_db(self):
+        "Dump a database as a sql file"
+        self.sql_db.commit()
+        con = self.sql_db.engine.raw_connection()
+
+        # https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.iterdump
+        for line in con.iterdump():
+            self.text_output.stream.write("%s\n" % line)
+
+    def close(self, *args, **kwargs):
+        self._dump_db()
+        self.sql_db.close(*args, **kwargs)
+        self.text_output.close(*args, **kwargs)
+        self.tempdir.cleanup()
 
 
 def _validate_fields(mappings, tables):
