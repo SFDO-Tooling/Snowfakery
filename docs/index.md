@@ -1025,9 +1025,9 @@ Some objects are meant to be produced only once, regardless
 of how many times the recipe executes. The programming
 language term for this is a "singleton". For example
 an accounting system might generate a dataset that has
-exactly 3 Ledger objects, Checking and Savings. You could have
+exactly 2 Ledger objects, Checking and Savings. You could have
 dozens of Entries per Ledger or maybe billions. But it
-might want to always generate exactly 3 Ledgers.
+might want to always generate exactly 2 Ledgers.
 
 Here is how you would do that:
 
@@ -1507,7 +1507,7 @@ $ cci flow run test_everything
 - Rows: Rows (often also called “records”) in a database are a unit of related information. For example in Salesforce (which includes a database) a “Contact” has a first name, last name, phone number, etc. Each Contact is a row. “Contact” is the type of each of those rows. Rows represent real-world Objects. See “Objects” above for more information.
 - Recipe: A Snowfakery YAML file instructing Snowfakery on what to generate.
 - Iteration: Snowfakery recipes can be "scaled up" to generate more data by specifying command line, API or CumulusCI options. The recipe is scaled up by executing over and over again. These executions are called iterations.
-- Singleton: A singleton is an Object Template that generates a single row now how many times the recipe is iterated over.
+- Singleton: A singleton is an Object Template that generates a single row regardless of how many times the recipe is iterated over.
 - YAML: YAML is a relatively simple, human-readable format. You can learn more about it at [yaml.org](http://yaml.org/). But you can also just pick up the basics of it by reading along.
 
 ## Using Snowfakery within Python
