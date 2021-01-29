@@ -1023,8 +1023,8 @@ Each one is called an `iteration`.
 
 Some objects are meant to be produced only once, regardless
 of how many times the recipe executes. The programming
-language term for thhis is a "singleton". For example
-an accounting system might generate a datase that has
+language term for this is a "singleton". For example
+an accounting system might generate a dataset that has
 exactly 3 Ledger objects, Checking and Savings. You could have
 dozens of Entries per Ledger or maybe billions. But it
 might want to always generate exactly 3 Ledgers.
