@@ -264,7 +264,7 @@ class JsonApiTables:
         for row in self.data["data"]:
             r = row.copy()
             tablename = r.pop("type")
-            self.tables[tablename].append(r)
+            self.tables[tablename].append(r["attributes"])
 
     def __getitem__(self, name):
         return self.tables[name]
@@ -306,8 +306,8 @@ class TestJsonApiOutputStream(OutputCommonTests):
         output_stream.close()
         assert json.loads(stdout.getvalue()) == {
             "data": [
-                {"type": "foo", "id": 1, "attributes": {"a": "b", "c": 3.0}},
-                {"type": "foo", "id": 2, "attributes": {"a": "b", "c": 3.0}},
+                {"type": "foo", "id": 1, "attributes": {"id": 1, "a": "b", "c": 3}},
+                {"type": "foo", "id": 2, "attributes": {"id": 2, "a": "b", "c": 3}},
             ]
         }
 
