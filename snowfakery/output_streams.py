@@ -230,6 +230,8 @@ class JSONOutputStream(FileOutputStream):
 
 
 class JsonApiOutputStream(FileOutputStream):
+    """Output Stream to generates JSON:API formated data."""
+
     encoders: Mapping[type, Callable] = {
         **OutputStream.encoders,
         datetime.date: str,
@@ -242,11 +244,14 @@ class JsonApiOutputStream(FileOutputStream):
         self.first_row = True
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
+        # JSON:API documents wrap the data in a "data" object.
         if self.first_row:
             self.stream.write('{"data":[')
             self.first_row = False
         else:
             self.stream.write(",\n")
+        # For JSON:API documents the table name becomes the object type for
+        # each row and fields are put into an attributes child object.
         values = {"type": tablename, "id": row.get("id"), "attributes": {**row}}
         self.stream.write(json.dumps(values))
 
