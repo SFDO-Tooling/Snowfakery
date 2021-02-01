@@ -1014,6 +1014,60 @@ for all of the CSV files.
 
 ## Advanced Features
 
+
+### Singletons with the "just_once" feature
+
+Snowfakery scales up to larger data volumes
+by evaluating your recipe over and over again.
+Each one is called an `iteration`.
+
+Some objects are meant to be produced only once, regardless
+of how many times the recipe executes. The programming
+language term for this is a "singleton". For example
+an accounting system might generate a dataset that has
+exactly 2 Ledger objects, Checking and Savings. You could have
+dozens of Entries per Ledger or maybe billions. But it
+might want to always generate exactly 2 Ledgers.
+
+Here is how you would do that:
+
+```yaml
+- object: Ledger
+  just_once: True
+  nickname: Checking
+  fields:
+    Name: Checking
+
+- object: Ledger
+  just_once: True
+  nickname: Savings
+  fields:
+    Name: Savings
+
+- object: Entry
+  count: 1000
+  fields:
+    Ledger: Checking
+    ...
+
+- object: Entry
+  count: 1000
+  fields:
+    Ledger: Savings
+    ...
+```
+
+Now if you execute this from the Snowfakery command line like this:
+
+```s
+$ snowfakery accounting.yml --target-number 10_000 Entry
+...
+```
+
+You will get 2 Ledger rows and 5000 Entry rows attached to
+each of the Ledger rows. If you scale the recipe up to 1M, you
+will still get only two Ledger rows.
+
 ### Hidden Fields and Objects
 
 As described earlier, fields can refer to each other. For example field `c` could be the sum of fields `a` and `b`. Or perhaps you only want to output PersonLastName if PersonFirstName was set, and PersonFirstName is set randomly.
@@ -1101,7 +1155,7 @@ you would model it like this:
 Which generates:
 
 ```javascript
-Company(id=1, Name=Nelson-Singleton)
+Company(id=1, Name=Nelson-Sampson)
 Company(id=2)
 Employee(id=1, Name=Julie Turner, EmployedBy=Company(2))
 Company(id=3)
@@ -1510,6 +1564,8 @@ does not.
 - Object Template: These represent instructions on how to create a row, or multiple rows in a database. Each row represents a real-world Object.
 - Rows: Rows (often also called “records”) in a database are a unit of related information. For example in Salesforce (which includes a database) a “Contact” has a first name, last name, phone number, etc. Each Contact is a row. “Contact” is the type of each of those rows. Rows represent real-world Objects. See “Objects” above for more information.
 - Recipe: A Snowfakery YAML file instructing Snowfakery on what to generate.
+- Iteration: Snowfakery recipes can be "scaled up" to generate more data by specifying command line, API or CumulusCI options. The recipe is scaled up by executing over and over again. These executions are called iterations.
+- Singleton: A singleton is an Object Template that generates a single row regardless of how many times the recipe is iterated over.
 - YAML: YAML is a relatively simple, human-readable format. You can learn more about it at [yaml.org](http://yaml.org/). But you can also just pick up the basics of it by reading along.
 
 ## Using Snowfakery within Python
