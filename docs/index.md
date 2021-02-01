@@ -1510,7 +1510,7 @@ You should start by installing Snowfakery in a context which
 makes it easy to use the Python command 'pip' to manage your
 Python environment. For example you could install Python
 using the standard installers from `python.org` and then
-you would do these commands to create and use a venv with the
+you would run the following commands to create and use a venv with the
 Postgres plugin:
 
 ```bash
