@@ -357,7 +357,7 @@ class Interpreter:
 
     def loop_over_templates_until_finished(self, continuing):
         finished = False
-        runtimecontext = RuntimeContext(interpreter=self)
+        RuntimeContext(interpreter=self)
         while not finished:
             self.loop_over_templates_once(self.statements, continuing)
             finished = self.current_context.check_if_finished()
@@ -366,18 +366,11 @@ class Interpreter:
 
     def loop_over_templates_once(self, statement_list, continuing: bool):
         for statement in statement_list:
-            if statement.__class__.__name__ == "ObjectTemplate":
-                template = statement
-                should_skip = template.just_once and continuing
-                if not should_skip:
-                    template.generate_rows(self.output_stream, self.current_context)
-            elif statement.__class__.__name__ == "VariableDefinition":
-                vardef = statement
-                self.current_context.variable_definitions()[
-                    vardef.varname
-                ] = vardef.evaluate(self.current_context)
-            else:
-                assert 0, statement  # pragma: no cover
+            statement.execute(self, self.current_context, continuing)
+
+    def register_variable(self, name: str, value: object):
+        vardefs = self.current_context.variable_definitions()
+        vardefs[name] = value
 
     def __enter__(self, *args):
         return self

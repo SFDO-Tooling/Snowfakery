@@ -1,8 +1,5 @@
 from abc import abstractmethod, ABC
-from .data_generator_runtime import (
-    evaluate_function,
-    RuntimeContext,
-)
+from .data_generator_runtime import evaluate_function, RuntimeContext, Interpreter
 from .object_rows import ObjectRow, ObjectReference
 from contextlib import contextmanager
 from typing import Union, Dict, Sequence, Optional, cast
@@ -60,6 +57,14 @@ class VariableDefinition:
     def evaluate(self, context: RuntimeContext) -> FieldValue:
         """Evaluate the count expression to an integer"""
         return self.expression.render(context)
+
+    def execute(
+        self, interp: Interpreter, context: RuntimeContext, continuing: bool
+    ) -> Optional[ObjectRow]:
+        name = self.varname
+        value = self.evaluate(context)
+
+        interp.register_variable(name, value)
 
 
 class ObjectTemplate:
@@ -189,6 +194,13 @@ class ObjectTemplate:
                 context.register_intertable_reference(
                     self.tablename, fieldvalue._tablename, fieldname
                 )
+
+    def execute(
+        self, interp: Interpreter, context: RuntimeContext, continuing: bool
+    ) -> Optional[ObjectRow]:
+        should_skip = self.just_once and continuing
+        if not should_skip:
+            return self.generate_rows(interp.output_stream, interp.current_context)
 
 
 class SimpleValue(FieldDefinition):
