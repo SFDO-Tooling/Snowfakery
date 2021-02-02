@@ -357,7 +357,7 @@ class Interpreter:
 
     def loop_over_templates_until_finished(self, continuing):
         finished = False
-        RuntimeContext(interpreter=self)
+        self.current_context = RuntimeContext(interpreter=self)
         while not finished:
             self.loop_over_templates_once(self.statements, continuing)
             finished = self.current_context.check_if_finished()
@@ -458,9 +458,9 @@ class RuntimeContext:
             interpreter=self.interpreter,
             parent_context=self,
         )
-        # jr will register itself with the interpreter
         try:
             yield jr
+            self.interpreter.current_context = jr
         finally:
             # Goodbye junior, its been nice
             # Hope you find your paradise
