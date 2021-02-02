@@ -62,6 +62,7 @@ id_manager:
     bar: 1000
 nicknames_and_tables: {}
 today: 2022-11-03
+persistent_nicknames: {}
                 """
         generate(
             StringIO(yaml),

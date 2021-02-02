@@ -51,13 +51,27 @@ class TestRestart:
 
         assert write_row.mock_calls[-1][1][1]["id"] == 10
 
+    def test_forward_references_work_after_restart(self, generated_rows):
+        yaml = """
+            - object: Foo
+              fields:
+                bar:
+                    reference: Bar
+            - object: Bar
+            """
+        continuation_file = StringIO()
+        generate(StringIO(yaml), generate_continuation_file=continuation_file)
+        generate(
+            StringIO(yaml), continuation_file=StringIO(continuation_file.getvalue())
+        )
+
+        assert generated_rows.table_values("Foo", 2, "bar") == "Bar(2)"
+
     @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
     def test_faker_dates_work(self, write_row):
         yaml = """
             - object: foo
-              nickname: Blah
               just_once: True
-              count: 50
               fields:
                 a_date:
                     date_between:

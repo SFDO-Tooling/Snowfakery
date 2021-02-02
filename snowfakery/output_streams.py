@@ -27,7 +27,7 @@ except (ImportError, ModuleNotFoundError) as e:
         raise exception
 
 
-from .data_generator_runtime import ObjectRow, NicknameSlot
+from .object_rows import ObjectRow, ObjectReference
 from .parse_recipe_yaml import TableInfo
 
 
@@ -57,7 +57,7 @@ class OutputStream(ABC):
         sourcetable: str,
         fieldname: str,
         source_row_dict: Dict,
-        target_object_row: Union[ObjectRow, NicknameSlot],
+        target_object_row: Union[ObjectRow, ObjectReference],
     ) -> Union[str, int]:
         return target_object_row.id
 
@@ -68,7 +68,7 @@ class OutputStream(ABC):
         pass
 
     def cleanup(self, field_name, field_value, sourcetable, row):
-        if isinstance(field_value, (ObjectRow, NicknameSlot)):
+        if isinstance(field_value, (ObjectRow, ObjectReference)):
             return self.flatten(sourcetable, field_name, row, field_value)
         else:
             encoder = self.encoders.get(type(field_value))
@@ -152,7 +152,7 @@ class DebugOutputStream(FileOutputStream):
         sourcetable: str,
         fieldname: str,
         source_row_dict: Dict,
-        target_object_row: Union[ObjectRow, NicknameSlot],
+        target_object_row: Union[ObjectRow, ObjectReference],
     ) -> Union[str, int]:
         return f"{target_object_row._tablename}({target_object_row.id})"
 
@@ -369,7 +369,7 @@ class GraphvizOutputStream(FileOutputStream):
         sourcetable: str,
         fieldname: str,
         source_row_dict: Dict,
-        target_object_row: Union[ObjectRow, NicknameSlot],
+        target_object_row: Union[ObjectRow, ObjectReference],
     ) -> Union[str, int]:
         source = (sourcetable, source_row_dict["id"])
         target = (target_object_row._tablename, target_object_row.id)
