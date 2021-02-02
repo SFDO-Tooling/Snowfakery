@@ -286,10 +286,10 @@ def parse_inclusions(
 
 def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTemplate:
     parsed_template: Any = parse_element(
-        yaml_sobj,
-        "object",
-        {},
-        {
+        dct=yaml_sobj,
+        element_type="object",
+        mandatory_keys={},
+        optional_keys={
             "fields": Dict,
             "friends": List,
             "include": str,
@@ -297,7 +297,7 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
             "just_once": bool,
             "count": (str, int, dict),
         },
-        context,
+        context=context,
     )
 
     assert yaml_sobj
