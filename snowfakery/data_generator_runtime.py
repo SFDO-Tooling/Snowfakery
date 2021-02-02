@@ -403,7 +403,6 @@ class RuntimeContext:
             self.current_template = current_template
 
         self.interpreter = interpreter
-        self.interpreter.current_context = self
         self.parent = parent_context
         if self.parent:
             self._plugin_context_vars = self.parent._plugin_context_vars.new_child()
@@ -459,8 +458,8 @@ class RuntimeContext:
             parent_context=self,
         )
         try:
-            yield jr
             self.interpreter.current_context = jr
+            yield jr
         finally:
             # Goodbye junior, its been nice
             # Hope you find your paradise
