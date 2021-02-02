@@ -160,7 +160,7 @@ CSV output goes to a directory with one CSV file per table and a JSON manifest f
 
 ## Objects
 
-The main, core concept in the language is an “*Object Template*”. It basically represents instructions on how to create a *Row* (or multiple rows) in a database. Rows in turn represent real-world entities like People,  Places or Things and that’s why we use the keyword “Object”.
+The main, core concept in the language is an “*Object Template*”. It basically represents instructions on how to create a *Row* (or multiple rows) in a database. Rows in turn represent real-world entities like People,  Places or Things and that’s why we use the keyword “Object”. "Record" is another term for "Row"
 
  Each *Row* has a type, which represents — for example — the name of the table it goes in if it is headed for a relational database, or which CSV file it goes in it if it is destined to be output as CSV. You declare the type after the keyword `object`.
 
@@ -1014,6 +1014,60 @@ for all of the CSV files.
 
 ## Advanced Features
 
+
+### Singletons with the "just_once" feature
+
+Snowfakery scales up to larger data volumes
+by evaluating your recipe over and over again.
+Each one is called an `iteration`.
+
+Some objects are meant to be produced only once, regardless
+of how many times the recipe executes. The programming
+language term for this is a "singleton". For example
+an accounting system might generate a dataset that has
+exactly 2 Ledger objects, Checking and Savings. You could have
+dozens of Entries per Ledger or maybe billions. But it
+might want to always generate exactly 2 Ledgers.
+
+Here is how you would do that:
+
+```yaml
+- object: Ledger
+  just_once: True
+  nickname: Checking
+  fields:
+    Name: Checking
+
+- object: Ledger
+  just_once: True
+  nickname: Savings
+  fields:
+    Name: Savings
+
+- object: Entry
+  count: 1000
+  fields:
+    Ledger: Checking
+    ...
+
+- object: Entry
+  count: 1000
+  fields:
+    Ledger: Savings
+    ...
+```
+
+Now if you execute this from the Snowfakery command line like this:
+
+```s
+$ snowfakery accounting.yml --target-number 10_000 Entry
+...
+```
+
+You will get 2 Ledger rows and 5000 Entry rows attached to
+each of the Ledger rows. If you scale the recipe up to 1M, you
+will still get only two Ledger rows.
+
 ### Hidden Fields and Objects
 
 As described earlier, fields can refer to each other. For example field `c` could be the sum of fields `a` and `b`. Or perhaps you only want to output PersonLastName if PersonFirstName was set, and PersonFirstName is set randomly.
@@ -1101,7 +1155,7 @@ you would model it like this:
 Which generates:
 
 ```javascript
-Company(id=1, Name=Nelson-Singleton)
+Company(id=1, Name=Nelson-Sampson)
 Company(id=2)
 Employee(id=1, Name=Julie Turner, EmployedBy=Company(2))
 Company(id=3)
@@ -1413,7 +1467,7 @@ To specify a record type for a record, just put the Record Type’s API Name in 
 The process of actually generating the data into a Salesforce
 org happens through CumulusCI as described below.
 
-## Using Snowfakery within CumulusCI
+### Using Snowfakery within CumulusCI
 
 [CumulusCI](http://www.github.com/SFDO-Tooling/CumulusCI) is a
 tool and framework for building portable automation for
@@ -1446,12 +1500,72 @@ $ cci task run generate_opportunities_and_contacts
 $ cci flow run test_everything
 ```
 
+## Using Snowfakery with Databases
+
+Snowfakery is built on top of a very flexible engine called
+SQLAlchemy. This allows it to connect to many different databases
+subject to the limitations described below.
+
+You should start by installing Snowfakery in a context which
+makes it easy to use the Python command 'pip' to manage your
+Python environment. For example you could install Python
+using the standard installers from `python.org` and then
+you would run the following commands to create and use a venv with the
+Postgres plugin:
+
+```bash
+# create a new directory for our experiment
+$ mkdir experiment_with_postgres
+# cd into it
+$ cd experiment_with_postgres
+# create a new database: 
+# https://www.postgresql.org/docs/9.1/app-createdb.html
+$ createdb snowfakerydb
+# create a virtual environment. A good habit to get into.
+# https://docs.python.org/3/library/venv.html
+$ python3 -m venv myvenv
+# activate the venv
+$ source myvenv/bin/activate
+# install Snowfakery in this venv
+$ pip install snowfakery
+# install the Postgres library for Python
+# https://pypi.org/project/psycopg2/
+$ pip install psycopg2
+# let's use it!
+$ snowfakery --dburl='postgresql://localhost:5432/snowfakerydb' ~/code/Snowfakery/examples/company.yml --target-number 1000 Employee
+# and check the results
+# https://www.postgresql.org/docs/9.3/app-psql.html
+$ echo 'select * from "Employee"' | psql snowfakerydb
+```
+
+That's a lot to take in, but hopefully it will be clear enough
+to follow the links and understand the details.
+
+A limitation of this process is that currently Snowfakery can
+only create new tables rather than import into existing ones.
+
+The table will have an id column in addition to columns for every field that
+was generated by the recipe. All columns will be of type text.
+
+The list of databases supported by our underlying infrastructure
+(SQLAlchemy) is listed [here](https://docs.sqlalchemy.org/en/14/core/engines.html#supported-databases) and [here](https://docs.sqlalchemy.org/en/13/dialects/index.html).
+
+Snowfakery is not proactively tested with all of the output
+databases. We will certainly accept bug reports and pull requests
+relating to problems that are discovered.
+
+Please keep in touch with the Snowfakery team about your use of
+other databases so we can have a sense of what works well and what
+does not.
+
 ## Snowfakery Glossary
 
 - Object: When we think about our Rows in the context of each other, we often use the word “Object”. That’s because rows often *represent* real-world entities like houses (or at least their, addresses), organizations and people (in this case its acceptable to objectify people). See also: “Rows”
 - Object Template: These represent instructions on how to create a row, or multiple rows in a database. Each row represents a real-world Object.
 - Rows: Rows (often also called “records”) in a database are a unit of related information. For example in Salesforce (which includes a database) a “Contact” has a first name, last name, phone number, etc. Each Contact is a row. “Contact” is the type of each of those rows. Rows represent real-world Objects. See “Objects” above for more information.
 - Recipe: A Snowfakery YAML file instructing Snowfakery on what to generate.
+- Iteration: Snowfakery recipes can be "scaled up" to generate more data by specifying command line, API or CumulusCI options. The recipe is scaled up by executing over and over again. These executions are called iterations.
+- Singleton: A singleton is an Object Template that generates a single row regardless of how many times the recipe is iterated over.
 - YAML: YAML is a relatively simple, human-readable format. You can learn more about it at [yaml.org](http://yaml.org/). But you can also just pick up the basics of it by reading along.
 
 ## Using Snowfakery within Python
