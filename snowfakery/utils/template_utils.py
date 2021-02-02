@@ -60,10 +60,18 @@ Template = lru_cache(512)(Template)
 number_chars = set(string.digits + ".")
 
 
+from pysnooper import snoop
+
+
+@snoop()
 def look_for_number(arg):
     looks_like_float = False
+    sign = 1
     if len(arg) == 0:
         return arg
+    if arg[0] == "-":
+        sign = -1
+        arg = arg[1:]
     for char in arg:
         if char not in number_chars:
             return arg
@@ -75,6 +83,6 @@ def look_for_number(arg):
             else:
                 looks_like_float = True
     if looks_like_float:
-        return float(arg)
+        return sign * float(arg)
     else:
-        return int(arg)
+        return sign * int(arg)

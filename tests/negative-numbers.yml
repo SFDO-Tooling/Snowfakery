@@ -1,0 +1,14 @@
+- object: foo
+  fields:
+    # good:
+    #   random_number:
+    #     min: ${{ 0 }}
+    #     max: ${{ 1 }}
+    wrong_number:
+      random_number:
+        min: ${{0}}
+        max: ${{-1}}
+    # bad:
+    #   random_number:
+    #     min: ${{ -11 }}
+    #     max: ${{ 0 }}
