@@ -1,8 +1,5 @@
 from abc import abstractmethod, ABC
-from .data_generator_runtime import (
-    evaluate_function,
-    RuntimeContext,
-)
+from .data_generator_runtime import evaluate_function, RuntimeContext, Interpreter
 from .object_rows import ObjectRow, ObjectReference
 from contextlib import contextmanager
 from typing import Union, Dict, Sequence, Optional, cast
@@ -50,6 +47,26 @@ class FieldDefinition(ABC):
             raise DataGenError(f"{message} : {str(e)}", self.filename, self.line_num)
 
 
+class VariableDefinition:
+    """Defines a mutable variable"""
+
+    def __init__(self, varname: str, expression: Definition):
+        self.varname = varname
+        self.expression = expression
+
+    def evaluate(self, context: RuntimeContext) -> FieldValue:
+        """Evaluate the count expression to an integer"""
+        return self.expression.render(context)
+
+    def execute(
+        self, interp: Interpreter, context: RuntimeContext, continuing: bool
+    ) -> Optional[ObjectRow]:
+        name = self.varname
+        value = self.evaluate(context)
+
+        interp.register_variable(name, value)
+
+
 class ObjectTemplate:
     """A factory that generates rows.
 
@@ -86,7 +103,7 @@ class ObjectTemplate:
         return self.generate_rows(context.output_stream, context)
 
     def generate_rows(
-        self, storage, parent_context: RuntimeContext
+        self, output_stream, parent_context: RuntimeContext
     ) -> Optional[ObjectRow]:
         """Generate several rows"""
         rc = None
@@ -94,7 +111,7 @@ class ObjectTemplate:
             count = self._evaluate_count(context)
             with self.exception_handling(f"Cannot generate {self.name}"):
                 for i in range(count):
-                    rc = self._generate_row(storage, context, i)
+                    rc = self._generate_row(output_stream, context, i)
 
         return rc  # return last row
 
@@ -132,7 +149,9 @@ class ObjectTemplate:
     def id(self):
         return id(self)
 
-    def _generate_row(self, storage, context: RuntimeContext, index: int) -> ObjectRow:
+    def _generate_row(
+        self, output_stream, context: RuntimeContext, index: int
+    ) -> ObjectRow:
         """Generate an individual row"""
         id = context.generate_id(self.nickname)
         row = {"id": id}
@@ -145,10 +164,9 @@ class ObjectTemplate:
         with self.exception_handling("Cannot write row"):
             self.register_row_intertable_references(row, context)
             if not self.tablename.startswith("__"):
-                storage.write_row(self.tablename, row)
+                output_stream.write_row(self.tablename, row)
 
-        for i, childobj in enumerate(self.friends):
-            childobj.generate_rows(storage, context)
+        context.interpreter.loop_over_templates_once(self.friends, True)
         return sobj
 
     def _generate_fields(self, context: RuntimeContext, row: Dict) -> None:
@@ -176,6 +194,13 @@ class ObjectTemplate:
                 context.register_intertable_reference(
                     self.tablename, fieldvalue._tablename, fieldname
                 )
+
+    def execute(
+        self, interp: Interpreter, context: RuntimeContext, continuing: bool
+    ) -> Optional[ObjectRow]:
+        should_skip = self.just_once and continuing
+        if not should_skip:
+            return self.generate_rows(interp.output_stream, interp.current_context)
 
 
 class SimpleValue(FieldDefinition):
@@ -338,3 +363,6 @@ class FieldFactory:
 
     def __repr__(self):
         return f"<{self.__class__.__name__, self.name, self.definition.__class__.__name__}>"
+
+
+Statement = Union[ObjectTemplate, VariableDefinition]

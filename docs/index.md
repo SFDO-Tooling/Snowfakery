@@ -816,6 +816,47 @@ Macros are especially powerful if you combine them with the `include_file` featu
 
 Fields or friends declared  in the macros listed later override those listed earlier. Fields or friends declared in the Object Template override those declared in macros.
 
+## Defining Variables
+
+Sometimes you may want to generate a value (e.g. a locale name
+or surname) shared by multiple templates. You can do that like
+this:
+
+```yaml
+- var: lastname_var
+  value:
+    fake: last_name
+- object: person
+  fields:
+    first_name:
+      fake: first_name
+    last_name: ${{lastname_var}}
+- object: spouse
+  fields:
+    first_name:
+      fake: first_name
+    last_name: ${{lastname_var}}
+```
+
+This works both at the top level of your recipe and in friends
+lists.
+
+If you would like to group several fields together you can
+do that by creating a "hidden" object:
+
+```yaml
+- var: shared_address
+  value:
+    - object: __shared_address
+      fields:
+        street:
+          fake: street_address
+        city:
+          fake: city
+        state:
+          fake: state
+```
+
 ## Including files
 
 You can include a file by a relative path:
