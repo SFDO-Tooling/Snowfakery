@@ -234,7 +234,7 @@ class StandardFuncs(SnowfakeryPlugin):
             """
 
             globls = self.context.interpreter.globals
-            last_object = globls.object_names.get(tablename)
+            last_object = globls.transients.last_seen_obj_by_table.get(tablename)
             if last_object:
                 last_id = last_object.id
                 if scope == "prior-and-current-iterations":
@@ -249,10 +249,12 @@ class StandardFuncs(SnowfakeryPlugin):
                         None,
                     )
                 return ObjectReference(tablename, random.randint(first_id, last_id))
-            elif tablename in globls.nicknamed_objects:
-                raise DataGenError("Nicknames cannot be used in random_reference")
+            elif tablename in globls.transients.nicknamed_objects:
+                raise DataGenError(
+                    "Nicknames cannot be used in random_reference", None, None
+                )
             else:
-                raise DataGenError(f"There is no table named {tablename}")
+                raise DataGenError(f"There is no table named {tablename}", None, None)
 
         @lazy
         def if_(self, *choices: FieldDefinition):
