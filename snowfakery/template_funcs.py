@@ -66,7 +66,10 @@ def render_boolean(context: PluginContext, value: FieldDefinition) -> bool:
 class StandardFuncs(SnowfakeryPlugin):
     class Functions:
         int = int
-        _faker_for_dates = Faker(use_weighting=False)  # use ONLY for random_dates
+        # use ONLY for random_dates
+        # anything else should use the Faker from the Interpreter
+        # which is locale-scoped.
+        _faker_for_dates = Faker(use_weighting=False)
 
         def date(
             self,
