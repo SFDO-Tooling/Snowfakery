@@ -7,13 +7,13 @@ from snowfakery.data_generator import generate
 class TestLocales:
     def test_locales(self, generated_rows):
         yaml = """
-        - var: locale
+        - var: snowfakery_locale
           value: no_NO
         - object: first
           fields:
             name:
               fake: name
-        - var: locale
+        - var: snowfakery_locale
           value: fr_FR
         - object: second
           fields:
