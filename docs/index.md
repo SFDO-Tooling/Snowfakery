@@ -557,28 +557,28 @@ You can also call these functions with arguments as described in Faker's [docume
 country: ${{fake.country_code(representation='alpha-2')}}
 ```
 
-### International Fakes (syntax still under development)
+### International Fakes
 
-You can specify internationally appropriate fakes for many different kind of names (e.g. person, company) like this:
+You can specify internationally appropriate fakes for many different kind of names (e.g. person, company) by setting the snowfakery_locale this:
 
 ```yaml
-- object: Viking
+- var: snowfakery_locale
+  value: no_NO
+- object: person
   fields:
-    Name:
-      i18n_fake:
-        locale: no_NO
-        fake: first_name
-```
+    name:
+      fake: name
+- var: snowfakery_locale
+  value: fr_FR
+- object: person
+  fields:
+    name:
+      fake: name```
 
-This will generate a “typical” Norwegian first name.
+This will generate a “typical” Norwegian first name for the first person object and a French name for the second person object.
 
 You can infer which Faker providers are internationalizable by looking through the Faker [repository](https://github.com/joke2k/faker/tree/master/faker/providers) and seeing which directories have localizations. For example there are only three localizations of [credit card](https://github.com/joke2k/faker/tree/master/faker/providers) (who knew that credit cards were different in Iran and Russia) and dozens of localizations for [person name](https://github.com/joke2k/faker/tree/master/faker/providers/person).
 
-You can also call this as an inline function:
-
-```yaml
-lars_or_alf_or_something: ${{i18n_fake(locale="no_NO", fake='first_name')}}
-```
 
 ### `date_between`
 

@@ -121,6 +121,7 @@ class StandardFuncs(SnowfakeryPlugin):
             # swallow empty range errors per Python conventions
 
         def i18n_fake(self, locale: str, fake: str):
+            # deprecated by still here for backwards compatibility
             faker = Faker(locale, use_weighting=False)
             func = getattr(faker, fake)
             return func()

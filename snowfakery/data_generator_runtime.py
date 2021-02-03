@@ -408,7 +408,7 @@ class RuntimeContext:
             self._plugin_context_vars = self.parent._plugin_context_vars.new_child()
         else:
             self._plugin_context_vars = ChainMap()
-        locale = self.variable_definitions().get("locale")
+        locale = self.variable_definitions().get("snowfakery_locale")
         self.faker_template_library = self.interpreter.faker_template_library(locale)
 
     # TODO: move this into the interpreter object
