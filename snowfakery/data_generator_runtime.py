@@ -395,7 +395,7 @@ class RuntimeContext:
     def __init__(
         self,
         interpreter: Interpreter,
-        current_template: ObjectTemplate = None,
+        current_template: Statement = None,
         parent_context: "RuntimeContext" = None,
     ):
         if current_template:
