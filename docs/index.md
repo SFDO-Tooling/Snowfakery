@@ -469,6 +469,27 @@ select randomly among potential child objects.
                 LastName: Simpson
 ```
 
+**Note:** When trying to choose or define a `null` value in a field, use `~`.
+
+*Example*
+```yaml
+- object: Affiliation
+  fields:
+    EndDate:
+      random_choice:
+        - choice:
+            probability: 75%
+            pick:
+              date_between:
+                start_date: 1990-01-01
+                end_date: -30d
+        - choice:
+            probability: 25%
+            pick: ~
+
+```
+
+
 #### `random_reference`
 
 Create a reference to a random, already-created row from some table.
@@ -573,7 +594,8 @@ You can specify internationally appropriate fakes for many different kind of nam
 - object: person
   fields:
     name:
-      fake: name```
+      fake: name
+```
 
 This will generate a “typical” Norwegian first name for the first person object and a French name for the second person object.
 
