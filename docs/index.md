@@ -127,17 +127,17 @@ pet_stories.yml
                 name: Pets Choice
                 cost: $10
 
-        cat:
-          - object: Animal
-            fields:
-              name:
-                fake: first_name
-              species: feline
-              food:
-                - object: PetFood
-                  fields:
-                    name: Pets Choice
-                    cost: $1
+    cat:
+      - object: Animal
+        fields:
+          name:
+            fake: first_name
+          species: feline
+          food:
+            - object: PetFood
+              fields:
+                name: Pets Choice
+                cost: $1
 ```
 
 If you’re lost: don't worry! Those are a lot of new concepts at once, and you don't have to understand everything in this example right now. We'll come back to these concepts one by one.
