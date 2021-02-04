@@ -745,8 +745,70 @@ from `dateutil` is available for use in calculations like this:
 ${{ date(Date_Established__c) + relativedelta(months=child_index) }}
 ```
 
-Some plugins may also be interested in a `template` variable which has an `id` attributes represents a unique identifier for the current template. Look at 
+Some plugins may also be interested in a `template` variable which has an `id` attributes represents a unique identifier for the current template. Look at
 [datasets.py](https://github.com/SFDO-Tooling/Snowfakery/blob/master/snowfakery/standard_plugins/datasets.py) to see one use-case where the template's ID can used to differentiate between two otherwise identical datasets.
+
+### NULL
+
+The value `NULL` can be used to represent a missing value as in the recipe
+below:
+
+First, we can make `NULL` an option with `random_choice`:
+
+```yaml
+- object: foo
+  count: 10
+  fields:
+    EndDate:
+      random_choice:
+        - date_between:
+            start_date: 2018-01-01
+            end_date: 2021-12-12
+        - NULL
+```
+
+Then, in another field you can test whether the value is `NULL` or not:
+
+```yaml
+    DateSupplied:
+      if:
+        - choice:
+            when: ${{ EndDate!=NULL }}
+            pick: "Yes"
+        - choice:
+            pick: "No"
+```
+
+### NULL
+
+The value `NULL` can be used to represent a missing value as in the recipe
+below:
+
+First, we can make `NULL` an option with `random_choice`:
+
+```yaml
+- object: foo
+  count: 10
+  fields:
+    EndDate:
+      random_choice:
+        - date_between:
+            start_date: 2018-01-01
+            end_date: 2021-12-12
+        - NULL
+```
+
+Then, in another field you can test whether the value is `NULL` or not:
+
+```yaml
+    DateSupplied:
+      if:
+        - choice:
+            when: ${{ EndDate!=NULL }}
+            pick: "Yes"
+        - choice:
+            pick: "No"
+```
 
 ## Macros
 
