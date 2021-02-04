@@ -303,10 +303,7 @@ class StandardFuncs(SnowfakeryPlugin):
 
         def _snowfakery_filename(self):
             template = self.context.field_vars()["template"]
-            if template:
-                return template.filename
-            else:
-                return "<none>"
+            return template.filename
 
     setattr(Functions, "if", Functions.if_)
     setattr(Functions, "relativedelta", relativedelta)
