@@ -395,7 +395,7 @@ class RuntimeContext:
     def __init__(
         self,
         interpreter: Interpreter,
-        current_template: ObjectTemplate = None,
+        current_template: Statement = None,
         parent_context: "RuntimeContext" = None,
     ):
         if current_template:
@@ -450,7 +450,7 @@ class RuntimeContext:
         )
 
     @contextmanager
-    def child_context(self, template):
+    def child_context(self, template: Statement):
         "Create a nested RuntimeContext (analogous to a 'stack frame')."
         jr = self.__class__(
             current_template=template,
@@ -510,7 +510,6 @@ class EvaluationNamespace(NamedTuple):
             "today": interpreter.globals.today,
             "fake": self.runtime_context.faker_template_library,
             "template": self.runtime_context.current_template,
-            "template_filename": self.runtime_context.current_template.filename,
             **interpreter.options,
             **interpreter.globals.object_names,
             **(obj._values if obj else {}),

@@ -50,20 +50,26 @@ class FieldDefinition(ABC):
 class VariableDefinition:
     """Defines a mutable variable"""
 
-    def __init__(self, varname: str, expression: Definition):
+    tablename = None
+
+    def __init__(
+        self, filename: str, line_num: int, varname: str, expression: Definition
+    ):
         self.varname = varname
         self.expression = expression
+        self.filename = filename
+        self.line_num = line_num
 
     def evaluate(self, context: RuntimeContext) -> FieldValue:
-        """Evaluate the count expression to an integer"""
+        """Evaluate the expression"""
         return self.expression.render(context)
 
     def execute(
-        self, interp: Interpreter, context: RuntimeContext, continuing: bool
-    ) -> Optional[ObjectRow]:
-        name = self.varname
-        value = self.evaluate(context)
-
+        self, interp: Interpreter, parent_context: RuntimeContext, continuing: bool
+    ) -> Optional[dict]:
+        with parent_context.child_context(self) as context:
+            name = self.varname
+            value = self.evaluate(context)
         interp.register_variable(name, value)
 
 
@@ -142,7 +148,7 @@ class ObjectTemplate:
     def name(self) -> str:
         name = self.tablename
         if self.nickname:
-            name += " (self.nickname)"
+            name += f" ({self.nickname})"
         return name
 
     @property
@@ -200,7 +206,7 @@ class ObjectTemplate:
     ) -> Optional[ObjectRow]:
         should_skip = self.just_once and continuing
         if not should_skip:
-            return self.generate_rows(interp.output_stream, interp.current_context)
+            self.generate_rows(interp.output_stream, interp.current_context)
 
 
 class SimpleValue(FieldDefinition):

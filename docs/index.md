@@ -727,7 +727,7 @@ a single recipe.
 
 The `fake` variable gives access to faker as described elsewhere in this documentation.
 
-The `template_filename` variable represents the file containing the template. This is useful
+The `snowfakery_filename` variable represents the file containing the template. This is useful
 for relative paths.
 
 The `date` function can either coerce a string into a date object for calculations OR generate
@@ -746,7 +746,7 @@ ${{ date(Date_Established__c) + relativedelta(months=child_index) }}
 ```
 
 Some plugins may also be interested in a `template` variable which has an `id` attributes represents a unique identifier for the current template. Look at 
-[datasets.py](https://github.com/SFDO-Tooling/Snowfakery/blob/master/snowfakery/standard_plugins/datasets.py) to see one use-case..
+[datasets.py](https://github.com/SFDO-Tooling/Snowfakery/blob/master/snowfakery/standard_plugins/datasets.py) to see one use-case where the template's ID can used to differentiate between two otherwise identical datasets.
 
 ## Macros
 

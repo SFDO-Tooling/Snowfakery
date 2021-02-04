@@ -345,6 +345,8 @@ def parse_variable_definition(
         var_def_expr = yaml_sobj.get("value")
 
         sobj_def["expression"] = parse_field_value("value", var_def_expr, context)
+        sobj_def["line_num"] = parsed_template.line_num.line_num
+        sobj_def["filename"] = parsed_template.line_num.filename
         new_def = VariableDefinition(**sobj_def)
         return new_def
 

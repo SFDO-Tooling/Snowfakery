@@ -352,13 +352,17 @@ class TestTemplateFuncs:
 
     def test_template_context(self, generated_rows):
         yaml = """
+        - var: V
+          value: ${{snowfakery_filename}}
         - object: foo
           fields:
             filename: ${{template.filename}}
-            filename2: ${{template_filename}}
+            filename2: ${{snowfakery_filename}}
+            filename3: ${{V}}
             template_id: ${{template.id}}
         """
         generate(StringIO(yaml))
         assert generated_rows.table_values("foo", 1, "filename") == "<stream>"
         assert generated_rows.table_values("foo", 1, "filename2") == "<stream>"
+        assert generated_rows.table_values("foo", 1, "filename3") == "<stream>"
         assert int(generated_rows.table_values("foo", 1, "template_id"))

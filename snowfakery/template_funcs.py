@@ -16,6 +16,7 @@ from .data_gen_exceptions import DataGenError
 import snowfakery.data_generator_runtime  # noqa
 from snowfakery.plugins import SnowfakeryPlugin, PluginContext, lazy
 from snowfakery.object_rows import ObjectRow, ObjectReference
+from snowfakery.utils.template_utils import StringGenerator
 
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
 
@@ -70,6 +71,10 @@ class StandardFuncs(SnowfakeryPlugin):
         # anything else should use the Faker from the Interpreter
         # which is locale-scoped.
         _faker_for_dates = Faker(use_weighting=False)
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.snowfakery_filename = StringGenerator(self._snowfakery_filename)
 
         def date(
             self,
@@ -295,6 +300,13 @@ class StandardFuncs(SnowfakeryPlugin):
             if hasattr(rc, "render"):
                 rc = self.context.evaluate_raw(rc)
             return rc
+
+        def _snowfakery_filename(self):
+            template = self.context.field_vars()["template"]
+            if template:
+                return template.filename
+            else:
+                return "<none>"
 
     setattr(Functions, "if", Functions.if_)
     setattr(Functions, "relativedelta", relativedelta)
