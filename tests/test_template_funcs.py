@@ -349,3 +349,16 @@ class TestTemplateFuncs:
         """
         with pytest.raises(DataGenError):
             generate(StringIO(yaml))
+
+    def test_template_context(self, generated_rows):
+        yaml = """
+        - object: foo
+          fields:
+            filename: ${{template.filename}}
+            filename2: ${{template_filename}}
+            template_id: ${{template.id}}
+        """
+        generate(StringIO(yaml))
+        assert generated_rows.table_values("foo", 1, "filename") == "<stream>"
+        assert generated_rows.table_values("foo", 1, "filename2") == "<stream>"
+        assert int(generated_rows.table_values("foo", 1, "template_id"))

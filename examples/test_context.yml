@@ -1,0 +1,3 @@
+- object: foo
+  fields:
+    filename: ${{template_filename}}

@@ -510,6 +510,7 @@ class EvaluationNamespace(NamedTuple):
             "today": interpreter.globals.today,
             "fake": self.runtime_context.faker_template_library,
             "template": self.runtime_context.current_template,
+            "template_filename": self.runtime_context.current_template.filename,
             **interpreter.options,
             **interpreter.globals.object_names,
             **(obj._values if obj else {}),
