@@ -450,7 +450,7 @@ class RuntimeContext:
         )
 
     @contextmanager
-    def child_context(self, template: Statement):
+    def child_context(self, template):
         "Create a nested RuntimeContext (analogous to a 'stack frame')."
         jr = self.__class__(
             current_template=template,
