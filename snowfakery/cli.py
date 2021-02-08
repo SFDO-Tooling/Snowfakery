@@ -41,6 +41,7 @@ file_extensions = [
     "json",
     "txt",
     "csv",
+    "sql",
 ] + graphic_file_extensions
 
 
