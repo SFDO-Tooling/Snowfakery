@@ -73,7 +73,7 @@ class DatasetIteratorBase:
 
     def close(self):
         "Subclasses should implement this if they need to clean up resources"
-        pass
+        pass  # pragma: no cover
 
 
 class SQLDatasetIterator(DatasetIteratorBase):

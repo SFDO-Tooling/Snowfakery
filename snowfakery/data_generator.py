@@ -143,6 +143,7 @@ def generate(
         # now do the output
         runtime_context = output_batches(
             output_stream,
+            parse_result.statements,
             parse_result.templates,
             options,
             stopping_criteria=stopping_criteria,

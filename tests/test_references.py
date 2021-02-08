@@ -353,16 +353,69 @@ class TestReferences:
         assert generated_rows.row_values(23, "A_ref") == "A(3)"
         assert "experimental" in str(warn.mock_calls)
 
-    def test_random_reference_wrong_scope(self, generated_rows):
-        # undocumented experimental feature!
+    def test_random_reference_missing_table(self):
         yaml = """                  #1
-      - object: B                   #2
+      - object: A                   #2
         count: 2                    #3
         fields:                     #4
             A_ref:                  #5
               random_reference:
+                tablename: B
+    """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert "There is no table named B" in str(e)
+
+    def test_random_reference_wrong_scope(self):
+        # undocumented experimental feature!
+        yaml = """                  #1
+      - object: A                   #2
+      - object: B                   #3
+        count: 2                    #4
+        fields:                     #5
+            A_ref:                  #6
+              random_reference:
                 tablename: A
                 scope: xyzzy
     """
-        with pytest.raises(DataGenError):
+        with pytest.raises(DataGenError) as e:
             generate(StringIO(yaml))
+        assert "Scope must be" in str(e)
+
+    def test_random_reference_to_nickname(self):
+        # undocumented experimental feature!
+        yaml = """
+      - object: A
+        nickname: AA
+      - object: B
+        count: 2
+        fields:
+            A_ref:
+              random_reference: AA
+    """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert "nickname" in str(e).lower()
+
+    def test_reference_unknown_object(self):
+        yaml = """
+        - object: B
+          count: 2
+          fields:
+              A_ref:
+                reference: AA"""
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert "cannot find" in str(e).lower()
+
+    def test_reference_wrong_type(self):
+        yaml = """
+        - object: B
+          count: 2
+          fields:
+              __foo: 5
+              A_ref:
+                reference: __foo"""
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert "incorrect object type" in str(e).lower()

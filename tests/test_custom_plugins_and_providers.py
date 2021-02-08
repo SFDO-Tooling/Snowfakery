@@ -45,6 +45,8 @@ class WrongTypePlugin(SnowfakeryPlugin):
             "Evaluates its argument twice into a string"
             return int  # function
 
+        junk = None
+
 
 class MyEvaluator(PluginResult):
     def __init__(self, operator, *operands):
@@ -211,7 +213,7 @@ class PluginThatNeedsState(SnowfakeryPlugin):
 
 class TestContextVars:
     @mock.patch(write_row_path)
-    def test_context_vars(self, write_row):
+    def test_plugin_context_vars(self, write_row):
         yaml = """
         - plugin: tests.test_custom_plugins_and_providers.PluginThatNeedsState
         - object: OBJ
@@ -266,6 +268,30 @@ class TestContextVars:
           fields:                               #4
             foo:                                #5
                 WrongTypePlugin.return_bad_type: 5  #6
+        """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert 6 > e.value.line_num >= 3
+
+    def test_missing_attributes(self):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.WrongTypePlugin  # 2
+        - object: B                             #3
+          fields:                               #4
+            foo:                                #5
+                WrongTypePlugin.abcdef: 5  #6
+        """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert 6 > e.value.line_num >= 3
+
+    def test_null_attributes(self):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.WrongTypePlugin  # 2
+        - object: B                             #3
+          fields:                               #4
+            foo:                                #5
+                WrongTypePlugin.junk: 5  #6
         """
         with pytest.raises(DataGenError) as e:
             generate(StringIO(yaml))
