@@ -154,9 +154,18 @@ Snowfakery builds on a tool called SQLAlchemy, so it gets a variety of database 
 
 When integrated with CumulusCI (see [Advanced Features](#advanced-features)) it is possible to output to a Salesforce instance.
 
-Snowfakery can also output JSON, directories of CSV and object diagrams.
+Snowfakery can also output JSON, SQL, directories of CSV and object diagrams.
 
 CSV output goes to a directory with one CSV file per table and a JSON manifest file in the [csvw](https://www.w3.org/TR/tabular-data-primer/) format.
+
+The complete list of file-based (as opposed to database-based) formats are:
+
+- JSON - a custom JSON dialect
+- TXT - debugging-style output)
+- CSV - a directory of CSV files plus a csvw file
+- SQL - a bulk import SQL file
+- DOT - A Graphviz file for use with graphviz command line or [web-based](http://graphviz.it/) [tools](https://dreampuf.github.io/GraphvizOnline) (no endorsement intended!)
+- SVG, SVGZ, JPEG, PS PNG - Graphic formats which can be created if graphviz is installed.
 
 ## Objects
 
@@ -960,9 +969,8 @@ And then you pass that option like this:
 You can learn the list of options available in the latest version
 like this:
 
-```bash
+```s
 $ snowfakery --help
-
 Usage: snowfakery [OPTIONS] YAML_FILE
 
       Generates records from a YAML file
@@ -986,8 +994,7 @@ Options:
                                   sqlite:///foo.db if you don't have one set
                                   up.
 
-  --output-format [JSON|json|PNG|png|SVG|svg|svgz|jpeg|jpg|ps|dot|txt|csv]
-  --output-folder PATH
+  --output-format [JSON|json|txt|csv|sql|PNG|png|SVG|svg|svgz|jpeg|jpg|ps|dot]  --output-folder PATH
   -o, --output-file PATH
   --option EVAL_ARG...            Options to send to the recipe YAML.
   --target-number TEXT...         Target options for the recipe YAML in the
@@ -996,7 +1003,10 @@ Options:
 
   --debug-internals / --no-debug-internals
   --cci-mapping-file PATH
-  --generate-cci-mapping-file PATH
+  --generate-cci-mapping-file FILENAME
+                                  Generate a CumulusCI mapping file for the
+                                  dataset
+
   --generate-continuation-file FILENAME
                                   A file that captures information about how
                                   to continue a multi-batch data generation
