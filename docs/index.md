@@ -827,20 +827,35 @@ this:
 - var: lastname_var
   value:
     fake: last_name
+- var: nationality
+  value:
+    random_choice:
+      - Estonian
+      - Canadian
 - object: person
   fields:
     first_name:
       fake: first_name
     last_name: ${{lastname_var}}
+    nation: ${{nationality}}
 - object: spouse
   fields:
     first_name:
       fake: first_name
     last_name: ${{lastname_var}}
+    nation: ${{nationality}}
 ```
 
 This works both at the top level of your recipe and in friends
 lists.
+
+Variables are different than macros because each time a variable
+is evaluated it keeps its value and that value is shared by
+templates that refer to it. A macro, by contrast, is evaluated
+again in every context that it is used. If you make a macro
+that includes `fake: last_name`, every object embedding it will
+get a different `last_name`. Macros are for sharing declarations.
+Variables are for sharing values.
 
 If you would like to group several fields together you can
 do that by creating a "hidden" object:
@@ -1529,7 +1544,17 @@ $ cci task run generate_and_load_from_yaml -o generator_yaml examples/salesforce
 
 You can (and more often will) use generate_and_load_from_yaml from
 within a flow captured in in a `cumulusci.yml`, like the one in
-the [Snowfakery repo](https://github.com/SFDO-Tooling/Snowfakery/tree/master/cumulusci.yml).
+the [Snowfakery repo](https://github.com/SFDO-Tooling/Snowfakery/tree/master/cumulusci.yml). For example:
+
+```yaml
+    generate_and_load_from_yaml:
+        description: Generate data from a file using Snowfakery and load to SF Org
+        class_path: cumulusci.tasks.bulkdata.generate_and_load_data_from_yaml.GenerateAndLoadDataFromYaml
+        options:
+            generator_yaml: testdata.recipe.yml
+            num_records_tablename: Account
+            num_records: 100_000
+```
 
 If you have CumulusCI configured and you would like to test this,
 you can do so like this (the Snowfakery repo itself has a

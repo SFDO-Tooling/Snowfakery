@@ -27,6 +27,8 @@ def generate_data(
     continuation_file: Path = None,
     generate_continuation_file: Union[TextIO, Path] = None,
     generate_cci_mapping_file: Union[TextIO, Path] = None,
+    # if this flag exists, recipe will terminate between executions
+    finish_flag_file: Path = None,
 ):
     from .cli import generate_cli
 
@@ -64,4 +66,5 @@ def generate_data(
             continuation_file=continuation_file,
             generate_continuation_file=generate_continuation_file,
             generate_cci_mapping_file=generate_cci_mapping_file,
+            finish_flag_file=finish_flag_file,
         )

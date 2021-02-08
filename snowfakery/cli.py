@@ -122,6 +122,11 @@ def int_string_tuple(ctx, param, value=None):
     type=click.File("r"),
     help="Continue generating a dataset where 'continuation-file' left off",
 )
+@click.option(
+    "--finish-flag-file",
+    type=Path,
+    hidden=True,
+)
 @click.version_option(version=version, prog_name="snowfakery")
 def generate_cli(
     yaml_file,
@@ -136,6 +141,7 @@ def generate_cli(
     output_folder=None,
     continuation_file=None,
     generate_continuation_file=None,
+    finish_flag_file: Path = None,
 ):
     """
         Generates records from a YAML file
@@ -180,6 +186,7 @@ def generate_cli(
                     stopping_criteria=stopping_criteria,
                     generate_continuation_file=generate_continuation_file,
                     continuation_file=continuation_file,
+                    finish_flag_file=finish_flag_file,
                 )
             if debug_internals:
                 debuginfo = yaml.dump(

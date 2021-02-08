@@ -3,6 +3,7 @@ from datetime import date
 from contextlib import contextmanager
 
 from typing import Optional, Dict, List, Sequence, Mapping, NamedTuple, Set
+from pathlib import Path
 
 import jinja2
 import yaml
@@ -35,15 +36,26 @@ class FinishedChecker:
 
     stopping_criteria: StoppingCriteria
 
-    def __init__(self, start_ids, stopping_criteria):
-        self.start_ids = start_ids
+    def __init__(
+        self,
+        start_ids: Optional[dict],
+        stopping_criteria: Optional[StoppingCriteria],
+        finish_flag_file: Path = None,
+    ):
+        self.start_ids = start_ids or {}
         self.stopping_criteria = stopping_criteria
         self.target_progress_id = 0
+        self.finish_flag_file = finish_flag_file
 
     def check_if_finished(self, id_manager):
         "Check whether we've finished making as many objects as we promised"
         # if nobody told us how much to make, finish after first run
         if not self.stopping_criteria:
+            return True
+
+        # if finish_flag_file exists, we use that as an external message
+        # that we're done.
+        if self.finish_flag_file and self.finish_flag_file.exists():
             return True
 
         target_table, count = self.stopping_criteria
@@ -321,6 +333,7 @@ class Interpreter:
         start_ids: Optional[Mapping[str, int]] = None,
         faker_providers: Sequence[object] = (),
         statements: Sequence[Statement] = (),
+        finish_flag_file: Path = None,
     ):
         self.output_stream = output_stream
         self.options = options or {}
@@ -333,7 +346,9 @@ class Interpreter:
             name: plugin.custom_functions()
             for name, plugin in self.plugin_instances.items()
         }
-        self.finished_checker = FinishedChecker(start_ids, stopping_criteria)
+        self.finished_checker = FinishedChecker(
+            start_ids, stopping_criteria, finish_flag_file
+        )
         self.faker_template_libraries = {}
 
         self.globals = globals
@@ -555,6 +570,7 @@ def output_batches(
     tables: Mapping[str, int] = None,
     snowfakery_plugins: Mapping[str, snowfakery.SnowfakeryPlugin] = None,
     faker_providers: List[object] = None,
+    finish_flag_file: Path = None,
 ) -> Globals:
     """Generate 'count' batches to 'output_stream' """
     # check the stopping_criteria against the templates available
@@ -597,6 +613,7 @@ def output_batches(
         start_ids=start_ids,
         faker_providers=faker_providers,
         statements=statements,
+        finish_flag_file=finish_flag_file,
     ) as interpreter:
 
         interpreter.current_context = RuntimeContext(interpreter=interpreter)

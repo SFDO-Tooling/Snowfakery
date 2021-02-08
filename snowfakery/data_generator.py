@@ -1,5 +1,6 @@
 import warnings
 from typing import IO, Tuple, Mapping, List, Dict, TextIO, Union
+from pathlib import Path
 
 import yaml
 from faker.providers import BaseProvider as FakerProvider
@@ -115,6 +116,7 @@ def generate(
     stopping_criteria: StoppingCriteria = None,
     generate_continuation_file: FileLike = None,
     continuation_file: TextIO = None,
+    finish_flag_file: Path = None,
 ) -> ExecutionSummary:
     """The main entry point to the package for Python applications."""
     user_options = user_options or {}
@@ -151,6 +153,7 @@ def generate(
             tables=parse_result.tables,
             snowfakery_plugins=snowfakery_plugins,
             faker_providers=faker_providers,
+            finish_flag_file=finish_flag_file,
         )
     except DataGenError as e:
         if e.filename:
