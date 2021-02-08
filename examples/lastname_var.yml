@@ -1,0 +1,13 @@
+- var: lastname_var
+  value:
+    fake: last_name
+- object: person
+  fields:
+    first_name:
+      fake: first_name
+    last_name: ${{lastname_var}}
+- object: spouse
+  fields:
+    first_name:
+      fake: first_name
+    last_name: ${{lastname_var}}

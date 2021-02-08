@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, ChainMap
 from datetime import date
 from contextlib import contextmanager
 
@@ -16,7 +16,9 @@ import snowfakery
 from snowfakery.object_rows import NicknameSlot, SlotState, ObjectRow
 
 OutputStream = "snowfakery.output_streams.OutputStream"
+VariableDefinition = "snowfakery.data_generator_runtime_object_model.VariableDefinition"
 ObjectTemplate = "snowfakery.data_generator_runtime_object_model.ObjectTemplate"
+Statement = "snowfakery.data_generator_runtime_object_model.Statement"
 
 # Runtime objects and algorithms used during the generation of rows.
 
@@ -312,16 +314,17 @@ class Interpreter:
     def __init__(
         self,
         output_stream: OutputStream,
-        globals: Globals = None,
+        globals: Globals,
         options: Mapping = None,
         snowfakery_plugins: Optional[Mapping[str, callable]] = None,
         stopping_criteria: Optional[StoppingCriteria] = None,
         start_ids: Optional[Mapping[str, int]] = None,
         faker_providers: Sequence[object] = (),
-        templates: Sequence[ObjectTemplate] = (),
+        statements: Sequence[Statement] = (),
     ):
         self.output_stream = output_stream
         self.options = options or {}
+        self.faker_providers = faker_providers
         snowfakery_plugins = snowfakery_plugins or {}
         self.plugin_instances = {
             name: plugin(self) for name, plugin in snowfakery_plugins.items()
@@ -331,22 +334,9 @@ class Interpreter:
             for name, plugin in self.plugin_instances.items()
         }
         self.finished_checker = FinishedChecker(start_ids, stopping_criteria)
-        self.faker_template_library = FakerTemplateLibrary(faker_providers)
+        self.faker_template_libraries = {}
 
-        # TODO: clean this duplicated code up
-        name_slots = {
-            template.nickname: template.tablename
-            for template in templates
-            if template.nickname
-        }
-
-        # table names are sort of nicknames for themselves too, because
-        # you can refer to them.
-        name_slots.update(
-            {template.tablename: template.tablename for template in templates}
-        )
-
-        self.globals = globals or Globals(name_slots=name_slots)
+        self.globals = globals
 
         # inject context into the standard functions
         standard_funcs_obj = StandardFuncs(self).custom_functions()
@@ -356,22 +346,31 @@ class Interpreter:
             if not name.startswith("_") and name != "context"
         }
 
-        self.templates = templates
+        self.statements = statements
+
+    def faker_template_library(self, locale):
+        rc = self.faker_template_libraries.get(locale)
+        if not rc:
+            rc = FakerTemplateLibrary(self.faker_providers, locale)
+            self.faker_template_libraries[locale] = rc
+        return rc
 
     def loop_over_templates_until_finished(self, continuing):
         finished = False
-        runtimecontext = RuntimeContext(interpreter=self)
+        self.current_context = RuntimeContext(interpreter=self)
         while not finished:
-            self.loop_over_templates_once(runtimecontext, continuing)
-            finished = runtimecontext.check_if_finished()
+            self.loop_over_templates_once(self.statements, continuing)
+            finished = self.current_context.check_if_finished()
             continuing = True
             self.globals.reset_slots()
 
-    def loop_over_templates_once(self, runtimecontext, continuing):
-        for template in self.templates:
-            should_skip = template.just_once and continuing
-            if not should_skip:
-                template.generate_rows(self.output_stream, runtimecontext)
+    def loop_over_templates_once(self, statement_list, continuing: bool):
+        for statement in statement_list:
+            statement.execute(self, self.current_context, continuing)
+
+    def register_variable(self, name: str, value: object):
+        vardefs = self.current_context.variable_definitions()
+        vardefs[name] = value
 
     def __enter__(self, *args):
         return self
@@ -396,7 +395,7 @@ class RuntimeContext:
     def __init__(
         self,
         interpreter: Interpreter,
-        current_template: ObjectTemplate = None,
+        current_template: Statement = None,
         parent_context: "RuntimeContext" = None,
     ):
         if current_template:
@@ -404,14 +403,13 @@ class RuntimeContext:
             self.current_template = current_template
 
         self.interpreter = interpreter
-        self.interpreter.current_context = self
         self.parent = parent_context
         if self.parent:
-            self._context_vars = {
-                **self.parent._context_vars
-            }  # implements variable inheritance
+            self._plugin_context_vars = self.parent._plugin_context_vars.new_child()
         else:
-            self._context_vars = {}
+            self._plugin_context_vars = ChainMap()
+        locale = self.variable_definitions().get("snowfakery_locale")
+        self.faker_template_library = self.interpreter.faker_template_library(locale)
 
     # TODO: move this into the interpreter object
     def check_if_finished(self):
@@ -459,8 +457,8 @@ class RuntimeContext:
             interpreter=self.interpreter,
             parent_context=self,
         )
-        # jr will register itself with the interpreter
         try:
+            self.interpreter.current_context = jr
             yield jr
         finally:
             # Goodbye junior, its been nice
@@ -485,7 +483,12 @@ class RuntimeContext:
         return self.evaluation_namespace.field_vars()
 
     def context_vars(self, plugin_namespace):
-        return self._context_vars.setdefault(plugin_namespace, {})
+        local_plugin_vars = self._plugin_context_vars.get(plugin_namespace, {}).copy()
+        self._plugin_context_vars[plugin_namespace] = local_plugin_vars
+        return local_plugin_vars
+
+    def variable_definitions(self):
+        return self.context_vars("variable definitions")
 
 
 # NamedTuple because it is immutable, efficient and auto-generates init
@@ -505,12 +508,13 @@ class EvaluationNamespace(NamedTuple):
             "child_index": obj._child_index if obj else None,
             "this": obj,
             "today": interpreter.globals.today,
-            "fake": interpreter.faker_template_library,
+            "fake": self.runtime_context.faker_template_library,
             "template": self.runtime_context.current_template,
             **interpreter.options,
             **interpreter.globals.object_names,
             **(obj._values if obj else {}),
             **interpreter.plugin_function_libraries,
+            **self.runtime_context.variable_definitions(),
         }
 
     def field_funcs(self):
@@ -524,9 +528,7 @@ class EvaluationNamespace(NamedTuple):
 
     # todo: remove this special case
     def fake(self, name):
-        return str(
-            getattr(self.runtime_context.interpreter.faker_template_library, name)
-        )
+        return str(getattr(self.runtime_context.faker_template_library, name))
 
     def field_vars(self):
         return {**self.simple_field_vars(), **self.field_funcs()}
@@ -545,7 +547,8 @@ def evaluate_function(func, args: Sequence, kwargs: Mapping, context):
 
 def output_batches(
     output_stream,
-    templates: List,
+    statements: List[Statement],
+    templates: List[ObjectTemplate],
     options: Dict,
     stopping_criteria: Optional[StoppingCriteria] = None,
     continuation_data: Globals = None,
@@ -573,6 +576,8 @@ def output_batches(
             for template in templates
             if template.nickname
         }
+        # table names are sort of nicknames for themselves too, because
+        # you can refer to them.
         name_slots.update(
             {template.tablename: template.tablename for template in templates}
         )
@@ -591,9 +596,10 @@ def output_batches(
         stopping_criteria=stopping_criteria,
         start_ids=start_ids,
         faker_providers=faker_providers,
-        templates=templates,
+        statements=statements,
     ) as interpreter:
 
+        interpreter.current_context = RuntimeContext(interpreter=interpreter)
         continuing = bool(continuation_data)
         interpreter.loop_over_templates_until_finished(continuing)
         return interpreter.globals
