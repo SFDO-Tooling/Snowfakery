@@ -53,7 +53,7 @@ class START_EXAMPLE:
 
 
 def check_triple_quote_alone(line, location):
-    """Triple-quotes at the ends or mmiddle of line are
+    """Triple-quotes at the ends or middle of line are
     almost certainly errors."""
     if line.strip() != TRIPLE_QUOTE:
         assert 0, location
