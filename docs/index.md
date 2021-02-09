@@ -573,7 +573,8 @@ You can specify internationally appropriate fakes for many different kind of nam
 - object: person
   fields:
     name:
-      fake: name```
+      fake: name
+```
 
 This will generate a “typical” Norwegian first name for the first person object and a French name for the second person object.
 
@@ -1135,7 +1136,9 @@ examples/hidden_fields.yml:
 ```
 Which would output:
 
-```Dates(id=1, ProgramStartDate=2016-11-30, FirstEvent=2017-02-24, ProgramEndDate=2017-11-30)```
+```json
+Dates(id=1, ProgramStartDate=2016-11-30, FirstEvent=2017-02-24, ProgramEndDate=2017-11-30)
+```
 
 ### Random Weights that are not Percentages
 
@@ -1499,26 +1502,32 @@ objects or subclasses. Consider a plugin that generates child objects
 that include values that sum up values on child objects to a value specified on a parent:
 
 ```yaml
+# examples/sum_child_values.yml
+# This shows how you could create a plugin or feature where
+# a parent object generates child objects which sum up
+# to any particular value.
+
 - plugin: examples.sum_totals.SummationPlugin
+- var: summation_helper
+  value:
+    SummationPlugin.summer:
+      total: 100
+      step: 10
 
 - object: ParentObject__c
   count: 10
   fields:
     MinimumChildObjectAmount__c: 10
     MinimumStep: 5
-    __summer:
-      SummationPlugin.summer:
-        total: 100
-        step: 10
-    TotalAmount__c: ${{__summer.total}}
+    TotalAmount__c: ${{summation_helper.total}}
   friends:
     - object: ChildObject__c
-      count: ${{ParentObject__c.__summer.count}}
+      count: ${{summation_helper.count}}
       fields:
         Parent__c:
           reference: ParentObject__c
-        Amount__c: ${{ParentObject__c.__summer.next_amount}}
-        RunningTotal__c: ${{ParentObject__c.__summer.running_total}}
+        Amount__c: ${{summation_helper.next_amount}}
+        RunningTotal__c: ${{summation_helper.running_total}}
 ```
 
 This would generate values like this:
@@ -1545,11 +1554,22 @@ ChildObject__c(id=11, Parent__c=ParentObject__c(3), Amount__c=30, RunningTotal__
 Here is the plugin implementation:
 
 ```python
+# examples/sum_totals.py
 from random import randint, shuffle
 
 from snowfakery.plugins import SnowfakeryPlugin, PluginResult
 
+
 def parts(total, step):
+    """Split a number into a randomized set of 'pieces'.
+    The pieces add up to the number. E.g.
+
+    parts(12, 3) -> [3, 6, 3]
+    parts(16, 4) -> [8, 4, 4]
+
+    >>> assert len(parts(12, 3)) > 1
+    >>> assert sum(parts(12, 3)) == 12
+    """
     assert total % step == 0
     pieces = []
 
@@ -1560,11 +1580,13 @@ def parts(total, step):
     shuffle(pieces)
     return pieces
 
+
 class Summation(PluginResult):
+    """Represent a group of pieces"""
+
     def __init__(self, total, step):
         self.total = total
         self.pieces = parts(total, step)
-        self.running_total = 0
         super().__init__(None)
 
     @property
@@ -1574,10 +1596,12 @@ class Summation(PluginResult):
     @property
     def next_amount(self):
         rc = self.pieces.pop()
-        self.running_total += rc
         return rc
 
+
 class SummationPlugin(SnowfakeryPlugin):
+    """Plugin which generates a summataion helper"""
+
     class Functions:
         def summer(self, total, step):
             return Summation(total, step)
@@ -1641,6 +1665,7 @@ you would run the following commands to create and use a venv with the
 Postgres plugin:
 
 ```bash
+
 # create a new directory for our experiment
 $ mkdir experiment_with_postgres
 # cd into it
