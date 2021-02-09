@@ -98,7 +98,7 @@ Releasing Snowfakery
 It's easy for maintainers to release a version of Snowfakery to GitHub and PyPI! First, 
 create a new branch for your version::
 
-    $ git checkout -b feature/newversion
+    $ git switch -c feature/snowfakery-<versionnum>
 
 Make the necessary changes to prepare the new release:
 
