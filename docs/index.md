@@ -573,7 +573,8 @@ You can specify internationally appropriate fakes for many different kind of nam
 - object: person
   fields:
     name:
-      fake: name```
+      fake: name
+```
 
 This will generate a “typical” Norwegian first name for the first person object and a French name for the second person object.
 
@@ -1135,7 +1136,9 @@ examples/hidden_fields.yml:
 ```
 Which would output:
 
-```Dates(id=1, ProgramStartDate=2016-11-30, FirstEvent=2017-02-24, ProgramEndDate=2017-11-30)```
+```json
+Dates(id=1, ProgramStartDate=2016-11-30, FirstEvent=2017-02-24, ProgramEndDate=2017-11-30)
+```
 
 ### Random Weights that are not Percentages
 
@@ -1556,6 +1559,7 @@ you would run the following commands to create and use a venv with the
 Postgres plugin:
 
 ```bash
+
 # create a new directory for our experiment
 $ mkdir experiment_with_postgres
 # cd into it
