@@ -136,6 +136,7 @@ class PluginResult:
         self.result = result
 
     def __getattr__(self, name):
+        # ensures that it won't recurse
         return self.__dict__["result"][name]
 
     def __reduce__(self):
