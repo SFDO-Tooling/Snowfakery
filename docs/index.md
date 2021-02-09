@@ -161,7 +161,7 @@ CSV output goes to a directory with one CSV file per table and a JSON manifest f
 The complete list of file-based (as opposed to database-based) formats are:
 
 - JSON - a custom JSON dialect
-- TXT - debugging-style output)
+- TXT - debugging-style output
 - CSV - a directory of CSV files plus a csvw file
 - SQL - a bulk import SQL file
 - DOT - A Graphviz file for use with graphviz command line or [web-based](http://graphviz.it/) [tools](https://dreampuf.github.io/GraphvizOnline) (no endorsement intended!)
