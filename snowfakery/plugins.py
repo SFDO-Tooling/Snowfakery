@@ -136,7 +136,8 @@ class PluginResult:
         self.result = result
 
     def __getattr__(self, name):
-        return self.result[name]
+        # ensures that it won't recurse
+        return self.__dict__["result"][name]
 
     def __reduce__(self):
         return (self.__class__, (dict(self.result),))
@@ -146,6 +147,7 @@ class PluginResult:
 
     def __str__(self):
         return str(self.result)
+
 
 # round-trip PluginResult objects through continuation YAML if needed.
 SnowfakeryDumper.add_representer(PluginResult, Representer.represent_object)
