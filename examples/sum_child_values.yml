@@ -1,0 +1,25 @@
+# This shows how you could create a plugin or feature where
+# a parent object generates child objects which sum up
+# to any particular value.
+
+- plugin: examples.sum_totals.SummationPlugin
+- var: summation_helper
+  value:
+    SummationPlugin.summer:
+      total: 100
+      step: 10
+
+- object: ParentObject__c
+  count: 10
+  fields:
+    MinimumChildObjectAmount__c: 10
+    MinimumStep: 5
+    TotalAmount__c: ${{summation_helper.total}}
+  friends:
+    - object: ChildObject__c
+      count: ${{summation_helper.count}}
+      fields:
+        Parent__c:
+          reference: ParentObject__c
+        Amount__c: ${{summation_helper.next_amount}}
+        RunningTotal__c: ${{summation_helper.running_total}}
