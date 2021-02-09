@@ -37,6 +37,8 @@ def noop(x):
 
 
 class OutputStream(ABC):
+    """Common base class for all output streams"""
+
     count = 1
     flush_limit = 1000
     commit_limit = 10000
@@ -118,10 +120,12 @@ class OutputStream(ABC):
 
         Return a list of messages to print out.
         """
-        super().close()
+        return super().close()
 
 
 class SmartStream:
+    """Common code for managing stream/file opening/closing"""
+
     mode = "wt"
 
     def __init__(self, stream_or_path=None):
@@ -147,10 +151,14 @@ class SmartStream:
 
 
 class FileOutputStream(OutputStream, SmartStream):
+    """Base class for all file/stream-based OutputStreams"""
+
     pass
 
 
 class DebugOutputStream(FileOutputStream):
+    """Simplied output for debugging Snowfakery files."""
+
     def write_single_row(self, tablename: str, row: Dict) -> None:
         values = ", ".join([f"{key}={value}" for key, value in row.items()])
         self.write(f"{tablename}({values})\n")
@@ -169,6 +177,8 @@ CSVContext = namedtuple("CSVContext", ["dictwriter", "file"])
 
 
 class CSVOutputStream(OutputStream):
+    """Output stream that generates a directory of CSV files."""
+
     def __init__(self, output_folder):
         super().__init__()
         self.target_path = Path(output_folder)
@@ -234,10 +244,12 @@ class JSONOutputStream(FileOutputStream):
     def close(self) -> Optional[Sequence[str]]:
         if not self.first_row:
             self.write("]\n")
-        super().close()
+        return super().close()
 
 
 class SqlDbOutputStream(OutputStream):
+    """Output stream for talking to SQL Databases"""
+
     mappings = None
     should_close_session = False
 
@@ -312,6 +324,8 @@ class SqlDbOutputStream(OutputStream):
 
 
 class SqlTextOutputStream(FileOutputStream):
+    """Output stream to generate a SQL text file"""
+
     mode = "wt"
 
     def __init__(self, stream_or_path=None):
@@ -400,6 +414,8 @@ def find_name_in_dict(d):
 
 
 class GraphvizOutputStream(FileOutputStream):
+    """Generates a Graphviz .dot file"""
+
     def __init__(self, path):
         import gvgen
 
@@ -510,6 +526,8 @@ class ImageOutputStream(OutputStream):
 
 
 class MultiplexOutputStream(OutputStream):
+    """Generate multiple output streams at once."""
+
     def __init__(self, outputstreams):
         self.outputstreams = outputstreams
 
