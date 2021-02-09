@@ -163,7 +163,7 @@ The complete list of file-based (as opposed to database-based) formats are:
 - JSON - a custom JSON dialect
 - TXT - debugging-style output
 - CSV - a directory of CSV files plus a csvw file
-- SQL - a bulk import SQL file
+- SQL - a SQL file with CREATE TABLE and INSERT statements
 - DOT - A Graphviz file for use with graphviz command line or [web-based](http://graphviz.it/) [tools](https://dreampuf.github.io/GraphvizOnline) (no endorsement intended!)
 - SVG, SVGZ, JPEG, PS PNG - Graphic formats which can be created if graphviz is installed.
 
@@ -1369,7 +1369,7 @@ Only SQLite is part of our test suite, however.
 If a SQL dataset has more than one table, you must specify which table
 to use like this:
 
-```
+```yaml
     __address_from_csv:
       Dataset.iterate:
         dataset: addresses.csv
