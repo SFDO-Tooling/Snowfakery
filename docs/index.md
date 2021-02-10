@@ -970,11 +970,6 @@ And then you pass that option like this:
 You can learn the list of options available in the latest version
 like this:
 
-<<<<<<< HEAD
-```text
-=======
-```s
->>>>>>> origin/master
 $ snowfakery --help
 Usage: snowfakery [OPTIONS] YAML_FILE
 
@@ -1502,13 +1497,8 @@ Every second time this is called, it will evaluate its argument twice, and stick
 
 This would output an `OBJ` row with values:
 
-<<<<<<< HEAD
 ```python
   {'id': 1, 'some_value': 'abc : abc', 'some_value_2': '1 : 2'})
-=======
-```json
-  {"id": 1, "some_value": "abc : abc"})
->>>>>>> origin/master
 ```
 
 Occasionally you might write a plugin which needs to evaluate its
