@@ -13,7 +13,12 @@ import pytest
 
 from sqlalchemy import create_engine
 
-from snowfakery.output_streams import SqlOutputStream, JSONOutputStream, CSVOutputStream
+from snowfakery.output_streams import (
+    SqlDbOutputStream,
+    JSONOutputStream,
+    CSVOutputStream,
+    SqlTextOutputStream,
+)
 import snowfakery.data_gen_exceptions as exc
 
 from snowfakery.data_generator import generate
@@ -133,11 +138,11 @@ class OutputCommonTests(ABC):
         )
 
 
-class TestSqlOutputStream(unittest.TestCase, OutputCommonTests):
+class TestSqlDbOutputStream(unittest.TestCase, OutputCommonTests):
     def do_output(self, yaml):
         with named_temporary_file_path() as f:
             url = f"sqlite:///{f}"
-            output_stream = SqlOutputStream.from_url(url, None)
+            output_stream = SqlDbOutputStream.from_url(url, None)
             results = generate(StringIO(yaml), {}, output_stream)
             table_names = results.tables.keys()
             output_stream.close()
@@ -303,7 +308,31 @@ class TestCSVOutputStream(unittest.TestCase, OutputCommonTests):
             is_null:
             """
         values = self.do_output(yaml)["foo"][0]
-        print(values)
         assert (
             values["is_null"] == ""
         )  # CSV is no way of distingushing null from empty str
+
+
+class TestSQLTextOutputStream(unittest.TestCase, OutputCommonTests):
+    def do_output(self, yaml):
+        with named_temporary_file_path() as f:
+            path = str(f) + ".sql"
+            output_stream = SqlTextOutputStream(path)
+            generate(StringIO(yaml), {}, output_stream)
+            output_stream.close()
+            import sqlite3
+
+            con = sqlite3.connect(":memory:")
+            with open(path, "r") as f:
+                data = f.read()
+                con.executescript(data)
+            table_name_rows = con.execute("select name from sqlite_master").fetchall()
+            table_names = [r[0] for r in table_name_rows]
+            print(table_names)
+            con.row_factory = sqlite3.Row
+
+            tables = {
+                table_name: con.execute(f"select * from {table_name}").fetchall()
+                for table_name in table_names
+            }
+            return tables

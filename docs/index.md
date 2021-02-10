@@ -154,9 +154,18 @@ Snowfakery builds on a tool called SQLAlchemy, so it gets a variety of database 
 
 When integrated with CumulusCI (see [Advanced Features](#advanced-features)) it is possible to output to a Salesforce instance.
 
-Snowfakery can also output JSON, directories of CSV and object diagrams.
+Snowfakery can also output JSON, SQL, directories of CSV and object diagrams.
 
 CSV output goes to a directory with one CSV file per table and a JSON manifest file in the [csvw](https://www.w3.org/TR/tabular-data-primer/) format.
+
+The complete list of file-based (as opposed to database-based) formats are:
+
+- JSON - a custom JSON dialect
+- TXT - debugging-style output
+- CSV - a directory of CSV files plus a csvw file
+- SQL - a SQL file with CREATE TABLE and INSERT statements
+- DOT - A Graphviz file for use with graphviz command line or [web-based](http://graphviz.it/) [tools](https://dreampuf.github.io/GraphvizOnline) (no endorsement intended!)
+- SVG, SVGZ, JPEG, PS PNG - Graphic formats which can be created if graphviz is installed.
 
 ## Objects
 
@@ -573,7 +582,8 @@ You can specify internationally appropriate fakes for many different kind of nam
 - object: person
   fields:
     name:
-      fake: name```
+      fake: name
+```
 
 This will generate a “typical” Norwegian first name for the first person object and a French name for the second person object.
 
@@ -960,9 +970,12 @@ And then you pass that option like this:
 You can learn the list of options available in the latest version
 like this:
 
+<<<<<<< HEAD
 ```text
+=======
+```s
+>>>>>>> origin/master
 $ snowfakery --help
-
 Usage: snowfakery [OPTIONS] YAML_FILE
 
       Generates records from a YAML file
@@ -986,8 +999,7 @@ Options:
                                   sqlite:///foo.db if you don't have one set
                                   up.
 
-  --output-format [JSON|json|PNG|png|SVG|svg|svgz|jpeg|jpg|ps|dot|txt|csv]
-  --output-folder PATH
+  --output-format [JSON|json|txt|csv|sql|PNG|png|SVG|svg|svgz|jpeg|jpg|ps|dot]  --output-folder PATH
   -o, --output-file PATH
   --option EVAL_ARG...            Options to send to the recipe YAML.
   --target-number TEXT...         Target options for the recipe YAML in the
@@ -996,7 +1008,10 @@ Options:
 
   --debug-internals / --no-debug-internals
   --cci-mapping-file PATH
-  --generate-cci-mapping-file PATH
+  --generate-cci-mapping-file FILENAME
+                                  Generate a CumulusCI mapping file for the
+                                  dataset
+
   --generate-continuation-file FILENAME
                                   A file that captures information about how
                                   to continue a multi-batch data generation
@@ -1135,7 +1150,9 @@ examples/hidden_fields.yml:
 ```
 Which would output:
 
-```Dates(id=1, ProgramStartDate=2016-11-30, FirstEvent=2017-02-24, ProgramEndDate=2017-11-30)```
+```json
+Dates(id=1, ProgramStartDate=2016-11-30, FirstEvent=2017-02-24, ProgramEndDate=2017-11-30)
+```
 
 ### Random Weights that are not Percentages
 
@@ -1359,7 +1376,7 @@ Only SQLite is part of our test suite, however.
 If a SQL dataset has more than one table, you must specify which table
 to use like this:
 
-```
+```yaml
     __address_from_csv:
       Dataset.iterate:
         dataset: addresses.csv
@@ -1445,7 +1462,7 @@ class PluginThatCounts(SnowfakeryPlugin):
             return context_vars["count"]
 ```
 
-Plugins also have access to a dictionary called `self.context.field_vars()` whic
+Plugins also have access to a dictionary called `self.context.field_vars()` which
 represents the values that would be available to a formula running in the same context.
 
 Plugins can return normal Python primitive types, datetime.date, `ObjectRow` or `PluginResult` objects. `ObjectRow` objects represent new output records/objects. `PluginResult` objects
@@ -1476,27 +1493,138 @@ Every second time this is called, it will evaluate its argument twice, and stick
 
 ```yaml
   - plugin: tests.test_custom_plugins_and_providers.DoubleVisionPlugin
-  - plugin: tests.test_custom_plugins_and_providers.PluginThatNeedsState
   - object: OBJ
     fields:
       some_value:
           - DoubleVisionPlugin.do_it_twice:
               - abc
-      some_value_2:
-          - DoubleVisionPlugin.do_it_twice:
-              - ${{PluginThatNeedsState.count()}}
 ```
 
 This would output an `OBJ` row with values:
 
+<<<<<<< HEAD
 ```python
   {'id': 1, 'some_value': 'abc : abc', 'some_value_2': '1 : 2'})
+=======
+```json
+  {"id": 1, "some_value": "abc : abc"})
+>>>>>>> origin/master
 ```
 
 Occasionally you might write a plugin which needs to evaluate its
 parameters lazily but doesn't care about the internals of the values
 because it just returns it to some parent context. In that case,
 use `context.evaluate_raw` instead of `context.evaluate`.
+
+Plugins that require "memory" or "state" are possible using PluginResult
+objects or subclasses. Consider a plugin that generates child objects
+that include values that sum up values on child objects to a value specified on a parent:
+
+```yaml
+# examples/sum_child_values.yml
+# This shows how you could create a plugin or feature where
+# a parent object generates child objects which sum up
+# to any particular value.
+
+- plugin: examples.sum_totals.SummationPlugin
+- var: summation_helper
+  value:
+    SummationPlugin.summer:
+      total: 100
+      step: 10
+
+- object: ParentObject__c
+  count: 10
+  fields:
+    MinimumChildObjectAmount__c: 10
+    MinimumStep: 5
+    TotalAmount__c: ${{summation_helper.total}}
+  friends:
+    - object: ChildObject__c
+      count: ${{summation_helper.count}}
+      fields:
+        Parent__c:
+          reference: ParentObject__c
+        Amount__c: ${{summation_helper.next_amount}}
+        RunningTotal__c: ${{summation_helper.running_total}}
+```
+
+This would generate values like this:
+
+```json
+ParentObject__c(id=1, MinimumChildObjectAmount__c=10, MinimumStep=5, TotalAmount__c=100)
+ChildObject__c(id=1, Parent__c=ParentObject__c(1), Amount__c=60, RunningTotal__c=60)
+ChildObject__c(id=2, Parent__c=ParentObject__c(1), Amount__c=20, RunningTotal__c=80)
+ChildObject__c(id=3, Parent__c=ParentObject__c(1), Amount__c=20, RunningTotal__c=100)
+
+ParentObject__c(id=2, MinimumChildObjectAmount__c=10, MinimumStep=5, TotalAmount__c=100)
+ChildObject__c(id=4, Parent__c=ParentObject__c(2), Amount__c=40, RunningTotal__c=40)
+ChildObject__c(id=5, Parent__c=ParentObject__c(2), Amount__c=20, RunningTotal__c=60)
+ChildObject__c(id=6, Parent__c=ParentObject__c(2), Amount__c=40, RunningTotal__c=100)
+
+ParentObject__c(id=3, MinimumChildObjectAmount__c=10, MinimumStep=5, TotalAmount__c=100)
+ChildObject__c(id=7, Parent__c=ParentObject__c(3), Amount__c=10, RunningTotal__c=10)
+ChildObject__c(id=8, Parent__c=ParentObject__c(3), Amount__c=40, RunningTotal__c=50)
+ChildObject__c(id=9, Parent__c=ParentObject__c(3), Amount__c=10, RunningTotal__c=60)
+ChildObject__c(id=10, Parent__c=ParentObject__c(3), Amount__c=10, RunningTotal__c=70)
+ChildObject__c(id=11, Parent__c=ParentObject__c(3), Amount__c=30, RunningTotal__c=100)
+```
+
+Here is the plugin implementation:
+
+```python
+# examples/sum_totals.py
+from random import randint, shuffle
+
+from snowfakery.plugins import SnowfakeryPlugin, PluginResult
+
+
+def parts(total, step):
+    """Split a number into a randomized set of 'pieces'.
+    The pieces add up to the number. E.g.
+
+    parts(12, 3) -> [3, 6, 3]
+    parts(16, 4) -> [8, 4, 4]
+
+    >>> assert len(parts(12, 3)) > 1
+    >>> assert sum(parts(12, 3)) == 12
+    """
+    assert total % step == 0
+    pieces = []
+
+    while sum(pieces) < total:
+        top = (total - sum(pieces)) / step
+        pieces.append(randint(1, top) * step)
+
+    shuffle(pieces)
+    return pieces
+
+
+class Summation(PluginResult):
+    """Represent a group of pieces"""
+
+    def __init__(self, total, step):
+        self.total = total
+        self.pieces = parts(total, step)
+        super().__init__(None)
+
+    @property
+    def count(self, null=None):
+        return len(self.pieces)
+
+    @property
+    def next_amount(self):
+        rc = self.pieces.pop()
+        return rc
+
+
+class SummationPlugin(SnowfakeryPlugin):
+    """Plugin which generates a summataion helper"""
+
+    class Functions:
+        def summer(self, total, step):
+            return Summation(total, step)
+```
 
 ## Using Snowfakery with Salesforce
 
@@ -1556,6 +1684,7 @@ you would run the following commands to create and use a venv with the
 Postgres plugin:
 
 ```bash
+
 # create a new directory for our experiment
 $ mkdir experiment_with_postgres
 # cd into it

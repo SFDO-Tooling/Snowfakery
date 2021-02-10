@@ -2,7 +2,8 @@
 from snowfakery.generate_mapping_from_recipe import mapping_from_recipe_templates
 from snowfakery.output_streams import (
     DebugOutputStream,
-    SqlOutputStream,
+    SqlDbOutputStream,
+    SqlTextOutputStream,
     JSONOutputStream,
     CSVOutputStream,
     ImageOutputStream,
@@ -41,6 +42,7 @@ file_extensions = [
     "json",
     "txt",
     "csv",
+    "sql",
 ] + graphic_file_extensions
 
 
@@ -215,11 +217,14 @@ def configure_output_stream(
         else:
             mappings = None
 
-        output_streams.append(SqlOutputStream.from_url(dburl, mappings))
+        output_streams.append(SqlDbOutputStream.from_url(dburl, mappings))
 
-    # JSON is the only output format (other than debug) that can go on stdout
+    # JSON and SQL are the only output formats (other than debug) that can go on stdout
     if output_format == "json" and not output_files:
         output_streams.append(JSONOutputStream(sys.stdout))
+
+    if output_format == "sql" and not output_files:
+        output_streams.append(SqlTextOutputStream(sys.stdout))
 
     if output_format == "csv":
         output_streams.append(CSVOutputStream(output_folder))
@@ -232,6 +237,8 @@ def configure_output_stream(
 
             if format == "json":
                 output_streams.append(JSONOutputStream(path))
+            elif format == "sql":
+                output_streams.append(SqlTextOutputStream(path))
             elif format == "txt":
                 output_streams.append(DebugOutputStream(path))
             elif format == "dot":
@@ -253,6 +260,7 @@ def configure_output_stream(
         yield output_stream
     finally:
         for output_stream in output_streams:
+            messages = None
             try:
                 messages = output_stream.close()
             except Exception as e:
