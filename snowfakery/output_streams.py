@@ -161,7 +161,7 @@ class FileOutputStream(OutputStream, SmartStream):
 
 
 class DebugOutputStream(FileOutputStream):
-    """Simplied output for debugging Snowfakery files."""
+    """Simplified output for debugging Snowfakery files."""
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
         values = ", ".join([f"{key}={value}" for key, value in row.items()])
