@@ -1,0 +1,33 @@
+- var: foo
+  value: bar
+- var: foo2
+  value: ${{foo}}${{foo}}
+- object: X
+  fields:
+    bar: ${{foo}}
+    bar2: ${{foo2}}
+    name:
+      fake: name
+- var: foo
+  value: baz
+- var: foo2
+  value: ${{foo}}${{foo}}
+- object: Y
+  fields:
+    baz: ${{foo}}
+    baz2: ${{foo2}}
+    name:
+      fake: name
+  friends:
+    - var: foo
+      value: jazz
+    - var: foo2
+      value: ${{foo}}${{foo}}
+    - object: jazz
+      fields:
+        jazz: ${{foo}}
+        jazz2: ${{foo2}}
+- object: Z
+  fields:
+    baz: ${{foo}}
+    baz2: ${{foo2}}

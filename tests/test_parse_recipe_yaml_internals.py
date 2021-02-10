@@ -63,7 +63,7 @@ class TestCategorizeTopLevelObjects(unittest.TestCase):
     def test_categorize_top_level_objects(self):
         objects = [{"object": "a", **linenum}]
         tlos = categorize_top_level_objects(objects, ParseContext())
-        assert tlos["object"][0]["object"] == "a"
+        assert tlos["statement"][0]["object"] == "a"
 
     def test_unknown_top_level_objects(self):
         with self.assertRaises(DataGenError):

@@ -2,6 +2,7 @@ import random
 from functools import lru_cache
 from datetime import date, datetime
 import dateutil.parser
+import warnings
 from dateutil.relativedelta import relativedelta
 from ast import literal_eval
 
@@ -14,11 +15,10 @@ from .data_gen_exceptions import DataGenError
 
 import snowfakery.data_generator_runtime  # noqa
 from snowfakery.plugins import SnowfakeryPlugin, PluginContext, lazy
+from snowfakery.object_rows import ObjectRow, ObjectReference
+from snowfakery.utils.template_utils import StringGenerator
 
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
-ObjectRow = "snowfakery.data_generator_runtime.ObjectRow"
-
-fake = Faker(use_weighting=False)
 
 # It might make more sense to use context vars for context handling when
 # Python 3.6 is out of the support matrix.
@@ -67,6 +67,14 @@ def render_boolean(context: PluginContext, value: FieldDefinition) -> bool:
 class StandardFuncs(SnowfakeryPlugin):
     class Functions:
         int = int
+        # use ONLY for random_dates
+        # anything else should use the Faker from the Interpreter
+        # which is locale-scoped.
+        _faker_for_dates = Faker(use_weighting=False)
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.snowfakery_filename = StringGenerator(self._snowfakery_filename)
 
         def date(
             self,
@@ -111,13 +119,14 @@ class StandardFuncs(SnowfakeryPlugin):
             end_date = try_parse_date(end_date)
 
             try:
-                return fake.date_between(start_date, end_date)
+                return self._faker_for_dates.date_between(start_date, end_date)
             except ValueError as e:
                 if "empty range" not in str(e):
                     raise
             # swallow empty range errors per Python conventions
 
         def i18n_fake(self, locale: str, fake: str):
+            # deprecated by still here for backwards compatibility
             faker = Faker(locale, use_weighting=False)
             func = getattr(faker, fake)
             return func()
@@ -215,6 +224,46 @@ class StandardFuncs(SnowfakeryPlugin):
                 probability = parse_weight_str(self.context, probability)
             return probability or when, pick
 
+        def random_reference(self, tablename: str, scope: str = "current-iteration"):
+            """Select a random, already-created row from 'sobject'
+
+            - object: Owner
+              count: 10
+              fields:
+                name: fake.name
+            - object: Pet
+              count: 10
+              fields:
+                ownedBy:
+                    random_reference:
+                        Owner
+
+            See the docs for more info.
+            """
+
+            globls = self.context.interpreter.globals
+            last_object = globls.transients.last_seen_obj_by_table.get(tablename)
+            if last_object:
+                last_id = last_object.id
+                if scope == "prior-and-current-iterations":
+                    first_id = 1
+                    warnings.warn("Global scope is an experimental feature.")
+                elif scope == "current-iteration":
+                    first_id = globls.first_new_id(tablename)
+                else:
+                    raise DataGenError(
+                        f"Scope must be 'prior-and-current-iterations' or 'current-iteration' not {scope}",
+                        None,
+                        None,
+                    )
+                return ObjectReference(tablename, random.randint(first_id, last_id))
+            elif tablename in globls.transients.nicknamed_objects:
+                raise DataGenError(
+                    "Nicknames cannot be used in random_reference", None, None
+                )
+            else:
+                raise DataGenError(f"There is no table named {tablename}", None, None)
+
         @lazy
         def if_(self, *choices: FieldDefinition):
             """Template helper for conditional choices.
@@ -251,6 +300,13 @@ class StandardFuncs(SnowfakeryPlugin):
             if hasattr(rc, "render"):
                 rc = self.context.evaluate_raw(rc)
             return rc
+
+        def _snowfakery_filename(self):
+            template = self.context.field_vars()["template"]
+            if template:
+                return template.filename
+            else:
+                return "<none>"
 
     setattr(Functions, "if", Functions.if_)
     setattr(Functions, "relativedelta", relativedelta)

@@ -3,13 +3,13 @@
 - option: num_druids
   default: 2
 
+- var: snowfakery_locale
+  value: no_NO
 - object: Druid
   count: ${{num_druids}}
   fields:
     Name:
-      i18n_fake:
-        locale: no_NO
-        fake: first_name
+      fake: first_name
     Level: ${{random_number(1,10)}}
     Strength:
       random_number:
@@ -88,13 +88,14 @@
                 probability: 50%
                 pick: Totem
 
+- var: snowfakery_locale
+  value: ja_JP
+
 - object: Fighter
   count: ${{num_fighters}}
   fields:
     Name:
-      i18n_fake:
-        locale: ja_JP
-        fake: first_name
+      fake: first_name
     Level: ${{random_number(1,10)}}
     Strength:
       random_number:
@@ -176,12 +177,13 @@
                 probability: 50%
                 pick: Explorers
 
+- var: snowfakery_locale
+  value: nl_NL
+
 - object: Paladin
   fields:
     Name:
-      i18n_fake:
-        locale: nl_NL
-        fake: first_name
+      fake: first_name
     Level: 10 # fixme
     Strength:
       random_number:

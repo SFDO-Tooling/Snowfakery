@@ -13,7 +13,7 @@ from snowfakery.data_gen_exceptions import DataGenError
 from snowfakery.data_generator_runtime import Dependency
 
 
-class TestGenerateMapping(unittest.TestCase):
+class TestGenerateMapping:
     def test_simple_parent_child_reference(self):
         yaml = """
             - object: Parent
@@ -273,3 +273,16 @@ class TestRecordTypes:
         mapping = mapping_from_recipe_templates(summary)
 
         assert mapping["Insert Bar"]["lookups"]["child"]["key_field"] == "child"
+
+    def test_random_reference_lookups(self):
+        yaml = """
+            - object: Target
+            - object: Ref
+              fields:
+                targ:
+                  random_reference: Target
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert mapping["Insert Ref"]["lookups"]["targ"]["table"] == "Target"
