@@ -157,8 +157,6 @@ class SmartStream:
 class FileOutputStream(OutputStream, SmartStream):
     """Base class for all file/stream-based OutputStreams"""
 
-    pass
-
 
 class DebugOutputStream(FileOutputStream):
     """Simplified output for debugging Snowfakery files."""
