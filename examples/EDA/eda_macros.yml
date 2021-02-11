@@ -187,7 +187,7 @@
         start_date: -1y
         end_date: today
     __hed__Applicant__c__disabled: "OPTIONAL REFERENCE SKIPPED: ['Contact']"
-    hed__Application_Date__c: <<fake.date>>T<<fake.time>>Z
+    hed__Application_Date__c: ${{fake.date}}T${{fake.time}}Z
     hed__Application_Decision_Date__c:
       date_between:
         start_date: -1y
