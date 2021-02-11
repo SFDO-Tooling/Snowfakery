@@ -154,13 +154,22 @@ Snowfakery builds on a tool called SQLAlchemy, so it gets a variety of database 
 
 When integrated with CumulusCI (see [Advanced Features](#advanced-features)) it is possible to output to a Salesforce instance.
 
-Snowfakery can also output JSON, directories of CSV and object diagrams.
+Snowfakery can also output JSON, SQL, directories of CSV and object diagrams.
 
 CSV output goes to a directory with one CSV file per table and a JSON manifest file in the [csvw](https://www.w3.org/TR/tabular-data-primer/) format.
 
+The complete list of file-based (as opposed to database-based) formats are:
+
+- JSON - a custom JSON dialect
+- TXT - debugging-style output
+- CSV - a directory of CSV files plus a csvw file
+- SQL - a SQL file with CREATE TABLE and INSERT statements
+- DOT - A Graphviz file for use with graphviz command line or [web-based](http://graphviz.it/) [tools](https://dreampuf.github.io/GraphvizOnline) (no endorsement intended!)
+- SVG, SVGZ, JPEG, PS PNG - Graphic formats which can be created if graphviz is installed.
+
 ## Objects
 
-The main, core concept in the language is an “*Object Template*”. It basically represents instructions on how to create a *Row* (or multiple rows) in a database. Rows in turn represent real-world entities like People,  Places or Things and that’s why we use the keyword “Object”.
+The main, core concept in the language is an “*Object Template*”. It basically represents instructions on how to create a *Row* (or multiple rows) in a database. Rows in turn represent real-world entities like People,  Places or Things and that’s why we use the keyword “Object”. "Record" is another term for "Row"
 
  Each *Row* has a type, which represents — for example — the name of the table it goes in if it is headed for a relational database, or which CSV file it goes in it if it is destined to be output as CSV. You declare the type after the keyword `object`.
 
@@ -452,12 +461,12 @@ StageName:
 You can do more sophisticated randomness with features that will be discussed in the section [Random Weights That Are Not Percentages](#random-weights-that-are-not-percentages).
 
 A more elaborate form of `random_choice` can also be used to
-select randomly among potential child or friend objects.
+select randomly among potential child objects.
 
 ```yaml
 - object : Task
   fields:
-    who:
+    person_doing_the_task:
         random_choice:
           - object: Contact
             fields:
@@ -468,6 +477,36 @@ select randomly among potential child or friend objects.
                 FirstName: Marge
                 LastName: Simpson
 ```
+
+#### `random_reference`
+
+Create a reference to a random, already-created row from some table.
+
+```yaml
+- object: Owner
+  count: 10
+  fields:
+    name: fake.name
+- object: Pet
+  count: 10
+  fields:
+    ownedBy:
+        random_reference: Owner
+```
+
+The selected row could be any one that matches the object
+type and was already created in the current iteration of
+the recipe. For example, the recipe above was executed
+20 times (iterations) to generate 200 Pets and Owners,
+the selected rows in the first iteration would be one
+of the first 10 Owners and the ones picked in the last
+iteration would be one of the last 10.
+
+Snowfakery cannot currently generate a random reference
+based on a nickname or to a row created in a previous
+or future iteration of the recipe. If you need these
+features, contact the Snowfakery team through a
+github issue.
 
 ### `fake`
 
@@ -527,28 +566,29 @@ You can also call these functions with arguments as described in Faker's [docume
 country: ${{fake.country_code(representation='alpha-2')}}
 ```
 
-### International Fakes (syntax still under development)
+### International Fakes
 
-You can specify internationally appropriate fakes for many different kind of names (e.g. person, company) like this:
+You can specify internationally appropriate fakes for many different kind of names (e.g. person, company) by setting the snowfakery_locale this:
 
 ```yaml
-- object: Viking
+- var: snowfakery_locale
+  value: no_NO
+- object: person
   fields:
-    Name:
-      i18n_fake:
-        locale: no_NO
-        fake: first_name
+    name:
+      fake: name
+- var: snowfakery_locale
+  value: fr_FR
+- object: person
+  fields:
+    name:
+      fake: name
 ```
 
-This will generate a “typical” Norwegian first name.
+This will generate a “typical” Norwegian first name for the first person object and a French name for the second person object.
 
 You can infer which Faker providers are internationalizable by looking through the Faker [repository](https://github.com/joke2k/faker/tree/master/faker/providers) and seeing which directories have localizations. For example there are only three localizations of [credit card](https://github.com/joke2k/faker/tree/master/faker/providers) (who knew that credit cards were different in Iran and Russia) and dozens of localizations for [person name](https://github.com/joke2k/faker/tree/master/faker/providers/person).
 
-You can also call this as an inline function:
-
-```yaml
-lars_or_alf_or_something: ${{i18n_fake(locale="no_NO", fake='first_name')}}
-```
 
 ### `date_between`
 
@@ -577,6 +617,8 @@ The options `start_date` and `end_date` can take the following forms:
 - `+<number>w`: `number` weeks in the future, e.g. `+10w`
 - `-<number>w`: `number` weeks in the past, e.g. `-10w`
 - `today` : the date the template is evaluated
+
+Case is relevant. The "M" for months must be upper-case. The rest must be lower case.
 
 Examples: Pick a date between 30 days ago and 108 days in the future:
 
@@ -697,9 +739,7 @@ a single recipe.
 
 The `fake` variable gives access to faker as described elsewhere in this documentation.
 
-The `context.id` variable is a unique identifyer representing the current Object Template (as opposed to Object/Row).
-
-The `context.filename` variable represents the file containing the template. This is useful
+The `snowfakery_filename` variable represents the file containing the template. This is useful
 for relative paths.
 
 The `date` function can either coerce a string into a date object for calculations OR generate
@@ -716,6 +756,9 @@ from `dateutil` is available for use in calculations like this:
 ```yaml
 ${{ date(Date_Established__c) + relativedelta(months=child_index) }}
 ```
+
+Some plugins may also be interested in a `template` variable which has an `id` attributes represents a unique identifier for the current template. Look at 
+[datasets.py](https://github.com/SFDO-Tooling/Snowfakery/blob/master/snowfakery/standard_plugins/datasets.py) to see one use-case where the template's ID can used to differentiate between two otherwise identical datasets.
 
 ## Macros
 
@@ -786,6 +829,47 @@ Macros are especially powerful if you combine them with the `include_file` featu
 
 Fields or friends declared  in the macros listed later override those listed earlier. Fields or friends declared in the Object Template override those declared in macros.
 
+## Defining Variables
+
+Sometimes you may want to generate a value (e.g. a locale name
+or surname) shared by multiple templates. You can do that like
+this:
+
+```yaml
+- var: lastname_var
+  value:
+    fake: last_name
+- object: person
+  fields:
+    first_name:
+      fake: first_name
+    last_name: ${{lastname_var}}
+- object: spouse
+  fields:
+    first_name:
+      fake: first_name
+    last_name: ${{lastname_var}}
+```
+
+This works both at the top level of your recipe and in friends
+lists.
+
+If you would like to group several fields together you can
+do that by creating a "hidden" object:
+
+```yaml
+- var: shared_address
+  value:
+    - object: __shared_address
+      fields:
+        street:
+          fake: street_address
+        city:
+          fake: city
+        state:
+          fake: state
+```
+
 ## Including files
 
 You can include a file by a relative path:
@@ -846,7 +930,7 @@ In theory you could use Jinja keywords like `${% if` (as opposed to `{% if`) but
 
 Hard-coding the exact number of records to create into a template file is not always the ideal thing.
 
-You can pass options (numbers, strings, booleans) to your generator script from a command line.
+You can pass options (numbers, strings, booleans) to your generator recipe from a command line.
 
 The first step is to declare the options in your template file:
 
@@ -857,7 +941,7 @@ The first step is to declare the options in your template file:
 
 If you do not specify a default, the option is required and the template will not be processed without it.
 
-In your script, you use the value by referring to it in a formula:
+In your recipe, you use the value by referring to it in a formula:
 
 ```yaml
 - object: Account
@@ -888,9 +972,8 @@ And then you pass that option like this:
 You can learn the list of options available in the latest version
 like this:
 
-```bash
+```s
 $ snowfakery --help
-
 Usage: snowfakery [OPTIONS] YAML_FILE
 
       Generates records from a YAML file
@@ -914,8 +997,7 @@ Options:
                                   sqlite:///foo.db if you don't have one set
                                   up.
 
-  --output-format [JSON|json|PNG|png|SVG|svg|svgz|jpeg|jpg|ps|dot|txt|csv]
-  --output-folder PATH
+  --output-format [JSON|json|txt|csv|sql|PNG|png|SVG|svg|svgz|jpeg|jpg|ps|dot]  --output-folder PATH
   -o, --output-file PATH
   --option EVAL_ARG...            Options to send to the recipe YAML.
   --target-number TEXT...         Target options for the recipe YAML in the
@@ -924,7 +1006,10 @@ Options:
 
   --debug-internals / --no-debug-internals
   --cci-mapping-file PATH
-  --generate-cci-mapping-file PATH
+  --generate-cci-mapping-file FILENAME
+                                  Generate a CumulusCI mapping file for the
+                                  dataset
+
   --generate-continuation-file FILENAME
                                   A file that captures information about how
                                   to continue a multi-batch data generation
@@ -984,6 +1069,60 @@ for all of the CSV files.
 
 ## Advanced Features
 
+
+### Singletons with the "just_once" feature
+
+Snowfakery scales up to larger data volumes
+by evaluating your recipe over and over again.
+Each one is called an `iteration`.
+
+Some objects are meant to be produced only once, regardless
+of how many times the recipe executes. The programming
+language term for this is a "singleton". For example
+an accounting system might generate a dataset that has
+exactly 2 Ledger objects, Checking and Savings. You could have
+dozens of Entries per Ledger or maybe billions. But it
+might want to always generate exactly 2 Ledgers.
+
+Here is how you would do that:
+
+```yaml
+- object: Ledger
+  just_once: True
+  nickname: Checking
+  fields:
+    Name: Checking
+
+- object: Ledger
+  just_once: True
+  nickname: Savings
+  fields:
+    Name: Savings
+
+- object: Entry
+  count: 1000
+  fields:
+    Ledger: Checking
+    ...
+
+- object: Entry
+  count: 1000
+  fields:
+    Ledger: Savings
+    ...
+```
+
+Now if you execute this from the Snowfakery command line like this:
+
+```s
+$ snowfakery accounting.yml --target-number 10_000 Entry
+...
+```
+
+You will get 2 Ledger rows and 5000 Entry rows attached to
+each of the Ledger rows. If you scale the recipe up to 1M, you
+will still get only two Ledger rows.
+
 ### Hidden Fields and Objects
 
 As described earlier, fields can refer to each other. For example field `c` could be the sum of fields `a` and `b`. Or perhaps you only want to output PersonLastName if PersonFirstName was set, and PersonFirstName is set randomly.
@@ -1009,7 +1148,9 @@ examples/hidden_fields.yml:
 ```
 Which would output:
 
-```Dates(id=1, ProgramStartDate=2016-11-30, FirstEvent=2017-02-24, ProgramEndDate=2017-11-30)```
+```json
+Dates(id=1, ProgramStartDate=2016-11-30, FirstEvent=2017-02-24, ProgramEndDate=2017-11-30)
+```
 
 ### Random Weights that are not Percentages
 
@@ -1071,7 +1212,7 @@ you would model it like this:
 Which generates:
 
 ```javascript
-Company(id=1, Name=Nelson-Singleton)
+Company(id=1, Name=Nelson-Sampson)
 Company(id=2)
 Employee(id=1, Name=Julie Turner, EmployedBy=Company(2))
 Company(id=3)
@@ -1280,7 +1421,7 @@ Only SQLite is part of our test suite, however.
 If a SQL dataset has more than one table, you must specify which table
 to use like this:
 
-```
+```yaml
     __address_from_csv:
       Dataset.iterate:
         dataset: addresses.csv
@@ -1366,7 +1507,7 @@ class PluginThatCounts(SnowfakeryPlugin):
             return context_vars["count"]
 ```
 
-Plugins also have access to a dictionary called `self.context.field_vars()` whic
+Plugins also have access to a dictionary called `self.context.field_vars()` which
 represents the values that would be available to a formula running in the same context.
 
 Plugins can return normal Python primitive types, datetime.date, `ObjectRow` or `PluginResult` objects. `ObjectRow` objects represent new output records/objects. `PluginResult` objects
@@ -1397,27 +1538,133 @@ Every second time this is called, it will evaluate its argument twice, and stick
 
 ```yaml
   - plugin: tests.test_custom_plugins_and_providers.DoubleVisionPlugin
-  - plugin: tests.test_custom_plugins_and_providers.PluginThatNeedsState
   - object: OBJ
     fields:
       some_value:
           - DoubleVisionPlugin.do_it_twice:
               - abc
-      some_value_2:
-          - DoubleVisionPlugin.do_it_twice:
-              - ${{PluginThatNeedsState.count()}}
 ```
 
 This would output an `OBJ` row with values:
 
 ```json
-  {'id': 1, 'some_value': 'abc : abc', 'some_value_2': '1 : 2'})
+  {"id": 1, "some_value": "abc : abc"})
 ```
 
 Occasionally you might write a plugin which needs to evaluate its
 parameters lazily but doesn't care about the internals of the values
 because it just returns it to some parent context. In that case,
 use `context.evaluate_raw` instead of `context.evaluate`.
+
+Plugins that require "memory" or "state" are possible using PluginResult
+objects or subclasses. Consider a plugin that generates child objects
+that include values that sum up values on child objects to a value specified on a parent:
+
+```yaml
+# examples/sum_child_values.yml
+# This shows how you could create a plugin or feature where
+# a parent object generates child objects which sum up
+# to any particular value.
+
+- plugin: examples.sum_totals.SummationPlugin
+- var: summation_helper
+  value:
+    SummationPlugin.summer:
+      total: 100
+      step: 10
+
+- object: ParentObject__c
+  count: 10
+  fields:
+    MinimumChildObjectAmount__c: 10
+    MinimumStep: 5
+    TotalAmount__c: ${{summation_helper.total}}
+  friends:
+    - object: ChildObject__c
+      count: ${{summation_helper.count}}
+      fields:
+        Parent__c:
+          reference: ParentObject__c
+        Amount__c: ${{summation_helper.next_amount}}
+        RunningTotal__c: ${{summation_helper.running_total}}
+```
+
+This would generate values like this:
+
+```json
+ParentObject__c(id=1, MinimumChildObjectAmount__c=10, MinimumStep=5, TotalAmount__c=100)
+ChildObject__c(id=1, Parent__c=ParentObject__c(1), Amount__c=60, RunningTotal__c=60)
+ChildObject__c(id=2, Parent__c=ParentObject__c(1), Amount__c=20, RunningTotal__c=80)
+ChildObject__c(id=3, Parent__c=ParentObject__c(1), Amount__c=20, RunningTotal__c=100)
+
+ParentObject__c(id=2, MinimumChildObjectAmount__c=10, MinimumStep=5, TotalAmount__c=100)
+ChildObject__c(id=4, Parent__c=ParentObject__c(2), Amount__c=40, RunningTotal__c=40)
+ChildObject__c(id=5, Parent__c=ParentObject__c(2), Amount__c=20, RunningTotal__c=60)
+ChildObject__c(id=6, Parent__c=ParentObject__c(2), Amount__c=40, RunningTotal__c=100)
+
+ParentObject__c(id=3, MinimumChildObjectAmount__c=10, MinimumStep=5, TotalAmount__c=100)
+ChildObject__c(id=7, Parent__c=ParentObject__c(3), Amount__c=10, RunningTotal__c=10)
+ChildObject__c(id=8, Parent__c=ParentObject__c(3), Amount__c=40, RunningTotal__c=50)
+ChildObject__c(id=9, Parent__c=ParentObject__c(3), Amount__c=10, RunningTotal__c=60)
+ChildObject__c(id=10, Parent__c=ParentObject__c(3), Amount__c=10, RunningTotal__c=70)
+ChildObject__c(id=11, Parent__c=ParentObject__c(3), Amount__c=30, RunningTotal__c=100)
+```
+
+Here is the plugin implementation:
+
+```python
+# examples/sum_totals.py
+from random import randint, shuffle
+
+from snowfakery.plugins import SnowfakeryPlugin, PluginResult
+
+
+def parts(total, step):
+    """Split a number into a randomized set of 'pieces'.
+    The pieces add up to the number. E.g.
+
+    parts(12, 3) -> [3, 6, 3]
+    parts(16, 4) -> [8, 4, 4]
+
+    >>> assert len(parts(12, 3)) > 1
+    >>> assert sum(parts(12, 3)) == 12
+    """
+    assert total % step == 0
+    pieces = []
+
+    while sum(pieces) < total:
+        top = (total - sum(pieces)) / step
+        pieces.append(randint(1, top) * step)
+
+    shuffle(pieces)
+    return pieces
+
+
+class Summation(PluginResult):
+    """Represent a group of pieces"""
+
+    def __init__(self, total, step):
+        self.total = total
+        self.pieces = parts(total, step)
+        super().__init__(None)
+
+    @property
+    def count(self, null=None):
+        return len(self.pieces)
+
+    @property
+    def next_amount(self):
+        rc = self.pieces.pop()
+        return rc
+
+
+class SummationPlugin(SnowfakeryPlugin):
+    """Plugin which generates a summataion helper"""
+
+    class Functions:
+        def summer(self, total, step):
+            return Summation(total, step)
+```
 
 ## Using Snowfakery with Salesforce
 
@@ -1463,12 +1710,73 @@ $ cci task run generate_opportunities_and_contacts
 $ cci flow run test_everything
 ```
 
+## Using Snowfakery with Databases
+
+Snowfakery is built on top of a very flexible engine called
+SQLAlchemy. This allows it to connect to many different databases
+subject to the limitations described below.
+
+You should start by installing Snowfakery in a context which
+makes it easy to use the Python command 'pip' to manage your
+Python environment. For example you could install Python
+using the standard installers from `python.org` and then
+you would run the following commands to create and use a venv with the
+Postgres plugin:
+
+```bash
+
+# create a new directory for our experiment
+$ mkdir experiment_with_postgres
+# cd into it
+$ cd experiment_with_postgres
+# create a new database: 
+# https://www.postgresql.org/docs/9.1/app-createdb.html
+$ createdb snowfakerydb
+# create a virtual environment. A good habit to get into.
+# https://docs.python.org/3/library/venv.html
+$ python3 -m venv myvenv
+# activate the venv
+$ source myvenv/bin/activate
+# install Snowfakery in this venv
+$ pip install snowfakery
+# install the Postgres library for Python
+# https://pypi.org/project/psycopg2/
+$ pip install psycopg2
+# let's use it!
+$ snowfakery --dburl='postgresql://localhost:5432/snowfakerydb' ~/code/Snowfakery/examples/company.yml --target-number 1000 Employee
+# and check the results
+# https://www.postgresql.org/docs/9.3/app-psql.html
+$ echo 'select * from "Employee"' | psql snowfakerydb
+```
+
+That's a lot to take in, but hopefully it will be clear enough
+to follow the links and understand the details.
+
+A limitation of this process is that currently Snowfakery can
+only create new tables rather than import into existing ones.
+
+The table will have an id column in addition to columns for every field that
+was generated by the recipe. All columns will be of type text.
+
+The list of databases supported by our underlying infrastructure
+(SQLAlchemy) is listed [here](https://docs.sqlalchemy.org/en/14/core/engines.html#supported-databases) and [here](https://docs.sqlalchemy.org/en/13/dialects/index.html).
+
+Snowfakery is not proactively tested with all of the output
+databases. We will certainly accept bug reports and pull requests
+relating to problems that are discovered.
+
+Please keep in touch with the Snowfakery team about your use of
+other databases so we can have a sense of what works well and what
+does not.
+
 ## Snowfakery Glossary
 
 - Object: When we think about our Rows in the context of each other, we often use the word “Object”. That’s because rows often *represent* real-world entities like houses (or at least their, addresses), organizations and people (in this case its acceptable to objectify people). See also: “Rows”
 - Object Template: These represent instructions on how to create a row, or multiple rows in a database. Each row represents a real-world Object.
 - Rows: Rows (often also called “records”) in a database are a unit of related information. For example in Salesforce (which includes a database) a “Contact” has a first name, last name, phone number, etc. Each Contact is a row. “Contact” is the type of each of those rows. Rows represent real-world Objects. See “Objects” above for more information.
 - Recipe: A Snowfakery YAML file instructing Snowfakery on what to generate.
+- Iteration: Snowfakery recipes can be "scaled up" to generate more data by specifying command line, API or CumulusCI options. The recipe is scaled up by executing over and over again. These executions are called iterations.
+- Singleton: A singleton is an Object Template that generates a single row regardless of how many times the recipe is iterated over.
 - YAML: YAML is a relatively simple, human-readable format. You can learn more about it at [yaml.org](http://yaml.org/). But you can also just pick up the basics of it by reading along.
 
 ## Using Snowfakery within Python

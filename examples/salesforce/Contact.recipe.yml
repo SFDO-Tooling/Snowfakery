@@ -138,7 +138,7 @@
     EmailBouncedReason:
       fake.text:
         max_nb_chars: 100
-    EmailBouncedDate: <<fake.date>>T<<fake.time>>Z
+    EmailBouncedDate: ${{fake.date}}T${{fake.time}}Z
     CleanStatus:
       random_choice:
         - Matched

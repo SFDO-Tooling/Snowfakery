@@ -1,0 +1,10 @@
+- object: target
+  count: 100
+  fields:
+    name: ${{id}}
+
+- object: test-random-reference
+  count: 100
+  fields:
+    ref:
+      random_reference: target

@@ -127,7 +127,7 @@
         end_date: today
     hed__Applicant__c:
       reference: Contact
-    hed__Application_Date__c: <<fake.date>>T<<fake.time>>Z
+    hed__Application_Date__c: ${{fake.date}}T${{fake.time}}Z
     hed__Application_Decision_Date__c:
       date_between:
         start_date: -1y
