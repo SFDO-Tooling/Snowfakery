@@ -272,16 +272,16 @@ class JinjaTemplateEvaluatorFactory:
     def __init__(self):
         self.compilers = [
             jinja2.Environment(
-                block_start_string="<%",
-                block_end_string="%>",
-                variable_start_string="<<",
-                variable_end_string=">>",
-            ),
-            jinja2.Environment(
                 block_start_string="${%",
                 block_end_string="%}",
                 variable_start_string="${{",
                 variable_end_string="}}",
+            ),
+            jinja2.Environment(
+                block_start_string="<%",
+                block_end_string="%>",
+                variable_start_string="<<",
+                variable_end_string=">>",
             ),
         ]
 
