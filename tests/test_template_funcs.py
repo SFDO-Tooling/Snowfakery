@@ -216,7 +216,7 @@ class TestTemplateFuncs:
         yaml = """
         - object : A
           fields:
-            a: <<date("2012-01-01T00:01")>>
+            a: ${{date("2012-01-01T00:01")}}
         """
         generate(StringIO(yaml), {}, None)
         assert write_row.mock_calls[0][1][1]["a"] == "2012-01-01"
@@ -246,7 +246,7 @@ class TestTemplateFuncs:
         yaml = """
         - object : A
           fields:
-            a: <<5 + 3>>
+            a: ${{5 + 3}}
         """
         generate(StringIO(yaml), {}, None)
         assert write_row.mock_calls[0][1][1]["a"] == 8
@@ -284,7 +284,7 @@ class TestTemplateFuncs:
             - object: B
               count: 3
               fields:
-                    num: <<child_index>>
+                    num: ${{child_index}}
         """
         generate(StringIO(yaml), {}, None)
         assert write_row.mock_calls[3][1][1]["num"] == 2
