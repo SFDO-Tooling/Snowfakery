@@ -618,6 +618,8 @@ The options `start_date` and `end_date` can take the following forms:
 - `-<number>w`: `number` weeks in the past, e.g. `-10w`
 - `today` : the date the template is evaluated
 
+Case is relevant. The "M" for months must be upper-case. The rest must be lower case.
+
 Examples: Pick a date between 30 days ago and 108 days in the future:
 
 ```yaml
