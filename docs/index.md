@@ -14,7 +14,7 @@ But while you’re at it, why not install CumulusCI too?
 
 Next, you can go to a terminal and install Snowfakery:
 
-```bash
+```s
 $ pip3 install pipx
 ...
 $ pipx install snowfakery
@@ -25,7 +25,7 @@ If you want to use Snowfakery within CumulusCI, you can find instructions for th
 
 After installation, you should be able to invoke Snowfakery like this:
 
-```bash
+```s
 $ snowfakery somefile.yml
 ...
 ```
@@ -47,14 +47,14 @@ simple_static.yml
 
 We run this example through Snowfakery like this:
 
-```bash
+```s
 $ snowfakery docs/examples/simple_static.yml
 ...
 ```
 
 This simple example will generate a single record that looks like this:
 
-```json
+```python
 Person(id=1, name=Buster Bluth, age=35)
 ```
 
@@ -93,7 +93,7 @@ What did we say here?
 
 Now you should get an output more like this:
 
-```json
+```python
 Person(id=1, name=Allison Garcia, age=94)
 Person(id=2, name=Megan Campos, age=67)
 Person(id=3, name=Katherine Nelson, age=92)
@@ -290,7 +290,7 @@ Now each of the 3 people has a Sugar glider for a pet. Which is a good thing, as
 
 Let’s look at what that generates:
 
-```json
+```python
 Person(id=1, name=Rachel Thompson, pet=Animal(1))
 Animal(id=2, name=Charles, species=Petaurus Breviceps)
 Person(id=2, name=Alexander Zhang, pet=Animal(2))
@@ -323,7 +323,7 @@ Now person has a field called `pet` which refers to `Animal` rows and those anim
 
 Let’s look at the output:
 
-```json
+```python
 Animal(id=1, name=Nicole, owner=Person(1))
 Person(id=1, name=Steven Ellis, pet=Animal(1))
 Animal(id=2, name=Richard, owner=Person(2))
@@ -384,7 +384,7 @@ pet_stories_2.yml
             reference: vetschoice
 ```
 
-```json
+```perl
 PetFood(id=1, name=Pets Choice, cost=$10)
 PetFood(id=2, name=Vets Choice, cost=$12)
 Animal(id=1, owner=Person, name=Dustin, species=canine, food=PetFood(1))
@@ -544,7 +544,7 @@ You can also include Faker extension libraries after you’ve added them to your
 
 You would install that provider like this:
 
-```bash
+```s
 $ pip install faker_microservice
 ```
 
@@ -972,7 +972,6 @@ And then you pass that option like this:
 You can learn the list of options available in the latest version
 like this:
 
-```s
 $ snowfakery --help
 Usage: snowfakery [OPTIONS] YAML_FILE
 
@@ -1026,7 +1025,7 @@ Options:
 
 From the command line you can control how many rows a recipe generates. You do this by specifying a "target count" and a "target tablename", like this:
 
-```bash
+```s
 snowfakery accounts.yml --target-number 1000 Account
 ```
 
@@ -1048,14 +1047,14 @@ and 1500 Opportunites.
 
 You create a CSV directory like this:
 
-```basy
+```s
 $ snowfakery template.yml --output-format csv --output-folder csvfiles
 ...
 ```
 
 This would generate a directory that looks like:
 
-```bash
+```s
 Animal.csv
 Person.csv
 PetFood.csv
@@ -1300,7 +1299,7 @@ Snowfakery can incorporate data from external CSV files or databases as datasets
 
 Here is an example of a simple CSV-based dataset:
 
-```csv
+```text
 Number,Street,City,Postcode
 420,Kings Ave,Burnaby,85633
 421,Granville Street,White Rock,85633
@@ -1340,7 +1339,7 @@ The `Dataset.iterate` [function block](#function-blocks) pulls each row from the
 
 So it would generate output like this:
 
-```bash
+```s
 $ snowfakery examples/datasets/datasets.recipe.yml 
 Person(id=1, Name=Dawn Gray, StreetAddress=420 Kings Ave, City=Burnaby)
 Person(id=2, Name=Melissa Walker, StreetAddress=421 Granville Street, City=White Rock)
@@ -1449,7 +1448,7 @@ in Snowfakery. Snowfakery's source repository includes a simplistic tool called
 `shufflecsv.py` which can do that for CSV files. You feed it a CSV on stdin
  and it will generate another one on stdout like this:
 
-```bash
+```s
 $ python tools/shufflecsv.py < examples/datasets/addresses.csv > examples/datasets/shuffled.csv
 ...
 ```
@@ -1547,8 +1546,8 @@ Every second time this is called, it will evaluate its argument twice, and stick
 
 This would output an `OBJ` row with values:
 
-```json
-  {"id": 1, "some_value": "abc : abc"})
+```python
+  {'id': 1, 'some_value': 'abc : abc', 'some_value_2': '1 : 2'})
 ```
 
 Occasionally you might write a plugin which needs to evaluate its
@@ -1690,7 +1689,7 @@ install it) is with its [Trailhead Trail](https://trailhead.salesforce.com/en/co
 CumulusCI's documentation [describes](https://cumulusci.readthedocs.io/en/latest/cookbook.html#large-volume-data-synthesis-with-snowfakery)
 how to use it with Snowfakery. Here is a short example:
 
-```bash
+```s
 $ cci task run generate_and_load_from_yaml -o generator_yaml examples/salesforce/Contact.recipe.yml -o num_records 300 -o num_records_tablename Contact --org qa
 ...
 ```
@@ -1703,7 +1702,7 @@ If you have CumulusCI configured and you would like to test this,
 you can do so like this (the Snowfakery repo itself has a
 `cumulusci.yml`):
 
-```bash
+```s
 $ git clone https://github.com/SFDO-Tooling/Snowfakery.git
 $ cd Snowfakery
 $ cci task run generate_opportunities_and_contacts
