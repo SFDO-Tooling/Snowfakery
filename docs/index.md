@@ -618,6 +618,8 @@ The options `start_date` and `end_date` can take the following forms:
 - `-<number>w`: `number` weeks in the past, e.g. `-10w`
 - `today` : the date the template is evaluated
 
+Case is relevant. The "M" for months must be upper-case. The rest must be lower case.
+
 Examples: Pick a date between 30 days ago and 108 days in the future:
 
 ```yaml
@@ -1350,6 +1352,53 @@ Person(id=8, Name=Tamara Farley, StreetAddress=421 Granville Street, City=White 
 Person(id=9, Name=Austin Wong, StreetAddress=422 Kingsway Road, City=Richmond)
 Person(id=10, Name=Kelly Jones, StreetAddress=420 Kings Ave, City=Burnaby)
 ```
+
+There are two ways you can think of and use this data: a) using CSV data
+to "enrich" your fake data with real or pre-generated data or b) using
+Snowfakery to "enrich" your real or pre-generated data with fake data.
+
+##### Iterating over Salesforce datasets
+
+CumulusCI can also be used to download CSV data for enrichment as follows.
+
+`CumulusCI.yml`:
+
+```yaml
+    contacts_for_accounts:
+        steps:
+            1:
+                task: query
+                options:
+                    object: Account
+                    query: select Id from Account
+                    result_file: accounts.csv
+            2:
+                task: generate_and_load_from_yaml
+                options:
+                    generator_yaml: examples/salesforce/ContactsForAccounts.recipe.yml
+                    num_records: 100
+                    num_records_tablename: Contact
+```
+
+`ContactsForAccounts.recipe.yml` :
+
+```yaml
+- plugin: snowfakery.standard_plugins.datasets.Dataset
+- object: Contact
+  fields:
+    __accounts:
+      Dataset.shuffle:
+        dataset: ../../accounts.csv
+    FirstName:
+      fake: first_name
+    LastName:
+      fake: last_name
+    AccountId: ${{__accounts.Id}}
+```
+
+Of course you will need to adjust the paths based on your directory structure.
+
+Snowfakery will soon have built-in features for querying SOQL so you may also want to evaluate those as an alternative to this technique.
 
 ##### Iterating over SQL database datasets
 

@@ -137,6 +137,14 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
         x = f.generate_value(standard_runtime())
         assert x == 15
 
+    def test_mixed_jinja_syntax(self):
+        definition = SimpleValue("${{2+3}} <<5*3>>", "abc.yml", 10)
+        repr(definition)
+        f = FieldFactory("field", definition, "abc.yml", 10)
+        repr(f)
+        x = f.generate_value(standard_runtime())
+        assert x == "5 <<5*3>>"
+
     def test_check_type(self):
         o = ObjectTemplate("abcd", filename="abc.yml", line_num=10)
         field = mock.MagicMock()

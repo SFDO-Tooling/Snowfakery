@@ -1,0 +1,11 @@
+- plugin: snowfakery.standard_plugins.datasets.Dataset
+- object: Contact
+  fields:
+    __accounts:
+      Dataset.shuffle:
+        dataset: ../../accounts.csv
+    FirstName:
+      fake: first_name
+    LastName:
+      fake: last_name
+    AccountId: ${{__accounts.Id}}
