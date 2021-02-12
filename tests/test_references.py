@@ -420,15 +420,13 @@ class TestReferences:
             generate(StringIO(yaml))
         assert "incorrect object type" in str(e).lower()
 
-    def test_reference_really_wrong_type(self, disable_typeguard):
+    def test_reference_really_wrong_type(self):
         yaml = """
         - object: B
           count: 2
           fields:
               A_ref:
                 reference: 5"""
-        with mock.patch(
-            "typeguard.check_argument_types", lambda *args, **kwargs: ...
-        ), pytest.raises(DataGenError) as e:
+        with pytest.raises(DataGenError) as e:
             generate(StringIO(yaml))
         assert "can't get reference to object" in str(e).lower()
