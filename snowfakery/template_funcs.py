@@ -6,7 +6,7 @@ import warnings
 from dateutil.relativedelta import relativedelta
 from ast import literal_eval
 
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Any
 
 from faker import Faker
 from faker.providers.date_time import Provider as DateProvider
@@ -15,7 +15,7 @@ from .data_gen_exceptions import DataGenError
 
 import snowfakery.data_generator_runtime  # noqa
 from snowfakery.plugins import SnowfakeryPlugin, PluginContext, lazy
-from snowfakery.object_rows import ObjectRow, ObjectReference
+from snowfakery.object_rows import ObjectReference
 from snowfakery.utils.template_utils import StringGenerator
 
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
@@ -135,7 +135,7 @@ class StandardFuncs(SnowfakeryPlugin):
             """Pick a random number between min and max like Python's randint."""
             return random.randrange(min, max + 1, step)
 
-        def reference(self, x: Union[ObjectRow, str]):
+        def reference(self, x: Any):
             """YAML-embeddable function to Reference another object."""
             if hasattr(x, "id"):  # reference to an object with an id
                 target = x
@@ -303,10 +303,10 @@ class StandardFuncs(SnowfakeryPlugin):
 
         def _snowfakery_filename(self):
             template = self.context.field_vars()["template"]
-            if template:
-                return template.filename
-            else:
-                return "<none>"
+            return template.filename
 
     setattr(Functions, "if", Functions.if_)
     setattr(Functions, "relativedelta", relativedelta)
+    setattr(Functions, "NULL", None)
+    setattr(Functions, "null", None)
+    setattr(Functions, "Null", None)

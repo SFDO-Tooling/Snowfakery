@@ -366,3 +366,42 @@ class TestTemplateFuncs:
         assert generated_rows.table_values("foo", 1, "filename2") == "<stream>"
         assert generated_rows.table_values("foo", 1, "filename3") == "<stream>"
         assert int(generated_rows.table_values("foo", 1, "template_id"))
+
+    def test_null(self, generated_rows):
+        yaml = """
+        - object: foo
+          count: 5
+          fields:
+            EndDate:
+                if:
+                    - choice:
+                        when: ${{ child_index%2==0 }}
+                        pick: 1
+                    - choice:
+                        pick: NULL
+            DateSupplied:
+                if:
+                    - choice:
+                        when: ${{ EndDate!=NULL }}
+                        pick: "Yes"
+                    - choice:
+                        pick: "No"
+        """
+        generate(StringIO(yaml))
+        call = mock.call
+        assert generated_rows.mock_calls == [
+            call(
+                "foo",
+                {"id": 1, "EndDate": 1, "DateSupplied": "Yes"},
+            ),
+            call("foo", {"id": 2, "EndDate": None, "DateSupplied": "No"}),
+            call(
+                "foo",
+                {"id": 3, "EndDate": 1, "DateSupplied": "Yes"},
+            ),
+            call("foo", {"id": 4, "EndDate": None, "DateSupplied": "No"}),
+            call(
+                "foo",
+                {"id": 5, "EndDate": 1, "DateSupplied": "Yes"},
+            ),
+        ]

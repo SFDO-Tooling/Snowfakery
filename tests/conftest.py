@@ -34,3 +34,9 @@ def generated_rows(request):
         mockobj.row_values = row_values
         mockobj.table_values = table_values
         yield mockobj
+
+
+@pytest.fixture(scope="function")
+def disable_typeguard():
+    with patch("typeguard.check_argument_types", lambda *args, **kwargs: ...):
+        yield
