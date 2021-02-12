@@ -14,7 +14,7 @@ But while you’re at it, why not install CumulusCI too?
 
 Next, you can go to a terminal and install Snowfakery:
 
-```bash
+```s
 $ pip3 install pipx
 ...
 $ pipx install snowfakery
@@ -25,7 +25,7 @@ If you want to use Snowfakery within CumulusCI, you can find instructions for th
 
 After installation, you should be able to invoke Snowfakery like this:
 
-```bash
+```s
 $ snowfakery somefile.yml
 ...
 ```
@@ -47,14 +47,14 @@ simple_static.yml
 
 We run this example through Snowfakery like this:
 
-```bash
+```s
 $ snowfakery docs/examples/simple_static.yml
 ...
 ```
 
 This simple example will generate a single record that looks like this:
 
-```json
+```python
 Person(id=1, name=Buster Bluth, age=35)
 ```
 
@@ -93,7 +93,7 @@ What did we say here?
 
 Now you should get an output more like this:
 
-```json
+```python
 Person(id=1, name=Allison Garcia, age=94)
 Person(id=2, name=Megan Campos, age=67)
 Person(id=3, name=Katherine Nelson, age=92)
@@ -154,9 +154,18 @@ Snowfakery builds on a tool called SQLAlchemy, so it gets a variety of database 
 
 When integrated with CumulusCI (see [Advanced Features](#advanced-features)) it is possible to output to a Salesforce instance.
 
-Snowfakery can also output JSON, directories of CSV and object diagrams.
+Snowfakery can also output JSON, SQL, directories of CSV and object diagrams.
 
 CSV output goes to a directory with one CSV file per table and a JSON manifest file in the [csvw](https://www.w3.org/TR/tabular-data-primer/) format.
+
+The complete list of file-based (as opposed to database-based) formats are:
+
+- JSON - a custom JSON dialect
+- TXT - debugging-style output
+- CSV - a directory of CSV files plus a csvw file
+- SQL - a SQL file with CREATE TABLE and INSERT statements
+- DOT - A Graphviz file for use with graphviz command line or [web-based](http://graphviz.it/) [tools](https://dreampuf.github.io/GraphvizOnline) (no endorsement intended!)
+- SVG, SVGZ, JPEG, PS PNG - Graphic formats which can be created if graphviz is installed.
 
 ## Objects
 
@@ -281,7 +290,7 @@ Now each of the 3 people has a Sugar glider for a pet. Which is a good thing, as
 
 Let’s look at what that generates:
 
-```json
+```python
 Person(id=1, name=Rachel Thompson, pet=Animal(1))
 Animal(id=2, name=Charles, species=Petaurus Breviceps)
 Person(id=2, name=Alexander Zhang, pet=Animal(2))
@@ -314,7 +323,7 @@ Now person has a field called `pet` which refers to `Animal` rows and those anim
 
 Let’s look at the output:
 
-```json
+```python
 Animal(id=1, name=Nicole, owner=Person(1))
 Person(id=1, name=Steven Ellis, pet=Animal(1))
 Animal(id=2, name=Richard, owner=Person(2))
@@ -375,7 +384,7 @@ pet_stories_2.yml
             reference: vetschoice
 ```
 
-```json
+```perl
 PetFood(id=1, name=Pets Choice, cost=$10)
 PetFood(id=2, name=Vets Choice, cost=$12)
 Animal(id=1, owner=Person, name=Dustin, species=canine, food=PetFood(1))
@@ -535,7 +544,7 @@ You can also include Faker extension libraries after you’ve added them to your
 
 You would install that provider like this:
 
-```bash
+```s
 $ pip install faker_microservice
 ```
 
@@ -573,7 +582,8 @@ You can specify internationally appropriate fakes for many different kind of nam
 - object: person
   fields:
     name:
-      fake: name```
+      fake: name
+```
 
 This will generate a “typical” Norwegian first name for the first person object and a French name for the second person object.
 
@@ -607,6 +617,8 @@ The options `start_date` and `end_date` can take the following forms:
 - `+<number>w`: `number` weeks in the future, e.g. `+10w`
 - `-<number>w`: `number` weeks in the past, e.g. `-10w`
 - `today` : the date the template is evaluated
+
+Case is relevant. The "M" for months must be upper-case. The rest must be lower case.
 
 Examples: Pick a date between 30 days ago and 108 days in the future:
 
@@ -1022,9 +1034,7 @@ And then you pass that option like this:
 You can learn the list of options available in the latest version
 like this:
 
-```bash
 $ snowfakery --help
-
 Usage: snowfakery [OPTIONS] YAML_FILE
 
       Generates records from a YAML file
@@ -1048,8 +1058,7 @@ Options:
                                   sqlite:///foo.db if you don't have one set
                                   up.
 
-  --output-format [JSON|json|PNG|png|SVG|svg|svgz|jpeg|jpg|ps|dot|txt|csv]
-  --output-folder PATH
+  --output-format [JSON|json|txt|csv|sql|PNG|png|SVG|svg|svgz|jpeg|jpg|ps|dot]  --output-folder PATH
   -o, --output-file PATH
   --option EVAL_ARG...            Options to send to the recipe YAML.
   --target-number TEXT...         Target options for the recipe YAML in the
@@ -1058,7 +1067,10 @@ Options:
 
   --debug-internals / --no-debug-internals
   --cci-mapping-file PATH
-  --generate-cci-mapping-file PATH
+  --generate-cci-mapping-file FILENAME
+                                  Generate a CumulusCI mapping file for the
+                                  dataset
+
   --generate-continuation-file FILENAME
                                   A file that captures information about how
                                   to continue a multi-batch data generation
@@ -1075,7 +1087,7 @@ Options:
 
 From the command line you can control how many rows a recipe generates. You do this by specifying a "target count" and a "target tablename", like this:
 
-```bash
+```s
 snowfakery accounts.yml --target-number 1000 Account
 ```
 
@@ -1097,14 +1109,14 @@ and 1500 Opportunites.
 
 You create a CSV directory like this:
 
-```basy
+```s
 $ snowfakery template.yml --output-format csv --output-folder csvfiles
 ...
 ```
 
 This would generate a directory that looks like:
 
-```bash
+```s
 Animal.csv
 Person.csv
 PetFood.csv
@@ -1197,7 +1209,9 @@ examples/hidden_fields.yml:
 ```
 Which would output:
 
-```Dates(id=1, ProgramStartDate=2016-11-30, FirstEvent=2017-02-24, ProgramEndDate=2017-11-30)```
+```json
+Dates(id=1, ProgramStartDate=2016-11-30, FirstEvent=2017-02-24, ProgramEndDate=2017-11-30)
+```
 
 ### Random Weights that are not Percentages
 
@@ -1347,7 +1361,7 @@ Snowfakery can incorporate data from external CSV files or databases as datasets
 
 Here is an example of a simple CSV-based dataset:
 
-```csv
+```text
 Number,Street,City,Postcode
 420,Kings Ave,Burnaby,85633
 421,Granville Street,White Rock,85633
@@ -1387,7 +1401,7 @@ The `Dataset.iterate` [function block](#function-blocks) pulls each row from the
 
 So it would generate output like this:
 
-```bash
+```s
 $ snowfakery examples/datasets/datasets.recipe.yml 
 Person(id=1, Name=Dawn Gray, StreetAddress=420 Kings Ave, City=Burnaby)
 Person(id=2, Name=Melissa Walker, StreetAddress=421 Granville Street, City=White Rock)
@@ -1400,6 +1414,53 @@ Person(id=8, Name=Tamara Farley, StreetAddress=421 Granville Street, City=White 
 Person(id=9, Name=Austin Wong, StreetAddress=422 Kingsway Road, City=Richmond)
 Person(id=10, Name=Kelly Jones, StreetAddress=420 Kings Ave, City=Burnaby)
 ```
+
+There are two ways you can think of and use this data: a) using CSV data
+to "enrich" your fake data with real or pre-generated data or b) using
+Snowfakery to "enrich" your real or pre-generated data with fake data.
+
+##### Iterating over Salesforce datasets
+
+CumulusCI can also be used to download CSV data for enrichment as follows.
+
+`CumulusCI.yml`:
+
+```yaml
+    contacts_for_accounts:
+        steps:
+            1:
+                task: query
+                options:
+                    object: Account
+                    query: select Id from Account
+                    result_file: accounts.csv
+            2:
+                task: generate_and_load_from_yaml
+                options:
+                    generator_yaml: examples/salesforce/ContactsForAccounts.recipe.yml
+                    num_records: 100
+                    num_records_tablename: Contact
+```
+
+`ContactsForAccounts.recipe.yml` :
+
+```yaml
+- plugin: snowfakery.standard_plugins.datasets.Dataset
+- object: Contact
+  fields:
+    __accounts:
+      Dataset.shuffle:
+        dataset: ../../accounts.csv
+    FirstName:
+      fake: first_name
+    LastName:
+      fake: last_name
+    AccountId: ${{__accounts.Id}}
+```
+
+Of course you will need to adjust the paths based on your directory structure.
+
+Snowfakery will soon have built-in features for querying SOQL so you may also want to evaluate those as an alternative to this technique.
 
 ##### Iterating over SQL database datasets
 
@@ -1421,7 +1482,7 @@ Only SQLite is part of our test suite, however.
 If a SQL dataset has more than one table, you must specify which table
 to use like this:
 
-```
+```yaml
     __address_from_csv:
       Dataset.iterate:
         dataset: addresses.csv
@@ -1449,7 +1510,7 @@ in Snowfakery. Snowfakery's source repository includes a simplistic tool called
 `shufflecsv.py` which can do that for CSV files. You feed it a CSV on stdin
  and it will generate another one on stdout like this:
 
-```bash
+```s
 $ python tools/shufflecsv.py < examples/datasets/addresses.csv > examples/datasets/shuffled.csv
 ...
 ```
@@ -1507,7 +1568,7 @@ class PluginThatCounts(SnowfakeryPlugin):
             return context_vars["count"]
 ```
 
-Plugins also have access to a dictionary called `self.context.field_vars()` whic
+Plugins also have access to a dictionary called `self.context.field_vars()` which
 represents the values that would be available to a formula running in the same context.
 
 Plugins can return normal Python primitive types, datetime.date, `ObjectRow` or `PluginResult` objects. `ObjectRow` objects represent new output records/objects. `PluginResult` objects
@@ -1538,20 +1599,16 @@ Every second time this is called, it will evaluate its argument twice, and stick
 
 ```yaml
   - plugin: tests.test_custom_plugins_and_providers.DoubleVisionPlugin
-  - plugin: tests.test_custom_plugins_and_providers.PluginThatNeedsState
   - object: OBJ
     fields:
       some_value:
           - DoubleVisionPlugin.do_it_twice:
               - abc
-      some_value_2:
-          - DoubleVisionPlugin.do_it_twice:
-              - ${{PluginThatNeedsState.count()}}
 ```
 
 This would output an `OBJ` row with values:
 
-```json
+```python
   {'id': 1, 'some_value': 'abc : abc', 'some_value_2': '1 : 2'})
 ```
 
@@ -1559,6 +1616,116 @@ Occasionally you might write a plugin which needs to evaluate its
 parameters lazily but doesn't care about the internals of the values
 because it just returns it to some parent context. In that case,
 use `context.evaluate_raw` instead of `context.evaluate`.
+
+Plugins that require "memory" or "state" are possible using PluginResult
+objects or subclasses. Consider a plugin that generates child objects
+that include values that sum up values on child objects to a value specified on a parent:
+
+```yaml
+# examples/sum_child_values.yml
+# This shows how you could create a plugin or feature where
+# a parent object generates child objects which sum up
+# to any particular value.
+
+- plugin: examples.sum_totals.SummationPlugin
+- var: summation_helper
+  value:
+    SummationPlugin.summer:
+      total: 100
+      step: 10
+
+- object: ParentObject__c
+  count: 10
+  fields:
+    MinimumChildObjectAmount__c: 10
+    MinimumStep: 5
+    TotalAmount__c: ${{summation_helper.total}}
+  friends:
+    - object: ChildObject__c
+      count: ${{summation_helper.count}}
+      fields:
+        Parent__c:
+          reference: ParentObject__c
+        Amount__c: ${{summation_helper.next_amount}}
+        RunningTotal__c: ${{summation_helper.running_total}}
+```
+
+This would generate values like this:
+
+```json
+ParentObject__c(id=1, MinimumChildObjectAmount__c=10, MinimumStep=5, TotalAmount__c=100)
+ChildObject__c(id=1, Parent__c=ParentObject__c(1), Amount__c=60, RunningTotal__c=60)
+ChildObject__c(id=2, Parent__c=ParentObject__c(1), Amount__c=20, RunningTotal__c=80)
+ChildObject__c(id=3, Parent__c=ParentObject__c(1), Amount__c=20, RunningTotal__c=100)
+
+ParentObject__c(id=2, MinimumChildObjectAmount__c=10, MinimumStep=5, TotalAmount__c=100)
+ChildObject__c(id=4, Parent__c=ParentObject__c(2), Amount__c=40, RunningTotal__c=40)
+ChildObject__c(id=5, Parent__c=ParentObject__c(2), Amount__c=20, RunningTotal__c=60)
+ChildObject__c(id=6, Parent__c=ParentObject__c(2), Amount__c=40, RunningTotal__c=100)
+
+ParentObject__c(id=3, MinimumChildObjectAmount__c=10, MinimumStep=5, TotalAmount__c=100)
+ChildObject__c(id=7, Parent__c=ParentObject__c(3), Amount__c=10, RunningTotal__c=10)
+ChildObject__c(id=8, Parent__c=ParentObject__c(3), Amount__c=40, RunningTotal__c=50)
+ChildObject__c(id=9, Parent__c=ParentObject__c(3), Amount__c=10, RunningTotal__c=60)
+ChildObject__c(id=10, Parent__c=ParentObject__c(3), Amount__c=10, RunningTotal__c=70)
+ChildObject__c(id=11, Parent__c=ParentObject__c(3), Amount__c=30, RunningTotal__c=100)
+```
+
+Here is the plugin implementation:
+
+```python
+# examples/sum_totals.py
+from random import randint, shuffle
+
+from snowfakery.plugins import SnowfakeryPlugin, PluginResult
+
+
+def parts(total, step):
+    """Split a number into a randomized set of 'pieces'.
+    The pieces add up to the number. E.g.
+
+    parts(12, 3) -> [3, 6, 3]
+    parts(16, 4) -> [8, 4, 4]
+
+    >>> assert len(parts(12, 3)) > 1
+    >>> assert sum(parts(12, 3)) == 12
+    """
+    assert total % step == 0
+    pieces = []
+
+    while sum(pieces) < total:
+        top = (total - sum(pieces)) / step
+        pieces.append(randint(1, top) * step)
+
+    shuffle(pieces)
+    return pieces
+
+
+class Summation(PluginResult):
+    """Represent a group of pieces"""
+
+    def __init__(self, total, step):
+        self.total = total
+        self.pieces = parts(total, step)
+        super().__init__(None)
+
+    @property
+    def count(self, null=None):
+        return len(self.pieces)
+
+    @property
+    def next_amount(self):
+        rc = self.pieces.pop()
+        return rc
+
+
+class SummationPlugin(SnowfakeryPlugin):
+    """Plugin which generates a summataion helper"""
+
+    class Functions:
+        def summer(self, total, step):
+            return Summation(total, step)
+```
 
 ## Using Snowfakery with Salesforce
 
@@ -1584,7 +1751,7 @@ install it) is with its [Trailhead Trail](https://trailhead.salesforce.com/en/co
 CumulusCI's documentation [describes](https://cumulusci.readthedocs.io/en/latest/cookbook.html#large-volume-data-synthesis-with-snowfakery)
 how to use it with Snowfakery. Here is a short example:
 
-```bash
+```s
 $ cci task run generate_and_load_from_yaml -o generator_yaml examples/salesforce/Contact.recipe.yml -o num_records 300 -o num_records_tablename Contact --org qa
 ...
 ```
@@ -1597,7 +1764,7 @@ If you have CumulusCI configured and you would like to test this,
 you can do so like this (the Snowfakery repo itself has a
 `cumulusci.yml`):
 
-```bash
+```s
 $ git clone https://github.com/SFDO-Tooling/Snowfakery.git
 $ cd Snowfakery
 $ cci task run generate_opportunities_and_contacts
@@ -1618,6 +1785,7 @@ you would run the following commands to create and use a venv with the
 Postgres plugin:
 
 ```bash
+
 # create a new directory for our experiment
 $ mkdir experiment_with_postgres
 # cd into it
