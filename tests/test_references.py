@@ -1,10 +1,9 @@
 from io import StringIO
-import unittest
 from unittest import mock
 
 import pytest
 
-from snowfakery.data_generator import generate
+from snowfakery.data_generator import generate, StoppingCriteria
 from test_parse_samples import find_row
 from snowfakery.data_gen_exceptions import DataGenError
 
@@ -54,7 +53,7 @@ reference_from_friend = """             #1
 write_row_path = "snowfakery.output_streams.DebugOutputStream.write_single_row"
 
 
-class TestReferences(unittest.TestCase):
+class TestReferences:
     @mock.patch(write_row_path)
     def test_simple_parent(self, write_row):
         generate(StringIO(simple_parent), {}, None)
@@ -205,3 +204,229 @@ class TestReferences(unittest.TestCase):
 
         assert "Bob" in str(e.value)
         assert "Bill" in str(e.value)
+
+    def test_forward_reference__iterations(self, generated_rows):
+        yaml = """
+            - object: A
+              fields:
+                B_ref:
+                  reference:
+                    B
+            - object: B
+              fields:
+                A_ref:
+                  reference:
+                    A
+              """
+        generate(StringIO(yaml), {}, stopping_criteria=StoppingCriteria("A", 3))
+        assert generated_rows.mock_calls == [
+            mock.call("A", {"id": 1, "B_ref": "B(1)"}),
+            mock.call("B", {"id": 1, "A_ref": "A(1)"}),
+            mock.call("A", {"id": 2, "B_ref": "B(2)"}),
+            mock.call("B", {"id": 2, "A_ref": "A(2)"}),
+            mock.call("A", {"id": 3, "B_ref": "B(3)"}),
+            mock.call("B", {"id": 3, "A_ref": "A(3)"}),
+        ]
+
+    def _generate_loop(self, yaml, iterations, num_per_iteration):
+        old_continuation_data = None
+        for i in range(0, iterations):
+            continuation_file = StringIO()
+            generate(
+                StringIO(yaml),
+                {},
+                stopping_criteria=StoppingCriteria("A", num_per_iteration),
+                continuation_file=old_continuation_data,
+                generate_continuation_file=continuation_file,
+            )
+            old_continuation_data = StringIO(continuation_file.getvalue())
+
+    def test_forward_reference__nickname__iterations(self, generated_rows):
+        yaml = """
+            - object: A
+              fields:
+                B_ref:
+                  reference:
+                    B_nick
+            - object: B
+              nickname: B_nick
+              fields:
+                A_ref:
+                  reference:
+                    A
+              """
+        self._generate_loop(yaml, 3, 2)
+
+        assert generated_rows.mock_calls == [
+            mock.call("A", {"id": 1, "B_ref": "B(1)"}),
+            mock.call("B", {"id": 1, "A_ref": "A(1)"}),
+            mock.call("A", {"id": 2, "B_ref": "B(2)"}),
+            mock.call("B", {"id": 2, "A_ref": "A(2)"}),
+            mock.call("A", {"id": 3, "B_ref": "B(3)"}),
+            mock.call("B", {"id": 3, "A_ref": "A(3)"}),
+            mock.call("A", {"id": 4, "B_ref": "B(4)"}),
+            mock.call("B", {"id": 4, "A_ref": "A(4)"}),
+            mock.call("A", {"id": 5, "B_ref": "B(5)"}),
+            mock.call("B", {"id": 5, "A_ref": "A(5)"}),
+            mock.call("A", {"id": 6, "B_ref": "B(6)"}),
+            mock.call("B", {"id": 6, "A_ref": "A(6)"}),
+        ]
+
+    def test_forward_reference__iterations__with_just_once(self, generated_rows):
+        yaml = """
+            - object: A
+              fields:
+                B_ref:
+                  reference:
+                    B_nick
+            - object: B
+              just_once: True
+              nickname: B_nick
+              fields:
+                A_ref:
+                  reference:
+                    A
+              """
+        self._generate_loop(yaml, 3, 2)
+        assert generated_rows.mock_calls == [
+            mock.call("A", {"id": 1, "B_ref": "B(1)"}),
+            mock.call("B", {"id": 1, "A_ref": "A(1)"}),
+            mock.call("A", {"id": 2, "B_ref": "B(1)"}),
+            mock.call("A", {"id": 3, "B_ref": "B(1)"}),
+            mock.call("A", {"id": 4, "B_ref": "B(1)"}),
+            mock.call("A", {"id": 5, "B_ref": "B(1)"}),
+            mock.call("A", {"id": 6, "B_ref": "B(1)"}),
+        ]
+
+    def test_random_reference_simple(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 10                   #4
+      - object: B                   #5
+        count: 2                    #6
+        fields:                     #7
+            A_ref:                  #8
+              random_reference: A   #9
+    """
+        with mock.patch("random.randint") as randint:
+            randint.side_effect = [8, 3]
+            generate(StringIO(yaml))
+        assert generated_rows.row_values(10, "A_ref") == "A(8)"
+        assert generated_rows.row_values(11, "A_ref") == "A(3)"
+
+    def test_random_reference_local(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 10                   #4
+      - object: B                   #5
+        fields:                     #7
+            A_ref:                  #8
+              random_reference:     #9
+                tablename: A        #10
+                scope: current-iteration        #11
+    """
+        with mock.patch("random.randint") as randint:
+            randint.side_effect = [8, 12]
+            generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 2))
+            assert randint.mock_calls == [mock.call(1, 10), mock.call(11, 20)]
+        assert generated_rows.table_values("B", 2, "A_ref") == "A(12)"
+
+    def test_random_reference_global(self, generated_rows):
+        # undocumented experimental feature!
+        yaml = """                  #1
+      - object: A                   #2
+        count: 10                   #4
+      - object: B                   #5
+        count: 2                    #6
+        fields:                     #7
+            A_ref:                  #8
+              random_reference:
+                tablename: A   #9
+                scope: prior-and-current-iterations
+    """
+        with mock.patch("random.randint") as randint, mock.patch(
+            "warnings.warn"
+        ) as warn:
+            randint.side_effect = [8, 3, 8, 3]
+            generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 4))
+        assert generated_rows.row_values(22, "A_ref") == "A(8)"
+        assert generated_rows.row_values(23, "A_ref") == "A(3)"
+        assert "experimental" in str(warn.mock_calls)
+
+    def test_random_reference_missing_table(self):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 2                    #3
+        fields:                     #4
+            A_ref:                  #5
+              random_reference:
+                tablename: B
+    """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert "There is no table named B" in str(e)
+
+    def test_random_reference_wrong_scope(self):
+        # undocumented experimental feature!
+        yaml = """                  #1
+      - object: A                   #2
+      - object: B                   #3
+        count: 2                    #4
+        fields:                     #5
+            A_ref:                  #6
+              random_reference:
+                tablename: A
+                scope: xyzzy
+    """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert "Scope must be" in str(e)
+
+    def test_random_reference_to_nickname(self):
+        # undocumented experimental feature!
+        yaml = """
+      - object: A
+        nickname: AA
+      - object: B
+        count: 2
+        fields:
+            A_ref:
+              random_reference: AA
+    """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert "nickname" in str(e).lower()
+
+    def test_reference_unknown_object(self):
+        yaml = """
+        - object: B
+          count: 2
+          fields:
+              A_ref:
+                reference: AA"""
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert "cannot find" in str(e).lower()
+
+    def test_reference_wrong_type(self):
+        yaml = """
+        - object: B
+          count: 2
+          fields:
+              __foo: 5
+              A_ref:
+                reference: __foo"""
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert "incorrect object type" in str(e).lower()
+
+    def test_reference_really_wrong_type(self):
+        yaml = """
+        - object: B
+          count: 2
+          fields:
+              A_ref:
+                reference: 5"""
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert "can't get reference to object" in str(e).lower()

@@ -1,7 +1,8 @@
+- var: snowfakery_locale
+  value: ja_JP
+
 - object: foo
   count: 10
   fields:
     japanese_name:
-        i18n_fake:
-            locale: ja_JP
-            fake: name
+      fake: name

@@ -1,0 +1,14 @@
+- var: snowfakery_locale
+  value: no_NO
+- object: first
+  fields:
+    name:
+      fake: name
+    thelocale: ${{snowfakery_locale}}
+- var: snowfakery_locale
+  value: fr_FR
+- object: second
+  fields:
+    name:
+      fake: name
+    thelocale: ${{snowfakery_locale}}

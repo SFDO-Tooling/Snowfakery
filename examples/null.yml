@@ -1,0 +1,16 @@
+- object: foo
+  count: 10
+  fields:
+    EndDate:
+      random_choice:
+        - date_between:
+            start_date: 2018-01-01
+            end_date: 2021-12-12
+        - NULL
+    DateSupplied:
+      if:
+        - choice:
+            when: ${{ EndDate!=NULL }}
+            pick: "Yes"
+        - choice:
+            pick: "No"
