@@ -1,36 +1,20 @@
 interactions:
 - request:
-    body: null
+    body: '{"Name": "Company"}'
     headers:
       Request-Headers:
       - Elided
-    method: GET
-    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=SELECT+count%28%29+FROM+Account
+    method: POST
+    uri: https://orgname.salesforce.com/services/data/v50.0/sobjects/Account/
   response:
     body:
-      string: "{\n  \"totalSize\" : 2531,\n  \"done\" : true,\n  \"records\" : [ ]\n}"
+      string: "{\n  \"id\" : \"001ACCOUNTID\",\n  \"success\" : true,\n  \"errors\"
+        : [ ]\n}"
     headers:
       Response-Headers: Elided
     status:
-      code: 200
-      message: OK
-- request:
-    body: null
-    headers:
-      Request-Headers:
-      - Elided
-    method: GET
-    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=Select+Id+FROM+Account+LIMIT+1+OFFSET+5
-  response:
-    body:
-      string: "{\n  \"totalSize\" : 1,\n  \"done\" : true,\n  \"records\" : [ {\n
-        \   \"attributes\" : {\n      \"type\" : \"Account\",\n      \"url\" : \"/services/data/v50.0/sobjects/Account/0016300000uJdTTAA0\"\n
-        \   },\n    \"Id\" : \"0016300000uJdTTAA0\"\n  } ]\n}"
-    headers:
-      Response-Headers: Elided
-    status:
-      code: 200
-      message: OK
+      code: 201
+      message: Created
 - request:
     body: null
     headers:
@@ -40,7 +24,7 @@ interactions:
     uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=SELECT+count%28%29+FROM+Account
   response:
     body:
-      string: "{\n  \"totalSize\" : 2531,\n  \"done\" : true,\n  \"records\" : [ ]\n}"
+      string: "{\n  \"totalSize\" : 33,\n  \"done\" : true,\n  \"records\" : [ ]\n}"
     headers:
       Response-Headers: Elided
     status:
@@ -52,12 +36,44 @@ interactions:
       Request-Headers:
       - Elided
     method: GET
-    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=Select+Id+FROM+Account+LIMIT+1+OFFSET+5
+    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=Select+Id+FROM+Account+LIMIT+1+OFFSET+0
   response:
     body:
       string: "{\n  \"totalSize\" : 1,\n  \"done\" : true,\n  \"records\" : [ {\n
-        \   \"attributes\" : {\n      \"type\" : \"Account\",\n      \"url\" : \"/services/data/v50.0/sobjects/Account/0016300000uJdTTAA0\"\n
-        \   },\n    \"Id\" : \"0016300000uJdTTAA0\"\n  } ]\n}"
+        \   \"attributes\" : {\n      \"type\" : \"Account\",\n      \"url\" : \"/services/data/v50.0/sobjects/Account/001ACCOUNTID\"\n
+        \   },\n    \"Id\" : \"001ACCOUNTID\"\n  } ]\n}"
+    headers:
+      Response-Headers: Elided
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=SELECT+count%28%29+FROM+Account
+  response:
+    body:
+      string: "{\n  \"totalSize\" : 33,\n  \"done\" : true,\n  \"records\" : [ ]\n}"
+    headers:
+      Response-Headers: Elided
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=Select+Id+FROM+Account+LIMIT+1+OFFSET+0
+  response:
+    body:
+      string: "{\n  \"totalSize\" : 1,\n  \"done\" : true,\n  \"records\" : [ {\n
+        \   \"attributes\" : {\n      \"type\" : \"Account\",\n      \"url\" : \"/services/data/v50.0/sobjects/Account/001ACCOUNTID\"\n
+        \   },\n    \"Id\" : \"001ACCOUNTID\"\n  } ]\n}"
     headers:
       Response-Headers: Elided
     status:

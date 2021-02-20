@@ -41,7 +41,8 @@ class Salesforce(SnowfakeryPlugin):
         def query_random(self, query_from):
             count_q = self._sf.query(f"SELECT count() FROM {query_from}")
             count = count_q["totalSize"]
-            rand_offset = randrange(0, min(count, MAX_SALESFORCE_OFFSET))
+            mx = min(count, MAX_SALESFORCE_OFFSET)
+            rand_offset = randrange(0, mx)
 
             # todo: use CompositeParallelSalesforce to cache 200 at a time
             return self._query_record(query_from, rand_offset)

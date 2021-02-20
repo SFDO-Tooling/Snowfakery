@@ -1,5 +1,21 @@
 interactions:
 - request:
+    body: '{"Name": "Company3"}'
+    headers:
+      Request-Headers:
+      - Elided
+    method: POST
+    uri: https://orgname.salesforce.com/services/data/v50.0/sobjects/Account/
+  response:
+    body:
+      string: "{\n  \"id\" : \"001ACCOUNTID\",\n  \"success\" : true,\n  \"errors\"
+        : [ ]\n}"
+    headers:
+      Response-Headers: Elided
+    status:
+      code: 201
+      message: Created
+- request:
     body: null
     headers:
       Request-Headers:
@@ -8,7 +24,7 @@ interactions:
     uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=SELECT+count%28%29+FROM+Account
   response:
     body:
-      string: "{\n  \"totalSize\" : 2531,\n  \"done\" : true,\n  \"records\" : [ ]\n}"
+      string: "{\n  \"totalSize\" : 35,\n  \"done\" : true,\n  \"records\" : [ ]\n}"
     headers:
       Response-Headers: Elided
     status:
@@ -20,12 +36,12 @@ interactions:
       Request-Headers:
       - Elided
     method: GET
-    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=Select+Id+FROM+Account+LIMIT+1+OFFSET+5
+    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=Select+Id+FROM+Account+LIMIT+1+OFFSET+1
   response:
     body:
       string: "{\n  \"totalSize\" : 1,\n  \"done\" : true,\n  \"records\" : [ {\n
-        \   \"attributes\" : {\n      \"type\" : \"Account\",\n      \"url\" : \"/services/data/v50.0/sobjects/Account/0016300000uJdTTAA0\"\n
-        \   },\n    \"Id\" : \"0016300000uJdTTAA0\"\n  } ]\n}"
+        \   \"attributes\" : {\n      \"type\" : \"Account\",\n      \"url\" : \"/services/data/v50.0/sobjects/Account/001ACCOUNTID\"\n
+        \   },\n    \"Id\" : \"001ACCOUNTID\"\n  } ]\n}"
     headers:
       Response-Headers: Elided
     status:
@@ -41,8 +57,8 @@ interactions:
   response:
     body:
       string: "{\n  \"totalSize\" : 1,\n  \"done\" : true,\n  \"records\" : [ {\n
-        \   \"attributes\" : {\n      \"type\" : \"Account\",\n      \"url\" : \"/services/data/v50.0/sobjects/Account/0016300000uJdTOAA0\"\n
-        \   },\n    \"Id\" : \"0016300000uJdTOAA0\"\n  } ]\n}"
+        \   \"attributes\" : {\n      \"type\" : \"Account\",\n      \"url\" : \"/services/data/v50.0/sobjects/Account/001ACCOUNTID\"\n
+        \   },\n    \"Id\" : \"001ACCOUNTID\"\n  } ]\n}"
     headers:
       Response-Headers: Elided
     status:

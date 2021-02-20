@@ -113,10 +113,10 @@ class TestSOQLNoCCI:
 
 
 class TestSOQLWithCCI:
-    @patch("snowfakery.standard_plugins.salesforce.randrange", lambda *arg, **kwargs: 5)
+    @patch("snowfakery.standard_plugins.salesforce.randrange", lambda *arg, **kwargs: 0)
     @pytest.mark.vcr()
     @skip_if_cumulusci_missing
-    def test_soql(self, org_config, generated_rows):
+    def test_soql(self, sf, org_config, generated_rows):
         yaml = """
             - plugin: snowfakery.standard_plugins.salesforce.Salesforce
             - object: Contact
@@ -133,10 +133,12 @@ class TestSOQLWithCCI:
                     Salesforce.query_random: Account
         """
         assert org_config.name
+        sf.Account.create({"Name": "Company"})
         generate(StringIO(yaml), plugin_options={"orgname": org_config.name})
 
     @skip_if_cumulusci_missing
-    def test_missing_orgname(self):
+    @pytest.mark.vcr()
+    def test_missing_orgname(self, sf):
         yaml = """
             - plugin: snowfakery.standard_plugins.salesforce.Salesforce
             - object: Contact
@@ -144,13 +146,15 @@ class TestSOQLWithCCI:
                 AccountId:
                     Salesforce.query_random: Account
         """
+        sf.Account.create({"Name": "Company2"})
         with pytest.raises(DataGenError):
             generate(StringIO(yaml), {})
 
-    @patch("snowfakery.standard_plugins.salesforce.randrange", lambda *arg, **kwargs: 5)
+    @patch("snowfakery.standard_plugins.salesforce.randrange", lambda *arg, **kwargs: 1)
     @skip_if_cumulusci_missing
     @pytest.mark.vcr()
-    def test_example_through_api(self, generated_rows, org_config):
+    def test_example_through_api(self, sf, generated_rows, org_config):
+        sf.Account.create({"Name": "Company3"})
         filename = (
             Path(__file__).parent.parent / "examples/salesforce_soql_example.recipe.yml"
         )

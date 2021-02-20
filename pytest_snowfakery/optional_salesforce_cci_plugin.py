@@ -7,6 +7,8 @@ try:
         sf_pytest_orgname,
         org_config,
         runtime,
+        sf,
+        project_config,
     )
 
 except ImportError:
@@ -27,4 +29,6 @@ __all__ = [
     "sf_pytest_orgname",
     "org_config",
     "runtime",
+    "sf",
+    "project_config",
 ]
