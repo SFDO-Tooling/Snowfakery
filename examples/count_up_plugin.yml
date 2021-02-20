@@ -1,0 +1,10 @@
+- plugin: counter.CountUpPlugin
+- object: CountUp1
+  fields:
+    counter:
+      CountUpPlugin.counter:
+
+- object: CountUp2
+  fields:
+    counter:
+      CountUpPlugin.counter:

@@ -60,52 +60,53 @@ class FakeSimpleSalesforce:
         try:
             return self.query_responses[query]
         except KeyError:
-            raise KeyError(f"No mock response found for Salesforcce query `{query}`")
+            raise KeyError(f"No mock response found for Salesforce query `{query}`")
 
 
 fake_sf_client = FakeSimpleSalesforce(
     {
         "SELECT count() FROM Account": {"totalSize": 10},
-        "Select Id FROM Account LIMIT 1 OFFSET 0": {"records": [{"Id": "FAKEID0"}]},
-        "Select Id FROM Account LIMIT 1 OFFSET 5": {"records": [{"Id": "FAKEID5"}]},
+        "SELECT Id FROM Account LIMIT 2": {"records": [{"Id": "FAKEID0"}]},
+        "SELECT Id FROM Account LIMIT 1 OFFSET 0": {"records": [{"Id": "FAKEID0"}]},
+        "SELECT Id FROM Account LIMIT 1 OFFSET 5": {"records": [{"Id": "FAKEID5"}]},
     }
 )
 
 
 class TestSOQLNoCCI:
     @patch(
-        "snowfakery.standard_plugins.salesforce.Salesforce.Functions._sf",
+        "snowfakery.standard_plugins.salesforce.SOQLQuery.sf",
         wraps=fake_sf_client,
     )
     @patch("snowfakery.standard_plugins.salesforce.randrange", lambda *arg, **kwargs: 5)
     def test_soql_plugin_random(self, fake_sf_client, generated_rows):
         yaml = """
-            - plugin: snowfakery.standard_plugins.salesforce.Salesforce
+            - plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
             - object: Contact
               fields:
                 FirstName: Suzy
                 LastName: Salesforce
                 AccountId:
-                    Salesforce.query_random: Account
+                    SOQLQuery.query_random: Account
         """
         generate(StringIO(yaml), plugin_options={"orgname": "blah"})
         assert fake_sf_client.mock_calls
         assert generated_rows.row_values(0, "AccountId") == "FAKEID5"
 
     @patch(
-        "snowfakery.standard_plugins.salesforce.Salesforce.Functions._sf",
+        "snowfakery.standard_plugins.salesforce.SOQLQuery.sf",
         wraps=fake_sf_client,
     )
     @patch("snowfakery.standard_plugins.salesforce.randrange", lambda *arg, **kwargs: 5)
     def test_soql_plugin_record(self, fake_sf_client, generated_rows):
         yaml = """
-            - plugin: snowfakery.standard_plugins.salesforce.Salesforce
+            - plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
             - object: Contact
               fields:
                 FirstName: Suzy
                 LastName: Salesforce
                 AccountId:
-                    Salesforce.query_record: Account
+                    SOQLQuery.query_record: Account
         """
         generate(StringIO(yaml), plugin_options={"orgname": "blah"})
         assert fake_sf_client.mock_calls
@@ -118,19 +119,19 @@ class TestSOQLWithCCI:
     @skip_if_cumulusci_missing
     def test_soql(self, sf, org_config, generated_rows):
         yaml = """
-            - plugin: snowfakery.standard_plugins.salesforce.Salesforce
+            - plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
             - object: Contact
               fields:
                 FirstName: Suzy
                 LastName: Salesforce
                 AccountId:
-                    Salesforce.query_random: Account
+                    SOQLQuery.query_random: Account
             - object: Contact
               fields:
                 FirstName: Sammy
                 LastName: Salesforce
                 AccountId:
-                    Salesforce.query_random: Account
+                    SOQLQuery.query_random: Account
         """
         assert org_config.name
         sf.Account.create({"Name": "Company"})
@@ -140,15 +141,18 @@ class TestSOQLWithCCI:
     @pytest.mark.vcr()
     def test_missing_orgname(self, sf):
         yaml = """
-            - plugin: snowfakery.standard_plugins.salesforce.Salesforce
+            - plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
             - object: Contact
               fields:
                 AccountId:
-                    Salesforce.query_random: Account
+                    SOQLQuery.query_random: Account
         """
         sf.Account.create({"Name": "Company2"})
         with pytest.raises(DataGenError):
             generate(StringIO(yaml), {})
+
+    # TODO: add tests for SOQLDatasets
+    #       ensure that all documented params/methods are covered.
 
     @patch("snowfakery.standard_plugins.salesforce.randrange", lambda *arg, **kwargs: 1)
     @skip_if_cumulusci_missing

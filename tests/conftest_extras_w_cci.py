@@ -14,8 +14,8 @@ DUMMY_ORGNAME = "pytest_sf_orgconnect_dummy_orgconfig"
 
 
 @pytest.fixture(scope="session")
-def fallback_orgconfig():
-    def fallback_orgconfig():
+def fallback_org_config():
+    def fallback_org_config():
         return DummyOrgConfig(
             {
                 "instance_url": "https://orgname.salesforce.com",
@@ -29,7 +29,7 @@ def fallback_orgconfig():
 
     def get_org(self, name: str):
         if name == DUMMY_ORGNAME:
-            return DUMMY_ORGNAME, fallback_orgconfig()
+            return DUMMY_ORGNAME, fallback_org_config()
         else:
             return original_get_org(self, name)
 
@@ -39,11 +39,11 @@ def fallback_orgconfig():
     )
     original_get_org = p.get_original()[0]
     with p:
-        yield fallback_orgconfig
+        yield fallback_org_config
 
 
 vcr_config = fixture(cci_vcr_config, scope="module")
 vcr = fixture(salesforce_vcr, scope="module")
 
 
-__all__ = ["vcr_config", "vcr", "fallback_orgconfig"]
+__all__ = ["vcr_config", "vcr", "fallback_org_config"]

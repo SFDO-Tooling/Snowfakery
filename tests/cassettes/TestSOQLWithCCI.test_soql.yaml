@@ -24,7 +24,7 @@ interactions:
     uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=SELECT+count%28%29+FROM+Account
   response:
     body:
-      string: "{\n  \"totalSize\" : 33,\n  \"done\" : true,\n  \"records\" : [ ]\n}"
+      string: "{\n  \"totalSize\" : 57,\n  \"done\" : true,\n  \"records\" : [ ]\n}"
     headers:
       Response-Headers: Elided
     status:
@@ -36,7 +36,7 @@ interactions:
       Request-Headers:
       - Elided
     method: GET
-    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=Select+Id+FROM+Account+LIMIT+1+OFFSET+0
+    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=SELECT+Id+FROM+Account+LIMIT+1+OFFSET+0
   response:
     body:
       string: "{\n  \"totalSize\" : 1,\n  \"done\" : true,\n  \"records\" : [ {\n
@@ -56,7 +56,7 @@ interactions:
     uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=SELECT+count%28%29+FROM+Account
   response:
     body:
-      string: "{\n  \"totalSize\" : 33,\n  \"done\" : true,\n  \"records\" : [ ]\n}"
+      string: "{\n  \"totalSize\" : 57,\n  \"done\" : true,\n  \"records\" : [ ]\n}"
     headers:
       Response-Headers: Elided
     status:
@@ -68,7 +68,7 @@ interactions:
       Request-Headers:
       - Elided
     method: GET
-    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=Select+Id+FROM+Account+LIMIT+1+OFFSET+0
+    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=SELECT+Id+FROM+Account+LIMIT+1+OFFSET+0
   response:
     body:
       string: "{\n  \"totalSize\" : 1,\n  \"done\" : true,\n  \"records\" : [ {\n

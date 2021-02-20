@@ -239,6 +239,7 @@ class SimpleValue(FieldDefinition):
 
     def render(self, context: RuntimeContext) -> FieldValue:
         """Render the value: rendering a template if necessary."""
+        context.unique_context_identifier = str(id(self))
         evaluator = self.evaluator(context)
         if evaluator:
             try:
@@ -286,6 +287,7 @@ class StructuredValue(FieldDefinition):
             self.kwargs = {}
 
     def render(self, context: RuntimeContext) -> FieldValue:
+        context.unique_context_identifier = id(self)
         if "." in self.function_name:
             objname, method, *rest = self.function_name.split(".")
             if rest:

@@ -1,14 +1,38 @@
-- plugin: snowfakery.standard_plugins.salesforce.Salesforce
+- plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
 - object: Contact
   fields:
     FirstName: Suzy
     LastName: Salesforce
     AccountId:
-      Salesforce.query_random: Account
+      SOQLQuery.query_random: Account
+
+- plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
+- object: Contact
+  fields:
+    FirstName: Suzy
+    LastName:
+      SOQLQuery.query_random:
+        query_from: User
+        fields: LastName
+
+- var: User1
+  value:
+    SOQLQuery.query_random:
+      query_from: User
+      fields: Id, FirstName, LastName
 
 - object: Contact
   fields:
-    FirstName: Sammy
-    LastName: Salesforce
-    AccountId:
-      Salesforce.query_record: Account
+    FirstName: ${{User1.FirstName}}
+    LastName: ${{User1.LastName}}
+
+- var: User2
+  value:
+    SOQLQuery.query_record:
+      query_from: User where FirstName='User'
+      fields: Id, FirstName, LastName
+
+- object: Contact
+  fields:
+    FirstName: ${{User2.FirstName}}
+    LastName: ${{User2.LastName}}

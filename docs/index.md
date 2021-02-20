@@ -1322,6 +1322,112 @@ Or:
       twelve: ${Math.sqrt}
 ```
 
+### SOQL
+
+When Snowfakery is used within CumulusCI, it can make queries
+into Salesforce. This allows you to combine information generated
+by a Snowfakery recipe with pre-existing information.
+
+For example, to connect to a random record:
+
+```yaml
+  - plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
+  - object: Contact
+    fields:
+      FirstName: Suzy
+      LastName: Salesforce
+      AccountId:
+          SOQLQuery.query_random: Account
+```
+
+By default `query_random` selects the `Id` of the record. You can select
+a different field using this more elaborate syntax:
+
+```yaml
+- plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
+- object: Contact
+  fields:
+    FirstName: Suzy
+    LastName:
+      SOQLQuery.query_random:
+        query_from: User
+        fields: LastName
+```
+
+You can also query for multiple fields, in case you would like to
+use them together:
+
+```yaml
+- plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
+- var: User1
+  value:
+    SOQLQuery.query_random:
+      query_from: User
+      fields: Id, FirstName, LastName
+
+- object: Contact
+  fields:
+    FirstName: ${{User1.FirstName}}
+    LastName: ${{User1.LastName}}
+    OwnerId: ${{User1.Id}}
+```
+
+You can query for specific records with a standard `WHERE` or `LIMIT`
+clause:
+
+```yaml
+- plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
+- var: User2
+  value:
+    SOQLQuery.query_random:
+      query_from: User where FirstName='User'
+      fields: Id, FirstName, LastName
+
+- object: Contact
+  fields:
+    FirstName: ${{User2.FirstName}}
+    LastName: ${{User2.LastName}}
+    OwnerId: ${{User1.Id}}
+```
+
+If you want Snowfakery to ensure that your query only returns a single
+record, use `query_record` rather than `query_random`, which will
+validate that the query returns a single record. This ensures that you
+will not accidentally refer to the wrong record with an overbroad
+query.
+
+If you will be connecting with thousands or millions of records from Salesforce, it may be more efficient to represent them as a "Dataset"
+which will be downloaded and used offline:
+
+```yaml
+- plugin: snowfakery.standard_plugins.salesforce.SOQLDataset
+- object: Contact
+  count: 10
+  fields:
+    __users_from_salesforce:
+      SOQLDataset.iterate:
+        fields: Id, Name
+        sobject: User
+    OwnerId: ${{__users_from_salesforce.Id}}
+    FirstName: ${{__users_from_salesforce.Name}}
+```
+
+Just as with CSV or SQLite datasets, you can either iterate over the records
+from top to bottom, or use a random ordering:
+
+```yaml
+- plugin: snowfakery.standard_plugins.salesforce.SOQLDataset
+- object: Contact
+  count: 10
+  fields:
+    __users_from_salesforce:
+      SOQLDataset.shuffle:
+        fields: Id, Name
+        sobject: User
+    OwnerId: ${{__users_from_salesforce.Id}}
+    FirstName: ${{__users_from_salesforce.Name}}
+```
+
 ### External datasets
 
 Snowfakery can incorporate data from external CSV files or databases as datasets.
@@ -1537,8 +1643,14 @@ class PluginThatCounts(SnowfakeryPlugin):
             return context_vars["count"]
 ```
 
-Plugins also have access to a dictionary called `self.context.field_vars()` which
+Plugins have access to a dictionary called `self.context.field_vars()` which
 represents the values that would be available to a formula running in the same context.
+
+Plugins can get a unique identifier for the location that they are evaluated
+in the recipe. This allows one to create a stateful object associated with
+a particular template which is separate from other instances.
+
+
 
 Plugins can return normal Python primitive types, datetime.date, `ObjectRow` or `PluginResult` objects. `ObjectRow` objects represent new output records/objects. `PluginResult` objects
 expose a namespace that other code can access through dot-notation. PluginResults can be
@@ -1694,11 +1806,6 @@ class SummationPlugin(SnowfakeryPlugin):
     class Functions:
         def summer(self, total, step):
             return Summation(total, step)
-Plugins that need some form of configuration can get it
-through `PluginOptions` objects like this:
-
-```
- TODO
 ```
 
 ## Using Snowfakery with Salesforce

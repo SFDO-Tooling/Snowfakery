@@ -122,10 +122,16 @@ class OutputStream(ABC):
         """
         return super().close()
 
+    def __enter__(self, *args):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
 
 class SmartStream:
     """Common code for managing stream/file opening/closing
-    
+
     Expects to be initialized with either a file-like object with a `write` method,
     or a path (str or pathlib.Path) that can be opened using `open()`
     """

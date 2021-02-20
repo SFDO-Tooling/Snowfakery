@@ -8,6 +8,7 @@ from faker.providers import BaseProvider as FakerProvider
 
 import snowfakery.data_gen_exceptions as exc
 from .utils.yaml_utils import SnowfakeryDumper
+from .utils.collections import CaseInsensitiveDict
 
 from numbers import Number
 
@@ -81,6 +82,10 @@ class PluginContext:
             self.plugin.__class__.__name__
         )
 
+    def unique_context_identifier(self) -> str:
+        "An identifier that will be unique across iterations (but not portion invocations)"
+        return self.interpreter.current_context.unique_context_identifier
+
     def evaluate_raw(self, field_definition):
         """Evaluate the contents of a field definition"""
         return field_definition.render(self.interpreter.current_context)
@@ -133,7 +138,7 @@ class PluginResult:
     PluginResults are serialized to continuation files as dicts."""
 
     def __init__(self, result: Mapping):
-        self.result = result
+        self.result = CaseInsensitiveDict(result)
 
     def __getattr__(self, name):
         # ensures that it won't recurse
