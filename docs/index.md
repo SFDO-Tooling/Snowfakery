@@ -1196,18 +1196,6 @@ StageName:
 
 Observant readers will note that the values do not add up to 100. That’s fine. Closed Won will be selected 5/12 of the time, In Progress will be picked 3/12 and New will be picked 4/12 of the time. They are just weights, not necessarily percentage weights.
 
-## Plugins and Providers
-
-Plugins and Providers allow Snowfakery to be extended with Python code. A plugin adds new functions to Snowfakery. A Provider adds new capabilities to the Fakery library which is exposed to Snowfakery users through the fake: keyword.
-
-You include either Plugins or Providers in a Snowfakery file like this:
-
-```yaml
-- plugin: package.module.classname
-```
-
-To write a new Provider, please refer to the documentation for Faker at https://faker.readthedocs.io/en/master/#providers
-
 #### Many to One relationships
 
 In relational databases, child records typically have a reference to
@@ -1292,6 +1280,24 @@ And here's how to use the "hidden fields"([#hidden-fields-and-objects]) feature:
           EmployedBy:
             reference: Company
 ```
+
+
+## Plugins and Providers
+
+Plugins and Providers allow Snowfakery to be extended with Python code. A plugin adds new functions to Snowfakery. A Provider adds new capabilities to the Fakery library which is exposed to Snowfakery users through the fake: keyword.
+
+You include either Plugins or Providers in a Snowfakery file like this:
+
+```yaml
+- plugin: package.module.classname
+```
+
+Snowfakery will look for the plugin or provider in these places:
+
+- the [Python path](https://docs.python.org/3/library/sys.html#sys.path),
+- in a `plugins` directory in the same directory as the recipe,
+- in a `plugins` directory below the current working directory and
+- in a subdirectory of the user's home directory called `.snowfakery/plugins`.
 
 ### Built-in Plugins
 
@@ -1695,6 +1701,10 @@ class SummationPlugin(SnowfakeryPlugin):
         def summer(self, total, step):
             return Summation(total, step)
 ```
+
+### Custom Providers
+
+To write a new Provider, please refer to the documentation for Faker at https://faker.readthedocs.io/en/master/#providers
 
 ## Using Snowfakery with Salesforce
 

@@ -11,6 +11,7 @@ from snowfakery.data_gen_exceptions import (
     DataGenImportError,
 )
 from snowfakery.output_streams import JSONOutputStream
+from snowfakery import generate_data
 
 
 from unittest import mock
@@ -272,6 +273,9 @@ class TestContextVars:
         with pytest.raises(DataGenError) as e:
             generate(StringIO(yaml))
         assert 6 > e.value.line_num >= 3
+
+    def test_plugin_paths(self, generated_rows):
+        generate_data("tests/test_plugin_paths.yml")
 
     def test_missing_attributes(self):
         yaml = """
