@@ -125,7 +125,7 @@ class OutputStream(ABC):
 
 class SmartStream:
     """Common code for managing stream/file opening/closing
-    
+
     Expects to be initialized with either a file-like object with a `write` method,
     or a path (str or pathlib.Path) that can be opened using `open()`
     """
@@ -394,8 +394,6 @@ def create_tables_from_inferred_fields(tables, engine, metadata):
                 if count > 0:
                     raise DataGenError(
                         f"Table already exists and has data: {table_name} in {engine.url}",
-                        None,
-                        None,
                     )
 
 

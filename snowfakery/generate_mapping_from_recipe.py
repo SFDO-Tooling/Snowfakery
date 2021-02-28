@@ -31,11 +31,11 @@ def find_record_type_field(fields, context_name):
         return None
     elif len(record_type_fields) > 1:
         raise DataGenError(
-            f"Only one RecordType field allowed: {context_name}", None, None
+            f"Only one RecordType field allowed: {context_name}",
         )
     elif record_type_fields[0].name != "RecordType":
         raise DataGenNameError(
-            "Recordtype field needs this capitalization: RecordType", None, None
+            "Recordtype field needs this capitalization: RecordType",
         )
 
     return record_type_fields[0]
@@ -155,7 +155,7 @@ def mappings_from_sorted_tables(
             fielddef = table.fields["RecordType"].definition
             if not getattr(fielddef, "definition", None):
                 raise DataGenError(
-                    "Record type definitions must be simple, not computed", None, None
+                    "Record type definitions must be simple, not computed",
                 )
             record_type = fielddef.definition
             filters = [f"RecordType = '{record_type}'"]
