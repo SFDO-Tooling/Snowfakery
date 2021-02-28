@@ -1,0 +1,96 @@
+minimum_cumulusci_version: "3.16.0"
+project:
+    name: Snowfakery
+    dependencies:
+        - github: https://github.com/SalesforceFoundation/NPSP
+
+sources:
+    npsp:
+        github: https://github.com/SalesforceFoundation/NPSP
+
+tasks:
+    generate_sf_accounts:
+        class_path: cumulusci.tasks.bulkdata.generate_and_load_data_from_yaml.GenerateAndLoadDataFromYaml
+        options:
+            generator_yaml: examples/salesforce/Account.recipe.yml
+            num_records: 100
+            num_records_tablename: Account
+    generate_sf_contacts:
+        class_path: cumulusci.tasks.bulkdata.generate_and_load_data_from_yaml.GenerateAndLoadDataFromYaml
+        options:
+            generator_yaml: examples/salesforce/Contact.recipe.yml
+            num_records: 100
+            num_records_tablename: Contact
+    generate_sf_opportunities:
+        class_path: cumulusci.tasks.bulkdata.generate_and_load_data_from_yaml.GenerateAndLoadDataFromYaml
+        options:
+            generator_yaml: examples/salesforce/Opportunity.recipe.yml
+            num_records: 100
+            num_records_tablename: Opportunity
+    generate_npsp_accounts:
+        class_path: cumulusci.tasks.bulkdata.generate_and_load_data_from_yaml.GenerateAndLoadDataFromYaml
+        options:
+            generator_yaml: examples/npsp/Account_npsp.recipe.yml
+            num_records: 100
+            num_records_tablename: Account
+    generate_npsp_contacts:
+        class_path: cumulusci.tasks.bulkdata.generate_and_load_data_from_yaml.GenerateAndLoadDataFromYaml
+        options:
+            generator_yaml: examples/npsp/Contact_npsp.recipe.yml
+            num_records: 100
+            num_records_tablename: Contact
+    generate_npsp_opportunities:
+        class_path: cumulusci.tasks.bulkdata.generate_and_load_data_from_yaml.GenerateAndLoadDataFromYaml
+        options:
+            generator_yaml: examples/npsp/Opportunity_npsp.recipe.yml
+            num_records: 100
+            num_records_tablename: Opportunity
+    generate_opportunity_contact_roles:
+        class_path: cumulusci.tasks.bulkdata.generate_and_load_data_from_yaml.GenerateAndLoadDataFromYaml
+        options:
+            generator_yaml: examples/salesforce/OpportunityContactRole.recipe.yml
+            num_records: 100
+            num_records_tablename: Opportunity
+    generate_opportunities_and_contacts:
+        class_path: cumulusci.tasks.bulkdata.generate_and_load_data_from_yaml.GenerateAndLoadDataFromYaml
+        options:
+            generator_yaml: examples/salesforce/OpportunityAndContact.recipe.yml
+            num_records: 100
+            num_records_tablename: Opportunity
+
+flows:
+    test_everything:
+        steps:
+            1:
+                task: generate_sf_accounts
+            2:
+                task: generate_sf_contacts
+            3:
+                task: generate_sf_opportunities
+            4:
+                flow: npsp:install_prod
+            5:
+                task: generate_npsp_accounts
+            6:
+                task: generate_npsp_contacts
+            7:
+                task: generate_npsp_opportunities
+            8:
+                task: generate_opportunity_contact_roles
+            9:
+                task: generate_opportunities_and_contacts
+
+    contacts_for_accounts:
+        steps:
+            1:
+                task: query
+                options:
+                    object: Account
+                    query: select Id from Account
+                    result_file: accounts.csv
+            2:
+                task: generate_and_load_from_yaml
+                options:
+                    generator_yaml: examples/salesforce/ContactsForAccounts.recipe.yml
+                    num_records: 100
+                    num_records_tablename: Contact

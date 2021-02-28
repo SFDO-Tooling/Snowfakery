@@ -2,7 +2,6 @@ from os import fsdecode
 from numbers import Number
 from datetime import date
 from contextlib import contextmanager
-from collections import namedtuple
 from pathlib import Path
 from typing import IO, List, Dict, Union, Tuple, Any, Iterable, Sequence, Mapping
 from warnings import warn
@@ -14,30 +13,32 @@ from yaml.error import YAMLError
 
 from .data_generator_runtime_object_model import (
     ObjectTemplate,
+    VariableDefinition,
     FieldFactory,
     SimpleValue,
     StructuredValue,
     ReferenceValue,
+    Statement,
 )
 
-from snowfakery.plugins import resolve_plugin
+from snowfakery.plugins import resolve_plugins, LineTracker
 import snowfakery.data_gen_exceptions as exc
 
 SHARED_OBJECT = "#SHARED_OBJECT"
 
 TemplateLike = Union[ObjectTemplate, StructuredValue]
-
 ###
 #   The entry point to this is parse_recipe
 
-LineTracker = namedtuple("LineTracker", ["filename", "line_num"])
-
 
 class ParseResult:
-    def __init__(self, options, tables: Mapping, templates, plugins: Sequence = ()):
+    def __init__(
+        self, options, tables: Mapping, statements: Sequence, plugins: Sequence = ()
+    ):
         self.options = options
         self.tables = tables
-        self.templates = templates
+        self.statements = statements
+        self.templates = [obj for obj in statements if isinstance(obj, ObjectTemplate)]
         self.plugins = plugins
 
 
@@ -62,7 +63,13 @@ class TableInfo:
                 if not field.name.startswith("__")
             }
         )
-        self.friends.update({friend.tablename: friend for friend in template.friends})
+        self.friends.update(
+            {
+                friend.tablename: friend
+                for friend in template.friends
+                if hasattr(friend, "tablename")
+            }
+        )
         self._templates.append(template)
 
     def __repr__(self) -> str:
@@ -224,8 +231,8 @@ def parse_fields(fields: Dict, context: ParseContext) -> List[FieldFactory]:
         ]
 
 
-def parse_friends(friends: List, context: ParseContext) -> List[TemplateLike]:
-    return parse_object_template_list(friends, context)
+def parse_friends(friends: List, context: ParseContext) -> List[Statement]:
+    return parse_statement_list(friends, context)
 
 
 def parse_count_expression(yaml_sobj: Dict, sobj_def: Dict, context: ParseContext):
@@ -277,10 +284,10 @@ def parse_inclusions(
 
 def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTemplate:
     parsed_template: Any = parse_element(
-        yaml_sobj,
-        "object",
-        {},
-        {
+        dct=yaml_sobj,
+        element_type="object",
+        mandatory_keys={},
+        optional_keys={
             "fields": Dict,
             "friends": List,
             "include": str,
@@ -288,7 +295,7 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
             "just_once": bool,
             "count": (str, int, dict),
         },
-        context,
+        context=context,
     )
 
     assert yaml_sobj
@@ -322,16 +329,48 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
         return new_template
 
 
-def parse_object_template_list(
-    object_templates: List[dict], context: ParseContext
-) -> List[ObjectTemplate]:
-    parsed_object_templates = []
-    for obj in object_templates:
+def parse_variable_definition(
+    yaml_sobj: Dict, context: ParseContext
+) -> VariableDefinition:
+    parsed_template: Any = parse_element(
+        yaml_sobj,
+        "var",
+        {},
+        {
+            "value": (str, int, dict, list),
+        },
+        context,
+    )
+
+    assert yaml_sobj
+    with context.change_current_parent_object(yaml_sobj):
+        sobj_def = {}
+        sobj_def["varname"] = parsed_template.var
+        var_def_expr = yaml_sobj.get("value")
+
+        sobj_def["expression"] = parse_field_value("value", var_def_expr, context)
+        sobj_def["line_num"] = parsed_template.line_num.line_num
+        sobj_def["filename"] = parsed_template.line_num.filename
+        new_def = VariableDefinition(**sobj_def)
+        return new_def
+
+
+def parse_statement_list(
+    statements: List[dict], context: ParseContext
+) -> List[Statement]:
+    parsed_statements = []
+    for obj in statements:
         assert isinstance(obj, dict), obj
-        assert obj["object"], obj
-        object_template = parse_object_template(obj, context)
-        parsed_object_templates.append(object_template)
-    return parsed_object_templates
+        if obj.get("object"):
+            object_template = parse_object_template(obj, context)
+            parsed_statements.append(object_template)
+        elif obj.get("var"):
+            variable_definition = parse_variable_definition(obj, context)
+            parsed_statements.append(variable_definition)
+        else:
+            assert 0  # pragma: no cover
+
+    return parsed_statements
 
 
 def yaml_safe_load_with_line_numbers(
@@ -451,6 +490,16 @@ def parse_included_files(path: Path, data: List, context: ParseContext):
     return templates
 
 
+collection_rules = {
+    "option": "option",
+    "include_file": "include_file",
+    "macro": "macro",
+    "plugin": "plugin",
+    "object": "statement",
+    "var": "statement",
+}
+
+
 def categorize_top_level_objects(data: List, context: ParseContext):
     """Look at all of the top-level declarations and categorize them"""
     top_level_collections: Dict = {
@@ -458,7 +507,7 @@ def categorize_top_level_objects(data: List, context: ParseContext):
         "include_file": [],
         "macro": [],
         "plugin": [],
-        "object": [],
+        "statement": [],  # objects with side-effects
     }
     assert isinstance(data, list)
     for obj in data:
@@ -467,17 +516,18 @@ def categorize_top_level_objects(data: List, context: ParseContext):
                 f"Top level elements in a data generation template should all be dictionaries, not {obj}",
                 **context.line_num(data),
             )
-        parent_collection = None
-        for collection in top_level_collections:
-            if obj.get(collection):
-                if parent_collection:
+        obj_category = None
+        for declaration, category in collection_rules.items():
+            typ = obj.get(declaration)
+            if typ:
+                if obj_category:
                     raise exc.DataGenError(
-                        f"Top level element seems to match two name patterns: {collection, parent_collection}",
+                        f"Top level element seems to match two name patterns: {declaration, obj_category}",
                         **context.line_num(obj),
                     )
-                parent_collection = collection
-        if parent_collection:
-            top_level_collections[parent_collection].append(obj)
+                obj_category = category
+        if obj_category:
+            top_level_collections[obj_category].append(obj)
         else:
             raise exc.DataGenError(
                 f"Unknown object type {obj}", **context.line_num(obj)
@@ -487,18 +537,19 @@ def categorize_top_level_objects(data: List, context: ParseContext):
 
 def parse_top_level_elements(path: Path, data: List, context: ParseContext):
     top_level_objects = categorize_top_level_objects(data, context)
-    templates: List[ObjectTemplate] = []
-    templates.extend(parse_included_files(path, data, context))
+    statements: List[ObjectTemplate] = []
+    statements.extend(parse_included_files(path, data, context))
     context.options.extend(top_level_objects["option"])
     context.macros.update({obj["macro"]: obj for obj in top_level_objects["macro"]})
+    plugin_specs = [
+        (obj["plugin"], obj["__line__"]) for obj in top_level_objects["plugin"]
+    ]
+    plugin_near_recipe = path.parent / "plugins"
     context.plugins.extend(
-        [
-            resolve_plugin(obj["plugin"], obj["__line__"])
-            for obj in top_level_objects["plugin"]
-        ]
+        resolve_plugins(plugin_specs, search_paths=[plugin_near_recipe])
     )
-    templates.extend(top_level_objects["object"])
-    return templates
+    statements.extend(top_level_objects["statement"])
+    return statements
 
 
 def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
@@ -524,15 +575,15 @@ def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
             1,
         )
 
-    templates = parse_top_level_elements(path, data, context)
+    statements = parse_top_level_elements(path, data, context)
 
-    return templates
+    return statements
 
 
 def parse_recipe(stream: IO[str]) -> ParseResult:
     context = ParseContext()
     objects = parse_file(stream, context)
-    templates = parse_object_template_list(objects, context)
+    statements = parse_statement_list(objects, context)
     tables = context.table_infos
     tables = {
         name: value
@@ -540,4 +591,4 @@ def parse_recipe(stream: IO[str]) -> ParseResult:
         if not name.startswith("__")
     }
 
-    return ParseResult(context.options, tables, templates, plugins=context.plugins)
+    return ParseResult(context.options, tables, statements, plugins=context.plugins)

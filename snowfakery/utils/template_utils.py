@@ -44,7 +44,7 @@ class FakerTemplateLibrary:
 
     def __init__(self, faker_providers: Sequence[object], locale=None):
         self.locale = locale
-        self.faker = Faker(self.locale)
+        self.faker = Faker(self.locale, use_weighting=False)
         for provider in faker_providers:
             self.faker.add_provider(provider)
 

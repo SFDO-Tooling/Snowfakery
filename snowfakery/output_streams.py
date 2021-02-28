@@ -1,7 +1,10 @@
 from abc import abstractmethod, ABC
 import json
+from tempfile import TemporaryDirectory
 import csv
+import subprocess
 import datetime
+import sys
 from pathlib import Path
 from collections import namedtuple, defaultdict
 from typing import Dict, Union, Optional, Mapping, Callable, Sequence
@@ -25,7 +28,7 @@ except (ImportError, ModuleNotFoundError) as e:
         raise exception
 
 
-from .data_generator_runtime import ObjectRow, NicknameSlot
+from .object_rows import ObjectRow, ObjectReference
 from .parse_recipe_yaml import TableInfo
 
 
@@ -34,6 +37,8 @@ def noop(x):
 
 
 class OutputStream(ABC):
+    """Common base class for all output streams"""
+
     count = 1
     flush_limit = 1000
     commit_limit = 10000
@@ -55,7 +60,7 @@ class OutputStream(ABC):
         sourcetable: str,
         fieldname: str,
         source_row_dict: Dict,
-        target_object_row: Union[ObjectRow, NicknameSlot],
+        target_object_row: Union[ObjectRow, ObjectReference],
     ) -> Union[str, int]:
         return target_object_row.id
 
@@ -66,7 +71,7 @@ class OutputStream(ABC):
         pass
 
     def cleanup(self, field_name, field_value, sourcetable, row):
-        if isinstance(field_value, (ObjectRow, NicknameSlot)):
+        if isinstance(field_value, (ObjectRow, ObjectReference)):
             return self.flatten(sourcetable, field_name, row, field_value)
         else:
             encoder = self.encoders.get(type(field_value))
@@ -108,15 +113,23 @@ class OutputStream(ABC):
         """Write a single row to the stream"""
         pass
 
-    def close(self) -> None:
+    def close(self) -> Optional[Sequence[str]]:
         """Close any resources the stream opened.
 
         Do not close file handles which were passed in!
+
+        Return a list of messages to print out.
         """
-        pass
+        return super().close()
 
 
-class FileOutputStream(OutputStream):
+class SmartStream:
+    """Common code for managing stream/file opening/closing
+    
+    Expects to be initialized with either a file-like object with a `write` method,
+    or a path (str or pathlib.Path) that can be opened using `open()`
+    """
+
     mode = "wt"
 
     def __init__(self, stream_or_path=None):
@@ -128,26 +141,36 @@ class FileOutputStream(OutputStream):
             self.owns_stream = True
         elif stream_or_path is None:
             self.owns_stream = False
-            self.stream = None  # sys.stdout
+            self.stream = sys.stdout
         else:  # noqa
             assert False, f"stream_or_path is {stream_or_path}"
+
+    def write(self, data):
+        self.stream.write(data)
 
     def close(self):
         if self.owns_stream:
             self.stream.close()
+            return [f"Generated {self.stream.name}"]
+
+
+class FileOutputStream(OutputStream, SmartStream):
+    """Base class for all file/stream-based OutputStreams"""
 
 
 class DebugOutputStream(FileOutputStream):
+    """Simplified output for debugging Snowfakery files."""
+
     def write_single_row(self, tablename: str, row: Dict) -> None:
         values = ", ".join([f"{key}={value}" for key, value in row.items()])
-        print(f"{tablename}({values})", file=self.stream)
+        self.write(f"{tablename}({values})\n")
 
     def flatten(
         self,
         sourcetable: str,
         fieldname: str,
         source_row_dict: Dict,
-        target_object_row: Union[ObjectRow, NicknameSlot],
+        target_object_row: Union[ObjectRow, ObjectReference],
     ) -> Union[str, int]:
         return f"{target_object_row._tablename}({target_object_row.id})"
 
@@ -156,6 +179,8 @@ CSVContext = namedtuple("CSVContext", ["dictwriter", "file"])
 
 
 class CSVOutputStream(OutputStream):
+    """Output stream that generates a directory of CSV files."""
+
     def __init__(self, output_folder):
         super().__init__()
         self.target_path = Path(output_folder)
@@ -177,7 +202,7 @@ class CSVOutputStream(OutputStream):
     def write_single_row(self, tablename: str, row: Dict) -> None:
         self.writers[tablename].dictwriter.writerow(row)
 
-    def close(self) -> Sequence[str]:
+    def close(self) -> Optional[Sequence[str]]:
         messages = []
         for context in self.writers.values():
             context.file.close()
@@ -211,20 +236,22 @@ class JSONOutputStream(FileOutputStream):
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
         if self.first_row:
-            self.stream.write("[")
+            self.write("[")
             self.first_row = False
         else:
-            self.stream.write(",\n")
+            self.write(",\n")
         values = {"_table": tablename, **row}
-        self.stream.write(json.dumps(values))
+        self.write(json.dumps(values))
 
-    def close(self) -> None:
+    def close(self) -> Optional[Sequence[str]]:
         if not self.first_row:
-            self.stream.write("]\n")
-        super().close()
+            self.write("]\n")
+        return super().close()
 
 
-class SqlOutputStream(OutputStream):
+class SqlDbOutputStream(OutputStream):
+    """Output stream for talking to SQL Databases"""
+
     mappings = None
     should_close_session = False
 
@@ -273,7 +300,7 @@ class SqlOutputStream(OutputStream):
         self.flush()
         self.session.commit()
 
-    def close(self) -> None:
+    def close(self) -> Optional[Sequence[str]]:
         self.commit()
         self.session.close()
 
@@ -296,6 +323,52 @@ class SqlOutputStream(OutputStream):
                     },
                 )
                 self.table_info[tablename].fallback_dict["id"] = None  # id is special
+
+
+class SqlTextOutputStream(FileOutputStream):
+    """Output stream to generate a SQL text file"""
+
+    mode = "wt"
+
+    def __init__(self, stream_or_path=None):
+        self.text_output = SmartStream(stream_or_path)
+        self.tempdir = TemporaryDirectory()
+        self.sql_db = self._init_db()
+
+    def _init_db(self):
+        "Initialize a db through an owned output stream"
+        db_url = f"sqlite:///{self.tempdir.name}/tempdb.db"
+        engine = create_engine(db_url)
+        return SqlDbOutputStream(engine, None)
+
+    def write_single_row(self, tablename: str, row: Dict) -> None:
+        self.sql_db.write_single_row(tablename, row)
+        # it might seem logical to try and output the raw SQL here
+        # but it gets messy due to limitations of SQL Alchemy
+        # https://docs.sqlalchemy.org/en/13/faq/sqlexpressions.html#rendering-bound-parameters-inline
+        # in particular datetime values do not render properly without extra code
+        # perhaps there are other, similar, undiscovered limitations.
+
+    def create_or_validate_tables(self, tables: Dict[str, TableInfo]) -> None:
+        self.sql_db.create_or_validate_tables(tables)
+
+    def flush(self):
+        self.sql_db.flush()
+
+    def _dump_db(self):
+        "Dump a database as a sql file"
+        self.sql_db.commit()
+        con = self.sql_db.engine.raw_connection()
+
+        # https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.iterdump
+        for line in con.iterdump():
+            self.text_output.stream.write("%s\n" % line)
+
+    def close(self, *args, **kwargs):
+        self._dump_db()
+        self.sql_db.close(*args, **kwargs)
+        self.text_output.close(*args, **kwargs)
+        self.tempdir.cleanup()
 
 
 def _validate_fields(mappings, tables):
@@ -326,38 +399,51 @@ def create_tables_from_inferred_fields(tables, engine, metadata):
                     )
 
 
-class GraphvizOutputStream(FileOutputStream):
-    def __init__(self, path):
-        super().__init__(path)
-        import pygraphviz
+def find_name_in_dict(d):
+    "Try to find a key that is semantically a 'name' for diagramming purposes."
+    keys = {k.lower().replace("_", ""): k for k in d.keys()}
+    if "name" in keys:
+        return d[keys["name"]]
+    elif "firstname" in keys or "lastname" in keys:
+        firstname = d[keys.get("firstname")] if keys.get("firstname") else ""
+        lastname = d[keys.get("lastname")] if keys.get("lastname") else ""
+        return " ".join([firstname, lastname])
+    elif "name" in str(" ".join(d.keys())):
+        namekey = [k for k in d.keys() if "name" in k][0]
+        return d[namekey]
+    elif "id" in keys:
+        return d[keys["id"]]
 
-        self.G = pygraphviz.AGraph(strict=False, directed=True)
-        self.G.edge_attr["fontsize"] = "10"
-        self.G.node_attr["style"] = "filled"
-        self.G.node_attr["fillcolor"] = "#1798c1"
-        self.G.node_attr["fontcolor"] = "#FFFFFF"
-        self.G.node_attr["height"] = "0.75"
-        self.G.node_attr["width"] = "0.75"
-        self.G.node_attr["widshapeth"] = "circle"
+
+class GraphvizOutputStream(FileOutputStream):
+    """Generates a Graphviz .dot file"""
+
+    def __init__(self, path):
+        import gvgen
+
+        super().__init__(path)
+
+        self.nodes = {}
+        self.links = []
+        self.G = gvgen.GvGen()
+        self.G.styleDefaultAppend("fontsize", "10")
+        self.G.styleDefaultAppend("style", "filled")
+        self.G.styleDefaultAppend("fillcolor", "#1798c1")
+        self.G.styleDefaultAppend("fontcolor", "#FFFFFF")
+        self.G.styleDefaultAppend("height", "0.75")
+        self.G.styleDefaultAppend("width", "0.75")
+        self.G.styleDefaultAppend("widshapeth", "circle")
 
     def flatten(
         self,
         sourcetable: str,
         fieldname: str,
         source_row_dict: Dict,
-        target_object_row: Union[ObjectRow, NicknameSlot],
+        target_object_row: Union[ObjectRow, ObjectReference],
     ) -> Union[str, int]:
-        source_node_name = self.generate_node_name(
-            sourcetable, source_row_dict.get("name"), source_row_dict.get("id")
-        )
-        target_node_name = self.generate_node_name(
-            target_object_row._tablename,
-            getattr(target_object_row, "name"),
-            target_object_row.id,
-        )
-        self.G.add_edge(
-            source_node_name, target_node_name, fieldname, label=f"    {fieldname}     "
-        )
+        source = (sourcetable, source_row_dict["id"])
+        target = (target_object_row._tablename, target_object_row.id)
+        self.links.append((fieldname, source, target))
         return ""
 
     def generate_node_name(
@@ -368,15 +454,39 @@ class GraphvizOutputStream(FileOutputStream):
         return f"{tablename}({id}{separator}{rowname})"
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
-        node_name = self.generate_node_name(tablename, row.get("name"), row["id"])
-        self.G.add_node(node_name)
+        node_name = self.generate_node_name(
+            tablename, find_name_in_dict(row), row["id"]
+        )
+        self.nodes[tablename, row["id"]] = self.G.newItem(node_name)
 
-    def close(self) -> None:
-        self.stream.write(self.G.string())
-        super().close()
+    def close(self) -> Optional[Sequence[str]]:
+        for fieldname, source, target in self.links:
+            mylink = self.G.newLink(self.nodes[source], self.nodes[target])
+            self.G.propertyAppend(mylink, "label", fieldname)
+        self.G.dot(self.stream)
+        return super().close()
 
 
-class ImageOutputStream(GraphvizOutputStream):
+DOT_MISSING_MESSAGE = """
+Could not find `dot` executable.
+
+Please install graphviz and ensure that the command `dot` is available.
+For example, on Mac you could try `brew install graphviz`
+On Windows you could try `winget install graphviz` or `choco install graphviz`
+Other installation options are here: http://www.graphviz.org/download/
+
+If you have installed graphviz but Snowfakery cannot find it, perhaps you
+will need to use Snowfakery to generate a dotfile (--output-file=out.dot)
+and then you can convert it to another format yourself as described here:
+https://stackoverflow.com/a/1494495/113477
+
+If your data is not private, you could even use one of the online
+converters that you can find by searching the Web for
+"convert dot file to png online".
+"""
+
+
+class ImageOutputStream(OutputStream):
     """Output an Image file in a graphviz supported format."""
 
     mode = "wb"
@@ -384,13 +494,42 @@ class ImageOutputStream(GraphvizOutputStream):
     def __init__(self, path, format):
         self.path = path
         self.format = format
-        super().__init__(path)
+        self.tempdir = TemporaryDirectory()
+        self.dotfile = Path(self.tempdir.name) / "temp.dot"
+        self.gv_os = GraphvizOutputStream(self.dotfile)
 
-    def close(self) -> None:
-        self.G.draw(path=self.stream, prog="dot", format=self.format)
+    def write_single_row(self, *args, **kwargs):
+        return self.gv_os.write_single_row(*args, **kwargs)
+
+    def flatten(self, *args, **kwargs):
+        return self.gv_os.flatten(*args, **kwargs)
+
+    def close(self) -> Optional[Sequence[str]]:
+        self.gv_os.close()
+        assert self.dotfile.exists()
+        rc = self._render(self.dotfile, self.path)
+        self.tempdir.cleanup()
+        return rc or [f"Generated {self.path}"]
+
+    def _render(self, dotfile, outfile):
+        assert dotfile.exists()
+        try:
+            out = subprocess.Popen(
+                ["dot", "-T" + self.format, dotfile, "-o" + str(outfile)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+            stdout, stderr = out.communicate()
+            stdout = [stdout.decode("ASCII")] if stdout else []
+            stderr = [stderr.decode("ASCII")] if stderr else []
+        except FileNotFoundError:
+            return [DOT_MISSING_MESSAGE]
+        return stdout + stderr
 
 
 class MultiplexOutputStream(OutputStream):
+    """Generate multiple output streams at once."""
+
     def __init__(self, outputstreams):
         self.outputstreams = outputstreams
 
@@ -402,7 +541,7 @@ class MultiplexOutputStream(OutputStream):
         for stream in self.outputstreams:
             stream.write_row(tablename, row_with_references)
 
-    def close(self) -> None:
+    def close(self) -> Optional[Sequence[str]]:
         for stream in self.outputstreams:
             stream.close()
 

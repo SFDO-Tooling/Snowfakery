@@ -11,6 +11,7 @@ from snowfakery.data_gen_exceptions import (
     DataGenImportError,
 )
 from snowfakery.output_streams import JSONOutputStream
+from snowfakery import generate_data
 
 
 from unittest import mock
@@ -44,6 +45,8 @@ class WrongTypePlugin(SnowfakeryPlugin):
         def return_bad_type(self, value):
             "Evaluates its argument twice into a string"
             return int  # function
+
+        junk = None
 
 
 class MyEvaluator(PluginResult):
@@ -148,10 +151,16 @@ class TestCustomPlugin:
         - plugin: snowfakery.standard_plugins.Math
         - object: OBJ
           fields:
-            twelve: ${{Math.sqrt(144)}}
+            sqrt: ${{Math.sqrt(144)}}
+            max: ${{Math.max(144, 200, 100)}}
+            eleven: ${{Math.round(10.7)}}
+            min: ${{Math.min(144, 200, 100)}}
         """
         generate(StringIO(yaml), {})
-        assert row_values(write_row_mock, 0, "twelve") == 12
+        assert row_values(write_row_mock, 0, "sqrt") == 12
+        assert row_values(write_row_mock, 0, "max") == 200
+        assert row_values(write_row_mock, 0, "eleven") == 11
+        assert row_values(write_row_mock, 0, "min") == 100
 
     @mock.patch(write_row_path)
     def test_math_deconstructed(self, write_row_mock):
@@ -160,7 +169,7 @@ class TestCustomPlugin:
         - object: OBJ
           fields:
             twelve:
-                Math.sqrt: 144
+                Math.sqrt: ${{Math.min(144, 169)}}
         """
         generate(StringIO(yaml), {})
         assert row_values(write_row_mock, 0, "twelve") == 12
@@ -205,7 +214,7 @@ class PluginThatNeedsState(SnowfakeryPlugin):
 
 class TestContextVars:
     @mock.patch(write_row_path)
-    def test_context_vars(self, write_row):
+    def test_plugin_context_vars(self, write_row):
         yaml = """
         - plugin: tests.test_custom_plugins_and_providers.PluginThatNeedsState
         - object: OBJ
@@ -260,6 +269,33 @@ class TestContextVars:
           fields:                               #4
             foo:                                #5
                 WrongTypePlugin.return_bad_type: 5  #6
+        """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert 6 > e.value.line_num >= 3
+
+    def test_plugin_paths(self, generated_rows):
+        generate_data("tests/test_plugin_paths.yml")
+
+    def test_missing_attributes(self):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.WrongTypePlugin  # 2
+        - object: B                             #3
+          fields:                               #4
+            foo:                                #5
+                WrongTypePlugin.abcdef: 5  #6
+        """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert 6 > e.value.line_num >= 3
+
+    def test_null_attributes(self):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.WrongTypePlugin  # 2
+        - object: B                             #3
+          fields:                               #4
+            foo:                                #5
+                WrongTypePlugin.junk: 5  #6
         """
         with pytest.raises(DataGenError) as e:
             generate(StringIO(yaml))

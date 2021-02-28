@@ -1,6 +1,10 @@
-from typing import Any, Callable, Mapping, Union
+import sys
+
+from typing import Any, Callable, Mapping, Union, NamedTuple, List, Tuple
 from importlib import import_module
 from datetime import date, datetime
+from pathlib import Path
+from unittest.mock import patch
 
 import yaml
 from yaml.representer import Representer
@@ -13,6 +17,11 @@ from numbers import Number
 
 
 Scalar = Union[str, Number, date, datetime, None]
+
+
+class LineTracker(NamedTuple):
+    filename: str
+    line_num: int
 
 
 class SnowfakeryPlugin:
@@ -102,6 +111,23 @@ def lazy(func: Any) -> Callable:
     return func
 
 
+def resolve_plugins(
+    plugin_specs: List[Tuple[str, object]], search_paths: List[Union[str, Path]]
+):
+    "Resolve a list of plugins and lineinfos"
+    cwd_plugins = "./plugins"
+    user_plugins = Path.home() / ".snowfakery/plugins"
+    new_sys_path = [
+        *sys.path,
+        *(str(p) for p in search_paths),
+        str(cwd_plugins),
+        str(user_plugins),
+    ]
+
+    with patch.object(sys, "path", new_sys_path):
+        return [resolve_plugin(*plugin_spec) for plugin_spec in plugin_specs]
+
+
 def resolve_plugin(plugin: str, lineinfo) -> object:
     "Resolve a plugin to a class"
     module_name, class_name = plugin.rsplit(".", 1)
@@ -136,7 +162,8 @@ class PluginResult:
         self.result = result
 
     def __getattr__(self, name):
-        return self.result[name]
+        # ensures that it won't recurse
+        return self.__dict__["result"][name]
 
     def __reduce__(self):
         return (self.__class__, (dict(self.result),))
@@ -146,6 +173,7 @@ class PluginResult:
 
     def __str__(self):
         return str(self.result)
+
 
 # round-trip PluginResult objects through continuation YAML if needed.
 SnowfakeryDumper.add_representer(PluginResult, Representer.represent_object)

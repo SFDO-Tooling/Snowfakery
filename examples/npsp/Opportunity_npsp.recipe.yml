@@ -1,0 +1,225 @@
+## NPSP Opportunities Example
+
+# TODO: record types
+# To run this code against an org called 'qa':
+#
+# cci task run generate_and_load_from_yaml -o generator_yaml examples/npsp/Opportunity_npsp.recipe.yml -o num_records 300 -o num_records_tablename Opportunity --org qa
+#
+# Look at examples/salesforce/Opportunity.recipe.yml for more examples.
+
+- include_file: ../salesforce/standard_objs.recipe.yml
+- include_file: standard_npsp_objs_recipe.yml
+
+- object: Opportunity
+  nickname: GrantOpportunity
+  fields:
+    Name: Grant Opportunity
+    Description: A Grant Opportunity
+    Amount:
+      random_number:
+        min: 1
+        max: 100000
+    RecordType: Grant
+    CloseDate: 2021-10-10
+    StageName: Prospecting
+
+- object: Opportunity
+  nickname: MatchingGift
+  fields:
+    Name: Matching Gift
+    Description: A Matching Gift Opportunity
+    Amount:
+      random_number:
+        min: 1
+        max: 100000
+    RecordType: MatchingGift
+    CloseDate: 2022-11-12
+    StageName: Needs Analysis
+
+# randomized values
+- object: Opportunity
+  fields:
+    AccountId:
+      reference: Account # you need to have declared an account elsewhere
+    Name:
+      fake: name
+    CloseDate:
+      date_between:
+        start_date: -1y
+        end_date: today
+    Description:
+      fake.text:
+        max_nb_chars: 100
+    StageName:
+      random_choice:
+        - Prospecting
+        - Pledged
+    Amount:
+      random_number:
+        min: 1
+        max: 100000
+
+- object: Opportunity
+  fields:
+    AccountId:
+      reference: Account # you need to have declared an account elsewhere
+    Name:
+      fake: name
+    Description:
+      fake.text:
+        max_nb_chars: 100
+    CloseDate:
+      date_between:
+        start_date: -1y
+        end_date: today
+    StageName:
+      random_choice:
+        - Prospecting
+        - Qualification
+        - Needs Analysis
+        - Value Proposition
+        - Id. Decision Makers
+        - Perception Analysis
+        - Proposal/Price Quote
+        - Negotiation/Review
+        - Closed Won
+        - Closed Lost
+        - Pledged
+    Amount:
+      random_number:
+        min: 1
+        max: 100000
+    # ContractId:
+    #   reference: Contract
+    npe01__Contact_Id_for_Role__c:
+      fake.text:
+        max_nb_chars: 100
+    npe01__Member_Level__c:
+      random_choice:
+        - Gold
+        - Silver
+        - Bronze
+    npe01__Membership_End_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npe01__Membership_Origin__c:
+      random_choice:
+        - New
+        - Renewal
+        - Reacquire
+    npe01__Membership_Start_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npe03__Recurring_Donation__c:
+      reference: npe03__Recurring_Donation__c
+    npsp__Acknowledgment_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npsp__Acknowledgment_Status__c:
+      random_choice:
+        - To Be Acknowledged
+        - Acknowledged
+        - Do Not Acknowledge
+        - Email Acknowledgment Now
+        - Email Acknowledgment Not Sent
+    npsp__Ask_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npsp__Closed_Lost_Reason__c:
+      fake.text:
+        max_nb_chars: 100
+    npsp__Fair_Market_Value__c:
+      random_number:
+        min: 1
+        max: 100000
+    npsp__Gift_Strategy__c:
+      random_choice:
+        - New Donor
+        - Renewal
+        - Upgrade
+    npsp__Grant_Contract_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npsp__Grant_Contract_Number__c:
+      fake.text:
+        max_nb_chars: 100
+    npsp__Grant_Period_End_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npsp__Grant_Period_Start_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npsp__Grant_Program_Area_s__c:
+      fake.text:
+        max_nb_chars: 100
+    npsp__Grant_Requirements_Website__c:
+      fake: url
+    npsp__Honoree_Contact__c:
+      reference: Contact
+    npsp__Honoree_Name__c:
+      fake: name
+    npsp__In_Kind_Description__c:
+      fake.text:
+        max_nb_chars: 100
+    npsp__In_Kind_Type__c:
+      random_choice:
+        - Goods
+        - Services
+    npsp__Matching_Gift_Account__c:
+      reference: Organization
+    npsp__Matching_Gift_Employer__c:
+      fake.text:
+        max_nb_chars: 100
+    npsp__Matching_Gift_Status__c:
+      random_choice:
+        - Potential
+        - Submitted
+        - Received
+    # npsp__Matching_Gift__c:
+    #   reference: MatchingGift
+    npsp__Notification_Message__c:
+      fake.text:
+        max_nb_chars: 100
+    npsp__Notification_Preference__c:
+      random_choice:
+        - Email
+        - Postal Mail
+        - Phone
+        - Do Not Notify
+    npsp__Notification_Recipient_Contact__c:
+      reference: Contact
+    npsp__Notification_Recipient_Information__c:
+      fake.text:
+        max_nb_chars: 100
+    npsp__Notification_Recipient_Name__c:
+      fake: name
+    # npsp__Previous_Grant_Opportunity__c:
+    #   reference: Opportunity
+    npsp__Primary_Contact_Campaign_Member_Status__c:
+      fake.text:
+        max_nb_chars: 40
+    npsp__Primary_Contact__c:
+      reference: Contact
+    npsp__Qualified_Date__c:
+      date_between:
+        start_date: -1y
+        end_date: today
+    npsp__Recurring_Donation_Installment_Number__c:
+      random_number:
+        min: 1
+        max: 100000
+    npsp__Requested_Amount__c:
+      random_number:
+        min: 1
+        max: 100000
+    npsp__Tribute_Type__c:
+      random_choice:
+        - Honor
+        - Memorial

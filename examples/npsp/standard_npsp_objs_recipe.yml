@@ -1,0 +1,45 @@
+- object: npe03__Recurring_Donation__c
+  just_once: True
+  fields:
+    Name: NMH Transitional Housing Capital Campaign - Evans and Wong Household
+    npe03__Amount__c: 10000.0
+    npe03__Date_Established__c: "2018-11-05"
+    npe03__Installment_Period__c: Quarterly
+    npe03__Installments__c: 12.0
+    npe03__Last_Payment_Date__c: "2019-11-30"
+    npe03__Next_Payment_Date__c: "2020-02-29"
+    npe03__Open_Ended_Status__c: None
+    npe03__Paid_Amount__c: 4166.65
+    npe03__Schedule_Type__c: Divide By
+    npe03__Total_Paid_Installments__c: 5.0
+    npsp__Always_Use_Last_Day_Of_Month__c: true
+    npsp__Day_Of_Month__c: 30
+    npe03__Contact__c:
+      reference: Contact
+    npe03__Recurring_Donation_Campaign__c:
+      reference: Campaign
+
+- object: Account
+  just_once: True
+  nickname: Household
+  fields:
+    name: The Household
+    RecordType: HH_Account
+
+- object: Account
+  just_once: True
+  nickname: Organization
+  fields:
+    name: The Organization
+    RecordType: Organization
+
+- object: npsp__Address__c
+  just_once: True
+  fields:
+    npsp__MailingStreet__c: 36624 Jefferson Way Way
+    npsp__MailingCity__c: Greenville
+    npsp__MailingPostalCode__c: 63102
+    npsp__MailingState__c: OR
+    npsp__Address_Type__c: Home
+    npsp__Household_Account__c:
+      reference: Household

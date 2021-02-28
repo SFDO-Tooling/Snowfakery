@@ -1,0 +1,24 @@
+## Salesforce Opportunity tied to a Contact
+
+# To run this code against an org named 'qa':
+#
+# cci task run generate_and_load_from_yaml -o generator_yaml examples/salesforce/OpportunityAndContact.recipe.yml -o num_records 300 -o num_records_tablename Opportunity --org qa
+
+- object: Contact
+  fields:
+    FirstName:
+      fake: first_name
+    LastName:
+      fake: last_name
+  friends:
+    - object: Opportunity
+      count:
+        random_number:
+          min: 4
+          max: 5
+      fields:
+        ContactId:
+          reference: Contact
+        Name: The ${{Contact.LastName}} Opportunity
+        StageName: Qualification
+        CloseDate: 2020-12-31

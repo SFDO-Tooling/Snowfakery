@@ -5,7 +5,7 @@ from io import StringIO
 import pytest
 
 from snowfakery.data_generator import merge_options, generate, StoppingCriteria
-from snowfakery.data_gen_exceptions import DataGenNameError
+from snowfakery.data_gen_exceptions import DataGenNameError, DataGenError
 
 
 class TestDataGenerator(unittest.TestCase):
@@ -62,6 +62,7 @@ id_manager:
     bar: 1000
 nicknames_and_tables: {}
 today: 2022-11-03
+persistent_nicknames: {}
                 """
         generate(
             StringIO(yaml),
@@ -98,3 +99,13 @@ today: 2022-11-03
         """
         with self.assertRaises(RuntimeError):
             generate(StringIO(yaml), stopping_criteria=StoppingCriteria("foo", 3))
+
+    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
+    def test_stops_if_criteria_misspelled(self, write_row):
+        yaml = """
+        - object: foo
+          just_once: True
+        - object: bar
+        """
+        with self.assertRaises(DataGenError):
+            generate(StringIO(yaml), stopping_criteria=StoppingCriteria("baz", 3))
