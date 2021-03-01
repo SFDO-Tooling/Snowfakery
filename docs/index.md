@@ -1878,6 +1878,14 @@ generate_data(
 )
 ```
 
+## Security Profiile of Snowfakery
+
+Snowfakery should be considered a domain-specific programming language with
+access to most of the power of Python. It can load Python plugins and
+call Python methods. It would be unwise to run untrusted recipes in an
+environment that has access to secure resources such as passwords, network
+connections, etc.
+
 ## Internal Software Architecture
 
 |Filename	                        |Purpose	|
