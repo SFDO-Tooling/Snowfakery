@@ -211,7 +211,7 @@ class Globals:
         if not_filled:
             plural = "s" if len(not_filled) > 1 else ""
             raise DataGenNameError(
-                f"Reference{plural} not fulfilled: {','.join(not_filled)}",
+                f"Reference{plural} not fulfilled: {','.join(not_filled)}"
             )
 
     def first_new_id(self, tablename):

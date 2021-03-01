@@ -325,6 +325,10 @@ class SqlDbOutputStream(OutputStream):
                 self.table_info[tablename].fallback_dict["id"] = None  # id is special
 
 
+# backwards-compatible name for CCI
+SqlOutputStream = SqlDbOutputStream
+
+
 class SqlTextOutputStream(FileOutputStream):
     """Output stream to generate a SQL text file"""
 
