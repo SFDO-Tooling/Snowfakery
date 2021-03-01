@@ -125,7 +125,7 @@ class OutputStream(ABC):
 
 class SmartStream:
     """Common code for managing stream/file opening/closing
-    
+
     Expects to be initialized with either a file-like object with a `write` method,
     or a path (str or pathlib.Path) that can be opened using `open()`
     """
@@ -323,6 +323,10 @@ class SqlDbOutputStream(OutputStream):
                     },
                 )
                 self.table_info[tablename].fallback_dict["id"] = None  # id is special
+
+
+# backwards-compatible name for CCI
+SqlOutputStream = SqlDbOutputStream
 
 
 class SqlTextOutputStream(FileOutputStream):

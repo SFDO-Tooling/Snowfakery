@@ -1,30 +1,16 @@
 - object: Account
   fields:
-     name: Bluth Family
-     RecordType: Household
-     primary_contact:
-        - object: Contact
-          nickname: Michael
-          fields:
-            name: Michael Bluth
+    name: Bluth Family
+    RecordType: HH_Account
 - object: Account
   fields:
-     name: Bluth Corporation
-     primary_contact:
-        reference: Michael
-     RecordType: Organization
+    name: Bluth Corporation
+    RecordType: Organization
 - object: Account
   fields:
-     name: The Windors
-     primary_contact:
-      - object: Contact
-        nickname: Liz
-        fields: 
-          name: The Queen
-     RecordType: Household
+    name: The Windors
+    RecordType: HH_Account
 - object: Account
   fields:
-     name: The Firm
-     primary_contact:
-        reference: Liz
-     RecordType: Organization
+    name: The Firm
+    RecordType: Organization

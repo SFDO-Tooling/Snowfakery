@@ -143,7 +143,9 @@ class Globals:
     nicknames_and_tables: Mapping[str, str]  # what table does each nickname refer to?
 
     def __init__(
-        self, today: date = None, name_slots: Mapping[str, str] = None,
+        self,
+        today: date = None,
+        name_slots: Mapping[str, str] = None,
     ):
         # these lists start empty and are filled.
         # They survive iterations and continuations.
@@ -209,7 +211,9 @@ class Globals:
         if not_filled:
             plural = "s" if len(not_filled) > 1 else ""
             raise DataGenNameError(
-                f"Reference{plural} not fulfilled: {','.join(not_filled)}", None, None,
+                f"Reference{plural} not fulfilled: {','.join(not_filled)}",
+                None,
+                None,
             )
 
     def first_new_id(self, tablename):
