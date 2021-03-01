@@ -1,7 +1,10 @@
 import unittest
 from io import StringIO
+from pathlib import Path
+import yaml
 
 import pytest
+from sqlalchemy import create_engine
 
 from snowfakery.data_generator import generate
 from snowfakery.generate_mapping_from_recipe import (
@@ -9,8 +12,8 @@ from snowfakery.generate_mapping_from_recipe import (
     build_dependencies,
     _table_is_free,
 )
-from snowfakery.data_gen_exceptions import DataGenError
 from snowfakery.data_generator_runtime import Dependency
+from snowfakery import generate_data
 
 
 class TestGenerateMapping:
@@ -167,6 +170,19 @@ class TestGenerateMapping:
         with pytest.warns(UserWarning, match="Circular"):
             mapping_from_recipe_templates(summary)
 
+    def test_random_reference_lookups(self):
+        yaml = """
+            - object: Target
+            - object: Ref
+              fields:
+                targ:
+                  random_reference: Target
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert mapping["Insert Ref"]["lookups"]["targ"]["table"] == "Target"
+
 
 class TestBuildDependencies(unittest.TestCase):
     def test_build_dependencies_simple(self):
@@ -230,59 +246,27 @@ class TestTableIsFree(unittest.TestCase):
 
 
 class TestRecordTypes:
-    def test_basic_recordtypes(self):
-        yaml = """
+    def test_basic_recordtypes(self, tmpdir):
+        recipe_data = """
             - object: Obj
               fields:
                 RecordType: Bar
               """
-        summary = generate(StringIO(yaml), {}, None)
-        mapping = mapping_from_recipe_templates(summary)
+        tmpdir = Path(tmpdir)
+        db = tmpdir / "testdb.db"
+        dburl = f"sqlite:///{db}"
+        recipe = tmpdir / "recipe.yml"
+        mapping_file = tmpdir / "mapping.yml"
+        recipe.write_text(recipe_data)
 
-        assert mapping["Insert Bar"]["filters"][0] == "RecordType = 'Bar'"
-        assert mapping["Insert Obj"]["filters"][0] == "RecordType is NULL"
-
-    def test_recordtype_errors_on_wrong_capitalization(self):
-        yaml = """
-            - object: Obj
-              fields:
-                recordtype: Bar
-              """
-        summary = generate(StringIO(yaml), {}, None)
-        with pytest.raises(DataGenError):
-            mapping_from_recipe_templates(summary)
-
-        yaml = """
-            - object: Obj
-              fields:
-                record_type: Bar
-              """
-        summary = generate(StringIO(yaml), {}, None)
-        with pytest.raises(DataGenError):
-            mapping_from_recipe_templates(summary)
-
-    def test_recordtypes_and_lookups(self):
-        yaml = """
-            - object: Obj
-              fields:
-                RecordType: Bar
-                child:
-                - object: Child
-              """
-        summary = generate(StringIO(yaml), {}, None)
-        mapping = mapping_from_recipe_templates(summary)
-
-        assert mapping["Insert Bar"]["lookups"]["child"]["key_field"] == "child"
-
-    def test_random_reference_lookups(self):
-        yaml = """
-            - object: Target
-            - object: Ref
-              fields:
-                targ:
-                  random_reference: Target
-              """
-        summary = generate(StringIO(yaml), {}, None)
-        mapping = mapping_from_recipe_templates(summary)
-
-        assert mapping["Insert Ref"]["lookups"]["targ"]["table"] == "Target"
+        generate_data(
+            recipe,
+            generate_cci_mapping_file=mapping_file,
+            dburl=dburl,
+            should_create_cci_record_type_tables=True,
+        )
+        mapping = yaml.safe_load(mapping_file.read_text())
+        e = create_engine(dburl)
+        records = list(e.execute("SELECT * from Obj_rt_mapping"))
+        assert records == [("Bar", "Bar")], records
+        assert mapping["Insert Obj"]["fields"]["RecordTypeId"] == "RecordType"
