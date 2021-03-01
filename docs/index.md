@@ -758,7 +758,7 @@ ${{ date(Date_Established__c) + relativedelta(months=child_index) }}
 ```
 
 Some plugins may also be interested in a `template` variable which has an `id` attributes represents a unique identifier for the current template. Look at
-[datasets.py](https://github.com/SFDO-Tooling/Snowfakery/blob/master/snowfakery/standard_plugins/datasets.py) to see one use-case where the template's ID can used to differentiate between two otherwise identical datasets.
+[datasets.py](https://github.com/SFDO-Tooling/Snowfakery/blob/main/snowfakery/standard_plugins/datasets.py) to see one use-case where the template's ID can used to differentiate between two otherwise identical datasets.
 
 ### NULL
 
@@ -1710,7 +1710,7 @@ To write a new Provider, please refer to the documentation for Faker at https://
 
 Snowfakery recipes that generate Salesforce records are just like any
 other Snowfakery recipes. You use SObject names for the 'objects'.
-There are several examples [in the Snowfakery repository](https://github.com/SFDO-Tooling/Snowfakery/tree/master/examples/salesforce)
+There are several examples [in the Snowfakery repository](https://github.com/SFDO-Tooling/Snowfakery/tree/main/examples/salesforce)
 
 To specify a record type for a record, just put the Record Type’s API Name in a field named RecordType.
 
@@ -1737,7 +1737,7 @@ $ cci task run generate_and_load_from_yaml -o generator_yaml examples/salesforce
 
 You can (and more often will) use generate_and_load_from_yaml from
 within a flow captured in in a `cumulusci.yml`, like the one in
-the [Snowfakery repo](https://github.com/SFDO-Tooling/Snowfakery/tree/master/cumulusci.yml).
+the [Snowfakery repo](https://github.com/SFDO-Tooling/Snowfakery/tree/main/cumulusci.yml).
 
 If you have CumulusCI configured and you would like to test this,
 you can do so like this (the Snowfakery repo itself has a
