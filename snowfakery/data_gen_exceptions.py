@@ -4,7 +4,7 @@ class DataGenError(Exception):
         "use the --debug-internals option."
     )
 
-    def __init__(self, message, filename, line_num):
+    def __init__(self, message, filename=None, line_num=None):
         self.message = message
         self.filename = filename
         self.line_num = line_num
