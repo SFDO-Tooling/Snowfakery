@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from snowfakery.generate_mapping_from_recipe import mapping_from_recipe_templates
+from snowfakery.salesforce import create_cci_record_type_tables
 from snowfakery.output_streams import (
     DebugOutputStream,
     SqlDbOutputStream,
@@ -120,6 +121,12 @@ def int_string_tuple(ctx, param, value=None):
     "multi-batch data generation process",
 )
 @click.option(
+    "--generate-record-type-tables/--no-generate-record-type-tables",
+    "should_create_cci_record_type_tables",
+    default=False,
+    hidden=True,
+)
+@click.option(
     "--continuation-file",
     type=click.File("r"),
     help="Continue generating a dataset where 'continuation-file' left off",
@@ -138,6 +145,7 @@ def generate_cli(
     output_folder=None,
     continuation_file=None,
     generate_continuation_file=None,
+    should_create_cci_record_type_tables=False,
 ):
     """
         Generates records from a YAML file
@@ -201,6 +209,8 @@ def generate_cli(
                 click.echo("")
                 click.echo(e.prefix)
                 raise click.ClickException(str(e)) from e
+    if should_create_cci_record_type_tables:
+        create_cci_record_type_tables(dburls[0])
 
 
 @contextmanager

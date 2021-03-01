@@ -2,79 +2,16 @@ from copy import deepcopy
 from warnings import warn
 
 from snowfakery.data_generator import ExecutionSummary
-from snowfakery.data_gen_exceptions import DataGenNameError, DataGenError
-from snowfakery.parse_recipe_yaml import TableInfo
-from snowfakery.data_generator_runtime import Dependency
+from snowfakery.salesforce import find_record_type_column
 
 
 def mapping_from_recipe_templates(summary: ExecutionSummary):
     """Use the outputs of the recipe YAML and convert to Mapping.yml format"""
-    record_types = generate_record_type_pseudo_tables(summary)
     dependencies, reference_fields = build_dependencies(summary.intertable_dependencies)
-    tables = {**summary.tables, **record_types}
+    tables = summary.tables.copy()
     table_order = sort_dependencies(dependencies, tables)
     mappings = mappings_from_sorted_tables(tables, table_order, reference_fields)
     return mappings
-
-
-def find_record_type_field(fields, context_name):
-    """Verify that the RecordType field has the right capitalization and return it."""
-
-    # theoretically a custom object could have a field named record_type but more likely
-    # it would be a mistake, so warn on that too
-    record_type_fields = [
-        field
-        for field in fields
-        if field.name.lower().replace("d_t", "dt", 1) == "recordtype"
-    ]
-    if not record_type_fields:
-        return None
-    elif len(record_type_fields) > 1:
-        raise DataGenError(
-            f"Only one RecordType field allowed: {context_name}", None, None
-        )
-    elif record_type_fields[0].name != "RecordType":
-        raise DataGenNameError(
-            "Recordtype field needs this capitalization: RecordType", None, None
-        )
-
-    return record_type_fields[0]
-
-
-def generate_record_type_pseudo_tables(summary):
-    """Generate fake table objects for purposes of dependency sorting, lookups and mapping generation"""
-    record_types = {}
-    for template in summary.templates:
-        real_table_name = template.tablename
-        record_type_field = find_record_type_field(template.fields, real_table_name)
-        if not record_type_field:
-            continue
-
-        real_table = summary.tables[real_table_name]
-        record_type_name = record_type_field.definition.definition
-
-        # generate a pretend table for purposes of dependency sorting,
-        # lookups and mapping generation
-        record_type_pseudo_table = record_types.setdefault(
-            record_type_name, TableInfo(template.tablename)
-        )
-        record_type_pseudo_table.register(template)
-        record_type_pseudo_table.record_type = record_type_name
-
-        # copy over the dependencies from the real table
-        for dependency in sorted(summary.intertable_dependencies):
-            if dependency.table_name_from == real_table_name:
-                summary.intertable_dependencies.add(
-                    Dependency(record_type_name, *dependency[1:])
-                )
-
-        # the record type field isn't helpful for the TableInfo of the real table anymore
-        # need a conditional here to ensure its only deleted once
-        if real_table.fields.get("RecordType"):
-            del real_table.fields["RecordType"]
-            real_table.has_record_types = True
-
-    return record_types
 
 
 def build_dependencies(intertable_dependencies):
@@ -136,12 +73,17 @@ def mappings_from_sorted_tables(
     mappings = {}
     for table_name in table_order:
         table = tables[table_name]
+        record_type_col = find_record_type_column(table_name, table.fields.keys())
+
         fields = {
             fieldname: fieldname
             for fieldname, fielddef in table.fields.items()
             if (table_name, fieldname) not in reference_fields.keys()
-            and fieldname != "RecordType"
+            and fieldname != record_type_col
         }
+        if record_type_col:
+            fields["RecordTypeId"] = record_type_col
+
         lookups = {
             fieldname: {
                 "table": reference_fields[(table_name, fieldname)],
@@ -151,28 +93,7 @@ def mappings_from_sorted_tables(
             if (table_name, fieldname) in reference_fields.keys()
         }
 
-        if "RecordType" in table.fields:
-            fielddef = table.fields["RecordType"].definition
-            if not getattr(fielddef, "definition", None):
-                raise DataGenError(
-                    "Record type definitions must be simple, not computed", None, None
-                )
-            record_type = fielddef.definition
-            filters = [f"RecordType = '{record_type}'"]
-        else:
-            record_type = None
-            # add a filter to avoid returning rows associated with record types
-            filters = (
-                ["RecordType is NULL"]
-                if getattr(table, "has_record_types", False)
-                else []
-            )
-
         mapping = {"sf_object": table.name, "table": table.name, "fields": fields}
-        if record_type:
-            mapping["record_type"] = record_type
-        if filters:
-            mapping["filters"] = filters
         if lookups:
             mapping["lookups"] = lookups
 

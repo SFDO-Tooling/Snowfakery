@@ -325,6 +325,10 @@ class SqlDbOutputStream(OutputStream):
                 self.table_info[tablename].fallback_dict["id"] = None  # id is special
 
 
+# backwards-compatible name for CCI
+SqlOutputStream = SqlDbOutputStream
+
+
 class SqlTextOutputStream(FileOutputStream):
     """Output stream to generate a SQL text file"""
 
@@ -394,8 +398,6 @@ def create_tables_from_inferred_fields(tables, engine, metadata):
                 if count > 0:
                     raise DataGenError(
                         f"Table already exists and has data: {table_name} in {engine.url}",
-                        None,
-                        None,
                     )
 
 

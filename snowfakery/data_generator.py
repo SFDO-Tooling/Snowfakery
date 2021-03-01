@@ -70,7 +70,7 @@ def merge_options(option_definitions: List, user_options: Mapping) -> Tuple[Dict
             options[name] = option["default"]
         else:
             raise DataGenNameError(
-                f"No definition supplied for option {name}", None, None
+                f"No definition supplied for option {name}",
             )
 
     extra_options = set(user_options.keys()) - set(options.keys())
