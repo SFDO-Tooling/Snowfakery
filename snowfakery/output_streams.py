@@ -398,8 +398,6 @@ def create_tables_from_inferred_fields(tables, engine, metadata):
                 if count > 0:
                     raise DataGenError(
                         f"Table already exists and has data: {table_name} in {engine.url}",
-                        None,
-                        None,
                     )
 
 

@@ -150,7 +150,7 @@ class StandardFuncs(SnowfakeryPlugin):
                 target = obj
             else:
                 raise DataGenError(
-                    f"Can't get reference to object of type {type(x)}: {x}", None, None
+                    f"Can't get reference to object of type {type(x)}: {x}"
                 )
 
             return target
