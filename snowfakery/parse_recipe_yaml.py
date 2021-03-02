@@ -4,6 +4,7 @@ from datetime import date
 from contextlib import contextmanager
 from pathlib import Path
 from typing import IO, List, Dict, Union, Tuple, Any, Iterable, Sequence, Mapping
+from warnings import warn
 
 import yaml
 from yaml.composer import Composer
@@ -308,7 +309,13 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
         parse_inclusions(yaml_sobj, fields, friends, context)
         fields.extend(parse_fields(parsed_template.fields or {}, context))
         friends.extend(parse_friends(parsed_template.friends or [], context))
-        sobj_def["nickname"] = parsed_template.nickname
+        sobj_def["nickname"] = nickname = parsed_template.nickname
+        if nickname and not nickname.isidentifier():
+            warn(
+                f"{nickname} is not a valid nickname.\n"
+                "Future versions of Snowfakery may disallow it."
+            )
+
         sobj_def["just_once"] = parsed_template.just_once or False
         sobj_def["line_num"] = parsed_template.line_num.line_num
         sobj_def["filename"] = parsed_template.line_num.filename
