@@ -270,3 +270,28 @@ class TestRecordTypes:
         records = list(e.execute("SELECT * from Obj_rt_mapping"))
         assert records == [("Bar", "Bar")], records
         assert mapping["Insert Obj"]["fields"]["RecordTypeId"] == "RecordType"
+
+    def test_Case_recordtypes(self, tmpdir):
+        recipe_data = """
+            - object: Case
+              fields:
+                recordtype: Bar
+              """
+        tmpdir = Path(tmpdir)
+        db = tmpdir / "testdb.db"
+        dburl = f"sqlite:///{db}"
+        recipe = tmpdir / "recipe.yml"
+        mapping_file = tmpdir / "mapping.yml"
+        recipe.write_text(recipe_data)
+
+        generate_data(
+            recipe,
+            generate_cci_mapping_file=mapping_file,
+            dburl=dburl,
+            should_create_cci_record_type_tables=True,
+        )
+        mapping = yaml.safe_load(mapping_file.read_text())
+        e = create_engine(dburl)
+        records = list(e.execute("SELECT * from Case_rt_mapping"))
+        assert records == [("Bar", "Bar")], records
+        assert mapping["Insert Case"]["fields"]["RecordTypeId"] == "recordtype"
