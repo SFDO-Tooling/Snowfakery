@@ -10,4 +10,4 @@ pytest-cov==2.11.1
 Sphinx==3.5.1
 typeguard==2.10.0
 faker-microservice==2.0.0  # for testing
-tox==3.22.0
+tox==3.23.0
