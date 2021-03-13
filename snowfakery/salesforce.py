@@ -1,6 +1,7 @@
 import typing as T
 
 from sqlalchemy import create_engine, MetaData, Column, Table, Unicode
+from sqlalchemy.sql import select
 
 from snowfakery.data_gen_exceptions import DataGenError
 
@@ -18,7 +19,7 @@ def create_cci_record_type_tables(db_url: str):
             if record_type_column:
                 rt_table = _create_record_type_table(tablename, metadata)
                 rt_table.create()
-                _populate_rt_table(connection, tablename, record_type_column, rt_table)
+                _populate_rt_table(connection, table, record_type_column, rt_table)
 
 
 def _create_record_type_table(tablename: str, metadata: MetaData):
@@ -31,12 +32,13 @@ def _create_record_type_table(tablename: str, metadata: MetaData):
     return rt_map_table
 
 
-def _populate_rt_table(connection, tablename: str, columnname: str, rt_table: Table):
+def _populate_rt_table(connection, table: Table, columnname: str, rt_table: Table):
+    column = getattr(table.columns, columnname)
     query_res = connection.execute(
-        f"SELECT distinct({columnname}) "
-        f"FROM {tablename} WHERE {columnname} IS NOT NULL"
+        select([column]).where(column is not None).distinct()
     )
     record_types = [res[0] for res in query_res]
+
     if record_types:
         insert_stmt = rt_table.insert()
         rows = [
