@@ -7,7 +7,7 @@ myst-parser==0.13.5
 pre-commit==2.10.1
 pytest==6.2.2
 pytest-cov==2.11.1
-Sphinx==3.5.1
+Sphinx==3.5.2
 typeguard==2.10.0
 faker-microservice==2.0.0  # for testing
 tox==3.22.0
