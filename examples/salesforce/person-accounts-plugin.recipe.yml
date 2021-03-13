@@ -1,0 +1,50 @@
+- plugin: snowfakery.standard_plugins.datasets.Dataset
+- plugin: snowfakery.standard_plugins.Salesforce
+- object: Account
+  fields:
+    FirstName:
+      fake: first_name
+    LastName:
+      fake: last_name
+    PersonMailingStreet:
+      fake: street_address
+    PersonMailingCity:
+      fake: city
+    PersonMailingState:
+      fake: state
+    PersonMailingCountry: USA
+    PersonMailingPostalCode:
+      random_number:
+        min: 10000
+        max: 99999
+    PersonEmail:
+      fake: email
+    Phone:
+      fake: phone_number
+    PersonMobilePhone:
+      fake: phone_number
+    PersonContactId:
+      Salesforce.SpecialObject: PersonContact
+- object: User
+  fields:
+    TimeZoneSidKey: America/Los_Angeles
+    LocaleSidKey: en_US
+    EmailEncodingKey:
+      ISO-8859-1
+      # this dataset is extracted in person_accounts_and_community_users
+    __datasetid:
+      Dataset.iterate:
+        dataset: ../../temp/temp_profiles.csv
+    ProfileId: ${{__datasetid.Id}}
+    LanguageLocaleKey: en_US
+    LastName:
+      fake: last_name
+    Username:
+      fake: email
+    Email:
+      fake: email
+    Alias: Word
+    CommunityNickname:
+      fake: word
+    ContactId:
+      reference: Account.PersonContactId

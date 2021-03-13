@@ -1,10 +1,8 @@
 import unittest
-from io import StringIO
 from pathlib import Path
-import yaml
+from io import StringIO
 
 import pytest
-from sqlalchemy import create_engine
 
 from snowfakery.data_generator import generate
 from snowfakery.generate_mapping_from_recipe import (
@@ -13,7 +11,7 @@ from snowfakery.generate_mapping_from_recipe import (
     _table_is_free,
 )
 from snowfakery.data_generator_runtime import Dependency
-from snowfakery import generate_data
+from snowfakery import data_gen_exceptions as exc
 
 
 class TestGenerateMapping:
@@ -246,27 +244,100 @@ class TestTableIsFree(unittest.TestCase):
 
 
 class TestRecordTypes:
-    def test_basic_recordtypes(self, tmpdir):
+    def test_basic_recordtypes(self, generate_in_tmpdir):
         recipe_data = """
             - object: Obj
               fields:
                 RecordType: Bar
               """
-        tmpdir = Path(tmpdir)
-        db = tmpdir / "testdb.db"
-        dburl = f"sqlite:///{db}"
-        recipe = tmpdir / "recipe.yml"
-        mapping_file = tmpdir / "mapping.yml"
-        recipe.write_text(recipe_data)
+        with generate_in_tmpdir(recipe_data) as (mapping, db):
+            records = list(db.execute("SELECT * from Obj_rt_mapping"))
+            assert records == [("Bar", "Bar")], records
+            assert mapping["Insert Obj"]["fields"]["RecordTypeId"] == "RecordType"
 
-        generate_data(
-            recipe,
-            generate_cci_mapping_file=mapping_file,
-            dburl=dburl,
-            should_create_cci_record_type_tables=True,
+
+class TestPersonAccounts:
+    def test_basic_person_accounts(self, generate_in_tmpdir):
+        recipe_data = """
+          - plugin: snowfakery.standard_plugins.Salesforce
+          - object: Account
+            fields:
+              FirstName:
+                fake: first_name
+              LastName:
+                fake: last_name
+              PersonContactId:
+                Salesforce.SpecialObject: PersonContact
+          - object: User
+            fields:
+              Username:
+                fake: email
+              ContactId:
+                reference: Account.PersonContactId
+          """
+
+        with generate_in_tmpdir(recipe_data) as (mapping, db):
+            self._standard_validations(mapping, db)
+
+    def _standard_validations(self, mapping, db):
+        records = list(db.execute("SELECT * from PersonContact"))
+        assert records == [(1, "true", "1")], records
+        assert mapping["Insert PersonContact"] == {
+            "fields": {"IsPersonAccount": "IsPersonAccount"},
+            "lookups": {"AccountId": {"key_field": "AccountId", "table": "Account"}},
+            "sf_object": "Contact",
+            "table": "PersonContact",
+        }
+        insert_order = tuple(mapping.keys())
+        # important that Accounts be inserted before Users.
+        assert insert_order.index("Insert Account") < insert_order.index("Insert User")
+
+    def test_wrong_special_object(self):
+        recipe_data = """
+          - plugin: snowfakery.standard_plugins.Salesforce
+          - object: Account
+            fields:
+              Foo:
+                Salesforce.SpecialObject: Bar
+          """
+        with pytest.raises(exc.DataGenError, match="Bar"):
+            generate(StringIO(recipe_data), {}, None)
+
+    def test_person_account_sample(self, generate_in_tmpdir):
+        pa_sample = (
+            Path(__file__).parent.parent
+            / "examples/salesforce/person-accounts-plugin.recipe.yml"
+        ).read_text()
+
+        # replace a filename with an abspath
+        csv = Path("examples/salesforce/temp_profiles_fallback.csv").resolve()
+        pa_sample = pa_sample.replace(
+            "../../temp/temp_profiles.csv",
+            str(csv),
         )
-        mapping = yaml.safe_load(mapping_file.read_text())
-        e = create_engine(dburl)
-        records = list(e.execute("SELECT * from Obj_rt_mapping"))
-        assert records == [("Bar", "Bar")], records
-        assert mapping["Insert Obj"]["fields"]["RecordTypeId"] == "RecordType"
+        with generate_in_tmpdir(pa_sample) as (mapping, db):
+            self._standard_validations(mapping, db)
+
+    def test_person_accounts_with_nicknme(self, generate_in_tmpdir):
+        recipe_data = """
+          - plugin: snowfakery.standard_plugins.Salesforce
+          - object: Account
+            fields:
+              FirstName:
+                fake: first_name
+              LastName:
+                fake: last_name
+              PersonContactId:
+                Salesforce.SpecialObject:
+                  name: PersonContact
+                  nickname: PCPC
+          - object: User
+            fields:
+              Username:
+                fake: email
+              ContactId:
+                reference: PCPC
+          """
+
+        with generate_in_tmpdir(recipe_data) as (mapping, db):
+            self._standard_validations(mapping, db)

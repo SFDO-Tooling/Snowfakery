@@ -5,3 +5,4 @@ PyYAML==5.4.1
 click==7.1.2
 python-dateutil==2.8.1
 gvgen==1.0
+sortedcontainers==2.3.0

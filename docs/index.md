@@ -1308,20 +1308,13 @@ And here's how to use the "hidden fields"([#hidden-fields-and-objects]) feature:
 
 ## Plugins and Providers
 
-Plugins and Providers allow Snowfakery to be extended with Python code. A plugin adds new functions to Snowfakery. A Provider adds new capabilities to the Fakery library which is exposed to Snowfakery users through the fake: keyword.
+Plugins and Providers allow Snowfakery to be extended with Python code. A plugin adds new functions to Snowfakery. A Provider adds new capabilities to the Faker library which is exposed to Snowfakery users through the fake: keyword.
 
 You include either Plugins or Providers in a Snowfakery file like this:
 
 ```yaml
 - plugin: package.module.classname
 ```
-
-Snowfakery will look for the plugin or provider in these places:
-
-- the [Python path](https://docs.python.org/3/library/sys.html#sys.path),
-- in a `plugins` directory in the same directory as the recipe,
-- in a `plugins` directory below the current working directory and
-- in a subdirectory of the user's home directory called `.snowfakery/plugins`.
 
 ### Built-in Plugins
 
@@ -1525,7 +1518,132 @@ recipe once. It could, however, save you time if you  were running
 the Snowfakery recipe over and over, because the shuffling would
 happen just once.
 
+### Salesforce Plugin
+
+There are several features planned for the Salesforce Plugin, but
+the first is support for Person Accounts.
+
+#### Creating and Referencing Person Accounts
+
+You can use Person Accounts like this:
+
+```yaml
+- plugin: snowfakery.standard_plugins.Salesforce
+- object: Account
+  fields:
+    FirstName:
+      fake: first_name
+    LastName:
+      fake: last_name
+    PersonMailingStreet:
+      fake: street_address
+    PersonMailingCity:
+      fake: city
+    PersonContactId:
+      Salesforce.SpecialObject: PersonContact
+```
+
+This will generate a placeholder object in your recipe which can
+be referred to by other templates like so:
+
+```yaml
+- object: User
+  fields:
+    Username:
+      fake: email
+    ...
+    ContactId:
+      reference: Account.PersonContactId
+```
+
+CumulusCI will fix up the references during data load. If you run into
+errors, please verify that the Account object is being loaded before
+the others that refer to the PersonContactId. If not, you may need to
+write a CumulusCI mapping file to ensure that it does.
+
+The `Salesforce.SpecialObject` function cannot currently be used for any other
+SObject or in any other context. It must always generate a `PersonContact`
+in the `PersonContactId` field.
+
+There is also an alternate syntax which allows nicknaming:
+
+```yaml
+...
+- object: Account
+  fields:
+    PersonContactId:
+      Salesforce.SpecialObject:
+        name: PersonContact
+        nickname: PCPC
+- object: User
+  fields:
+    ContactId:
+      reference: PCPC
+```
+
+
+
 ### Custom Plugins
+
+#### How Snowfakery Finds Plugins
+
+The basic format is:
+
+```yaml
+- plugin: package.module.classname
+```
+
+Which is equivalent to the Python:
+
+```python
+from package.module import classname
+```
+
+IIf the module name and the classname are the same.,
+this can be shortened to:
+
+```yaml
+- plugin: package.classname
+```
+
+In that case, Snowfakery will automatically expand it to 
+
+```python
+from package.classname import classname
+```
+
+Fewer keystrokes are better than more, so plugin providers are
+encouraged to create plugins where the module name and
+class name are the same.
+
+Snowfakery will look for the plugin or provider in these places:
+
+- the [Python path](https://docs.python.org/3/library/sys.html#sys.path),
+- in a `plugins` directory in the same directory as the recipe,
+- in a `plugins` directory below the current working directory and
+- in a subdirectory of the user's home directory called `.snowfakery/plugins`.
+
+So for example, if you had a Snowfakery file like this:
+
+```yaml
+- plugin: salesforce.org.DoGood
+```
+
+named `do_goodders/do_gooder.recipe.yml`
+
+You could make a file named `do_gooders/plugins/salesforce/org/DoGood.py`
+
+And that file would contain a class like this:
+
+```python
+from snowfakery.plugins import SnowfakeryPlugin
+
+class DoGood(SnowfakeryPlugin):
+    """Plugin which generates a summataion helper"""
+    ...
+```
+
+#### Writing Plugins
 
 To write a new Plugin, make a class that inherits from `SnowfakeryPlugin` and implements either the `custom_functions()` method or a `Functions` nested class. The nested class is simple: each method represents a function to expose in the namespace. In this case the function name would be `DoublingPlugin.double`.
 
@@ -1738,6 +1856,8 @@ There are several examples [in the Snowfakery repository](https://github.com/SFD
 
 To specify a record type for a record, just put the Record Type’s API Name in a field named RecordType.
 
+Person Account support is provided the [Salesforce Plugin](#salesforce-plugin).
+
 The process of actually generating the data into a Salesforce
 org happens through CumulusCI as described below.
 
@@ -1751,7 +1871,7 @@ creates Snowfakery.
 The easiest way to learn about CumulusCI (and to learn how to
 install it) is with its [Trailhead Trail](https://trailhead.salesforce.com/en/content/learn/trails/build-applications-with-cumulusci).
 
-CumulusCI's documentation [describes](https://cumulusci.readthedocs.io/en/latest/cookbook.html#large-volume-data-synthesis-with-snowfakery)
+CumulusCI's documentation [describes](https://cumulusci.readthedocs.io/en/latest/data.html?highlight=snowfakery#generate-fake-data)
 how to use it with Snowfakery. Here is a short example:
 
 ```s
