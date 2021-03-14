@@ -13,6 +13,10 @@ from snowfakery.output_streams import (
 )
 from snowfakery.data_gen_exceptions import DataGenError
 from snowfakery.data_generator import generate, StoppingCriteria
+from snowfakery.cci_mapping_files.declaration_parser import (
+    SObjectRuleDeclarationFile,
+    unify,
+)
 
 import sys
 from pathlib import Path
@@ -131,6 +135,11 @@ def int_string_tuple(ctx, param, value=None):
     type=click.File("r"),
     help="Continue generating a dataset where 'continuation-file' left off",
 )
+@click.option(
+    "--load-declarations",
+    type=click.File("r"),
+    help="Declarations to mix into the generated mapping file",
+)
 @click.version_option(version=version, prog_name="snowfakery")
 def generate_cli(
     yaml_file,
@@ -146,6 +155,7 @@ def generate_cli(
     continuation_file=None,
     generate_continuation_file=None,
     should_create_cci_record_type_tables=False,
+    load_declarations=None,
 ):
     """
         Generates records from a YAML file
@@ -197,8 +207,16 @@ def generate_cli(
                 )
                 sys.stderr.write(debuginfo)
             if generate_cci_mapping_file:
+                if load_declarations:
+                    declarations = yaml.safe_load(load_declarations)
+                    declarations = SObjectRuleDeclarationFile.parse_from_yaml(
+                        declarations
+                    )
+                    unified_declarations = unify(declarations)
+                else:
+                    unified_declarations = {}
                 yaml.safe_dump(
-                    mapping_from_recipe_templates(summary),
+                    mapping_from_recipe_templates(summary, unified_declarations),
                     generate_cci_mapping_file,
                     sort_keys=False,
                 )

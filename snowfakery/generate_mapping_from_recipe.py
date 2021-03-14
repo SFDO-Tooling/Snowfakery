@@ -1,20 +1,41 @@
-from copy import deepcopy
+import typing as T
 from warnings import warn
+from collections import defaultdict
+
 
 from snowfakery.data_generator import ExecutionSummary
 from snowfakery.salesforce import find_record_type_column
+from snowfakery.data_generator_runtime import Dependency
+
+from .cci_mapping_files.declaration_parser import SObjectRuleDeclaration
+from .cci_mapping_files.post_processes import add_after_statements
 
 
-def mapping_from_recipe_templates(summary: ExecutionSummary):
+def mapping_from_recipe_templates(
+    summary: ExecutionSummary,
+    declarations: T.Mapping[str, SObjectRuleDeclaration] = None,
+):
     """Use the outputs of the recipe YAML and convert to Mapping.yml format"""
-    dependencies, reference_fields = build_dependencies(summary.intertable_dependencies)
+    declarations = declarations or {}
+    relevant_declarations = [decl for decl in declarations.values() if decl.load_after]
+
+    inferred_dependencies, declared_dependencies, reference_fields = build_dependencies(
+        summary.intertable_dependencies, relevant_declarations
+    )
     tables = summary.tables.copy()
-    table_order = sort_dependencies(dependencies, tables)
-    mappings = mappings_from_sorted_tables(tables, table_order, reference_fields)
+    table_order = sort_dependencies(
+        inferred_dependencies, declared_dependencies, tables
+    )
+    mappings = mappings_from_sorted_tables(
+        tables, table_order, reference_fields, declarations
+    )
     return mappings
 
 
-def build_dependencies(intertable_dependencies):
+def build_dependencies(
+    intertable_dependencies,
+    declarations: T.Sequence[SObjectRuleDeclaration] = None,
+):
     """Figure out which tables depend on which other ones (through foreign keys)
 
     intertable_dependencies is a dict with values of Dependency objects.
@@ -23,13 +44,23 @@ def build_dependencies(intertable_dependencies):
         1. a dictionary allowing easy lookup of dependencies by parent table
         2. a dictionary allowing lookups by (tablename, fieldname) pairs
     """
-    dependencies = {}
+    inferred_dependencies = defaultdict(set)
+    declared_dependencies = defaultdict(set)
     reference_fields = {}
+    declarations = declarations or ()
+
     for dep in intertable_dependencies:
-        table_deps = dependencies.setdefault(dep.table_name_from, set())
+        table_deps = inferred_dependencies[dep.table_name_from]
         table_deps.add(dep)
         reference_fields[(dep.table_name_from, dep.field_name)] = dep.table_name_to
-    return dependencies, reference_fields
+    for decl in declarations:
+        assert isinstance(decl.load_after, list)
+        for target in decl.load_after:
+            declared_dependencies[decl.sf_object].add(
+                Dependency(decl.sf_object, target, "(none)")
+            )
+
+    return inferred_dependencies, declared_dependencies, reference_fields
 
 
 def _table_is_free(table_name, dependencies, sorted_tables):
@@ -38,7 +69,7 @@ def _table_is_free(table_name, dependencies, sorted_tables):
     Look at the unit test test_table_is_free_simple to see some
     usage examples.
     """
-    tables_this_table_depends_upon = dependencies.get(table_name, {})
+    tables_this_table_depends_upon = dependencies.get(table_name, {}).copy()
     for dependency in sorted(tables_this_table_depends_upon):
         if dependency.table_name_to in sorted_tables:
             tables_this_table_depends_upon.remove(dependency)
@@ -46,9 +77,9 @@ def _table_is_free(table_name, dependencies, sorted_tables):
     return len(tables_this_table_depends_upon) == 0
 
 
-def sort_dependencies(dependencies, tables):
+def sort_dependencies(inferred_dependencies, declared_dependencies, tables):
     """"Sort the dependencies to output tables in the right order."""
-    dependencies = deepcopy(dependencies)
+    dependencies = {**inferred_dependencies, **declared_dependencies}
     sorted_tables = []
 
     while tables:
@@ -62,12 +93,24 @@ def sort_dependencies(dependencies, tables):
         tables = [table for table in tables if table not in sorted_tables]
         if len(tables) == remaining:
             warn(f"Circular references: {tables}. Load mapping may fail!")
-            sorted_tables.append(tables[0])
+
+            # this is a bit tricky.
+            # run the algorithm with ONLY the declared
+            # dependencies and see if it comes to resolution
+            if inferred_dependencies and declared_dependencies:
+                subset = sort_dependencies({}, declared_dependencies, tables.copy())
+                sorted_tables.extend(subset)
+            else:
+                sorted_tables.append(tables[0])
+
     return sorted_tables
 
 
 def mappings_from_sorted_tables(
-    tables: dict, table_order: list, reference_fields: dict
+    tables: dict,
+    table_order: list,
+    reference_fields: dict,
+    declarations: T.Mapping[str, SObjectRuleDeclaration],
 ):
     """Generate mapping.yml data structures. """
     mappings = {}
@@ -97,6 +140,11 @@ def mappings_from_sorted_tables(
         if lookups:
             mapping["lookups"] = lookups
 
+        sobject_declarations = declarations.get(table_name)
+        if sobject_declarations:
+            mapping.update(sobject_declarations.as_mapping())
+
         mappings[f"Insert {table_name}"] = mapping
 
+    add_after_statements(mappings)
     return mappings

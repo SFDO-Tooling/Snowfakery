@@ -195,8 +195,11 @@ class TestBuildDependencies(unittest.TestCase):
             Dependency("child", "grandchild", "daughter"),
         ]
         deps = parent_deps + child_deps
-        dependencies, reference_fields = build_dependencies(deps)
-        assert dependencies == {"parent": set(parent_deps), "child": set(child_deps)}
+        inferred_dependencies, _, reference_fields = build_dependencies(deps)
+        assert inferred_dependencies == {
+            "parent": set(parent_deps),
+            "child": set(child_deps),
+        }
         assert reference_fields == {
             ("parent", "daughter"): "child",
             ("parent", "son"): "child",
