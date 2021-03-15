@@ -1639,7 +1639,7 @@ And that file would contain a class like this:
 from snowfakery.plugins import SnowfakeryPlugin
 
 class DoGood(SnowfakeryPlugin):
-    """Plugin which generates a summataion helper"""
+    """Plugin which generates a summation helper"""
     ...
 ```
 
