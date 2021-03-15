@@ -1599,7 +1599,7 @@ Which is equivalent to the Python:
 from package.module import classname
 ```
 
-IIf the module name and the classname are the same.,
+If the module name and the classname are the same,
 this can be shortened to:
 
 ```yaml
