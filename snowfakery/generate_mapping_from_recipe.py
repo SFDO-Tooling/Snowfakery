@@ -1,10 +1,9 @@
 from copy import deepcopy
 from warnings import warn
 
-from sortedcontainers import SortedSet
-
 from snowfakery.data_generator import ExecutionSummary
 from snowfakery.salesforce import find_record_type_column
+from snowfakery.utils.collections import OrderedSet
 
 
 def mapping_from_recipe_templates(summary: ExecutionSummary):
@@ -43,7 +42,7 @@ def build_dependencies(intertable_dependencies):
     dependencies = {}
     reference_fields = {}
     for dep in intertable_dependencies:
-        table_deps = dependencies.setdefault(dep.table_name_from, SortedSet())
+        table_deps = dependencies.setdefault(dep.table_name_from, OrderedSet())
         table_deps.add(dep)
         reference_fields[(dep.table_name_from, dep.field_name)] = dep.table_name_to
     return dependencies, reference_fields

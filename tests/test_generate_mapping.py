@@ -12,6 +12,7 @@ from snowfakery.generate_mapping_from_recipe import (
 )
 from snowfakery.data_generator_runtime import Dependency
 from snowfakery import data_gen_exceptions as exc
+from snowfakery.utils.collections import OrderedSet
 
 
 class TestGenerateMapping:
@@ -194,7 +195,14 @@ class TestBuildDependencies(unittest.TestCase):
         ]
         deps = parent_deps + child_deps
         dependencies, reference_fields = build_dependencies(deps)
-        assert dependencies == {"parent": set(parent_deps), "child": set(child_deps)}
+        from pprint import pprint
+
+        pprint(dependencies)
+        pprint({"parent": OrderedSet(parent_deps), "child": OrderedSet(child_deps)})
+        assert dependencies == {
+            "parent": OrderedSet(parent_deps),
+            "child": OrderedSet(child_deps),
+        }
         assert reference_fields == {
             ("parent", "daughter"): "child",
             ("parent", "son"): "child",
