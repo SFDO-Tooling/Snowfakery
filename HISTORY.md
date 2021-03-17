@@ -4,10 +4,15 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 1.7
+
+Adds support for Salesforce Person Accounts to Snowfakery.
+See the documentation for details. (#283)
+
 ## Snowfakery 1.6.1
 
 Fix regression: Can set RecordType on objects with names that
-are SQL keywords (like Case).
+are SQL keywords (like Case).  (#277)
 
 ## Snowfakery 1.6
 

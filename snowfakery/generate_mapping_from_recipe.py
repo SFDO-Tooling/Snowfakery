@@ -3,15 +3,31 @@ from warnings import warn
 
 from snowfakery.data_generator import ExecutionSummary
 from snowfakery.salesforce import find_record_type_column
+from snowfakery.utils.collections import OrderedSet
 
 
 def mapping_from_recipe_templates(summary: ExecutionSummary):
     """Use the outputs of the recipe YAML and convert to Mapping.yml format"""
     dependencies, reference_fields = build_dependencies(summary.intertable_dependencies)
     tables = summary.tables.copy()
+    remove_person_contact_id(dependencies, tables)
     table_order = sort_dependencies(dependencies, tables)
     mappings = mappings_from_sorted_tables(tables, table_order, reference_fields)
     return mappings
+
+
+def remove_person_contact_id(dependencies, tables):
+    if "Account" in dependencies:
+        dep_to_person_contact = [
+            dep
+            for dep in dependencies["Account"]
+            if dep.table_name_to.lower() == "personcontact"
+        ]
+        for dep in dep_to_person_contact:
+            dependencies["Account"].remove(dep)
+
+    if tables.get("Account") and tables["Account"].fields.get("PersonContactId"):
+        del tables["Account"].fields["PersonContactId"]
 
 
 def build_dependencies(intertable_dependencies):
@@ -26,7 +42,7 @@ def build_dependencies(intertable_dependencies):
     dependencies = {}
     reference_fields = {}
     for dep in intertable_dependencies:
-        table_deps = dependencies.setdefault(dep.table_name_from, set())
+        table_deps = dependencies.setdefault(dep.table_name_from, OrderedSet())
         table_deps.add(dep)
         reference_fields[(dep.table_name_from, dep.field_name)] = dep.table_name_to
     return dependencies, reference_fields
@@ -92,8 +108,11 @@ def mappings_from_sorted_tables(
             for fieldname, fielddef in table.fields.items()
             if (table_name, fieldname) in reference_fields.keys()
         }
-
-        mapping = {"sf_object": table.name, "table": table.name, "fields": fields}
+        if table_name == "PersonContact":
+            sf_object = "Contact"
+        else:
+            sf_object = table.name
+        mapping = {"sf_object": sf_object, "table": table.name, "fields": fields}
         if lookups:
             mapping["lookups"] = lookups
 
