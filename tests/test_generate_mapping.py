@@ -274,6 +274,20 @@ class TestRecordTypes:
             assert records == [("Bar", "Bar")], records
             assert mapping["Insert Case"]["fields"]["RecordTypeId"] == "recordtype"
 
+    def test_incomplete_record_types(self, tmpdir, generate_in_tmpdir):
+        recipe_data = """
+            - object: Case
+              fields:
+                recordtype: Bar
+            - object: Case
+              fields:
+                blah: Blah
+              """
+        with generate_in_tmpdir(recipe_data) as (mapping, db):
+            records = list(db.execute("SELECT * from Case_rt_mapping"))
+            assert records == [("Bar", "Bar")], records
+            assert mapping["Insert Case"]["fields"]["RecordTypeId"] == "recordtype"
+
 
 class TestPersonAccounts:
     def test_basic_person_accounts(self, generate_in_tmpdir):
