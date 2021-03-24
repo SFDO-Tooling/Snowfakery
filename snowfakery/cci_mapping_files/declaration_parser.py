@@ -6,17 +6,47 @@ from collections import defaultdict
 from pydantic import BaseModel, validator, Extra
 
 
+class AtomicDecl(T.NamedTuple):
+    """A single object/key/value declaration
+
+    Might be extracted from a larger declaration set.
+
+    e.g.
+
+    - sf_object: foo
+      a: b
+      c: d
+
+    Implies:
+    AtomicDecl("foo", "a", "b", ...)
+    AtomicDecl("foo", "c", "d", ...)
+    """
+
+    sf_object: str
+    key: str
+    value: T.Union[T.List, str]
+    priority: int
+    merge_rule: T.Callable  # what to do if two declarations for same val
+
+
 class MergeRules:
+    """Namespace for merge rules.
+
+    Merge rules say what to do if there are two rules
+    that apply to the same sobject with the same key."""
+
     @staticmethod
     def use_highest_priority(
-        new_decl: T.Optional["AtomicDecl"], existing_decl: T.Optional["AtomicDecl"]
+        new_decl: T.Optional[AtomicDecl], existing_decl: T.Optional[AtomicDecl]
     ):
+        """The Highlander strategy. There can be only one."""
         if existing_decl:
             return max(existing_decl, new_decl, key=lambda decl: decl.priority)
         return new_decl
 
     @staticmethod
-    def append(new_decl: "AtomicDecl", existing_decl: T.Optional["AtomicDecl"]):
+    def append(new_decl: AtomicDecl, existing_decl: T.Optional[AtomicDecl]):
+        """The collaborative strategy. Let's work together."""
         if existing_decl:
             existing_decl.value.append(new_decl.value)
             return existing_decl
@@ -24,14 +54,6 @@ class MergeRules:
             d = new_decl
             # start to build a list-based declaration
             return AtomicDecl(d.sf_object, d.key, [d.value], d.priority, d.merge_rule)
-
-
-class AtomicDecl(T.NamedTuple):
-    sf_object: str
-    key: str
-    value: T.Union[T.List, str]
-    priority: int
-    merge_rule: T.Callable
 
 
 class SObjectRuleDeclaration(BaseModel):
