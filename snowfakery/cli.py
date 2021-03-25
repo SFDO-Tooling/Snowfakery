@@ -143,6 +143,7 @@ def int_string_tuple(ctx, param, value=None):
     "--load-declarations",
     type=click.Path(exists=True, readable=True, dir_okay=False),
     help="Declarations to mix into the generated mapping file",
+    multiple=True,
 )
 @click.version_option(version=version, prog_name="snowfakery")
 def generate_cli(
@@ -211,20 +212,9 @@ def generate_cli(
                 )
                 sys.stderr.write(debuginfo)
             if generate_cci_mapping_file:
-                if not load_declarations:
-                    inferred_load_file_path = infer_load_file_path(yaml_file)
-                    if inferred_load_file_path.is_file():
-                        load_declarations = inferred_load_file_path
-
-                if load_declarations:
-                    declarations = SObjectRuleDeclarationFile.parse_from_yaml(
-                        Path(load_declarations)
-                    )
-                    unified_declarations = unify(declarations)
-                else:
-                    unified_declarations = {}
+                declarations = gather_declarations(yaml_file, load_declarations)
                 yaml.safe_dump(
-                    mapping_from_recipe_templates(summary, unified_declarations),
+                    mapping_from_recipe_templates(summary, declarations),
                     generate_cci_mapping_file,
                     sort_keys=False,
                 )
@@ -359,6 +349,25 @@ def infer_load_file_path(yaml_file: T.Union[str, Path]):
         return Path(yaml_file.replace(suffixes, ".load.yml"))
     else:
         return Path("")
+
+
+def gather_declarations(yaml_file, load_declarations):
+    if not load_declarations:
+        inferred_load_file_path = infer_load_file_path(yaml_file)
+        if inferred_load_file_path.is_file():
+            load_declarations = [inferred_load_file_path]
+
+    if load_declarations:
+        declarations = []
+        for declfile in load_declarations:
+            declarations.extend(
+                SObjectRuleDeclarationFile.parse_from_yaml(Path(declfile))
+            )
+
+        unified_declarations = unify(declarations)
+    else:
+        unified_declarations = {}
+    return unified_declarations
 
 
 def main():

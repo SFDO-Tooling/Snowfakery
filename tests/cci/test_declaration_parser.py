@@ -76,7 +76,7 @@ class TestDeclarationParser:
 
     def test_cli__explicit_file(self, tmpdir):
         sample_yaml = Path(__file__).parent / "mapping_mixins.recipe.yml"
-        load_yaml = Path(__file__).parent / "mapping_mixins.reverse.load.yml"
+        load_yaml = Path(__file__).parent / "mapping_mixins-reverse.load.yml"
         mapping_yaml = Path(tmpdir) / "mapping.yml"
         generate_cli.main(
             [
@@ -111,3 +111,30 @@ class TestDeclarationParser:
         assert list(map_data.keys()) == [
             "Insert foo",
         ]
+
+    def test_cli__multiple_files(self, tmpdir):
+        sample_yaml = Path(__file__).parent / "mapping_mixins.recipe.yml"
+        load_yaml = Path(__file__).parent / "mapping_mixins.load.yml"
+        override_yaml = Path(__file__).parent / "mapping_mixins-override.load.yml"
+        mapping_yaml = Path(tmpdir) / "mapping.yml"
+        generate_cli.main(
+            [
+                str(sample_yaml),
+                "--generate-cci-mapping-file",
+                str(mapping_yaml),
+                "--load-declarations",
+                str(load_yaml),
+                "--load-declarations",
+                str(override_yaml),
+            ],
+            standalone_mode=False,
+        )
+        map_data = yaml.safe_load(mapping_yaml.read_text())
+        assert list(map_data.keys()) == [
+            "Insert Account",
+            "Insert Contact",
+            "Insert Opportunity",
+        ]
+        assert map_data["Insert Account"]["api"] == "rest"
+        assert map_data["Insert Contact"]["api"] == "rest"
+        assert map_data["Insert Opportunity"]["api"] == "bulk"
