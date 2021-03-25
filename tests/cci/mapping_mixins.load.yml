@@ -1,0 +1,8 @@
+- sf_object: Opportunity
+  load_after: Contact
+
+- sf_object: Contact
+  load_after: Account
+
+- sf_object: Account
+  api: smart

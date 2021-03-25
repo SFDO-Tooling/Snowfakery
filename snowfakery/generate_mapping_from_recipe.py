@@ -1,5 +1,4 @@
 import typing as T
-from warnings import warn
 from collections import defaultdict
 
 
@@ -92,7 +91,6 @@ def sort_dependencies(inferred_dependencies, declared_dependencies, tables):
         sorted_tables.extend(leaf_tables)
         tables = [table for table in tables if table not in sorted_tables]
         if len(tables) == remaining:
-            warn(f"Circular references: {tables}. Load mapping may fail!")
 
             # this is a bit tricky.
             # run the algorithm with ONLY the declared
@@ -101,7 +99,7 @@ def sort_dependencies(inferred_dependencies, declared_dependencies, tables):
                 subset = sort_dependencies({}, declared_dependencies, tables.copy())
                 sorted_tables.extend(subset)
             else:
-                sorted_tables.append(tables[0])
+                sorted_tables.append(sorted(tables)[0])
 
     return sorted_tables
 

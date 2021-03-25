@@ -1,8 +1,12 @@
+from pathlib import Path
 import typing as T
-from typing_extensions import Literal
+
 from datetime import date
 from collections import defaultdict
 
+import yaml
+
+from typing_extensions import Literal
 from pydantic import BaseModel, validator, Extra
 
 
@@ -100,8 +104,14 @@ class SObjectRuleDeclarationFile(BaseModel):
     __root__: T.List[SObjectRuleDeclaration]
 
     @classmethod
-    def parse_from_yaml(cls, data: T.List):
-        "Parse from a path, url, path-like or file-like"
+    def parse_from_yaml(cls, f: T.Union[Path, T.TextIO]):
+        "Parse from a file-like or Path"
+        if isinstance(f, Path):
+            with open(f) as fd:
+                data = yaml.safe_load(fd)
+        else:
+            data = yaml.safe_load(f)
+
         return cls.parse_obj(data).__root__
 
 

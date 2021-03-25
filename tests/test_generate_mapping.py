@@ -3,7 +3,6 @@ from io import StringIO
 from pathlib import Path
 import yaml
 
-import pytest
 from sqlalchemy import create_engine
 
 from snowfakery.data_generator import generate
@@ -107,8 +106,9 @@ class TestGenerateMapping:
                   - object: A
               """
         summary = generate(StringIO(yaml), {}, None)
-        with pytest.warns(UserWarning, match="Circular"):
-            mapping_from_recipe_templates(summary)
+        mapping = mapping_from_recipe_templates(summary)
+        assert list(mapping.keys()) == ["Insert A", "Insert B"]
+        assert mapping["Insert A"]["lookups"]["B"]["after"] == "Insert B"
 
     def test_cats_and_dogs(self):
         yaml = """
@@ -167,8 +167,9 @@ class TestGenerateMapping:
             reference: Person
 """
         summary = generate(StringIO(yaml), {}, None)
-        with pytest.warns(UserWarning, match="Circular"):
-            mapping_from_recipe_templates(summary)
+        mapping = mapping_from_recipe_templates(summary)
+        assert list(mapping.keys()) == ["Insert Animal", "Insert Person"]
+        assert mapping["Insert Animal"]["lookups"]["owner"]["after"] == "Insert Person"
 
     def test_random_reference_lookups(self):
         yaml = """

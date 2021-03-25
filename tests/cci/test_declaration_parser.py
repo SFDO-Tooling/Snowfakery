@@ -1,7 +1,12 @@
+from pathlib import Path
+
 from snowfakery.cci_mapping_files.declaration_parser import (
     SObjectRuleDeclaration,
     unify,
 )
+from snowfakery.cli import generate_cli
+
+import yaml
 
 declarations = [
     SObjectRuleDeclaration(sf_object="foo", priority="low", api="rest"),
@@ -53,3 +58,56 @@ class TestDeclarationParser:
         unification = unify(declarations)
         assert set(unification["foo"].load_after) == set(["A", "B", "C"])
         assert set(unification["bar"].load_after) == set(["A", "D", "E"])
+
+    def test_cli__infers_load_file(self, tmpdir):
+        sample_yaml = Path(__file__).parent / "mapping_mixins.recipe.yml"
+        mapping_yaml = Path(tmpdir) / "mapping.yml"
+        generate_cli.main(
+            [str(sample_yaml), "--generate-cci-mapping-file", str(mapping_yaml)],
+            standalone_mode=False,
+        )
+        map_data = yaml.safe_load(mapping_yaml.read_text())
+        assert list(map_data.keys()) == [
+            "Insert Account",
+            "Insert Contact",
+            "Insert Opportunity",
+        ]
+        assert map_data["Insert Account"]["api"] == "smart"
+
+    def test_cli__explicit_file(self, tmpdir):
+        sample_yaml = Path(__file__).parent / "mapping_mixins.recipe.yml"
+        load_yaml = Path(__file__).parent / "mapping_mixins.reverse.load.yml"
+        mapping_yaml = Path(tmpdir) / "mapping.yml"
+        generate_cli.main(
+            [
+                str(sample_yaml),
+                "--generate-cci-mapping-file",
+                str(mapping_yaml),
+                "--load-declarations",
+                str(load_yaml),
+            ],
+            standalone_mode=False,
+        )
+        map_data = yaml.safe_load(mapping_yaml.read_text())
+        assert list(map_data.keys()) == [
+            "Insert Contact",
+            "Insert Opportunity",
+            "Insert Account",
+        ]
+        assert map_data["Insert Opportunity"]["bulk_mode"] == "serial"
+
+    def test_cli__file_no_dots(self, tmpdir):
+        sample_yaml = Path(__file__).parent / "no_extension_filename"
+        mapping_yaml = Path(tmpdir) / "mapping.yml"
+        generate_cli.main(
+            [
+                str(sample_yaml),
+                "--generate-cci-mapping-file",
+                str(mapping_yaml),
+            ],
+            standalone_mode=False,
+        )
+        map_data = yaml.safe_load(mapping_yaml.read_text())
+        assert list(map_data.keys()) == [
+            "Insert foo",
+        ]

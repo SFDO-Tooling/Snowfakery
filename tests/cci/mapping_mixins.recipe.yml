@@ -1,0 +1,14 @@
+- object: Account
+  fields:
+    Name:
+      fake: sentence
+- object: Contact
+  fields:
+    FirstName:
+      fake: first_name
+    LastName:
+      fake: last_name
+- object: Opportunity
+  fields:
+    Name:
+      fake: sentence
