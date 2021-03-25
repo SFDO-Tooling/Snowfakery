@@ -22,6 +22,7 @@ def mapping_from_recipe_templates(
         summary.intertable_dependencies, relevant_declarations
     )
     tables = summary.tables.copy()
+    remove_person_contact_id(inferred_dependencies, tables)
     table_order = sort_dependencies(
         inferred_dependencies, declared_dependencies, tables
     )
@@ -29,6 +30,20 @@ def mapping_from_recipe_templates(
         tables, table_order, reference_fields, declarations
     )
     return mappings
+
+
+def remove_person_contact_id(dependencies, tables):
+    if "Account" in dependencies:
+        dep_to_person_contact = [
+            dep
+            for dep in dependencies["Account"]
+            if dep.table_name_to.lower() == "personcontact"
+        ]
+        for dep in dep_to_person_contact:
+            dependencies["Account"].remove(dep)
+
+    if tables.get("Account") and tables["Account"].fields.get("PersonContactId"):
+        del tables["Account"].fields["PersonContactId"]
 
 
 def build_dependencies(
@@ -133,8 +148,11 @@ def mappings_from_sorted_tables(
             for fieldname, fielddef in table.fields.items()
             if (table_name, fieldname) in reference_fields.keys()
         }
-
-        mapping = {"sf_object": table.name, "table": table.name, "fields": fields}
+        if table_name == "PersonContact":
+            sf_object = "Contact"
+        else:
+            sf_object = table.name
+        mapping = {"sf_object": sf_object, "table": table.name, "fields": fields}
         if lookups:
             mapping["lookups"] = lookups
 

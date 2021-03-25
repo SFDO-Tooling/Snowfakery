@@ -7,6 +7,9 @@ def add_after_statements(mappings):
     for idx, (mapping_name, mapping) in enumerate(mappings.items()):
         for lookup in mapping.get("lookups", {}).values():
             target_table = lookup["table"]
+            # PersonContacts are not real
+            if target_table == "PersonContact":
+                continue
             target_mapping_index = indexed_by_sobject[target_table]
             if target_mapping_index.first_instance >= idx:
                 if not lookup.get("after"):

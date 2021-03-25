@@ -19,9 +19,10 @@ from .data_generator_runtime_object_model import (
     StructuredValue,
     ReferenceValue,
     Statement,
+    Definition,
 )
 
-from snowfakery.plugins import resolve_plugins, LineTracker
+from snowfakery.plugins import resolve_plugins, LineTracker, ParserMacroPlugin
 import snowfakery.data_gen_exceptions as exc
 
 SHARED_OBJECT = "#SHARED_OBJECT"
@@ -85,6 +86,7 @@ class ParseContext:
         self.line_numbers = {}
         self.options = []
         self.table_infos = {}
+        self.parser_macros_plugins = {}
 
     def line_num(self, obj=None) -> Dict:
         if not obj:
@@ -159,9 +161,7 @@ def parse_structured_value_args(
         return parse_field_value("", args, context, False)
 
 
-def parse_structured_value(
-    name: str, field: Dict, context: ParseContext
-) -> StructuredValue:
+def parse_structured_value(name: str, field: Dict, context: ParseContext) -> Definition:
     """Parse something that might look like:
 
     {'choose': ['Option1', 'Option2', 'Option3', 'Option4'], '__line__': 9}
@@ -180,11 +180,20 @@ def parse_structured_value(
             f"Extra keys for field {name} : {top_level}", **context.line_num(field)
         )
     [[function_name, args]] = top_level
-    args = parse_structured_value_args(args, context)
-    if function_name == "reference":
-        return ReferenceValue(function_name, args, **context.line_num(field))
+    plugin = None
+    if "." in function_name:
+        namespace, name = function_name.split(".")
+        plugin = context.parser_macros_plugins.get(namespace)
+    if plugin:
+        func = getattr(plugin, name)
+        rc = func(context, args)
+        return rc
     else:
-        return StructuredValue(function_name, args, **context.line_num(field))
+        args = parse_structured_value_args(args, context)
+        if function_name == "reference":
+            return ReferenceValue(function_name, args, **context.line_num(field))
+        else:
+            return StructuredValue(function_name, args, **context.line_num(field))
 
 
 def parse_field_value(
@@ -549,6 +558,9 @@ def parse_top_level_elements(path: Path, data: List, context: ParseContext):
         resolve_plugins(plugin_specs, search_paths=[plugin_near_recipe])
     )
     statements.extend(top_level_objects["statement"])
+    for pluginbase, plugin in context.plugins:
+        if pluginbase == ParserMacroPlugin:
+            context.parser_macros_plugins[plugin.__name__] = plugin()
     return statements
 
 

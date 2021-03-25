@@ -352,10 +352,6 @@ def stopping_criteria_from_target_number(target_number):
     return None
 
 
-from pysnooper import snoop
-
-
-@snoop()
 def infer_load_file_path(yaml_file: T.Union[str, Path]):
     yaml_file = str(yaml_file)
     suffixes = "".join(Path(yaml_file).suffixes)
