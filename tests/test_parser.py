@@ -3,8 +3,6 @@ import unittest
 
 from datetime import date
 
-import pytest
-
 from snowfakery.parse_recipe_yaml import parse_recipe
 
 
@@ -34,11 +32,3 @@ class TestParseGenerator(unittest.TestCase):
         assert obj_template.fields[0].definition.kwargs["end_date"].definition == date(
             year=2000, month=1, day=1
         )
-
-    def test_parser__no_dots_in_names__error(self):
-        yamlstr = """
-        - object: Foo
-          nickname: Foo.bar
-        """
-        with pytest.warns(UserWarning, match="Foo.bar.*nickname.*"):
-            parse_recipe(StringIO(yamlstr))
