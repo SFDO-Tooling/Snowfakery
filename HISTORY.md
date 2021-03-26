@@ -4,6 +4,58 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 1.7
+
+Adds support for Salesforce Person Accounts to Snowfakery.
+See the documentation for details. (#283)
+
+## Snowfakery 1.6.1
+
+Fix regression: Can set RecordType on objects with names that
+are SQL keywords (like Case).  (#277)
+
+## Snowfakery 1.6
+
+Record types can now be specified with `random_choice`. #273
+
+Plugins are now searched for in relative directories called "plugins"
+as well as a directory under the user's home directory. See the docs
+for more information. #229
+
+Snowfakery can now generate SQL text as an output format. The specific
+schema is compatible with CCI's data loader, but can be used in other
+contexts. #162
+
+Add a `snowfakery_filename` variable to allow injecting the
+recipe filename into recipe output.
+#249
+
+Add NULL to Snowfakery formulas #239
+
+Allow references to be indirect and include dots in them.
+Consequently, dots and other punctuation are now disallowed in
+nicknames and discouraged in object/table names. #186
+
+Snowfakery's default branch is now main, so references to
+master should be updated.
+
+## Snowfakery 1.5
+
+Adds a "random_reference" feature to allow randomized
+connections between objects as described in the documentation.
+(PR #184)
+
+Adds a notion of "variables" as described in the documentation. These allow computed values to be easily shared between object templates.
+(PR #231)
+
+Adds a "snowfakery_locale" variable which determines what locale drives fake data creation (person nammes, state/province name etc.)
+(PR #231)
+
+Does not depend upon pygraphviz library which can be difficult to install. One will still generally want to install
+[graphviz](https://graphviz.org/), but not both graphviz AND pygraphviz. (PR #171)
+
+Calls to "fake" are optimized. Recipes that are heavily reliant on faked fields may be 10-15% faster. One tradeoff is that e.g. person names or state names do not follow a real-world statistical distribution. Rare names (in en_US locale) like "Mathias" are now as common as real-world common names like "Matthew". (PR #214)
+
 ## Snowfakery 1.4
 
 Adds Salesforce Example Files.

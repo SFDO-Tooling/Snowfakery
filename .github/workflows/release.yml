@@ -4,16 +4,16 @@ name: Release snowfakery
 on:
   push:
     branches:
-    - master
+      - main
     paths:
-    - snowfakery/version.txt
+      - snowfakery/version.txt
 
 jobs:
   publish-to-pypi:
     name: Publish new release to PyPI
     runs-on: ubuntu-18.04
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
       - name: Set up Python 3.8
         uses: actions/setup-python@v1
         with:

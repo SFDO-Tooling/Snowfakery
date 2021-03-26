@@ -216,7 +216,7 @@ class TestTemplateFuncs:
         yaml = """
         - object : A
           fields:
-            a: <<date("2012-01-01T00:01")>>
+            a: ${{date("2012-01-01T00:01")}}
         """
         generate(StringIO(yaml), {}, None)
         assert str(write_row.mock_calls[0][1][1]["a"]) == "2012-01-01"
@@ -246,7 +246,7 @@ class TestTemplateFuncs:
         yaml = """
         - object : A
           fields:
-            a: <<5 + 3>>
+            a: ${{5 + 3}}
         """
         generate(StringIO(yaml), {}, None)
         assert write_row.mock_calls[0][1][1]["a"] == 8
@@ -284,7 +284,7 @@ class TestTemplateFuncs:
             - object: B
               count: 3
               fields:
-                    num: <<child_index>>
+                    num: ${{child_index}}
         """
         generate(StringIO(yaml), {}, None)
         assert write_row.mock_calls[3][1][1]["num"] == 2
@@ -349,3 +349,59 @@ class TestTemplateFuncs:
         """
         with pytest.raises(DataGenError):
             generate(StringIO(yaml))
+
+    def test_template_context(self, generated_rows):
+        yaml = """
+        - var: V
+          value: ${{snowfakery_filename}}
+        - object: foo
+          fields:
+            filename: ${{template.filename}}
+            filename2: ${{snowfakery_filename}}
+            filename3: ${{V}}
+            template_id: ${{template.id}}
+        """
+        generate(StringIO(yaml))
+        assert generated_rows.table_values("foo", 1, "filename") == "<stream>"
+        assert generated_rows.table_values("foo", 1, "filename2") == "<stream>"
+        assert generated_rows.table_values("foo", 1, "filename3") == "<stream>"
+        assert int(generated_rows.table_values("foo", 1, "template_id"))
+
+    def test_null(self, generated_rows):
+        yaml = """
+        - object: foo
+          count: 5
+          fields:
+            EndDate:
+                if:
+                    - choice:
+                        when: ${{ child_index%2==0 }}
+                        pick: 1
+                    - choice:
+                        pick: NULL
+            DateSupplied:
+                if:
+                    - choice:
+                        when: ${{ EndDate!=NULL }}
+                        pick: "Yes"
+                    - choice:
+                        pick: "No"
+        """
+        generate(StringIO(yaml))
+        call = mock.call
+        assert generated_rows.mock_calls == [
+            call(
+                "foo",
+                {"id": 1, "EndDate": 1, "DateSupplied": "Yes"},
+            ),
+            call("foo", {"id": 2, "EndDate": None, "DateSupplied": "No"}),
+            call(
+                "foo",
+                {"id": 3, "EndDate": 1, "DateSupplied": "Yes"},
+            ),
+            call("foo", {"id": 4, "EndDate": None, "DateSupplied": "No"}),
+            call(
+                "foo",
+                {"id": 5, "EndDate": 1, "DateSupplied": "Yes"},
+            ),
+        ]

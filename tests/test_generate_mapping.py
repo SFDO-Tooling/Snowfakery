@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 from io import StringIO
 
 import pytest
@@ -9,11 +10,12 @@ from snowfakery.generate_mapping_from_recipe import (
     build_dependencies,
     _table_is_free,
 )
-from snowfakery.data_gen_exceptions import DataGenError
 from snowfakery.data_generator_runtime import Dependency
+from snowfakery import data_gen_exceptions as exc
+from snowfakery.utils.collections import OrderedSet
 
 
-class TestGenerateMapping(unittest.TestCase):
+class TestGenerateMapping:
     def test_simple_parent_child_reference(self):
         yaml = """
             - object: Parent
@@ -167,6 +169,19 @@ class TestGenerateMapping(unittest.TestCase):
         with pytest.warns(UserWarning, match="Circular"):
             mapping_from_recipe_templates(summary)
 
+    def test_random_reference_lookups(self):
+        yaml = """
+            - object: Target
+            - object: Ref
+              fields:
+                targ:
+                  random_reference: Target
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert mapping["Insert Ref"]["lookups"]["targ"]["table"] == "Target"
+
 
 class TestBuildDependencies(unittest.TestCase):
     def test_build_dependencies_simple(self):
@@ -180,7 +195,14 @@ class TestBuildDependencies(unittest.TestCase):
         ]
         deps = parent_deps + child_deps
         dependencies, reference_fields = build_dependencies(deps)
-        assert dependencies == {"parent": set(parent_deps), "child": set(child_deps)}
+        from pprint import pprint
+
+        pprint(dependencies)
+        pprint({"parent": OrderedSet(parent_deps), "child": OrderedSet(child_deps)})
+        assert dependencies == {
+            "parent": OrderedSet(parent_deps),
+            "child": OrderedSet(child_deps),
+        }
         assert reference_fields == {
             ("parent", "daughter"): "child",
             ("parent", "son"): "child",
@@ -230,46 +252,111 @@ class TestTableIsFree(unittest.TestCase):
 
 
 class TestRecordTypes:
-    def test_basic_recordtypes(self):
-        yaml = """
+    def test_basic_recordtypes(self, generate_in_tmpdir):
+        recipe_data = """
             - object: Obj
               fields:
                 RecordType: Bar
               """
-        summary = generate(StringIO(yaml), {}, None)
-        mapping = mapping_from_recipe_templates(summary)
+        with generate_in_tmpdir(recipe_data) as (mapping, db):
+            records = list(db.execute("SELECT * from Obj_rt_mapping"))
+            assert records == [("Bar", "Bar")], records
+            assert mapping["Insert Obj"]["fields"]["RecordTypeId"] == "RecordType"
 
-        assert mapping["Insert Bar"]["filters"][0] == "RecordType = 'Bar'"
-        assert mapping["Insert Obj"]["filters"][0] == "RecordType is NULL"
-
-    def test_recordtype_errors_on_wrong_capitalization(self):
-        yaml = """
-            - object: Obj
+    def test_Case_recordtypes(self, tmpdir, generate_in_tmpdir):
+        recipe_data = """
+            - object: Case
               fields:
                 recordtype: Bar
               """
-        summary = generate(StringIO(yaml), {}, None)
-        with pytest.raises(DataGenError):
-            mapping_from_recipe_templates(summary)
+        with generate_in_tmpdir(recipe_data) as (mapping, db):
+            records = list(db.execute("SELECT * from Case_rt_mapping"))
+            assert records == [("Bar", "Bar")], records
+            assert mapping["Insert Case"]["fields"]["RecordTypeId"] == "recordtype"
 
-        yaml = """
-            - object: Obj
-              fields:
-                record_type: Bar
-              """
-        summary = generate(StringIO(yaml), {}, None)
-        with pytest.raises(DataGenError):
-            mapping_from_recipe_templates(summary)
 
-    def test_recordtypes_and_lookups(self):
-        yaml = """
-            - object: Obj
-              fields:
-                RecordType: Bar
-                child:
-                - object: Child
-              """
-        summary = generate(StringIO(yaml), {}, None)
-        mapping = mapping_from_recipe_templates(summary)
+class TestPersonAccounts:
+    def test_basic_person_accounts(self, generate_in_tmpdir):
+        recipe_data = """
+          - plugin: snowfakery.standard_plugins.Salesforce
+          - object: Account
+            fields:
+              FirstName:
+                fake: first_name
+              LastName:
+                fake: last_name
+              PersonContactId:
+                Salesforce.SpecialObject: PersonContact
+          - object: User
+            fields:
+              Username:
+                fake: email
+              ContactId:
+                reference: Account.PersonContactId
+          """
 
-        assert mapping["Insert Bar"]["lookups"]["child"]["key_field"] == "child"
+        with generate_in_tmpdir(recipe_data) as (mapping, db):
+            self._standard_validations(mapping, db)
+
+    def _standard_validations(self, mapping, db):
+        records = list(db.execute("SELECT * from PersonContact"))
+        assert records == [(1, "true", "1")], records
+        assert mapping["Insert PersonContact"] == {
+            "fields": {"IsPersonAccount": "IsPersonAccount"},
+            "lookups": {"AccountId": {"key_field": "AccountId", "table": "Account"}},
+            "sf_object": "Contact",
+            "table": "PersonContact",
+        }
+        insert_order = tuple(mapping.keys())
+        # important that Accounts be inserted before Users.
+        assert insert_order.index("Insert Account") < insert_order.index("Insert User")
+
+    def test_wrong_special_object(self):
+        recipe_data = """
+          - plugin: snowfakery.standard_plugins.Salesforce
+          - object: Account
+            fields:
+              Foo:
+                Salesforce.SpecialObject: Bar
+          """
+        with pytest.raises(exc.DataGenError, match="Bar"):
+            generate(StringIO(recipe_data), {}, None)
+
+    def test_person_account_sample(self, generate_in_tmpdir):
+        pa_sample = (
+            Path(__file__).parent.parent
+            / "examples/salesforce/person-accounts-plugin.recipe.yml"
+        ).read_text()
+
+        # replace a filename with an abspath
+        csv = Path("examples/salesforce/temp_profiles_fallback.csv").resolve()
+        pa_sample = pa_sample.replace(
+            "../../temp/temp_profiles.csv",
+            str(csv),
+        )
+        with generate_in_tmpdir(pa_sample) as (mapping, db):
+            self._standard_validations(mapping, db)
+
+    def test_person_accounts_with_nicknme(self, generate_in_tmpdir):
+        recipe_data = """
+          - plugin: snowfakery.standard_plugins.Salesforce
+          - object: Account
+            fields:
+              FirstName:
+                fake: first_name
+              LastName:
+                fake: last_name
+              PersonContactId:
+                Salesforce.SpecialObject:
+                  name: PersonContact
+                  nickname: PCPC
+          - object: User
+            fields:
+              Username:
+                fake: email
+              ContactId:
+                reference: PCPC
+          """
+
+        with generate_in_tmpdir(recipe_data) as (mapping, db):
+            self._standard_validations(mapping, db)

@@ -75,7 +75,7 @@ Ready to contribute? Here's how to set up Snowfakery for local development.
 7. Push your changes to GitHub and submit a pull request. The base branch should 
 be a new feature branch that we create to receive the changes (contact us to create 
 the branch). This allows us to test the changes using our build system before 
-merging to master.
+merging to main.
 
 Note that we enable typeguard with pytest so if you add type declarations to your 
 code, those declarations will be treated as runtime assertions in your python
@@ -98,7 +98,7 @@ Releasing Snowfakery
 It's easy for maintainers to release a version of Snowfakery to GitHub and PyPI! First, 
 create a new branch for your version::
 
-    $ git checkout -b feature/newversion
+    $ git switch -c feature/snowfakery-<versionnum>
 
 Make the necessary changes to prepare the new release:
 

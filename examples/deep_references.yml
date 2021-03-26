@@ -1,0 +1,18 @@
+- object: cat
+  nickname: Fluffy
+  fields:
+    color: black
+
+- object: fiance
+  nickname: sam
+  fields:
+    pet:
+      reference: Fluffy
+
+- object: betrothed
+  fields:
+    spouse:
+      reference: sam
+    pet:
+      reference: spouse.pet
+    color: ${{pet.color}}

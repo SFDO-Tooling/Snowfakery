@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 from snowfakery.generate_mapping_from_recipe import mapping_from_recipe_templates
+from snowfakery.salesforce import create_cci_record_type_tables
 from snowfakery.output_streams import (
     DebugOutputStream,
-    SqlOutputStream,
+    SqlDbOutputStream,
+    SqlTextOutputStream,
     JSONOutputStream,
     CSVOutputStream,
     ImageOutputStream,
@@ -41,6 +43,7 @@ file_extensions = [
     "json",
     "txt",
     "csv",
+    "sql",
 ] + graphic_file_extensions
 
 
@@ -118,6 +121,12 @@ def int_string_tuple(ctx, param, value=None):
     "multi-batch data generation process",
 )
 @click.option(
+    "--generate-record-type-tables/--no-generate-record-type-tables",
+    "should_create_cci_record_type_tables",
+    default=False,
+    hidden=True,
+)
+@click.option(
     "--continuation-file",
     type=click.File("r"),
     help="Continue generating a dataset where 'continuation-file' left off",
@@ -136,6 +145,7 @@ def generate_cli(
     output_folder=None,
     continuation_file=None,
     generate_continuation_file=None,
+    should_create_cci_record_type_tables=False,
 ):
     """
         Generates records from a YAML file
@@ -199,6 +209,8 @@ def generate_cli(
                 click.echo("")
                 click.echo(e.prefix)
                 raise click.ClickException(str(e)) from e
+    if should_create_cci_record_type_tables:
+        create_cci_record_type_tables(dburls[0])
 
 
 @contextmanager
@@ -215,11 +227,14 @@ def configure_output_stream(
         else:
             mappings = None
 
-        output_streams.append(SqlOutputStream.from_url(dburl, mappings))
+        output_streams.append(SqlDbOutputStream.from_url(dburl, mappings))
 
-    # JSON is the only output format (other than debug) that can go on stdout
+    # JSON and SQL are the only output formats (other than debug) that can go on stdout
     if output_format == "json" and not output_files:
         output_streams.append(JSONOutputStream(sys.stdout))
+
+    if output_format == "sql" and not output_files:
+        output_streams.append(SqlTextOutputStream(sys.stdout))
 
     if output_format == "csv":
         output_streams.append(CSVOutputStream(output_folder))
@@ -232,6 +247,8 @@ def configure_output_stream(
 
             if format == "json":
                 output_streams.append(JSONOutputStream(path))
+            elif format == "sql":
+                output_streams.append(SqlTextOutputStream(path))
             elif format == "txt":
                 output_streams.append(DebugOutputStream(path))
             elif format == "dot":
@@ -253,6 +270,7 @@ def configure_output_stream(
         yield output_stream
     finally:
         for output_stream in output_streams:
+            messages = None
             try:
                 messages = output_stream.close()
             except Exception as e:

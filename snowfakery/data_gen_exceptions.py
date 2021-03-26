@@ -4,7 +4,7 @@ class DataGenError(Exception):
         "use the --debug-internals option."
     )
 
-    def __init__(self, message, filename, line_num):
+    def __init__(self, message, filename=None, line_num=None):
         self.message = message
         self.filename = filename
         self.line_num = line_num
@@ -62,6 +62,6 @@ def fix_exception(message, parentobj, e):
             e.filename = filename
         if not e.line_num:
             e.line_num = line_num
-        raise e
+        return e
     else:
-        raise DataGenError(message, filename, line_num) from e
+        return DataGenError(message, filename, line_num)

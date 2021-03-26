@@ -11,6 +11,7 @@ from snowfakery.data_gen_exceptions import (
     DataGenImportError,
 )
 from snowfakery.output_streams import JSONOutputStream
+from snowfakery import generate_data
 
 
 from unittest import mock
@@ -54,6 +55,8 @@ class WrongTypePlugin(SnowfakeryPlugin):
     class Functions:
         def return_bad_type(self, value):
             return int  # function
+
+        junk = None
 
 
 class MyEvaluator(PluginResult):
@@ -221,7 +224,7 @@ class PluginThatNeedsState(SnowfakeryPlugin):
 
 class TestContextVars:
     @mock.patch(write_row_path)
-    def test_context_vars(self, write_row):
+    def test_plugin_context_vars(self, write_row):
         yaml = """
         - plugin: tests.test_custom_plugins_and_providers.PluginThatNeedsState
         - object: OBJ
@@ -348,3 +351,30 @@ class TestContextVars:
         assert generated_rows.row_values(0, "C1") == "5"
         assert generated_rows.row_values(0, "D") == "5"
         assert generated_rows.row_values(0, "D1") == "5"
+
+    def test_plugin_paths(self, generated_rows):
+        generate_data("tests/test_plugin_paths.yml")
+
+    def test_missing_attributes(self):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.WrongTypePlugin  # 2
+        - object: B                             #3
+          fields:                               #4
+            foo:                                #5
+                WrongTypePlugin.abcdef: 5  #6
+        """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert 6 > e.value.line_num >= 3
+
+    def test_null_attributes(self):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.WrongTypePlugin  # 2
+        - object: B                             #3
+          fields:                               #4
+            foo:                                #5
+                WrongTypePlugin.junk: 5  #6
+        """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert 6 > e.value.line_num >= 3
