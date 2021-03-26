@@ -365,8 +365,7 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
         parse_inclusions(yaml_sobj, fields, friends, context)
         fields.extend(parse_fields(parsed_template.fields or {}, context))
         friends.extend(parse_friends(parsed_template.friends or [], context))
-        sobj_def["nickname"] = nickname = parsed_template.nickname
-        check_identifier(nickname, yaml_sobj, "Nicknames")
+        sobj_def["nickname"] = parsed_template.nickname
         sobj_def["just_once"] = parsed_template.just_once or False
         sobj_def["line_num"] = parsed_template.line_num.line_num
         sobj_def["filename"] = parsed_template.line_num.filename
