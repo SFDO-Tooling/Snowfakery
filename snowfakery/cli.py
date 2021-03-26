@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+import sys
+from pathlib import Path
+from contextlib import contextmanager
+import typing as T
+
 from snowfakery.generate_mapping_from_recipe import mapping_from_recipe_templates
 from snowfakery.salesforce import create_cci_record_type_tables
 from snowfakery.output_streams import (
@@ -13,10 +18,11 @@ from snowfakery.output_streams import (
 )
 from snowfakery.data_gen_exceptions import DataGenError
 from snowfakery.data_generator import generate, StoppingCriteria
+from snowfakery.cci_mapping_files.declaration_parser import (
+    SObjectRuleDeclarationFile,
+    unify,
+)
 
-import sys
-from pathlib import Path
-from contextlib import contextmanager
 
 import yaml
 import click
@@ -80,7 +86,9 @@ def int_string_tuple(ctx, param, value=None):
 @click.command()
 # TODO: This should become type=click.File("r")
 #       For consistency and flexibility
-@click.argument("yaml_file", type=click.Path(exists=True))
+@click.argument(
+    "yaml_file", type=click.Path(exists=True, readable=True, dir_okay=False)
+)
 @click.option(
     "--dburl",
     "dburls",
@@ -131,6 +139,12 @@ def int_string_tuple(ctx, param, value=None):
     type=click.File("r"),
     help="Continue generating a dataset where 'continuation-file' left off",
 )
+@click.option(
+    "--load-declarations",
+    type=click.Path(exists=True, readable=True, dir_okay=False),
+    help="Declarations to mix into the generated mapping file",
+    multiple=True,
+)
 @click.version_option(version=version, prog_name="snowfakery")
 def generate_cli(
     yaml_file,
@@ -146,6 +160,7 @@ def generate_cli(
     continuation_file=None,
     generate_continuation_file=None,
     should_create_cci_record_type_tables=False,
+    load_declarations=None,
 ):
     """
         Generates records from a YAML file
@@ -197,8 +212,9 @@ def generate_cli(
                 )
                 sys.stderr.write(debuginfo)
             if generate_cci_mapping_file:
+                declarations = gather_declarations(yaml_file, load_declarations)
                 yaml.safe_dump(
-                    mapping_from_recipe_templates(summary),
+                    mapping_from_recipe_templates(summary, declarations),
                     generate_cci_mapping_file,
                     sort_keys=False,
                 )
@@ -324,6 +340,34 @@ def stopping_criteria_from_target_number(target_number):
         return StoppingCriteria(*target_number)
 
     return None
+
+
+def infer_load_file_path(yaml_file: T.Union[str, Path]):
+    yaml_file = str(yaml_file)
+    suffixes = "".join(Path(yaml_file).suffixes)
+    if suffixes:
+        return Path(yaml_file.replace(suffixes, ".load.yml"))
+    else:
+        return Path("")
+
+
+def gather_declarations(yaml_file, load_declarations):
+    if not load_declarations:
+        inferred_load_file_path = infer_load_file_path(yaml_file)
+        if inferred_load_file_path.is_file():
+            load_declarations = [inferred_load_file_path]
+
+    if load_declarations:
+        declarations = []
+        for declfile in load_declarations:
+            declarations.extend(
+                SObjectRuleDeclarationFile.parse_from_yaml(Path(declfile))
+            )
+
+        unified_declarations = unify(declarations)
+    else:
+        unified_declarations = {}
+    return unified_declarations
 
 
 def main():
