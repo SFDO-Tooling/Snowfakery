@@ -12,7 +12,6 @@ from snowfakery.generate_mapping_from_recipe import (
 )
 from snowfakery.data_generator_runtime import Dependency
 from snowfakery import data_gen_exceptions as exc
-from snowfakery.utils.collections import OrderedSet
 
 
 class TestGenerateMapping:
@@ -106,8 +105,9 @@ class TestGenerateMapping:
                   - object: A
               """
         summary = generate(StringIO(yaml), {}, None)
-        with pytest.warns(UserWarning, match="Circular"):
-            mapping_from_recipe_templates(summary)
+        mapping = mapping_from_recipe_templates(summary)
+        assert list(mapping.keys()) == ["Insert A", "Insert B"]
+        assert mapping["Insert A"]["lookups"]["B"]["after"] == "Insert B"
 
     def test_cats_and_dogs(self):
         yaml = """
@@ -166,8 +166,9 @@ class TestGenerateMapping:
             reference: Person
 """
         summary = generate(StringIO(yaml), {}, None)
-        with pytest.warns(UserWarning, match="Circular"):
-            mapping_from_recipe_templates(summary)
+        mapping = mapping_from_recipe_templates(summary)
+        assert list(mapping.keys()) == ["Insert Animal", "Insert Person"]
+        assert mapping["Insert Animal"]["lookups"]["owner"]["after"] == "Insert Person"
 
     def test_random_reference_lookups(self):
         yaml = """
@@ -194,14 +195,10 @@ class TestBuildDependencies(unittest.TestCase):
             Dependency("child", "grandchild", "daughter"),
         ]
         deps = parent_deps + child_deps
-        dependencies, reference_fields = build_dependencies(deps)
-        from pprint import pprint
-
-        pprint(dependencies)
-        pprint({"parent": OrderedSet(parent_deps), "child": OrderedSet(child_deps)})
-        assert dependencies == {
-            "parent": OrderedSet(parent_deps),
-            "child": OrderedSet(child_deps),
+        inferred_dependencies, _, reference_fields = build_dependencies(deps)
+        assert inferred_dependencies == {
+            "parent": set(parent_deps),
+            "child": set(child_deps),
         }
         assert reference_fields == {
             ("parent", "daughter"): "child",
