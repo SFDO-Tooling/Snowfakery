@@ -1,9 +1,9 @@
+from datetime import date
 from io import StringIO
 import pytest
-from datetime import date
 
-from snowfakery.parse_recipe_yaml import parse_recipe
 from snowfakery import data_gen_exceptions as exc
+from snowfakery.parse_recipe_yaml import parse_recipe
 
 
 class TestParseGenerator:
