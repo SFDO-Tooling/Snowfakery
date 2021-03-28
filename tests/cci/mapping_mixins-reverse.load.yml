@@ -1,0 +1,6 @@
+- sf_object: Opportunity
+  load_after: Contact
+  bulk_mode: serial
+
+- sf_object: Account
+  load_after: Opportunity
