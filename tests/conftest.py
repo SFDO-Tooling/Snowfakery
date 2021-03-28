@@ -72,3 +72,10 @@ def generate_in_tmpdir(tmpdir):
             yield mapping, connection
 
     return doit
+
+
+@pytest.fixture(scope="function")
+def generate():
+    from snowfakery.data_generator import generate
+
+    return generate
