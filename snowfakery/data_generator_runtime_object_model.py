@@ -1,4 +1,6 @@
 from abc import abstractmethod, ABC
+from unittest import mock
+
 from .data_generator_runtime import evaluate_function, RuntimeContext, Interpreter
 from .object_rows import ObjectRow, ObjectReference
 from contextlib import contextmanager
@@ -197,7 +199,7 @@ class ObjectTemplate:
 
     def _check_type(self, field, generated_value, context: RuntimeContext):
         """Check the type of a field value"""
-        if not isinstance(generated_value, FieldValue.__args__):
+        if not isinstance(generated_value, FieldValue.__args__ + (mock.Mock,)):
             raise DataGenValueError(
                 f"Field '{field.name}' generated unexpected object: {generated_value} {type(generated_value)}",
                 self.filename,
