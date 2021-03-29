@@ -1,4 +1,4 @@
-import random
+from random import Random
 from functools import lru_cache
 from datetime import date, datetime
 import dateutil.parser
@@ -39,7 +39,7 @@ def parse_weight_str(context: PluginContext, weight_value) -> float:
     return float(weight_str)
 
 
-def weighted_choice(choices: List[Tuple[float, object]]):
+def weighted_choice(choices: List[Tuple[float, object]], random: Random):
     """Selects from choices based on their weights"""
     weights = [weight for weight, value in choices]
     options = [value for weight, value in choices]
@@ -70,7 +70,14 @@ class StandardFuncs(SnowfakeryPlugin):
         # use ONLY for random_dates
         # anything else should use the Faker from the Interpreter
         # which is locale-scoped.
-        _faker_for_dates = Faker(use_weighting=False)
+
+        @property
+        def _faker_for_dates(self):
+            return self.context.interpreter.faker_template_libraries[None].faker
+
+        @property
+        def random(self):
+            return self.context.interpreter.random
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -107,16 +114,8 @@ class StandardFuncs(SnowfakeryPlugin):
         def date_between(self, *, start_date, end_date):
             """A YAML-embeddable function to pick a date between two ranges"""
 
-            def try_parse_date(d):
-                if not isinstance(d, str) or not DateProvider.regex.fullmatch(d):
-                    try:
-                        d = parse_date(d)
-                    except Exception:  # let's hope its something faker can parse
-                        pass
-                return d
-
-            start_date = try_parse_date(start_date)
-            end_date = try_parse_date(end_date)
+            start_date = _try_parse_date(start_date)
+            end_date = _try_parse_date(end_date)
 
             try:
                 return self._faker_for_dates.date_between(start_date, end_date)
@@ -133,7 +132,7 @@ class StandardFuncs(SnowfakeryPlugin):
 
         def random_number(self, min: int, max: int, step: int = 1) -> int:
             """Pick a random number between min and max like Python's randint."""
-            return random.randrange(min, max + 1, step)
+            return self.random.randrange(min, max + 1, step)
 
         def reference(self, x: Any):
             """YAML-embeddable function to Reference another object."""
@@ -209,9 +208,9 @@ class StandardFuncs(SnowfakeryPlugin):
             elif use_choices:
                 if getattr(choices[0], "function_name", None) == "choice":
                     choices = [self.context.evaluate_raw(choice) for choice in choices]
-                    rc = weighted_choice(choices)
+                    rc = weighted_choice(choices, self.random)
                 else:
-                    rc = random.choice(choices)
+                    rc = self.random.choice(choices)
                 if hasattr(rc, "render"):
                     rc = self.context.evaluate_raw(rc)
             else:
@@ -220,7 +219,7 @@ class StandardFuncs(SnowfakeryPlugin):
                     (parse_weight_str(self.context, value), key)
                     for key, value in kwchoices.items()
                 ]
-                rc = weighted_choice(choices)
+                rc = weighted_choice(choices, self.random)
 
             return rc
 
@@ -268,7 +267,9 @@ class StandardFuncs(SnowfakeryPlugin):
                         None,
                         None,
                     )
-                return ObjectReference(tablename, random.randint(first_id, last_id))
+                return ObjectReference(
+                    tablename, self.random.randint(first_id, last_id)
+                )
             elif tablename in globls.transients.nicknamed_objects:
                 raise DataGenError(
                     "Nicknames cannot be used in random_reference", None, None
@@ -322,3 +323,12 @@ class StandardFuncs(SnowfakeryPlugin):
     setattr(Functions, "NULL", None)
     setattr(Functions, "null", None)
     setattr(Functions, "Null", None)
+
+
+def _try_parse_date(d):
+    if not isinstance(d, str) or not DateProvider.regex.fullmatch(d):
+        try:
+            d = parse_date(d)
+        except Exception:  # let's hope its something faker can parse
+            pass
+    return d

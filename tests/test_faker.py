@@ -3,6 +3,8 @@ import unittest
 from unittest import mock
 from datetime import date
 
+import pytest
+
 from snowfakery.data_generator import generate
 
 write_row_path = "snowfakery.output_streams.DebugOutputStream.write_row"
@@ -83,6 +85,7 @@ class TestFaker(unittest.TestCase):
         generate(StringIO(yaml), {}, None)
         assert row_values(write_row_mock, 0, "date").year
 
+    @pytest.mark.skipif("os.environ.get('SNOWFAKERY_DETERMINISTIC_FAKE')")
     @mock.patch(write_row_path)
     def test_non_overlapping_dates(self, write_row_mock):
         yaml = """

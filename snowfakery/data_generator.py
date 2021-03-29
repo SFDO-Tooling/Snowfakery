@@ -115,6 +115,7 @@ def generate(
     stopping_criteria: StoppingCriteria = None,
     generate_continuation_file: FileLike = None,
     continuation_file: TextIO = None,
+    deterministic_fake: bool = False,
 ) -> ExecutionSummary:
     """The main entry point to the package for Python applications."""
     user_options = user_options or {}
@@ -151,6 +152,7 @@ def generate(
             tables=parse_result.tables,
             snowfakery_plugins=snowfakery_plugins,
             faker_providers=faker_providers,
+            deterministic_fake=deterministic_fake,
         )
     except DataGenError as e:
         if e.filename:

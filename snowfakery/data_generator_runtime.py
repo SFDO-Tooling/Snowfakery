@@ -1,6 +1,7 @@
 from collections import defaultdict, ChainMap
 from datetime import date
 from contextlib import contextmanager
+from random import Random
 
 from typing import Optional, Dict, List, Sequence, Mapping, NamedTuple, Set
 
@@ -319,6 +320,7 @@ class Interpreter:
         start_ids: Optional[Mapping[str, int]] = None,
         faker_providers: Sequence[object] = (),
         statements: Sequence[Statement] = (),
+        deterministic_fake: bool = False,
     ):
         self.output_stream = output_stream
         self.options = options or {}
@@ -335,6 +337,13 @@ class Interpreter:
         self.faker_template_libraries = {}
 
         self.globals = globals
+        self.deterministic_fake = deterministic_fake
+        if deterministic_fake:
+            seed = 42
+        else:
+            seed = None
+
+        self.random = Random(seed)
 
         # inject context into the standard functions
         standard_funcs_obj = StandardFuncs(self).custom_functions()
@@ -349,7 +358,9 @@ class Interpreter:
     def faker_template_library(self, locale):
         rc = self.faker_template_libraries.get(locale)
         if not rc:
-            rc = FakerTemplateLibrary(self.faker_providers, locale)
+            rc = FakerTemplateLibrary(
+                self.faker_providers, locale, self.deterministic_fake
+            )
             self.faker_template_libraries[locale] = rc
         return rc
 
@@ -553,6 +564,7 @@ def output_batches(
     tables: Mapping[str, int] = None,
     snowfakery_plugins: Mapping[str, snowfakery.SnowfakeryPlugin] = None,
     faker_providers: List[object] = None,
+    deterministic_fake=False,
 ) -> Globals:
     """Generate 'count' batches to 'output_stream' """
     # check the stopping_criteria against the templates available
@@ -595,6 +607,7 @@ def output_batches(
         start_ids=start_ids,
         faker_providers=faker_providers,
         statements=statements,
+        deterministic_fake=deterministic_fake,
     ) as interpreter:
 
         interpreter.current_context = RuntimeContext(interpreter=interpreter)

@@ -20,7 +20,7 @@ class TestLocales:
             name:
               fake: name
         """
-        with mock.patch("snowfakery.utils.template_utils.Faker") as f:
+        with mock.patch("snowfakery.utils.template_utils.make_faker") as f:
             generate(StringIO(yaml))
             locale_changes = [c[1][0] for c in f.mock_calls if not c[0]]
 

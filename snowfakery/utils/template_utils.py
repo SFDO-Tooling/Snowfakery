@@ -2,7 +2,7 @@ from functools import lru_cache
 from typing import Sequence
 import string
 
-from faker import Faker
+from snowfakery.utils.fake_data import make_faker
 from jinja2 import Template
 
 
@@ -42,9 +42,11 @@ class StringGenerator:
 class FakerTemplateLibrary:
     """A Jinja template library to add the faker.xyz objects to templates"""
 
-    def __init__(self, faker_providers: Sequence[object], locale=None):
+    def __init__(
+        self, faker_providers: Sequence[object], locale=None, deterministic_fake=False
+    ):
         self.locale = locale
-        self.faker = Faker(self.locale, use_weighting=False)
+        self.faker = make_faker(self.locale)
         for provider in faker_providers:
             self.faker.add_provider(provider)
 

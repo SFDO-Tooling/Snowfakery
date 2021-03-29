@@ -49,7 +49,7 @@ class TestTemplateFuncs:
                         LastName: Simpson
         """
 
-        with mock.patch("random.choice", lambda x: x[-1]):
+        with mock.patch("random.Random.choice", lambda self, x: x[-1]):
             generate(StringIO(yaml), {}, None)
 
             assert len(write_row.mock_calls) == 2, write_row.mock_calls

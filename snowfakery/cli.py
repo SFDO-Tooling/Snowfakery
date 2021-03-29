@@ -84,8 +84,6 @@ def int_string_tuple(ctx, param, value=None):
 
 
 @click.command()
-# TODO: This should become type=click.File("r")
-#       For consistency and flexibility
 @click.argument(
     "yaml_file", type=click.Path(exists=True, readable=True, dir_okay=False)
 )
@@ -121,12 +119,14 @@ def int_string_tuple(ctx, param, value=None):
     "--generate-cci-mapping-file",
     type=click.File("w"),
     help="Generate a CumulusCI mapping file for the dataset",
+    hidden=True,
 )
 @click.option(
     "--generate-continuation-file",
     type=click.File("w"),
     help="A file that captures information about how to continue a "
     "multi-batch data generation process",
+    hidden=True,
 )
 @click.option(
     "--generate-record-type-tables/--no-generate-record-type-tables",
@@ -143,7 +143,13 @@ def int_string_tuple(ctx, param, value=None):
     "--load-declarations",
     type=click.Path(exists=True, readable=True, dir_okay=False),
     help="Declarations to mix into the generated mapping file",
+    hidden=True,
     multiple=True,
+)
+@click.option(
+    "--deterministic-fake/--no-deterministic-fake",
+    help="Use the small, predictable datasets for faking instead of the large unpredictable ones.",
+    default=False,
 )
 @click.version_option(version=version, prog_name="snowfakery")
 def generate_cli(
@@ -161,6 +167,7 @@ def generate_cli(
     generate_continuation_file=None,
     should_create_cci_record_type_tables=False,
     load_declarations=None,
+    deterministic_fake=False,
 ):
     """
         Generates records from a YAML file
@@ -205,6 +212,7 @@ def generate_cli(
                     stopping_criteria=stopping_criteria,
                     generate_continuation_file=generate_continuation_file,
                     continuation_file=continuation_file,
+                    deterministic_fake=deterministic_fake,
                 )
             if debug_internals:
                 debuginfo = yaml.dump(
