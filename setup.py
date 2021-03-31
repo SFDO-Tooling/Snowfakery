@@ -23,8 +23,6 @@ packages = [
     if p.startswith("snowfakery") and not p.startswith("snowfakery.docs")
 ]
 
-print("Releasing packages", packages)
-
 setuptools.setup(
     name="snowfakery",
     version=version,
