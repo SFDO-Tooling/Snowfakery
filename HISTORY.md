@@ -4,6 +4,14 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 1.8
+
+Fix regression when an SObject declares a RecordType on some records
+but not others.  #301
+
+Add a new feature for integrating with CumulusCI's Load architecture.
+This feature will obsolete most (hopefully all) uses of mapping.yml with Snowfakery.  Documentation for it will be in CumulusCI. #290
+
 ## Snowfakery 1.7
 
 Adds support for Salesforce Person Accounts to Snowfakery.
