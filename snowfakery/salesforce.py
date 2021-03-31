@@ -37,7 +37,7 @@ def _populate_rt_table(connection, table: Table, columnname: str, rt_table: Tabl
     query_res = connection.execute(
         select([column]).where(column is not None).distinct()
     )
-    record_types = [res[0] for res in query_res]
+    record_types = [res[0] for res in query_res if res[0]]
 
     if record_types:
         insert_stmt = rt_table.insert()
