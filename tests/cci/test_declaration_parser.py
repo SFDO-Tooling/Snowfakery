@@ -1,7 +1,9 @@
 from pathlib import Path
+from io import StringIO
 
 from snowfakery.cci_mapping_files.declaration_parser import (
     SObjectRuleDeclaration,
+    SObjectRuleDeclarationFile,
     unify,
 )
 from snowfakery.cli import generate_cli
@@ -138,3 +140,22 @@ class TestDeclarationParser:
         assert map_data["Insert Account"]["api"] == "rest"
         assert map_data["Insert Contact"]["api"] == "rest"
         assert map_data["Insert Opportunity"]["api"] == "bulk"
+
+    def test_circular_references__force_order(self, generate_in_tmpdir):
+        circular_test = (Path(__file__).parent / "circular_references.yml").read_text()
+        print(generate_in_tmpdir)
+        with generate_in_tmpdir(
+            circular_test, load_declarations=["tests/cci/mapping_mixins.load.yml"]
+        ) as (mapping, connection):
+            assert tuple(mapping.keys()) == tuple(
+                ["Insert Account", "Insert Contact", "Insert Opportunity"]
+            )
+
+    def test_parse_from_open_file(self):
+        s = StringIO(
+            """
+         - sf_object: Foo
+           api: bulk
+        """
+        )
+        SObjectRuleDeclarationFile.parse_from_yaml(s)
