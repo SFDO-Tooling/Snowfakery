@@ -4,6 +4,10 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 1.8.1
+
+Fixed packaging issue.
+
 ## Snowfakery 1.8
 
 Fix regression when an SObject declares a RecordType on some records
