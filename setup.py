@@ -17,6 +17,14 @@ with open("requirements_dev.txt") as dev_requirements_file:
 with open("snowfakery/version.txt") as f:
     version = f.read().strip()
 
+packages = [
+    p
+    for p in setuptools.find_namespace_packages()
+    if p.startswith("snowfakery") and not p.startswith("snowfakery.docs")
+]
+
+print("Releasing packages", packages)
+
 setuptools.setup(
     name="snowfakery",
     version=version,
@@ -31,7 +39,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/SFDO-Tooling/Snowfakery",
-    packages=setuptools.find_packages(),
+    packages=packages,
     package_dir={"snowfakery": "snowfakery"},
     include_package_data=True,
     classifiers=[
