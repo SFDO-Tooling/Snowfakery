@@ -10,7 +10,7 @@ Fix regression when an SObject declares a RecordType on some records
 but not others.  #301
 
 Add a new feature for integrating with CumulusCI's Load architecture.
-This feature will obsolete most (hopefully all) uses of mapping.yml with Snowfakery.  Documentation for it will be in CumulusCI. #209
+This feature will obsolete most (hopefully all) uses of mapping.yml with Snowfakery.  Documentation for it will be in CumulusCI. #290
 
 ## Snowfakery 1.7
 
