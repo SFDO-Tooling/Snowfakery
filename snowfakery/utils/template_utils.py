@@ -46,7 +46,7 @@ class FakerTemplateLibrary:
         self, faker_providers: Sequence[object], locale=None, deterministic_fake=False
     ):
         self.locale = locale
-        self.faker = make_faker(self.locale)
+        self.faker = make_faker(self.locale, deterministic_fake=deterministic_fake)
         for provider in faker_providers:
             self.faker.add_provider(provider)
 
