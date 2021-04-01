@@ -1,0 +1,6 @@
+Account(id=1, name=The Account)
+Contact(id=1, FirstName=Da, LastName=Boss)
+Campaign(id=1, name=The Campaign)
+Contact(id=2, FirstName=GOB, LastName=Bluth)
+Contact(id=3, FirstName=Hodor Hodor, LastName=Hodor Hodor)
+Contact(id=4, AccountId=Account(1), LastName=Hodor Hodor, FirstName=Hodor Hodor, Salutation=Ms., OtherStreet=Hodor Hodor, OtherCity=Hodor Hodor, OtherState=Hodor Hodor, OtherPostalCode=Hodor Hodor, OtherCountry=Hodor Hodor, OtherLatitude=Hodor Hodor, OtherLongitude=Hodor Hodor, OtherGeocodeAccuracy=Address, MailingStreet=Hodor Hodor, MailingCity=Hodor Hodor, MailingState=Hodor Hodor, MailingPostalCode=Hodor Hodor, MailingCountry=Hodor Hodor, MailingLatitude=Hodor Hodor, MailingLongitude=Hodor Hodor, MailingGeocodeAccuracy=ExtendedZip, Phone=Hodor Hodor, Fax=Hodor Hodor, MobilePhone=Hodor Hodor, HomePhone=Hodor Hodor, OtherPhone=Hodor Hodor, AssistantPhone=Hodor Hodor, Email=Hodor Hodor, Title=Hodor Hodor, Department=Hodor Hodor, AssistantName=Hodor Hodor, LeadSource=Phone Inquiry, Birthdate=2020-03-31, Description=Hodor Hodor, EmailBouncedReason=Hodor Hodor, EmailBouncedDate=1999-03-08THodor HodorZ, CleanStatus=Different)

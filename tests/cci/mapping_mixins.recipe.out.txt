@@ -1,0 +1,3 @@
+Account(id=1, Name=Hodor Hodor)
+Contact(id=1, FirstName=Hodor Hodor, LastName=Hodor Hodor)
+Opportunity(id=1, Name=Hodor Hodor)

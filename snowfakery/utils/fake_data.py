@@ -1,5 +1,4 @@
 from faker import Faker
-import os
 from datetime import date
 
 
@@ -10,13 +9,13 @@ class FakeFaker:
     def format(self, name, *args, **kwargs):
         if hasattr(self, name):
             return getattr(self, name)(*args, **kwargs)
-        return name + " Malkovich"
+        return "Hodor Hodor"
 
     def country_code(self, *args, representation=None):
         if representation == "alpha-2":
             return "CA"
         else:
-            return "country_code Malkovich"
+            return "country_code Hodor"
 
     def date(self, *args, pattern=None, end_datetime=None):
         the_date = date(year=1999, month=3, day=8)
@@ -34,13 +33,13 @@ class FakeFaker:
 
 
 class FakeData(Faker):
-    ...
+    pass
 
 
 def make_faker(
     locale=None, deterministic_fake=False, use_weighting=False, *args, **kwargs
 ):
-    if deterministic_fake or os.environ.get("SNOWFAKERY_DETERMINISTIC_FAKE"):
+    if deterministic_fake:
         return FakeFaker()
     else:
         return FakeData(locale, *args, use_weighting=use_weighting, **kwargs)

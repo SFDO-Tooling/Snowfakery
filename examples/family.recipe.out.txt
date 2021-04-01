@@ -1,0 +1,3 @@
+Duke(id=1, name=Leto I Atreides, son=Duke(2), wife=Lady(1))
+Duke(id=2, nickname=Muad'Dib, father=Duke(1), mother=Lady(1))
+Lady(id=1, FirstName=Lady, LastName=Jessica, husband=Duke(1), son=Duke(2))

@@ -1,0 +1,3 @@
+Account(id=1, name=The Account)
+Contact(id=1, FirstName=Da, LastName=Boss)
+Campaign(id=1, name=The Campaign)

@@ -138,6 +138,7 @@ def int_string_tuple(ctx, param, value=None):
     "--continuation-file",
     type=click.File("r"),
     help="Continue generating a dataset where 'continuation-file' left off",
+    hidden=True,
 )
 @click.option(
     "--load-declarations",
@@ -148,7 +149,9 @@ def int_string_tuple(ctx, param, value=None):
 )
 @click.option(
     "--deterministic-fake/--no-deterministic-fake",
-    help="Use the small, predictable datasets for faking instead of the large unpredictable ones.",
+    "--hodor/--no-hodor",
+    "--malkovich/--no-malkovich",
+    help="Generate predictable data for faking instead of realistic data.",
     default=False,
 )
 @click.version_option(version=version, prog_name="snowfakery")

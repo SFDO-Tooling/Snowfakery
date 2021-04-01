@@ -2,7 +2,6 @@ from pathlib import Path
 from csv import DictReader
 from contextlib import contextmanager
 import os
-from random import shuffle
 
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.sql.expression import func, select
@@ -141,11 +140,15 @@ class CSVDatasetRandomPermutationIterator(CSVDatasetLinearIterator):
     #   * segment the file into hundred-thousand-row partitions. Shuffle the
     #     rows in each partition and then pick randomly among the partitions
     #     before grabbing a row
+    def __init__(self, datasource, random):
+        self.random = random
+        super().__init__(datasource)
+
     def start(self):
         self.file.seek(0)
         d = DictReader(self.file)
         rows = [PluginResult(row) for row in d]
-        shuffle(rows)
+        self.random.shuffle(rows)
 
         self.results = iter(rows)
 
@@ -204,7 +207,9 @@ class Dataset(SnowfakeryPlugin):
                     if iteration_mode == "linear":
                         return CSVDatasetLinearIterator(filename)
                     elif iteration_mode == "shuffle":
-                        return CSVDatasetRandomPermutationIterator(filename)
+                        return CSVDatasetRandomPermutationIterator(
+                            filename, self.context.random
+                        )
 
 
 @contextmanager

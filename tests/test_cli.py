@@ -1,4 +1,4 @@
-import pytest
+import os
 from unittest import mock
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -6,13 +6,14 @@ from io import StringIO
 import json
 import re
 import sys
-from tests.utils import named_temporary_file_path
 
+import pytest
 import yaml
 from click.exceptions import ClickException
 
 from snowfakery.cli import generate_cli, eval_arg, main
 from snowfakery.data_gen_exceptions import DataGenError
+from tests.utils import named_temporary_file_path
 
 sample_yaml = Path(__file__).parent / "include_parent.yml"
 bad_sample_yaml = Path(__file__).parent / "include_bad_parent.yml"
@@ -361,7 +362,7 @@ class TestGenerateFromCLI:
             )
             assert Path(tempdir, "foo", "Account.csv").exists()
 
-    def test_output_folder__eror(self):
+    def test_output_folder__error(self):
         with TemporaryDirectory() as tempdir, pytest.raises(ClickException):
             generate_cli.main(
                 [
@@ -373,6 +374,57 @@ class TestGenerateFromCLI:
                 ],
                 standalone_mode=False,
             )
+
+    @mock.patch("random.Random.seed")
+    @mock.patch("snowfakery.utils.fake_data.FakeFaker")
+    def test_deterministic_fake__cli(self, FakeFaker, seed):
+        generate_cli.main(
+            [
+                str(sample_yaml),
+                "--deterministic-fake",
+            ],
+            standalone_mode=False,
+        )
+        seed.assert_called_once_with(42)
+        assert FakeFaker.mock_calls
+
+    @mock.patch("random.Random.seed")
+    @mock.patch("snowfakery.utils.fake_data.FakeFaker")
+    def test_non_deterministic_fake(self, FakeFaker, seed):
+        generate_cli.main(
+            [
+                str(sample_yaml),
+            ],
+            standalone_mode=False,
+        )
+        seed.assert_called_once_with(None)
+        assert not FakeFaker.mock_calls
+
+    @mock.patch("random.Random.seed")
+    @mock.patch("snowfakery.utils.fake_data.FakeFaker")
+    def test_non_deterministic_fake__explicit(self, FakeFaker, seed):
+        generate_cli.main(
+            [
+                str(sample_yaml),
+                "--no-deterministic-fake",
+            ],
+            standalone_mode=False,
+        )
+        seed.assert_called_once_with(None)
+        assert not FakeFaker.mock_calls
+
+    @mock.patch.dict(os.environ, {"SNOWFAKERY_DETERMINISTIC_FAKE": "True"})
+    @mock.patch("random.Random.seed")
+    @mock.patch("snowfakery.utils.fake_data.FakeFaker")
+    def test_deterministic_fake__env(self, FakeFaker, seed):
+        generate_cli.main(
+            [
+                str(sample_yaml),
+            ],
+            standalone_mode=False,
+        )
+        seed.assert_called_once_with(42)
+        assert FakeFaker.mock_calls
 
 
 class TestCLIOptionChecking:

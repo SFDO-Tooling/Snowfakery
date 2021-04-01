@@ -1,3 +1,4 @@
+import os
 import warnings
 from typing import IO, Tuple, Mapping, List, Dict, TextIO, Union
 
@@ -117,7 +118,10 @@ def generate(
     continuation_file: TextIO = None,
     deterministic_fake: bool = False,
 ) -> ExecutionSummary:
-    """The main entry point to the package for Python applications."""
+    """The low-level entry point to the package for Python applications."""
+    deterministic_fake = deterministic_fake or bool(
+        os.environ.get("SNOWFAKERY_DETERMINISTIC_FAKE")
+    )
     user_options = user_options or {}
 
     # Where are we going to put the rows?

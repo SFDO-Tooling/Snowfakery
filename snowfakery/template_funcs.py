@@ -67,17 +67,10 @@ def render_boolean(context: PluginContext, value: FieldDefinition) -> bool:
 class StandardFuncs(SnowfakeryPlugin):
     class Functions:
         int = int
-        # use ONLY for random_dates
-        # anything else should use the Faker from the Interpreter
-        # which is locale-scoped.
-
-        @property
-        def _faker_for_dates(self):
-            return self.context.interpreter.faker_template_libraries[None].faker
 
         @property
         def random(self):
-            return self.context.interpreter.random
+            return self.context.random
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -118,7 +111,7 @@ class StandardFuncs(SnowfakeryPlugin):
             end_date = _try_parse_date(end_date)
 
             try:
-                return self._faker_for_dates.date_between(start_date, end_date)
+                return self.context.faker.date_between(start_date, end_date)
             except ValueError as e:
                 if "empty range" not in str(e):
                     raise

@@ -1121,6 +1121,50 @@ If you do not specify an `output-folder`, the files will be created in the curre
 The [CSVW](https://www.w3.org/TR/tabular-data-primer/) JSON file is a sort of manifest
 for all of the CSV files.
 
+### Deterministic Mode
+
+The deterministic mode of Snowfakery generates output which is identical from
+one version of Snowfakery to the next. It does so by dramatically limiting
+the dataset available through the use of a FakeFaker class which
+fakes faker and therefore generates fake fake data.
+
+Here is an example of its use:
+
+```yml
+- object: Person
+  fields:
+    name:
+      fake: name
+    Street:
+      fake: street
+    State:
+      fake: administrative_unii
+    Country:
+      fake: country
+```
+
+```yml
+ $ snowfakery --hodor hodor.yml --target-number 10 Person
+Person(id=1, name=Hodor Hodor, Street=Hodor Hodor, State=Hodor Hodor, Country=Hodor Hodor)
+Person(id=2, name=Hodor Hodor, Street=Hodor Hodor, State=Hodor Hodor, Country=Hodor Hodor)
+Person(id=3, name=Hodor Hodor, Street=Hodor Hodor, State=Hodor Hodor, Country=Hodor Hodor)
+Person(id=4, name=Hodor Hodor, Street=Hodor Hodor, State=Hodor Hodor, Country=Hodor Hodor)
+Person(id=5, name=Hodor Hodor, Street=Hodor Hodor, State=Hodor Hodor, Country=Hodor Hodor)
+Person(id=6, name=Hodor Hodor, Street=Hodor Hodor, State=Hodor Hodor, Country=Hodor Hodor)
+Person(id=7, name=Hodor Hodor, Street=Hodor Hodor, State=Hodor Hodor, Country=Hodor Hodor)
+Person(id=8, name=Hodor Hodor, Street=Hodor Hodor, State=Hodor Hodor, Country=Hodor Hodor)
+Person(id=9, name=Hodor Hodor, Street=Hodor Hodor, State=Hodor Hodor, Country=Hodor Hodor)
+Person(id=10, name=Hodor Hodor, Street=Hodor Hodor, State=Hodor Hodor, Country=Hodor Hodor)
+```
+
+For programmers with different tastes and of a different era, ths feature
+is also available as Malkovich mode.
+
+```yml
+snowfakery --malkovich malkovich.yml
+```
+
+
 ## Advanced Features
 
 

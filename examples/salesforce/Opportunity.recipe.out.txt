@@ -1,0 +1,6 @@
+Account(id=1, name=The Account)
+Contact(id=1, FirstName=Da, LastName=Boss)
+Campaign(id=1, name=The Campaign)
+Opportunity(id=1, Name=Opportunity Name, Description=An Opportunity, Amount=100, StageName=Qualification, CloseDate=2020-12-31)
+Opportunity(id=2, AccountId=Account(1), Name=Hodor Hodor, CloseDate=2020-03-31, Description=Hodor Hodor, StageName=Pledged, Amount=14593)
+Opportunity(id=3, AccountId=Account(1), Name=Hodor Hodor, Description=Hodor Hodor, StageName=Prospecting, Amount=97197, TotalOpportunityQuantity=36049, CloseDate=2020-03-31, Type=Existing Customer - Replacement, NextStep=Hodor Hodor, LeadSource=Phone Inquiry, CampaignId=Campaign(1), ContactId=Contact(1))

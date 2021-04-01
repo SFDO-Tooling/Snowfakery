@@ -88,9 +88,24 @@ class ParserMacroPlugin:
 class PluginContext:
     "Exposes certain stable internals to plugins"
 
+    _faker = _random = None
+
     def __init__(self, plugin):
         self.plugin = plugin
         self.interpreter = plugin.interpreter
+
+    @property
+    def faker(self):
+        if not self._faker:
+            self._faker = self.interpreter.faker_template_libraries[None].faker
+        return self._faker
+        self.random = self.interpreter.random
+
+    @property
+    def random(self):
+        if not self._random:
+            self._random = self.interpreter.random
+        return self._random
 
     def field_vars(self):
         return self.interpreter.current_context.field_vars()
