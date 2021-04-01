@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Tuple, Union, Optional, Dict, TextIO
+from typing import Tuple, Union, Optional, Dict, TextIO, Sequence
 from contextlib import ExitStack
 
 from .plugins import SnowfakeryPlugin, lazy  # noqa
@@ -28,6 +28,7 @@ def generate_data(
     generate_continuation_file: Union[TextIO, Path] = None,
     generate_cci_mapping_file: Union[TextIO, Path] = None,
     should_create_cci_record_type_tables: bool = False,
+    load_declarations: Sequence[Union[Path, str]] = None
 ):
     from .cli import generate_cli
 
@@ -66,4 +67,5 @@ def generate_data(
             generate_continuation_file=generate_continuation_file,
             generate_cci_mapping_file=generate_cci_mapping_file,
             should_create_cci_record_type_tables=should_create_cci_record_type_tables,
+            load_declarations=load_declarations,
         )
