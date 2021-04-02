@@ -1,9 +1,8 @@
 from pathlib import Path
 from typing import Tuple, Union, Optional, Dict, TextIO, Sequence
-from contextlib import ExitStack
 
 from .plugins import SnowfakeryPlugin, lazy  # noqa
-
+from .common_entry_point import generate_with_cci_features, EmbeddingContext
 
 # TODO: when Python 3.6 is irrelevant, make this lazy:
 
@@ -16,6 +15,7 @@ with version_file.open() as f:
 
 def generate_data(
     yaml_file: Union[Path, str],
+    embedding_context: EmbeddingContext = None,
     *,
     user_options: Dict[str, str] = None,
     dburl: str = None,
@@ -30,42 +30,20 @@ def generate_data(
     should_create_cci_record_type_tables: bool = False,
     load_declarations: Sequence[Union[Path, str]] = None
 ):
-    from .cli import generate_cli
-
-    if target_number:
-        assert isinstance(target_number[0], int)
-
-    dburls = [dburl] if dburl else []
     output_files = [output_file] if output_file else []
-    options_sequence = list(user_options.items()) if user_options else ()
 
-    with ExitStack() as stack:
-
-        def open_if_necessary_and_close_later(file_like, mode):
-            if hasattr(file_like, "open"):
-                file_like = file_like.open(mode)
-                stack.enter_context(file_like)
-            return file_like
-
-        generate_continuation_file = open_if_necessary_and_close_later(
-            generate_continuation_file, "w"
-        )
-        generate_cci_mapping_file = open_if_necessary_and_close_later(
-            generate_cci_mapping_file, "w"
-        )
-
-        return generate_cli.callback(
-            yaml_file=yaml_file,
-            option=options_sequence,
-            dburls=dburls,
-            target_number=target_number,
-            debug_internals=debug_internals,
-            output_format=output_format,
-            output_files=output_files,
-            output_folder=output_folder,
-            continuation_file=continuation_file,
-            generate_continuation_file=generate_continuation_file,
-            generate_cci_mapping_file=generate_cci_mapping_file,
-            should_create_cci_record_type_tables=should_create_cci_record_type_tables,
-            load_declarations=load_declarations,
-        )
+    return generate_with_cci_features(
+        yaml_file=yaml_file,
+        user_options=user_options,
+        dburl=dburl,
+        target_number=target_number,
+        debug_internals=debug_internals,
+        output_format=output_format,
+        output_files=output_files,
+        output_folder=output_folder,
+        continuation_file=continuation_file,
+        generate_continuation_file=generate_continuation_file,
+        generate_cci_mapping_file=generate_cci_mapping_file,
+        should_create_cci_record_type_tables=should_create_cci_record_type_tables,
+        load_declarations=load_declarations,
+    )
