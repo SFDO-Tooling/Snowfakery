@@ -7,7 +7,7 @@ from snowfakery.data_gen_exceptions import DataGenError
 
 import click
 from snowfakery import version
-from snowfakery.common_entry_point import file_extensions, generate_with_cci_features
+from snowfakery.api import file_extensions, generate_data
 
 if __name__ == "__main__":  # pragma: no cover
     sys.path.append(str(Path(__file__).parent.parent))
@@ -147,7 +147,7 @@ def generate_cli(
     )
     try:
         user_options = dict(option)
-        generate_with_cci_features(
+        generate_data(
             yaml_file=yaml_file,
             user_options=user_options,
             dburls=dburls,

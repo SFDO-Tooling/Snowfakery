@@ -8,7 +8,7 @@ from click.utils import LazyFile
 from .data_gen_exceptions import DataGenNameError
 from .output_streams import DebugOutputStream, OutputStream
 from .parse_recipe_yaml import parse_recipe
-from .data_generator_runtime import output_batches, StoppingCriteria, Globals
+from .data_generator_runtime import Globals, Interpreter
 from .data_gen_exceptions import DataGenError
 from . import SnowfakeryPlugin
 from .utils.yaml_utils import SnowfakeryDumper, hydrate
@@ -112,11 +112,15 @@ def generate(
     open_yaml_file: IO[str],
     user_options: dict = None,
     output_stream: OutputStream = None,
-    stopping_criteria: StoppingCriteria = None,
+    embedding_context=None,
+    *,
+    stopping_criteria=None,
     generate_continuation_file: FileLike = None,
     continuation_file: TextIO = None,
 ) -> ExecutionSummary:
     """The main entry point to the package for Python applications."""
+    from .api import EmbeddingContext
+
     user_options = user_options or {}
 
     # Where are we going to put the rows?
@@ -139,19 +143,21 @@ def generate(
 
     faker_providers, snowfakery_plugins = process_plugins(parse_result.plugins)
 
+    embedding_context = embedding_context or EmbeddingContext(stopping_criteria)
+
     try:
         # now do the output
-        runtime_context = output_batches(
-            output_stream,
-            parse_result.statements,
-            parse_result.templates,
-            options,
-            stopping_criteria=stopping_criteria,
+        with Interpreter(
+            output_stream=output_stream,
             continuation_data=continuation_data,
-            tables=parse_result.tables,
+            options=options,
             snowfakery_plugins=snowfakery_plugins,
+            embedding_context=embedding_context,
             faker_providers=faker_providers,
-        )
+            parse_result=parse_result,
+        ) as interpreter:
+            runtime_context = interpreter.execute()
+
     except DataGenError as e:
         if e.filename:
             raise

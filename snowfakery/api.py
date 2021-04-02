@@ -6,7 +6,7 @@ import sys
 import yaml
 from click.utils import LazyFile
 
-from snowfakery.data_generator import generate, StoppingCriteria
+from snowfakery.data_generator import generate
 
 from snowfakery.output_streams import (
     DebugOutputStream,
@@ -25,6 +25,7 @@ from snowfakery.cci_mapping_files.declaration_parser import (
     unify,
 )
 import snowfakery.data_gen_exceptions as exc
+from snowfakery.data_generator_runtime import FinishedChecker, StoppingCriteria
 
 OpenFileLike = T.Union[T.TextIO, LazyFile]
 FileLike = T.Union[OpenFileLike, Path, str]
@@ -34,10 +35,20 @@ class EmbeddingContext:
     """Base class for all applications which embed Snowfakery as a library,
     including the Snowfakery CLI and CumulusCI"""
 
+    def __init__(self, stopping_criteria: StoppingCriteria = None):
+        self.stopping_criteria = stopping_criteria
+
     def echo(self, message=None, file=None, nl=True, err=False, color=None):
         import click
 
         click.echo(message, file, nl, err, color)
+
+    def finished_checker(self, start_ids) -> FinishedChecker:
+        return FinishedChecker(start_ids, self.stopping_criteria)
+
+    def stopping_tablename(self):
+        if self.stopping_criteria:
+            return self.stopping_criteria.tablename
 
 
 graphic_file_extensions = [
@@ -73,9 +84,9 @@ def stopping_criteria_from_target_number(target_number):
     return None
 
 
-# Entry point to CCI used by both the API ("snowfakery.generate_data")
+# Entry point to Snowfakery used by both the API ("snowfakery.generate_data")
 # and the command line ("snowfakery.cli")
-def generate_with_cci_features(
+def generate_data(
     yaml_file: FileLike,
     *,
     embedding_context: EmbeddingContext = None,
@@ -96,8 +107,11 @@ def generate_with_cci_features(
 ):
     stopping_criteria = stopping_criteria_from_target_number(target_number)
     dburls = dburls or ([dburl] if dburl else [])
+    output_files = output_files or []
+    if output_file:
+        output_files.append(output_file)
 
-    embedding_context = embedding_context or EmbeddingContext()
+    embedding_context = embedding_context or EmbeddingContext(stopping_criteria)
     with ExitStack() as exit_stack:
 
         def open_with_cleanup(file, mode):
@@ -118,7 +132,7 @@ def generate_with_cci_features(
             open_yaml_file=open_yaml_file,
             user_options=user_options,
             output_stream=output_stream,
-            stopping_criteria=stopping_criteria,
+            embedding_context=embedding_context,
             generate_continuation_file=open_new_continue_file,
             continuation_file=open_continuation_file,
         )

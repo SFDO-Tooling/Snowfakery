@@ -2,7 +2,7 @@ from collections import defaultdict, ChainMap
 from datetime import date
 from contextlib import contextmanager
 
-from typing import Optional, Dict, List, Sequence, Mapping, NamedTuple, Set
+from typing import Optional, Dict, Sequence, Mapping, NamedTuple, Set
 
 import jinja2
 import yaml
@@ -12,13 +12,14 @@ from .utils.yaml_utils import SnowfakeryDumper, hydrate
 
 from .template_funcs import StandardFuncs
 from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError
-import snowfakery
+import snowfakery  # noQA
 from snowfakery.object_rows import NicknameSlot, SlotState, ObjectRow
 
 OutputStream = "snowfakery.output_streams.OutputStream"
 VariableDefinition = "snowfakery.data_generator_runtime_object_model.VariableDefinition"
 ObjectTemplate = "snowfakery.data_generator_runtime_object_model.ObjectTemplate"
 Statement = "snowfakery.data_generator_runtime_object_model.Statement"
+ParseResult = "snowfakery.parse_recipe_yaml.ParseResult"
 
 # Runtime objects and algorithms used during the generation of rows.
 
@@ -312,13 +313,12 @@ class Interpreter:
     def __init__(
         self,
         output_stream: OutputStream,
-        globals: Globals,
+        parse_result: ParseResult,
+        continuation_data=None,
         options: Mapping = None,
         snowfakery_plugins: Optional[Mapping[str, callable]] = None,
-        stopping_criteria: Optional[StoppingCriteria] = None,
-        start_ids: Optional[Mapping[str, int]] = None,
+        embedding_context=None,
         faker_providers: Sequence[object] = (),
-        statements: Sequence[Statement] = (),
     ):
         self.output_stream = output_stream
         self.options = options or {}
@@ -331,10 +331,18 @@ class Interpreter:
             name: plugin.custom_functions()
             for name, plugin in self.plugin_instances.items()
         }
-        self.finished_checker = FinishedChecker(start_ids, stopping_criteria)
-        self.faker_template_libraries = {}
+        start_ids, self.globals = initialize_globals_and_startids(
+            continuation_data, parse_result.templates
+        )
+        self.continuing = bool(continuation_data)
+        self.finished_checker = embedding_context.finished_checker(start_ids)
+        stop_table_name = embedding_context.stopping_tablename()
+        if stop_table_name and stop_table_name not in parse_result.tables:
+            raise DataGenNameError(
+                f"No template creating {stop_table_name}",
+            )
 
-        self.globals = globals
+        self.faker_template_libraries = {}
 
         # inject context into the standard functions
         standard_funcs_obj = StandardFuncs(self).custom_functions()
@@ -344,7 +352,12 @@ class Interpreter:
             if not name.startswith("_") and name != "context"
         }
 
-        self.statements = statements
+        self.statements = parse_result.statements
+
+    def execute(self):
+        self.current_context = RuntimeContext(interpreter=self)
+        self.loop_over_templates_until_finished(self.continuing)
+        return self.globals
 
     def faker_template_library(self, locale):
         rc = self.faker_template_libraries.get(locale)
@@ -543,26 +556,7 @@ def evaluate_function(func, args: Sequence, kwargs: Mapping, context):
     return value
 
 
-def output_batches(
-    output_stream,
-    statements: List[Statement],
-    templates: List[ObjectTemplate],
-    options: Dict,
-    stopping_criteria: Optional[StoppingCriteria] = None,
-    continuation_data: Globals = None,
-    tables: Mapping[str, int] = None,
-    snowfakery_plugins: Mapping[str, snowfakery.SnowfakeryPlugin] = None,
-    faker_providers: List[object] = None,
-) -> Globals:
-    """Generate 'count' batches to 'output_stream' """
-    # check the stopping_criteria against the templates available
-    if stopping_criteria:
-        stop_table_name = stopping_criteria.tablename
-        if stop_table_name not in tables:
-            raise DataGenNameError(
-                f"No template creating {stop_table_name}",
-            )
-
+def initialize_globals_and_startids(continuation_data, templates):
     if continuation_data:
         globals = continuation_data
         start_ids = {
@@ -586,18 +580,4 @@ def output_batches(
         # be inferred from the continuation_file.
         start_ids = {}
 
-    with Interpreter(
-        output_stream=output_stream,
-        globals=globals,
-        options=options,
-        snowfakery_plugins=snowfakery_plugins,
-        stopping_criteria=stopping_criteria,
-        start_ids=start_ids,
-        faker_providers=faker_providers,
-        statements=statements,
-    ) as interpreter:
-
-        interpreter.current_context = RuntimeContext(interpreter=interpreter)
-        continuing = bool(continuation_data)
-        interpreter.loop_over_templates_until_finished(continuing)
-        return interpreter.globals
+    return start_ids, globals
