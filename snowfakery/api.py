@@ -169,69 +169,76 @@ def configure_output_stream(
     dburls, output_format, output_files, output_folder, embedding_context
 ):
     assert isinstance(output_files, (list, type(None)))
-    output_streams = []  # we allow multiple output streams
-    contexts = ExitStack()
 
-    for dburl in dburls:
-        output_streams.append(SqlDbOutputStream.from_url(dburl))
-
-    # JSON and SQL are the only output formats (other than debug) that can go on stdout
-    if output_format == "json" and not output_files:
-        output_streams.append(JSONOutputStream(sys.stdout))
-
-    if output_format == "sql" and not output_files:
-        output_streams.append(SqlTextOutputStream(sys.stdout))
-
-    if output_format == "csv":
-        output_streams.append(CSVOutputStream(output_folder))
-
-    if output_files:
-        for f in output_files:
-            if output_folder and isinstance(f, (str, Path)):
-                f = Path(output_folder, f)  # put the file in the output folder
-            file_context = open_file_like(f, "w")
-            path, open_file = contexts.enter_context(file_context)
-            if output_format:
-                format = output_format
-            elif path:
-                format = output_format or Path(path).suffix[1:]
-            else:
-                raise exc.DataGenError("No format supplied or inferrable")
-
-            if format == "json":
-                output_streams.append(JSONOutputStream(open_file))
-            elif format == "sql":
-                output_streams.append(SqlTextOutputStream(open_file))
-            elif format == "txt":
-                output_streams.append(DebugOutputStream(open_file))
-            elif format == "dot":
-                output_streams.append(GraphvizOutputStream(open_file))
-            elif format in graphic_file_extensions:
-                output_streams.append(ImageOutputStream(open_file, format))
-            else:
-                raise exc.DataGenError(f"Unknown format or file extension: {format}")
-
-    if len(output_streams) == 0:
-        output_stream = DebugOutputStream()
-    elif len(output_streams) == 1:
-        output_stream = output_streams[0]
-    else:
-        output_stream = MultiplexOutputStream(output_streams)
-    try:
-        yield output_stream
-    finally:
+    with _get_output_streams(
+        dburls, output_files, output_format, output_folder
+    ) as output_streams:
+        if len(output_streams) == 0:
+            output_stream = DebugOutputStream()
+        elif len(output_streams) == 1:
+            output_stream = output_streams[0]
+        else:
+            output_stream = MultiplexOutputStream(output_streams)
         try:
-            messages = output_stream.close()
-        except Exception as e:
-            messages = None
-            embedding_context.echo(
-                f"Could not close {output_stream}: {str(e)}", err=True
-            )
-        if messages:
-            for message in messages:
-                embedding_context.echo(message)
+            yield output_stream
+        finally:
+            try:
+                messages = output_stream.close()
+            except Exception as e:
+                messages = None
+                embedding_context.echo(
+                    f"Could not close {output_stream}: {str(e)}", err=True
+                )
+            if messages:
+                for message in messages:
+                    embedding_context.echo(message)
 
-        contexts.close()
+
+@contextmanager
+def _get_output_streams(dburls, output_files, output_format, output_folder):
+    with ExitStack() as onexit:
+        output_streams = []  # we allow multiple output streams
+        for dburl in dburls:
+            output_streams.append(SqlDbOutputStream.from_url(dburl))
+
+        # JSON and SQL are the only output formats (other than debug) that can go on stdout
+        if output_format == "json" and not output_files:
+            output_streams.append(JSONOutputStream(sys.stdout))
+
+        if output_format == "sql" and not output_files:
+            output_streams.append(SqlTextOutputStream(sys.stdout))
+
+        if output_format == "csv":
+            output_streams.append(CSVOutputStream(output_folder))
+
+        if output_files:
+            for f in output_files:
+                if output_folder and isinstance(f, (str, Path)):
+                    f = Path(output_folder, f)  # put the file in the output folder
+                file_context = open_file_like(f, "w")
+                path, open_file = onexit.enter_context(file_context)
+                if output_format:
+                    format = output_format
+                elif path:
+                    format = output_format or Path(path).suffix[1:]
+                else:
+                    raise exc.DataGenError("No format supplied or inferrable")
+
+                if format == "json":
+                    output_streams.append(JSONOutputStream(open_file))
+                elif format == "sql":
+                    output_streams.append(SqlTextOutputStream(open_file))
+                elif format == "txt":
+                    output_streams.append(DebugOutputStream(open_file))
+                elif format == "dot":
+                    output_streams.append(GraphvizOutputStream(open_file))
+                elif format in graphic_file_extensions:
+                    output_streams.append(ImageOutputStream(open_file, format))
+                else:
+                    raise exc.DataGenError(
+                        f"Unknown format or file extension: {format}"
+                    )
+        yield output_streams
 
 
 def gather_declarations(yaml_file, load_declarations):
