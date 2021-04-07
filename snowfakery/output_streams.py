@@ -430,7 +430,7 @@ class GraphvizOutputStream(FileOutputStream):
         self.G = gvgen.GvGen()
         self.G.styleDefaultAppend("fontsize", "10")
         self.G.styleDefaultAppend("style", "filled")
-        self.G.styleDefaultAppend("fillcolor", "#1798c1")
+        self.G.styleDefaultAppend("fillcolor", "#009EDB")
         self.G.styleDefaultAppend("fontcolor", "#FFFFFF")
         self.G.styleDefaultAppend("height", "0.75")
         self.G.styleDefaultAppend("width", "0.75")
