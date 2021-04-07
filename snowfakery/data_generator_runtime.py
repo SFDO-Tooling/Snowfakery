@@ -6,7 +6,6 @@ from typing import Optional, Dict, Sequence, Mapping, NamedTuple, Set
 
 import jinja2
 import yaml
-from enum import Flag
 
 from .utils.template_utils import FakerTemplateLibrary
 from .utils.yaml_utils import SnowfakeryDumper, hydrate
@@ -30,54 +29,6 @@ class StoppingCriteria(NamedTuple):
 
     tablename: str
     count: int
-
-
-class IsFinished(Flag):
-    Finished = True
-    Unfinished = False
-
-
-class FinishedChecker:
-    """Checks whether the Stopping Criteria have been met"""
-
-    stopping_criteria: StoppingCriteria
-    Finished = IsFinished.Finished
-    Unfinished = IsFinished.Unfinished
-
-    def __init__(self, stopping_criteria):
-        self.stopping_criteria = stopping_criteria
-        self.target_progress_id = 0
-
-    def check_if_finished(self, id_manager):
-        "Check whether we've finished making as many objects as we promised"
-        # if nobody told us how much to make, finish after first run
-        if not self.stopping_criteria:
-            return True
-
-        target_table, count = self.stopping_criteria
-
-        # Snowfakery processes can be restarted. We would need
-        # to keep track of where we restarted to know whether
-        # we are truly finished
-        start = id_manager.start_ids.get(target_table, 1)
-        target_id = start + count - 1
-
-        last_used_id = id_manager[target_table]
-
-        self._ensure_progress_was_made(last_used_id, target_id)
-
-        return IsFinished(last_used_id >= target_id)
-
-    def _ensure_progress_was_made(self, last_used_id, target_id):
-        """Check that we are actually making progress towards our goal"""
-        if last_used_id == self.target_progress_id:
-            raise RuntimeError(
-                f"{self.stopping_criteria.tablename} max ID was {self.target_progress_id} "
-                f"before evaluating recipe and is {last_used_id} after. "
-                f"At this rate we will never hit our target of {target_id}!"
-            )
-
-        self.target_progress_id = last_used_id
 
 
 class IdManager:
@@ -323,7 +274,7 @@ class Interpreter:
         *,
         options: Mapping = None,
         snowfakery_plugins: Optional[Mapping[str, callable]] = None,
-        embedding_context=None,
+        parent_application=None,
         faker_providers: Sequence[object] = (),
         continuing=False,
     ):
@@ -340,8 +291,8 @@ class Interpreter:
         }
         self.globals = globals
         self.continuing = continuing
-        if embedding_context:
-            stop_table_name = embedding_context.stopping_tablename()
+        if parent_application:
+            stop_table_name = parent_application.stopping_tablename
         else:
             stop_table_name = None
         if stop_table_name and stop_table_name not in parse_result.tables:
@@ -360,7 +311,7 @@ class Interpreter:
         }
 
         self.statements = parse_result.statements
-        self.embedding_context = embedding_context
+        self.parent_application = parent_application
 
     def execute(self):
         self.current_context = RuntimeContext(interpreter=self)
@@ -380,6 +331,7 @@ class Interpreter:
         while not finished:
             self.loop_over_templates_once(self.statements, continuing)
             finished = self.current_context.check_if_finished()
+
             continuing = True
             self.globals.reset_slots()
 
@@ -434,10 +386,13 @@ class RuntimeContext:
     def check_if_finished(self):
         "Have we iterated over the script enough times?"
         # check that every forward reference was resolved
-        self.interpreter.globals.check_slots_filled()
-        return self.interpreter.embedding_context.check_if_finished(
-            self.interpreter.globals.id_manager
-        )
+        globls = self.interpreter.globals
+        app = self.interpreter.parent_application
+
+        globls.check_slots_filled()
+        app.ensure_progress_was_made(globls.id_manager)
+
+        return app.check_if_finished(globls.id_manager)
 
     def generate_id(self, nickname: Optional[str]):
         "Generate a unique ID for this object"

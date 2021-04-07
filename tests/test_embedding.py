@@ -7,8 +7,8 @@ from io import StringIO
 import pytest
 
 from snowfakery import generate_data
-from snowfakery.data_generator_runtime import IdManager, IsFinished
-from snowfakery.api import EmbeddingContext
+from snowfakery.data_generator_runtime import IdManager
+from snowfakery.api import ParentApplication
 from snowfakery import data_gen_exceptions as exc
 
 
@@ -63,10 +63,10 @@ class TestEmbedding:
             with mapping_file.open() as f:
                 assert yaml.safe_load(f)
 
-    def test_embedding_context__echo(self):
+    def test_parent_application__echo(self):
         called = False
 
-        class MyEmbedder(EmbeddingContext):
+        class MyEmbedder(ParentApplication):
             def echo(self, *args, **kwargs):
                 nonlocal called
                 called = True
@@ -75,28 +75,25 @@ class TestEmbedding:
         with mock.patch(meth) as close:
             close.side_effect = AssertionError
             generate_data(
-                yaml_file="examples/company.yml", embedding_context=MyEmbedder()
+                yaml_file="examples/company.yml", parent_application=MyEmbedder()
             )
             assert called
 
-    def test_embedding_context__early_finish(self, generated_rows):
-        class MyEmbedder(EmbeddingContext):
+    def test_parent_application__early_finish(self, generated_rows):
+        class MyEmbedder(ParentApplication):
             count = 0
 
             def check_if_finished(self, idmanager):
                 assert isinstance(idmanager, IdManager)
                 self.__class__.count += 1
                 assert self.__class__.count < 100, "Runaway recipe!"
-                if idmanager["Employee"] >= 10:
-                    return IsFinished.Finished
-                else:
-                    return IsFinished.Unfinished
+                return idmanager["Employee"] >= 10
 
         meth = "snowfakery.output_streams.DebugOutputStream.close"
         with mock.patch(meth) as close:
             close.side_effect = AssertionError
             generate_data(
-                yaml_file="examples/company.yml", embedding_context=MyEmbedder()
+                yaml_file="examples/company.yml", parent_application=MyEmbedder()
             )
             # called 5 times, after generating 2 employees each
             assert MyEmbedder.count == 5
@@ -108,7 +105,7 @@ class TestEmbedding:
                 output_file=StringIO(),
             )
 
-    def test_embedding_context__streams_instead_of_files(self, generated_rows):
+    def test_parent_application__streams_instead_of_files(self, generated_rows):
         yaml_file = StringIO("""- object: Foo""")
         generate_cci_mapping_file = StringIO()
         output_file = StringIO()

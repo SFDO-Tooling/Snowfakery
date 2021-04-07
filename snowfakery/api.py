@@ -26,37 +26,11 @@ from snowfakery.cci_mapping_files.declaration_parser import (
 )
 import snowfakery.data_gen_exceptions as exc
 from snowfakery.data_generator_runtime import (
-    FinishedChecker,
     StoppingCriteria,
 )
-from snowfakery.data_generator_runtime import IsFinished  # noQA
 
 OpenFileLike = T.Union[T.TextIO, LazyFile]
 FileLike = T.Union[OpenFileLike, Path, str]
-
-
-class EmbeddingContext:
-    """Base class for all applications which embed Snowfakery as a library,
-    including the Snowfakery CLI and CumulusCI"""
-
-    stopping_criteria = None
-
-    def __init__(self, stopping_criteria: StoppingCriteria = None):
-        self.stopping_criteria = stopping_criteria
-        self.finished_checker = FinishedChecker(self.stopping_criteria)
-
-    def echo(self, message=None, file=None, nl=True, err=False, color=None):
-        import click
-
-        click.echo(message, file, nl, err, color)
-
-    def stopping_tablename(self):
-        if self.stopping_criteria:
-            return self.stopping_criteria.tablename
-
-    def check_if_finished(self, id_manager):
-        return self.finished_checker.check_if_finished(id_manager)
-
 
 graphic_file_extensions = [
     "PNG",
@@ -79,6 +53,72 @@ file_extensions = [
 ] + graphic_file_extensions
 
 
+class ParentApplication:
+    """Base class for all applications which embed Snowfakery as a library,
+    including the Snowfakery CLI and CumulusCI"""
+
+    stopping_criteria = None
+    starting_id = 0
+
+    def __init__(self, stopping_criteria: StoppingCriteria = None):
+        self.stopping_criteria = stopping_criteria
+
+    def echo(self, message=None, file=None, nl=True, err=False, color=None):
+        """Write something to a virtual stdout or stderr.
+
+        Arguments to this function are derived from click.echo"""
+        import click
+
+        click.echo(message, file, nl, err, color)
+
+    @property
+    def stopping_tablename(self):
+        """Return the name of "stopping table/object":
+
+        The table/object whose presence determines
+        whether we are done generating data.
+
+        This is used by Snowfakery to validate that
+        the provided recipe will not generate forever
+        due to a misspelling the stopping tablename."""
+        if self.stopping_criteria:
+            return self.stopping_criteria.tablename
+
+    def ensure_progress_was_made(self, id_manager):
+        """Check that we are actually making progress towards our goal"""
+        if not self.stopping_tablename:
+            return False
+
+        last_used_id = id_manager[self.stopping_tablename]
+
+        if last_used_id == self.starting_id:
+            raise RuntimeError(
+                f"{self.stopping_tablename} max ID was {self.starting_id} "
+                f"before evaluating recipe and is {last_used_id} after. "
+                f"At this rate we will never hit our target!"
+            )
+
+        self.starting_id = last_used_id
+
+    def check_if_finished(self, id_manager):
+        "Check whether we've finished making as many objects as we promised"
+        # if nobody told us how much to make, finish after first run
+        if not self.stopping_criteria:
+            return True
+
+        target_table, count = self.stopping_criteria
+
+        # Snowfakery processes can be restarted. We would need
+        # to keep track of where we restarted to know whether
+        # we are truly finished
+        start = id_manager.start_ids.get(target_table, 1)
+        target_id = start + count - 1
+
+        last_used_id = id_manager[target_table]
+
+        return last_used_id >= target_id
+
+
 def stopping_criteria_from_target_number(target_number):
     "Deconstruct a tuple of 'str number' or 'number str' and make a StoppingCriteria"
 
@@ -96,21 +136,23 @@ def stopping_criteria_from_target_number(target_number):
 def generate_data(
     yaml_file: FileLike,
     *,
-    embedding_context: EmbeddingContext = None,
-    user_options: T.Dict[str, str] = None,
-    dburls=[],
-    dburl: str = None,
-    target_number: T.Tuple = None,
-    debug_internals: bool = None,
-    generate_cci_mapping_file: FileLike = None,
-    output_format: str = None,
-    output_file: FileLike = None,
-    output_files: T.List[FileLike] = None,
-    output_folder: FileLike = None,
-    continuation_file: FileLike = None,
-    generate_continuation_file: FileLike = None,
-    should_create_cci_record_type_tables: bool = False,
-    load_declarations: T.Sequence[FileLike] = None,
+    parent_application: ParentApplication = None,  # the parent application
+    user_options: T.Dict[str, str] = None,  # same as --option
+    dburl: str = None,  # same as --dburl
+    dburls=[],  # same as multiple --dburl options
+    target_number: T.Tuple = None,  # same as --target-number
+    debug_internals: bool = None,  # same as --debug-internals
+    generate_cci_mapping_file: FileLike = None,  # same as --generate-cci-mapping-file
+    output_format: str = None,  # same as --output-format
+    output_file: FileLike = None,  # same as --output-file
+    output_files: T.List[FileLike] = None,  # same as multiple --output-file options
+    output_folder: FileLike = None,  # same as --output-folder
+    continuation_file: FileLike = None,  # continuation file from last execution
+    generate_continuation_file: FileLike = None,  # place to generate continuation file
+    should_create_cci_record_type_tables: bool = False,  # create CCI Record type tables?
+    load_declarations: T.Sequence[
+        FileLike
+    ] = None,  # read these load declarations for CCI
 ) -> None:
     stopping_criteria = stopping_criteria_from_target_number(target_number)
     dburls = dburls or ([dburl] if dburl else [])
@@ -123,11 +165,11 @@ def generate_data(
         def open_with_cleanup(file, mode):
             return exit_stack.enter_context(open_file_like(file, mode))
 
-        embedding_context = embedding_context or EmbeddingContext(stopping_criteria)
+        parent_application = parent_application or ParentApplication(stopping_criteria)
 
         output_stream = exit_stack.enter_context(
             configure_output_stream(
-                dburls, output_format, output_files, output_folder, embedding_context
+                dburls, output_format, output_files, output_folder, parent_application
             )
         )
 
@@ -140,7 +182,7 @@ def generate_data(
             open_yaml_file=open_yaml_file,
             user_options=user_options,
             output_stream=output_stream,
-            embedding_context=embedding_context,
+            parent_application=parent_application,
             generate_continuation_file=open_new_continue_file,
             continuation_file=open_continuation_file,
             stopping_criteria=stopping_criteria,
@@ -166,7 +208,7 @@ def generate_data(
 
 @contextmanager
 def configure_output_stream(
-    dburls, output_format, output_files, output_folder, embedding_context
+    dburls, output_format, output_files, output_folder, parent_application
 ):
     assert isinstance(output_files, (list, type(None)))
 
@@ -186,12 +228,12 @@ def configure_output_stream(
                 messages = output_stream.close()
             except Exception as e:
                 messages = None
-                embedding_context.echo(
+                parent_application.echo(
                     f"Could not close {output_stream}: {str(e)}", err=True
                 )
             if messages:
                 for message in messages:
-                    embedding_context.echo(message)
+                    parent_application.echo(message)
 
 
 @contextmanager

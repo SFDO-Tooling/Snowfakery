@@ -112,14 +112,14 @@ def generate(
     open_yaml_file: IO[str],
     user_options: dict = None,
     output_stream: OutputStream = None,
-    embedding_context=None,
+    parent_application=None,
     *,
     stopping_criteria=None,
     generate_continuation_file: FileLike = None,
     continuation_file: TextIO = None,
 ) -> ExecutionSummary:
     """The main entry point to the package for Python applications."""
-    from .api import EmbeddingContext
+    from .api import ParentApplication
 
     user_options = user_options or {}
 
@@ -147,7 +147,7 @@ def generate(
 
     # for unit tests that call this function directly
     # they should be updated to use generate_data instead
-    embedding_context = embedding_context or EmbeddingContext(stopping_criteria)
+    parent_application = parent_application or ParentApplication(stopping_criteria)
 
     try:
         # now do the output
@@ -155,7 +155,7 @@ def generate(
             output_stream=output_stream,
             options=options,
             snowfakery_plugins=snowfakery_plugins,
-            embedding_context=embedding_context,
+            parent_application=parent_application,
             faker_providers=faker_providers,
             parse_result=parse_result,
             globals=globls,

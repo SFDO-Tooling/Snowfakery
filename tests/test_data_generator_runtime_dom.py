@@ -15,7 +15,7 @@ from snowfakery.data_generator_runtime import (
     Globals,
 )
 
-from snowfakery.api import EmbeddingContext
+from snowfakery.api import ParentApplication
 
 from snowfakery.output_streams import DebugOutputStream
 
@@ -37,7 +37,7 @@ def standard_runtime():
     output_stream = DebugOutputStream()
     interpreter = Interpreter(
         output_stream=output_stream,
-        embedding_context=EmbeddingContext(),
+        parent_application=ParentApplication(),
         parse_result=FakeParseResult(),
         globals=Globals(),
     )
