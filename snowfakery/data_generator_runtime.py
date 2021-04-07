@@ -272,9 +272,9 @@ class Interpreter:
         parse_result: ParseResult,
         globals: Globals,
         *,
+        parent_application,
         options: Mapping = None,
         snowfakery_plugins: Optional[Mapping[str, callable]] = None,
-        parent_application=None,
         faker_providers: Sequence[object] = (),
         continuing=False,
     ):
@@ -291,10 +291,7 @@ class Interpreter:
         }
         self.globals = globals
         self.continuing = continuing
-        if parent_application:
-            stop_table_name = parent_application.stopping_tablename
-        else:
-            stop_table_name = None
+        stop_table_name = parent_application.stopping_tablename
         if stop_table_name and stop_table_name not in parse_result.tables:
             raise DataGenNameError(
                 f"No template creating {stop_table_name}",
