@@ -1,6 +1,7 @@
 from io import StringIO
 import math
 import operator
+from base64 import b64decode
 
 from snowfakery.data_generator import generate
 from snowfakery import SnowfakeryPlugin, lazy
@@ -192,6 +193,15 @@ class TestCustomPlugin:
             generate(StringIO(yaml), {}, output_stream)
             output_stream.close()
             assert eval(s.getvalue())[0]["some_value"] == 3
+
+    def test_binary(self, generated_rows):
+        sample = "examples/binary.recipe.yml"
+        with open(sample) as f:
+            generate(f)
+        b64data = generated_rows.table_values("BinaryData", 0)["encoded_data"]
+        rawdata = b64decode(b64data)
+        assert rawdata.startswith(b"%PDF-1.3")
+        assert b"Helvetica" in rawdata
 
 
 class PluginThatNeedsState(SnowfakeryPlugin):

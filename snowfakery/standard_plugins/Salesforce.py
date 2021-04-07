@@ -69,3 +69,10 @@ class Salesforce(ParserMacroPlugin):
                 )
 
         return sobj, nickname
+
+    def ContentFile(self, context, args) -> ObjectTemplate:
+        return {
+            "Base64.encode": [
+                {"File.file_data": {"encoding": "binary", "file": args.get("path")}}
+            ]
+        }

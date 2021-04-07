@@ -1,0 +1,10 @@
+- plugin: snowfakery.standard_plugins.base64.Base64
+- plugin: snowfakery.standard_plugins.file.File
+
+- object: BinaryData
+  fields:
+    encoded_data:
+      Base64.encode:
+        - File.file_data:
+            encoding: binary
+            file: salesforce/example.pdf
