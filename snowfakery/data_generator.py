@@ -143,18 +143,23 @@ def generate(
 
     faker_providers, snowfakery_plugins = process_plugins(parse_result.plugins)
 
+    globls = initialize_globals(continuation_data, parse_result.templates)
+
+    # for unit tests that call this function directly
+    # they should be updated to use generate_data instead
     embedding_context = embedding_context or EmbeddingContext(stopping_criteria)
 
     try:
         # now do the output
         with Interpreter(
             output_stream=output_stream,
-            continuation_data=continuation_data,
             options=options,
             snowfakery_plugins=snowfakery_plugins,
             embedding_context=embedding_context,
             faker_providers=faker_providers,
             parse_result=parse_result,
+            globals=globls,
+            continuing=bool(continuation_data),
         ) as interpreter:
             runtime_context = interpreter.execute()
 
@@ -169,6 +174,26 @@ def generate(
         save_continuation_yaml(runtime_context, generate_continuation_file)
 
     return ExecutionSummary(parse_result, runtime_context)
+
+
+def initialize_globals(continuation_data, templates):
+    if continuation_data:
+        globals = continuation_data
+    else:
+        name_slots = {
+            template.nickname: template.tablename
+            for template in templates
+            if template.nickname
+        }
+        # table names are sort of nicknames for themselves too, because
+        # you can refer to them.
+        name_slots.update(
+            {template.tablename: template.tablename for template in templates}
+        )
+
+        globals = Globals(name_slots=name_slots)
+
+    return globals
 
 
 if __name__ == "__main__":  # pragma: no cover

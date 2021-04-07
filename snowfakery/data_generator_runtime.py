@@ -6,6 +6,7 @@ from typing import Optional, Dict, Sequence, Mapping, NamedTuple, Set
 
 import jinja2
 import yaml
+from enum import Flag
 
 from .utils.template_utils import FakerTemplateLibrary
 from .utils.yaml_utils import SnowfakeryDumper, hydrate
@@ -31,13 +32,19 @@ class StoppingCriteria(NamedTuple):
     count: int
 
 
+class IsFinished(Flag):
+    Finished = True
+    Unfinished = False
+
+
 class FinishedChecker:
     """Checks whether the Stopping Criteria have been met"""
 
     stopping_criteria: StoppingCriteria
+    Finished = IsFinished.Finished
+    Unfinished = IsFinished.Unfinished
 
-    def __init__(self, start_ids, stopping_criteria):
-        self.start_ids = start_ids
+    def __init__(self, stopping_criteria):
         self.stopping_criteria = stopping_criteria
         self.target_progress_id = 0
 
@@ -52,19 +59,16 @@ class FinishedChecker:
         # Snowfakery processes can be restarted. We would need
         # to keep track of where we restarted to know whether
         # we are truly finished
-        if self.start_ids:
-            start = self.start_ids.get(target_table, 1)
-        else:
-            start = 1
+        start = id_manager.start_ids.get(target_table, 1)
         target_id = start + count - 1
 
         last_used_id = id_manager[target_table]
 
-        self.ensure_progress_was_made(last_used_id, target_id)
+        self._ensure_progress_was_made(last_used_id, target_id)
 
-        return last_used_id >= target_id
+        return IsFinished(last_used_id >= target_id)
 
-    def ensure_progress_was_made(self, last_used_id, target_id):
+    def _ensure_progress_was_made(self, last_used_id, target_id):
         """Check that we are actually making progress towards our goal"""
         if last_used_id == self.target_progress_id:
             raise RuntimeError(
@@ -79,9 +83,9 @@ class FinishedChecker:
 class IdManager:
     """Keep track of the most recent ID per Object type"""
 
-    def __init__(self, start_ids: Optional[Dict[str, int]] = None):
-        start_ids = start_ids or {}
+    def __init__(self):
         self.last_used_ids = defaultdict(lambda: 0)
+        self.start_ids = {}
 
     def generate_id(self, table_name: str) -> int:
         self.last_used_ids[table_name] += 1
@@ -95,6 +99,7 @@ class IdManager:
 
     def __setstate__(self, state):
         self.last_used_ids = defaultdict(lambda: 0, state["last_used_ids"])
+        self.start_ids = {name: val + 1 for name, val in self.last_used_ids.items()}
 
 
 SnowfakeryDumper.add_representer(defaultdict, SnowfakeryDumper.represent_dict)
@@ -314,11 +319,13 @@ class Interpreter:
         self,
         output_stream: OutputStream,
         parse_result: ParseResult,
-        continuation_data=None,
+        globals: Globals,
+        *,
         options: Mapping = None,
         snowfakery_plugins: Optional[Mapping[str, callable]] = None,
         embedding_context=None,
         faker_providers: Sequence[object] = (),
+        continuing=False,
     ):
         self.output_stream = output_stream
         self.options = options or {}
@@ -331,12 +338,12 @@ class Interpreter:
             name: plugin.custom_functions()
             for name, plugin in self.plugin_instances.items()
         }
-        start_ids, self.globals = initialize_globals_and_startids(
-            continuation_data, parse_result.templates
-        )
-        self.continuing = bool(continuation_data)
-        self.finished_checker = embedding_context.finished_checker(start_ids)
-        stop_table_name = embedding_context.stopping_tablename()
+        self.globals = globals
+        self.continuing = continuing
+        if embedding_context:
+            stop_table_name = embedding_context.stopping_tablename()
+        else:
+            stop_table_name = None
         if stop_table_name and stop_table_name not in parse_result.tables:
             raise DataGenNameError(
                 f"No template creating {stop_table_name}",
@@ -353,6 +360,7 @@ class Interpreter:
         }
 
         self.statements = parse_result.statements
+        self.embedding_context = embedding_context
 
     def execute(self):
         self.current_context = RuntimeContext(interpreter=self)
@@ -427,7 +435,7 @@ class RuntimeContext:
         "Have we iterated over the script enough times?"
         # check that every forward reference was resolved
         self.interpreter.globals.check_slots_filled()
-        return self.interpreter.finished_checker.check_if_finished(
+        return self.interpreter.embedding_context.check_if_finished(
             self.interpreter.globals.id_manager
         )
 
@@ -554,30 +562,3 @@ def evaluate_function(func, args: Sequence, kwargs: Mapping, context):
         }
     value = func(*args, **kwargs)
     return value
-
-
-def initialize_globals_and_startids(continuation_data, templates):
-    if continuation_data:
-        globals = continuation_data
-        start_ids = {
-            name: val + 1 for name, val in globals.id_manager.last_used_ids.items()
-        }
-    else:
-        name_slots = {
-            template.nickname: template.tablename
-            for template in templates
-            if template.nickname
-        }
-        # table names are sort of nicknames for themselves too, because
-        # you can refer to them.
-        name_slots.update(
-            {template.tablename: template.tablename for template in templates}
-        )
-
-        globals = Globals(name_slots=name_slots)
-        # at one point start-ids were passed from the command line
-        # but for simplicity this feature has been removed and they can only
-        # be inferred from the continuation_file.
-        start_ids = {}
-
-    return start_ids, globals

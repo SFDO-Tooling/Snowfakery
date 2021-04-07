@@ -12,7 +12,9 @@ from snowfakery.parse_recipe_yaml import ParseResult
 from snowfakery.data_generator_runtime import (
     RuntimeContext,
     Interpreter,
+    Globals,
 )
+
 from snowfakery.api import EmbeddingContext
 
 from snowfakery.output_streams import DebugOutputStream
@@ -37,6 +39,7 @@ def standard_runtime():
         output_stream=output_stream,
         embedding_context=EmbeddingContext(),
         parse_result=FakeParseResult(),
+        globals=Globals(),
     )
     runtime_context = RuntimeContext(interpreter=interpreter)
     interpreter.current_context = runtime_context

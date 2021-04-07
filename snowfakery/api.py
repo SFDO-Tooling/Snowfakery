@@ -25,7 +25,11 @@ from snowfakery.cci_mapping_files.declaration_parser import (
     unify,
 )
 import snowfakery.data_gen_exceptions as exc
-from snowfakery.data_generator_runtime import FinishedChecker, StoppingCriteria
+from snowfakery.data_generator_runtime import (
+    FinishedChecker,
+    StoppingCriteria,
+)
+from snowfakery.data_generator_runtime import IsFinished  # noQA
 
 OpenFileLike = T.Union[T.TextIO, LazyFile]
 FileLike = T.Union[OpenFileLike, Path, str]
@@ -35,20 +39,23 @@ class EmbeddingContext:
     """Base class for all applications which embed Snowfakery as a library,
     including the Snowfakery CLI and CumulusCI"""
 
+    stopping_criteria = None
+
     def __init__(self, stopping_criteria: StoppingCriteria = None):
         self.stopping_criteria = stopping_criteria
+        self.finished_checker = FinishedChecker(self.stopping_criteria)
 
     def echo(self, message=None, file=None, nl=True, err=False, color=None):
         import click
 
         click.echo(message, file, nl, err, color)
 
-    def finished_checker(self, start_ids) -> FinishedChecker:
-        return FinishedChecker(start_ids, self.stopping_criteria)
-
     def stopping_tablename(self):
         if self.stopping_criteria:
             return self.stopping_criteria.tablename
+
+    def check_if_finished(self, id_manager):
+        return self.finished_checker.check_if_finished(id_manager)
 
 
 graphic_file_extensions = [
@@ -97,25 +104,26 @@ def generate_data(
     debug_internals: bool = None,
     generate_cci_mapping_file: FileLike = None,
     output_format: str = None,
-    output_file: Path = None,
-    output_files=None,
+    output_file: FileLike = None,
+    output_files: T.List[FileLike] = None,
     output_folder: FileLike = None,
     continuation_file: FileLike = None,
     generate_continuation_file: FileLike = None,
     should_create_cci_record_type_tables: bool = False,
     load_declarations: T.Sequence[FileLike] = None,
-):
+) -> None:
     stopping_criteria = stopping_criteria_from_target_number(target_number)
     dburls = dburls or ([dburl] if dburl else [])
     output_files = output_files or []
     if output_file:
-        output_files.append(output_file)
+        output_files = output_files + [output_file]
 
-    embedding_context = embedding_context or EmbeddingContext(stopping_criteria)
     with ExitStack() as exit_stack:
 
         def open_with_cleanup(file, mode):
             return exit_stack.enter_context(open_file_like(file, mode))
+
+        embedding_context = embedding_context or EmbeddingContext(stopping_criteria)
 
         output_stream = exit_stack.enter_context(
             configure_output_stream(
@@ -135,13 +143,16 @@ def generate_data(
             embedding_context=embedding_context,
             generate_continuation_file=open_new_continue_file,
             continuation_file=open_continuation_file,
+            stopping_criteria=stopping_criteria,
         )
+
         # This feature seems seldom useful. Delete it if it isn't missed
-        # by fall 2021
+        # by fall 2021:
+
         # if debug_internals:
         #     debuginfo = yaml.dump(summary.summarize_for_debugging(), sort_keys=False)
         #     sys.stderr.write(debuginfo)
-        #
+
         if open_cci_mapping_file:
             declarations = gather_declarations(yaml_path or "", load_declarations)
             yaml.safe_dump(
@@ -159,6 +170,7 @@ def configure_output_stream(
 ):
     assert isinstance(output_files, (list, type(None)))
     output_streams = []  # we allow multiple output streams
+    contexts = ExitStack()
 
     for dburl in dburls:
         output_streams.append(SqlDbOutputStream.from_url(dburl))
@@ -174,21 +186,28 @@ def configure_output_stream(
         output_streams.append(CSVOutputStream(output_folder))
 
     if output_files:
-        for path in output_files:
-            if output_folder:
-                path = Path(output_folder, path)  # put the file in the output folder
-            format = output_format or Path(path).suffix[1:]
+        for f in output_files:
+            if output_folder and isinstance(f, (str, Path)):
+                f = Path(output_folder, f)  # put the file in the output folder
+            file_context = open_file_like(f, "w")
+            path, open_file = contexts.enter_context(file_context)
+            if output_format:
+                format = output_format
+            elif path:
+                format = output_format or Path(path).suffix[1:]
+            else:
+                raise exc.DataGenError("No format supplied or inferrable")
 
             if format == "json":
-                output_streams.append(JSONOutputStream(path))
+                output_streams.append(JSONOutputStream(open_file))
             elif format == "sql":
-                output_streams.append(SqlTextOutputStream(path))
+                output_streams.append(SqlTextOutputStream(open_file))
             elif format == "txt":
-                output_streams.append(DebugOutputStream(path))
+                output_streams.append(DebugOutputStream(open_file))
             elif format == "dot":
-                output_streams.append(GraphvizOutputStream(path))
+                output_streams.append(GraphvizOutputStream(open_file))
             elif format in graphic_file_extensions:
-                output_streams.append(ImageOutputStream(path, format))
+                output_streams.append(ImageOutputStream(open_file, format))
             else:
                 raise exc.DataGenError(f"Unknown format or file extension: {format}")
 
@@ -201,18 +220,18 @@ def configure_output_stream(
     try:
         yield output_stream
     finally:
-        for output_stream in output_streams:
+        try:
+            messages = output_stream.close()
+        except Exception as e:
             messages = None
-            try:
-                messages = output_stream.close()
-            except Exception as e:
-                messages = None
-                embedding_context.echo(
-                    f"Could not close {output_stream}: {str(e)}", err=True
-                )
-            if messages:
-                for message in messages:
-                    embedding_context.echo(message)
+            embedding_context.echo(
+                f"Could not close {output_stream}: {str(e)}", err=True
+            )
+        if messages:
+            for message in messages:
+                embedding_context.echo(message)
+
+        contexts.close()
 
 
 def gather_declarations(yaml_file, load_declarations):
@@ -225,9 +244,8 @@ def gather_declarations(yaml_file, load_declarations):
     if load_declarations:
         declarations = []
         for declfile in load_declarations:
-            declarations.extend(
-                SObjectRuleDeclarationFile.parse_from_yaml(Path(declfile))
-            )
+            with open_file_like(declfile, "r") as (path, f):
+                declarations.extend(SObjectRuleDeclarationFile.parse_from_yaml(f))
 
         unified_declarations = unify(declarations)
     else:
@@ -258,5 +276,8 @@ def open_file_like(
         with file_like.open(mode) as f:
             yield file_like, f
 
-    elif hasattr(file_like, "read"):
+    elif hasattr(file_like, "name"):
         yield file_like.name, file_like
+
+    elif hasattr(file_like, "read"):
+        yield None, file_like
