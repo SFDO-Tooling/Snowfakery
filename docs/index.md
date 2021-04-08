@@ -1525,7 +1525,7 @@ You can read and include Unicode files like this:
 ```yaml
 - plugin: snowfakery.standard_plugins.file.File
 
-- object: BinaryData
+- object: UnicodeData
   fields:
     encoded_data:
       - File.file_data:
