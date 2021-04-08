@@ -3,7 +3,7 @@ from snowfakery.data_generator_runtime_object_model import (
     ObjectTemplate,
     FieldFactory,
     SimpleValue,
-    ReferenceValue,
+    StructuredValue,
 )
 from snowfakery import data_gen_exceptions as exc
 
@@ -37,7 +37,7 @@ class Salesforce(ParserMacroPlugin):
             ),
             FieldFactory(
                 "AccountId",
-                ReferenceValue("reference", ["Account"], **line_info),
+                StructuredValue("reference", ["Account"], **line_info),
                 **line_info,
             ),
         ]
