@@ -1613,7 +1613,7 @@ There is also an alternate syntax which allows nicknaming:
 
 #### ContentVersions
 
-Files can be used as Salesforce ContentVersins like this:
+Files can be used as Salesforce ContentVersions like this:
 
 ```yaml
 - plugin: snowfakery.standard_plugins.base64.Base64
