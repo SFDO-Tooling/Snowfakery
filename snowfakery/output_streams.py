@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from collections import namedtuple, defaultdict
 from typing import Dict, Union, Optional, Mapping, Callable, Sequence
+from warnings import warn
 
 from sqlalchemy import create_engine, MetaData, Column, Integer, Table, Unicode, func
 from sqlalchemy.ext.automap import automap_base
@@ -252,22 +253,24 @@ class JSONOutputStream(FileOutputStream):
 class SqlDbOutputStream(OutputStream):
     """Output stream for talking to SQL Databases"""
 
-    mappings = None
     should_close_session = False
 
-    def __init__(self, engine: Engine, mappings: Optional[Dict]):
+    def __init__(self, engine: Engine, mappings: None = None):
+        if mappings:
+            warn("Please do not pass mapping argument to __init__", DeprecationWarning)
         self.buffered_rows = defaultdict(list)
         self.table_info = {}
-        self.mappings = mappings
         self.engine = engine
         self.session = create_session(bind=self.engine, autocommit=False)
         self.metadata = MetaData(bind=self.engine)
         self.base = automap_base(bind=engine, metadata=self.metadata)
 
     @classmethod
-    def from_url(cls, db_url: str, mappings: Optional[Dict] = None):
+    def from_url(cls, db_url: str, mappings: None = None):
+        if mappings:
+            warn("Please do not pass mapping argument to from_url", DeprecationWarning)
         engine = create_engine(db_url)
-        self = cls(engine, mappings)
+        self = cls(engine)
         return self
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
@@ -305,8 +308,6 @@ class SqlDbOutputStream(OutputStream):
         self.session.close()
 
     def create_or_validate_tables(self, inferred_tables: Dict[str, TableInfo]) -> None:
-        if self.mappings:
-            _validate_fields(self.mappings, inferred_tables)
         create_tables_from_inferred_fields(inferred_tables, self.engine, self.metadata)
         self.metadata.create_all()
         self.base.prepare(self.engine, reflect=True)
@@ -343,7 +344,7 @@ class SqlTextOutputStream(FileOutputStream):
         "Initialize a db through an owned output stream"
         db_url = f"sqlite:///{self.tempdir.name}/tempdb.db"
         engine = create_engine(db_url)
-        return SqlDbOutputStream(engine, None)
+        return SqlDbOutputStream(engine)
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
         self.sql_db.write_single_row(tablename, row)
@@ -373,11 +374,6 @@ class SqlTextOutputStream(FileOutputStream):
         self.sql_db.close(*args, **kwargs)
         self.text_output.close(*args, **kwargs)
         self.tempdir.cleanup()
-
-
-def _validate_fields(mappings, tables):
-    """Validate that the field names detected match the mapping"""
-    pass  # TODO
 
 
 def create_tables_from_inferred_fields(tables, engine, metadata):

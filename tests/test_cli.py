@@ -104,9 +104,7 @@ class TestGenerateFromCLI:
 
     @mock.patch(write_row_path)
     def test_with_debug_flags_on(self, write_row):
-        generate_cli.callback(
-            yaml_file=sample_yaml, option={}, debug_internals=True, mapping_file=None
-        )
+        generate_cli.callback(yaml_file=sample_yaml, option={}, debug_internals=True)
 
     @mock.patch(write_row_path)
     def test_exception_with_debug_flags_on(self, write_row):
@@ -227,8 +225,6 @@ class TestGenerateFromCLI:
             generate_cli.main(
                 [
                     str(sample_yaml),
-                    "--cci-mapping-file",
-                    mapping_file_path,
                     "--dburl",
                     database_url,
                     "--continuation-file",
