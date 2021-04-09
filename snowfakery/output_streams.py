@@ -447,9 +447,8 @@ class GraphvizOutputStream(FileOutputStream):
     def generate_node_name(
         self, tablename: str, rowname, id: Optional[int] = None
     ) -> str:
-        rowname = rowname or ""
-        separator = ", " if rowname else ""
-        return f"{tablename}({id}{separator}{rowname})"
+        rowname = (", " + rowname) if rowname and rowname != id else ""
+        return f"{tablename}({id}{rowname})"
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
         node_name = self.generate_node_name(

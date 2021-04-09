@@ -1519,6 +1519,47 @@ recipe once. It could, however, save you time if you  were running
 the Snowfakery recipe over and over, because the shuffling would
 happen just once.
 
+#### Reading files
+
+You can read and include Unicode files like this:
+
+```yaml
+- plugin: snowfakery.standard_plugins.file.File
+
+- object: TextData
+  fields:
+    encoded_data:
+      - File.file_data:
+          encoding: utf-8
+          file: ../CODE_OF_CONDUCT.md
+```
+
+`utf-8` is the default encoding, so you could remove that declaration from
+the example if you want. Other popular text encodings are `ascii`, `big5`,
+`latin-1` and `shift_jis`. The complete list includes more than
+[100 encodings](https://docs.python.org/3/library/codecs.html#standard-encodings).
+
+You can read and include Binary files like this:
+
+```yaml
+- plugin: snowfakery.standard_plugins.base64.Base64
+- plugin: snowfakery.standard_plugins.file.File
+
+- object: BinaryData
+  fields:
+    encoded_data:
+      Base64.encode:
+        - File.file_data:
+            encoding: binary
+            file: salesforce/example.pdf
+```
+
+Other encodings of binary data are not currently supported
+and output streams will generally not support raw binary
+data being written to them. It is relatively easy to make
+plugins that does other encodings by building on the code
+in [`File.py`](https://github.com/SFDO-Tooling/Snowfakery/blob/main/snowfakery/standard_plugins/file.py).
+
 ### Salesforce Plugin
 
 There are several features planned for the Salesforce Plugin, but
@@ -1582,7 +1623,32 @@ There is also an alternate syntax which allows nicknaming:
       reference: PCPC
 ```
 
+#### ContentVersions
 
+Files can be used as Salesforce ContentVersions like this:
+
+```yaml
+- plugin: snowfakery.standard_plugins.base64.Base64
+- plugin: snowfakery.standard_plugins.file.File
+- object: Account
+  nickname: FileOwner
+  fields:
+    Name:
+      fake: company
+- object: ContentVersion
+  nickname: FileAttachment
+  fields:
+    Title: Attachment for ${{Account.Name}}
+    PathOnClient: example.pdf
+    Description: example.pdf
+    VersionData:
+      Base64.encode:
+        - File.file_data:
+            encoding: binary
+            file: ${{PathOnClient}}
+    FirstPublishLocationId:
+      reference: Account
+```
 
 ### Custom Plugins
 
