@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from .plugins import SnowfakeryPlugin, lazy  # noqa
+from .plugins import SnowfakeryPlugin, lazy
 from .api import generate_data, SnowfakeryApplication
 
 # TODO: when Python 3.6 is irrelevant, make this lazy:

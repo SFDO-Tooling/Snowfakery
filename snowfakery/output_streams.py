@@ -257,7 +257,7 @@ class SqlDbOutputStream(OutputStream):
 
     def __init__(self, engine: Engine, mappings: None = None):
         if mappings:
-            warn("Please do not pass mapping argument to __init__", DeprecationWarning)
+            warn("Please do not pass mappings argument to __init__", DeprecationWarning)
         self.buffered_rows = defaultdict(list)
         self.table_info = {}
         self.engine = engine
@@ -268,7 +268,7 @@ class SqlDbOutputStream(OutputStream):
     @classmethod
     def from_url(cls, db_url: str, mappings: None = None):
         if mappings:
-            warn("Please do not pass mapping argument to from_url", DeprecationWarning)
+            warn("Please do not pass mappings argument to from_url", DeprecationWarning)
         engine = create_engine(db_url)
         self = cls(engine)
         return self
