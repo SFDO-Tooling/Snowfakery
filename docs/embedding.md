@@ -34,19 +34,20 @@ files, pathLib.Paths or string paths.
 ## Controlling Recipe Execution
 
 The Snowfakery API also allows the application
-to inject logic by implementing a ParentApplication
+to inject logic by implementing a SnowfakeryApplication
 subclass:
 
 ```python
-from snowfakery import generate_data, ParentApplication
+# examples/sample_app.py
+from snowfakery import generate_data, SnowfakeryApplication
 
 
-class MyApplication(ParentApplication):
+class MyApplication(SnowfakeryApplication):
     def __init__(self, stopping_tablename, count):
         self.count = count
-        self._stopping_tablename
+        self._stopping_tablename = stopping_tablename
 
-    def echo(self, message=None, file=None, nl=True, err=False, color=None):
+    def echo(self, message=None, file=None, nl=True, err=False, color=None, **kwargs):
         """Write something to a virtual stdout or stderr.
 
         Arguments to this function are derived from click.echo"""
@@ -58,7 +59,7 @@ class MyApplication(ParentApplication):
             print(message)
 
     @property
-    def stopping_tablename(self):
+    def stopping_tablename(self, **kwargs):
         """Return the name of "stopping table/object":
 
         The table/object whose presence determines
@@ -69,9 +70,9 @@ class MyApplication(ParentApplication):
         due to a misspelling the stopping tablename."""
         return self._stopping_tablename
 
-    def check_if_finished(self, id_manager):
+    def check_if_finished(self, id_manager, **kwargs):
         """Check if we're finished generating"""
-        print(id_manager[self.stopping_tablename])
+        print("Checking if finished:", id_manager[self.stopping_tablename])
         return id_manager[self.stopping_tablename] >= self.count
 
 
@@ -87,7 +88,7 @@ As you can see above, the two main extensbility points are
 a) where warning/logging output goes and b) controlling
 when to finish looping over a recipe.
 
-Always accept *args and **kwargs as arguments to allow new arguments to
+Always accept `**kwargs` as arguments to allow new arguments to
 be added by Snowfakery over time.
 
 ## All arguments to generate_data
@@ -98,7 +99,7 @@ The complete method declaration for `generate_data` is as follows:
 def generate_data(
     yaml_file: FileLike,
     *,
-    parent_application: ParentApplication = None,  # the parent application
+    parent_application: SnowfakeryApplication = None,  # the parent application
     user_options: T.Dict[str, str] = None,  # same as --option
     dburl: str = None,  # same as --dburl
     dburls=[],  # same as multiple --dburl options

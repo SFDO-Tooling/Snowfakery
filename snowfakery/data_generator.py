@@ -119,7 +119,7 @@ def generate(
     continuation_file: TextIO = None,
 ) -> ExecutionSummary:
     """The main entry point to the package for Python applications."""
-    from .api import ParentApplication
+    from .api import SnowfakeryApplication
 
     user_options = user_options or {}
 
@@ -147,7 +147,7 @@ def generate(
 
     # for unit tests that call this function directly
     # they should be updated to use generate_data instead
-    parent_application = parent_application or ParentApplication(stopping_criteria)
+    parent_application = parent_application or SnowfakeryApplication(stopping_criteria)
 
     try:
         # now do the output

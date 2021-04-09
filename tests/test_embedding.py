@@ -8,7 +8,7 @@ import pytest
 
 from snowfakery import generate_data
 from snowfakery.data_generator_runtime import IdManager
-from snowfakery.api import ParentApplication
+from snowfakery.api import SnowfakeryApplication
 from snowfakery import data_gen_exceptions as exc
 
 
@@ -66,7 +66,7 @@ class TestEmbedding:
     def test_parent_application__echo(self):
         called = False
 
-        class MyEmbedder(ParentApplication):
+        class MyEmbedder(SnowfakeryApplication):
             def echo(self, *args, **kwargs):
                 nonlocal called
                 called = True
@@ -80,7 +80,7 @@ class TestEmbedding:
             assert called
 
     def test_parent_application__early_finish(self, generated_rows):
-        class MyEmbedder(ParentApplication):
+        class MyEmbedder(SnowfakeryApplication):
             count = 0
 
             def check_if_finished(self, idmanager):

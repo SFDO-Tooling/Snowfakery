@@ -53,7 +53,7 @@ file_extensions = [
 ] + graphic_file_extensions
 
 
-class ParentApplication:
+class SnowfakeryApplication:
     """Base class for all applications which embed Snowfakery as a library,
     including the Snowfakery CLI and CumulusCI"""
 
@@ -136,7 +136,7 @@ def stopping_criteria_from_target_number(target_number):
 def generate_data(
     yaml_file: FileLike,
     *,
-    parent_application: ParentApplication = None,  # the parent application
+    parent_application: SnowfakeryApplication = None,  # the parent application
     user_options: T.Dict[str, str] = None,  # same as --option
     dburl: str = None,  # same as --dburl
     dburls=[],  # same as multiple --dburl options
@@ -165,7 +165,9 @@ def generate_data(
         def open_with_cleanup(file, mode):
             return exit_stack.enter_context(open_file_like(file, mode))
 
-        parent_application = parent_application or ParentApplication(stopping_criteria)
+        parent_application = parent_application or SnowfakeryApplication(
+            stopping_criteria
+        )
 
         output_stream = exit_stack.enter_context(
             configure_output_stream(

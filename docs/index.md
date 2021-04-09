@@ -1027,6 +1027,7 @@ And then you pass that option like this:
 You can learn the list of options available in the latest version
 like this:
 
+```s
 $ snowfakery --help
 Usage: snowfakery [OPTIONS] YAML_FILE
 
