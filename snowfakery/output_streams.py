@@ -18,17 +18,6 @@ from sqlalchemy.sql import select
 
 from .data_gen_exceptions import DataGenError
 
-try:
-    from cumulusci.tasks.bulkdata.base_generate_data_task import (
-        create_table as create_table_from_mapping,
-    )
-except (ImportError, ModuleNotFoundError) as e:
-    exception = e
-
-    def create_table_from_mapping(mapping, metadata):
-        raise exception
-
-
 from .object_rows import ObjectRow, ObjectReference
 from .parse_recipe_yaml import TableInfo
 
