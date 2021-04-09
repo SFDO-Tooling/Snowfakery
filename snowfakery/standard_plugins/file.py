@@ -4,7 +4,7 @@ from pathlib import Path
 
 class File(SnowfakeryPlugin):
     class Functions:
-        def file_data(self, file, encoding):
+        def file_data(self, file, encoding="utf-8"):
             if encoding == "binary":
                 encoding = "latin-1"
 
