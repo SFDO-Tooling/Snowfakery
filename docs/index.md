@@ -1518,6 +1518,36 @@ recipe once. It could, however, save you time if you  were running
 the Snowfakery recipe over and over, because the shuffling would
 happen just once.
 
+#### Reading files
+
+You can read and include Unicode files like this:
+
+```yaml
+- plugin: snowfakery.standard_plugins.file.File
+
+- object: UnicodeData
+  fields:
+    encoded_data:
+      - File.file_data:
+          encoding: utf-8
+          file: ../CODE_OF_CONDUCT.md
+```
+
+You can read and include Binary files like this:
+
+```yaml
+- plugin: snowfakery.standard_plugins.base64.Base64
+- plugin: snowfakery.standard_plugins.file.File
+
+- object: BinaryData
+  fields:
+    encoded_data:
+      Base64.encode:
+        - File.file_data:
+            encoding: binary
+            file: salesforce/example.pdf
+```
+
 ### Salesforce Plugin
 
 There are several features planned for the Salesforce Plugin, but
@@ -1581,7 +1611,32 @@ There is also an alternate syntax which allows nicknaming:
       reference: PCPC
 ```
 
+#### ContentVersions
 
+Files can be used as Salesforce ContentVersions like this:
+
+```yaml
+- plugin: snowfakery.standard_plugins.base64.Base64
+- plugin: snowfakery.standard_plugins.file.File
+- object: Account
+  nickname: FileOwner
+  fields:
+    Name:
+      fake: company
+- object: ContentVersion
+  nickname: FileAttachment
+  fields:
+    Title: Attachment for ${{Account.Name}}
+    PathOnClient: example.pdf
+    Description: example.pdf
+    VersionData:
+      Base64.encode:
+        - File.file_data:
+            encoding: binary
+            file: ${{PathOnClient}}
+    FirstPublishLocationId:
+      reference: Account
+```
 
 ### Custom Plugins
 
