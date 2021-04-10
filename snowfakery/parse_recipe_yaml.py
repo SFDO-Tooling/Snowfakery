@@ -287,6 +287,18 @@ def parse_inclusions(
         friends.extend(include_friends)
 
 
+def check_identifier(name):
+    if not name:
+        return
+    badchars = [char for char in '."' if char in name]
+    if set(name).intersection(badchars):
+        warn(
+            f"{name} is not a valid nickname.\n"
+            f"Nicknames cannot contain '.' or '\"'."
+            "Future versions of Snowfakery may disallow it."
+        )
+
+
 def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTemplate:
     parsed_template: Any = parse_element(
         dct=yaml_sobj,
@@ -307,6 +319,7 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
     with context.change_current_parent_object(yaml_sobj):
         sobj_def = {}
         sobj_def["tablename"] = parsed_template.object
+        check_identifier(parsed_template.object)
         fields: List
         friends: List
         sobj_def["fields"] = fields = []
@@ -315,12 +328,7 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
         fields.extend(parse_fields(parsed_template.fields or {}, context))
         friends.extend(parse_friends(parsed_template.friends or [], context))
         sobj_def["nickname"] = nickname = parsed_template.nickname
-        if nickname and not nickname.isidentifier():
-            warn(
-                f"{nickname} is not a valid nickname.\n"
-                "Future versions of Snowfakery may disallow it."
-            )
-
+        check_identifier(nickname)
         sobj_def["just_once"] = parsed_template.just_once or False
         sobj_def["line_num"] = parsed_template.line_num.line_num
         sobj_def["filename"] = parsed_template.line_num.filename
