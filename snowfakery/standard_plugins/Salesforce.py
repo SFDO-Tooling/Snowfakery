@@ -3,7 +3,7 @@ from snowfakery.data_generator_runtime_object_model import (
     ObjectTemplate,
     FieldFactory,
     SimpleValue,
-    ReferenceValue,
+    StructuredValue,
 )
 from snowfakery import data_gen_exceptions as exc
 
@@ -37,7 +37,7 @@ class Salesforce(ParserMacroPlugin):
             ),
             FieldFactory(
                 "AccountId",
-                ReferenceValue("reference", ["Account"], **line_info),
+                StructuredValue("reference", ["Account"], **line_info),
                 **line_info,
             ),
         ]
@@ -69,3 +69,10 @@ class Salesforce(ParserMacroPlugin):
                 )
 
         return sobj, nickname
+
+    def ContentFile(self, context, args) -> ObjectTemplate:
+        return {
+            "Base64.encode": [
+                {"File.file_data": {"encoding": "binary", "file": args.get("path")}}
+            ]
+        }

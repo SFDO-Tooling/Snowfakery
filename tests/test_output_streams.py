@@ -142,7 +142,7 @@ class TestSqlDbOutputStream(unittest.TestCase, OutputCommonTests):
     def do_output(self, yaml):
         with named_temporary_file_path() as f:
             url = f"sqlite:///{f}"
-            output_stream = SqlDbOutputStream.from_url(url, None)
+            output_stream = SqlDbOutputStream.from_url(url)
             results = generate(StringIO(yaml), {}, output_stream)
             table_names = results.tables.keys()
             output_stream.close()

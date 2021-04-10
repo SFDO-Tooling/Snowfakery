@@ -116,7 +116,6 @@ def int_string_tuple(ctx, param, value=None):
 @click.option(
     "--debug-internals/--no-debug-internals", "debug_internals", default=False
 )
-@click.option("--cci-mapping-file", "mapping_file", type=click.Path(exists=True))
 @click.option(
     "--generate-cci-mapping-file",
     type=click.File("w"),
@@ -151,7 +150,6 @@ def generate_cli(
     option=[],
     dburls=[],
     target_number=None,
-    mapping_file=None,
     debug_internals=False,
     generate_cci_mapping_file=None,
     output_format=None,
@@ -186,7 +184,6 @@ def generate_cli(
         yaml_file,
         option,
         dburls,
-        mapping_file,
         debug_internals,
         generate_cci_mapping_file,
         output_format,
@@ -194,7 +191,7 @@ def generate_cli(
         output_folder,
     )
     with configure_output_stream(
-        dburls, mapping_file, output_format, output_files, output_folder
+        dburls, output_format, output_files, output_folder
     ) as output_stream:
         try:
             with click.open_file(yaml_file) as f:
@@ -230,20 +227,12 @@ def generate_cli(
 
 
 @contextmanager
-def configure_output_stream(
-    dburls, mapping_file, output_format, output_files, output_folder
-):
+def configure_output_stream(dburls, output_format, output_files, output_folder):
     assert isinstance(output_files, (list, type(None)))
     output_streams = []  # we allow multiple output streams
 
     for dburl in dburls:
-        if mapping_file:
-            with click.open_file(mapping_file, "r") as f:
-                mappings = yaml.safe_load(f)
-        else:
-            mappings = None
-
-        output_streams.append(SqlDbOutputStream.from_url(dburl, mappings))
+        output_streams.append(SqlDbOutputStream.from_url(dburl))
 
     # JSON and SQL are the only output formats (other than debug) that can go on stdout
     if output_format == "json" and not output_files:
@@ -301,7 +290,6 @@ def validate_options(
     yaml_file,
     option,
     dburl,
-    mapping_file,
     debug_internals,
     generate_cci_mapping_file,
     output_format,
@@ -318,8 +306,6 @@ def validate_options(
             "Sorry, you need to pick --dburl or --output-file "
             "because they are mutually exclusive."
         )
-    if not dburl and mapping_file:
-        raise click.ClickException("--cci-mapping-file can only be used with --dburl")
     if (
         output_folder
         and str(output_folder) != "."
