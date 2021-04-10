@@ -10,3 +10,11 @@ repos:
     hooks:
     - id: check-merge-conflict
     - id: flake8
+- repo: local
+  hooks:
+    - id: merge-docs
+      name: Merge examples into docs
+      entry: tools/docs_samples.py
+      language: python
+      files: ".*.md"
+      always_run: true

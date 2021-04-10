@@ -21,9 +21,9 @@ class TestEmbedding:
             outfile = Path(t) / "foo.txt"
             continuation = Path(t) / "out.yml"
             generate_data(
-                yaml_file="examples/company.yml",
-                user_options={"A": "B"},
-                target_number=(20, "Employee"),
+                yaml_file="tests/BDI_generator.yml",
+                user_options={"num_accounts": "15"},
+                target_number=(20, "Account"),
                 debug_internals=True,
                 output_format="json",
                 output_file=outfile,
