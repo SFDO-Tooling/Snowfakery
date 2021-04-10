@@ -1,0 +1,20 @@
+- plugin: snowfakery.standard_plugins.base64.Base64
+- plugin: snowfakery.standard_plugins.file.File
+- object: Account
+  nickname: FileOwner
+  fields:
+    Name:
+      fake: company
+- object: ContentVersion
+  nickname: FileAttachment
+  fields:
+    Title: Attachment for ${{Account.Name}}
+    PathOnClient: example.pdf
+    Description: example.pdf
+    VersionData:
+      Base64.encode:
+        - File.file_data:
+            encoding: binary
+            file: ${{PathOnClient}}
+    FirstPublishLocationId:
+      reference: Account

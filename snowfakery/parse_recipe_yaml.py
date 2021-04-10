@@ -17,7 +17,6 @@ from .data_generator_runtime_object_model import (
     FieldFactory,
     SimpleValue,
     StructuredValue,
-    ReferenceValue,
     Statement,
     Definition,
 )
@@ -190,10 +189,7 @@ def parse_structured_value(name: str, field: Dict, context: ParseContext) -> Def
         return rc
     else:
         args = parse_structured_value_args(args, context)
-        if function_name == "reference":
-            return ReferenceValue(function_name, args, **context.line_num(field))
-        else:
-            return StructuredValue(function_name, args, **context.line_num(field))
+        return StructuredValue(function_name, args, **context.line_num(field))
 
 
 def parse_field_value(
@@ -582,7 +578,7 @@ def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
 
     if not isinstance(data, list):
         raise exc.DataGenSyntaxError(
-            "Generator file should be a list (use '-' on top-level lines)",
+            "Recipe file should be a list (use '-' on top-level lines)",
             stream_name,
             1,
         )
