@@ -406,3 +406,15 @@ class TestCLIOptionChecking:
                 standalone_mode=False,
             )
         assert "apping-file" in str(e.value)
+
+    def test_cli_errors__cannot_infer_output_format(self):
+        with pytest.raises(ClickException, match="Unknown format or file"):
+            with TemporaryDirectory() as t:
+                generate_cli.main(
+                    [
+                        str(sample_yaml),
+                        "--output-file",
+                        Path(t) / "bob",
+                    ],
+                    standalone_mode=False,
+                )
