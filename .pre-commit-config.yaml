@@ -16,5 +16,4 @@ repos:
       name: Merge examples into docs
       entry: tools/docs_samples.py
       language: python
-      files: ".*.md"
-      always_run: true
+      files: ".*.md|examples/.*.yml"
