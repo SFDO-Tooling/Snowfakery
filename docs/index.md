@@ -1027,6 +1027,7 @@ And then you pass that option like this:
 You can learn the list of options available in the latest version
 like this:
 
+```s
 $ snowfakery --help
 Usage: snowfakery [OPTIONS] YAML_FILE
 
@@ -2046,23 +2047,7 @@ generate_data(
 )
 ```
 
-The parameters to the function closely mirror the arguments to the
-[Command Line Interface](#commmand-line-interface). Their type signatures
-are:
-
-```python
-generate_data(
-    yaml_file: Union[Path, str],
-    option: List[Tuple[str, str]] = [],
-    dburl: str = None,
-    target_number: Optional[Tuple[int, str]] = None,
-    debug_internals: bool = False,
-    output_format: str = None,
-    output_file: Path = None,
-    output_folder: Path = None,
-    continuation_file: Path = None,
-)
-```
+Detailed information is available in [Embedding Snowfakery into Python Applications](./embedding.md)
 
 ## Security Profiile of Snowfakery
 

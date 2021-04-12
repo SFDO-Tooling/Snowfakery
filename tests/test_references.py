@@ -3,9 +3,10 @@ from unittest import mock
 
 import pytest
 
-from snowfakery.data_generator import generate, StoppingCriteria
+from snowfakery.data_generator import generate
 from test_parse_samples import find_row
 from snowfakery.data_gen_exceptions import DataGenError
+from snowfakery.api import StoppingCriteria
 
 simple_parent = """                     #1
 - object: A                             #2

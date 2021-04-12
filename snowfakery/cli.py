@@ -1,56 +1,16 @@
 #!/usr/bin/env python3
 import sys
 from pathlib import Path
-from contextlib import contextmanager
-import typing as T
 
-from snowfakery.generate_mapping_from_recipe import mapping_from_recipe_templates
-from snowfakery.salesforce import create_cci_record_type_tables
-from snowfakery.output_streams import (
-    DebugOutputStream,
-    SqlDbOutputStream,
-    SqlTextOutputStream,
-    JSONOutputStream,
-    CSVOutputStream,
-    ImageOutputStream,
-    GraphvizOutputStream,
-    MultiplexOutputStream,
-)
 from snowfakery.data_gen_exceptions import DataGenError
-from snowfakery.data_generator import generate, StoppingCriteria
-from snowfakery.cci_mapping_files.declaration_parser import (
-    SObjectRuleDeclarationFile,
-    unify,
-)
 
 
-import yaml
 import click
 from snowfakery import version
+from snowfakery.api import file_extensions, generate_data
 
 if __name__ == "__main__":  # pragma: no cover
     sys.path.append(str(Path(__file__).parent.parent))
-
-
-graphic_file_extensions = [
-    "PNG",
-    "png",
-    "SVG",
-    "svg",
-    "svgz",
-    "jpeg",
-    "jpg",
-    "ps",
-    "dot",
-]
-
-file_extensions = [
-    "JSON",
-    "json",
-    "txt",
-    "csv",
-    "sql",
-] + graphic_file_extensions
 
 
 def eval_arg(arg):
@@ -84,11 +44,7 @@ def int_string_tuple(ctx, param, value=None):
 
 
 @click.command()
-# TODO: This should become type=click.File("r")
-#       For consistency and flexibility
-@click.argument(
-    "yaml_file", type=click.Path(exists=True, readable=True, dir_okay=False)
-)
+@click.argument("yaml_file", type=click.File("r"))
 @click.option(
     "--dburl",
     "dburls",
@@ -150,7 +106,7 @@ def generate_cli(
     option=[],
     dburls=[],
     target_number=None,
-    debug_internals=False,
+    debug_internals=None,
     generate_cci_mapping_file=None,
     output_format=None,
     output_files=None,
@@ -178,7 +134,6 @@ def generate_cli(
             * https://snowfakery.readthedocs.io/en/docs/
     """
     output_files = list(output_files) if output_files else []
-    stopping_criteria = stopping_criteria_from_target_number(target_number)
     output_format = output_format.lower() if output_format else None
     validate_options(
         yaml_file,
@@ -190,100 +145,30 @@ def generate_cli(
         output_files,
         output_folder,
     )
-    with configure_output_stream(
-        dburls, output_format, output_files, output_folder
-    ) as output_stream:
-        try:
-            with click.open_file(yaml_file) as f:
-                summary = generate(
-                    open_yaml_file=f,
-                    user_options=dict(option),
-                    output_stream=output_stream,
-                    stopping_criteria=stopping_criteria,
-                    generate_continuation_file=generate_continuation_file,
-                    continuation_file=continuation_file,
-                )
-            if debug_internals:
-                debuginfo = yaml.dump(
-                    summary.summarize_for_debugging(), sort_keys=False
-                )
-                sys.stderr.write(debuginfo)
-            if generate_cci_mapping_file:
-                declarations = gather_declarations(yaml_file, load_declarations)
-                yaml.safe_dump(
-                    mapping_from_recipe_templates(summary, declarations),
-                    generate_cci_mapping_file,
-                    sort_keys=False,
-                )
-        except DataGenError as e:
-            if debug_internals:
-                raise e
-            else:
-                click.echo("")
-                click.echo(e.prefix)
-                raise click.ClickException(str(e)) from e
-    if should_create_cci_record_type_tables:
-        create_cci_record_type_tables(dburls[0])
-
-
-@contextmanager
-def configure_output_stream(dburls, output_format, output_files, output_folder):
-    assert isinstance(output_files, (list, type(None)))
-    output_streams = []  # we allow multiple output streams
-
-    for dburl in dburls:
-        output_streams.append(SqlDbOutputStream.from_url(dburl))
-
-    # JSON and SQL are the only output formats (other than debug) that can go on stdout
-    if output_format == "json" and not output_files:
-        output_streams.append(JSONOutputStream(sys.stdout))
-
-    if output_format == "sql" and not output_files:
-        output_streams.append(SqlTextOutputStream(sys.stdout))
-
-    if output_format == "csv":
-        output_streams.append(CSVOutputStream(output_folder))
-
-    if output_files:
-        for path in output_files:
-            if output_folder:
-                path = Path(output_folder, path)  # put the file in the output folder
-            format = output_format or Path(path).suffix[1:]
-
-            if format == "json":
-                output_streams.append(JSONOutputStream(path))
-            elif format == "sql":
-                output_streams.append(SqlTextOutputStream(path))
-            elif format == "txt":
-                output_streams.append(DebugOutputStream(path))
-            elif format == "dot":
-                output_streams.append(GraphvizOutputStream(path))
-            elif format in graphic_file_extensions:
-                output_streams.append(ImageOutputStream(path, format))
-            else:
-                raise click.ClickException(
-                    f"Unknown format or file extension: {format}"
-                )
-
-    if len(output_streams) == 0:
-        output_stream = DebugOutputStream()
-    elif len(output_streams) == 1:
-        output_stream = output_streams[0]
-    else:
-        output_stream = MultiplexOutputStream(output_streams)
     try:
-        yield output_stream
-    finally:
-        for output_stream in output_streams:
-            messages = None
-            try:
-                messages = output_stream.close()
-            except Exception as e:
-                messages = None
-                click.echo(f"Could not close {output_stream}: {str(e)}", err=True)
-            if messages:
-                for message in messages:
-                    click.echo(message)
+        user_options = dict(option)
+        generate_data(
+            yaml_file=yaml_file,
+            user_options=user_options,
+            dburls=dburls,
+            target_number=target_number,
+            debug_internals=debug_internals,
+            generate_cci_mapping_file=generate_cci_mapping_file,
+            output_format=output_format,
+            output_files=output_files,
+            output_folder=output_folder,
+            continuation_file=continuation_file,
+            generate_continuation_file=generate_continuation_file,
+            should_create_cci_record_type_tables=should_create_cci_record_type_tables,
+            load_declarations=load_declarations,
+        )
+    except DataGenError as e:
+        if debug_internals:
+            raise e
+        else:
+            click.echo("")
+            click.echo(e.prefix)
+            raise click.ClickException(str(e)) from e
 
 
 def validate_options(
@@ -314,46 +199,6 @@ def validate_options(
         raise click.ClickException(
             "--output-folder can only be used with --output-file=<something> or --output-format=csv"
         )
-
-
-def stopping_criteria_from_target_number(target_number):
-    "Deconstruct a tuple of 'str number' or 'number str' and make a StoppingCriteria"
-
-    # 'number str' is the official format so the other one can be deprecated one day.
-    if target_number:
-        if isinstance(target_number[0], int):
-            target_number = target_number[1], target_number[0]
-        return StoppingCriteria(*target_number)
-
-    return None
-
-
-def infer_load_file_path(yaml_file: T.Union[str, Path]):
-    yaml_file = str(yaml_file)
-    suffixes = "".join(Path(yaml_file).suffixes)
-    if suffixes:
-        return Path(yaml_file.replace(suffixes, ".load.yml"))
-    else:
-        return Path("")
-
-
-def gather_declarations(yaml_file, load_declarations):
-    if not load_declarations:
-        inferred_load_file_path = infer_load_file_path(yaml_file)
-        if inferred_load_file_path.is_file():
-            load_declarations = [inferred_load_file_path]
-
-    if load_declarations:
-        declarations = []
-        for declfile in load_declarations:
-            declarations.extend(
-                SObjectRuleDeclarationFile.parse_from_yaml(Path(declfile))
-            )
-
-        unified_declarations = unify(declarations)
-    else:
-        unified_declarations = {}
-    return unified_declarations
 
 
 def main():
