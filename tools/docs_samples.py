@@ -1,8 +1,15 @@
+#!/usr/bin/env python3
 from pathlib import Path
+from glob import glob
+from difflib import context_diff
 
 # This tool merges example files into the docs and thus ensures
 # that the tested version of the example is also the one in the
 # doc.
+
+being_replaced = []
+being_replaced_filename = None
+replacement = None
 
 
 class TOP:
@@ -27,13 +34,23 @@ class OPEN:
 
 
 class REPLACING:
-    """Code example is open being replaced because it corresponds to a file on disk"""
+    """Code example is being replaced because it corresponds to a file on disk"""
 
     def next_state(line, location):
         if line.startswith(TRIPLE_QUOTE):
             check_triple_quote_alone(line, location)
+            if replacement != being_replaced:
+                for diff in context_diff(
+                    replacement,
+                    being_replaced,
+                    fromfile=being_replaced_filename,
+                    tofile="Docs",
+                ):
+                    print(diff, end="")
+            being_replaced.clear()
             return TOP, [line]
         else:
+            being_replaced.append(line)
             return REPLACING, []  # IGNORE lines to be replaced
 
 
@@ -41,12 +58,14 @@ class START_EXAMPLE:
     """First line of a code example"""
 
     def next_state(line, location):
+        global replacement, being_replaced_filename
         if line.startswith("#"):
             filename = line.split("#")[1].strip()
             assert Path(filename).exists(), location
             with Path(filename).open() as f:
                 example_lines = f.readlines()
-            print("Replacing", filename)
+            replacement = example_lines
+            being_replaced_filename = filename
             return REPLACING, [line] + example_lines
         else:
             return OPEN, [line]
@@ -78,12 +97,18 @@ def replace_samples(input_file) -> str:
     return "".join(output)
 
 
-def main(filename):
+def replace_examples(filename):
     with open(filename) as f:
         output = replace_samples(f)
     with open(filename, "w") as f:
         f.write(output)
 
 
-filename = "docs/index.md"
-main(filename)
+def main():
+    filenames = glob("docs/*.md")
+    for filename in filenames:
+        replace_examples(filename)
+
+
+if __name__ == "__main__":
+    main()
