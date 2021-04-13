@@ -8,7 +8,7 @@ from click.utils import LazyFile
 from .data_gen_exceptions import DataGenNameError
 from .output_streams import DebugOutputStream, OutputStream
 from .parse_recipe_yaml import parse_recipe
-from .data_generator_runtime import output_batches, StoppingCriteria, Globals
+from .data_generator_runtime import Globals, Interpreter
 from .data_gen_exceptions import DataGenError
 from . import SnowfakeryPlugin
 from .utils.yaml_utils import SnowfakeryDumper, hydrate
@@ -112,11 +112,15 @@ def generate(
     open_yaml_file: IO[str],
     user_options: dict = None,
     output_stream: OutputStream = None,
-    stopping_criteria: StoppingCriteria = None,
+    parent_application=None,
+    *,
+    stopping_criteria=None,
     generate_continuation_file: FileLike = None,
     continuation_file: TextIO = None,
 ) -> ExecutionSummary:
     """The main entry point to the package for Python applications."""
+    from .api import SnowfakeryApplication
+
     user_options = user_options or {}
 
     # Where are we going to put the rows?
@@ -139,19 +143,26 @@ def generate(
 
     faker_providers, snowfakery_plugins = process_plugins(parse_result.plugins)
 
+    globls = initialize_globals(continuation_data, parse_result.templates)
+
+    # for unit tests that call this function directly
+    # they should be updated to use generate_data instead
+    parent_application = parent_application or SnowfakeryApplication(stopping_criteria)
+
     try:
         # now do the output
-        runtime_context = output_batches(
-            output_stream,
-            parse_result.statements,
-            parse_result.templates,
-            options,
-            stopping_criteria=stopping_criteria,
-            continuation_data=continuation_data,
-            tables=parse_result.tables,
+        with Interpreter(
+            output_stream=output_stream,
+            options=options,
             snowfakery_plugins=snowfakery_plugins,
+            parent_application=parent_application,
             faker_providers=faker_providers,
-        )
+            parse_result=parse_result,
+            globals=globls,
+            continuing=bool(continuation_data),
+        ) as interpreter:
+            runtime_context = interpreter.execute()
+
     except DataGenError as e:
         if e.filename:
             raise
@@ -163,6 +174,26 @@ def generate(
         save_continuation_yaml(runtime_context, generate_continuation_file)
 
     return ExecutionSummary(parse_result, runtime_context)
+
+
+def initialize_globals(continuation_data, templates):
+    if continuation_data:
+        globals = continuation_data
+    else:
+        name_slots = {
+            template.nickname: template.tablename
+            for template in templates
+            if template.nickname
+        }
+        # table names are sort of nicknames for themselves too, because
+        # you can refer to them.
+        name_slots.update(
+            {template.tablename: template.tablename for template in templates}
+        )
+
+        globals = Globals(name_slots=name_slots)
+
+    return globals
 
 
 if __name__ == "__main__":  # pragma: no cover
