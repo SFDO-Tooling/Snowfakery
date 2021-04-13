@@ -1,0 +1,8 @@
+- plugin: snowfakery.standard_plugins.file.File
+
+- object: BinaryData
+  fields:
+    encoded_data:
+      - File.file_data:
+          encoding: utf-8
+          file: ../CODE_OF_CONDUCT.md

@@ -429,6 +429,30 @@ nickname or tablename, that object is the target reference.
 Otherwise, the reference can be to an object that has not been created yet. Snowfakery will generate an ID for the object so that the current row can be generated. No other properties of the other object can be referred to, because
 it does not exist yet.
 
+If the referenced name contains dots then Snowfakery will follow
+field names to get to the final name. The first name before the first "." could be either a field name or an object-name.
+
+```yaml
+- object: cat
+  nickname: Fluffy
+  fields:
+    color: black
+
+- object: fiance
+  nickname: sam
+  fields:
+    pet:
+      reference: Fluffy
+
+- object: betrothed
+  fields:
+    spouse:
+      reference: sam
+    pet:
+      reference: spouse.pet
+    color: ${{pet.color}}
+```
+
 Snowfakery (and CumulusCI) allow one to loop over a recipe many times to
 generate multiple rows. In this case, references are always to objects
 created within the current "batch" of a recipe and never to a previous
@@ -758,7 +782,7 @@ ${{ date(Date_Established__c) + relativedelta(months=child_index) }}
 ```
 
 Some plugins may also be interested in a `template` variable which has an `id` attributes represents a unique identifier for the current template. Look at
-[datasets.py](https://github.com/SFDO-Tooling/Snowfakery/blob/master/snowfakery/standard_plugins/datasets.py) to see one use-case where the template's ID can used to differentiate between two otherwise identical datasets.
+[datasets.py](https://github.com/SFDO-Tooling/Snowfakery/blob/main/snowfakery/standard_plugins/datasets.py) to see one use-case where the template's ID can used to differentiate between two otherwise identical datasets.
 
 ### NULL
 
@@ -1003,6 +1027,7 @@ And then you pass that option like this:
 You can learn the list of options available in the latest version
 like this:
 
+```s
 $ snowfakery --help
 Usage: snowfakery [OPTIONS] YAML_FILE
 
@@ -1196,18 +1221,6 @@ StageName:
 
 Observant readers will note that the values do not add up to 100. That’s fine. Closed Won will be selected 5/12 of the time, In Progress will be picked 3/12 and New will be picked 4/12 of the time. They are just weights, not necessarily percentage weights.
 
-## Plugins and Providers
-
-Plugins and Providers allow Snowfakery to be extended with Python code. A plugin adds new functions to Snowfakery. A Provider adds new capabilities to the Fakery library which is exposed to Snowfakery users through the fake: keyword.
-
-You include either Plugins or Providers in a Snowfakery file like this:
-
-```yaml
-- plugin: package.module.classname
-```
-
-To write a new Provider, please refer to the documentation for Faker at https://faker.readthedocs.io/en/master/#providers
-
 #### Many to One relationships
 
 In relational databases, child records typically have a reference to
@@ -1293,7 +1306,18 @@ And here's how to use the "hidden fields"([#hidden-fields-and-objects]) feature:
             reference: Company
 ```
 
-## Built-in Plugins
+
+## Plugins and Providers
+
+Plugins and Providers allow Snowfakery to be extended with Python code. A plugin adds new functions to Snowfakery. A Provider adds new capabilities to the Faker library which is exposed to Snowfakery users through the fake: keyword.
+
+You include either Plugins or Providers in a Snowfakery file like this:
+
+```yaml
+- plugin: package.module.classname
+```
+
+### Built-in Plugins
 
 ### Advanced Math
 
@@ -1601,7 +1625,198 @@ recipe once. It could, however, save you time if you  were running
 the Snowfakery recipe over and over, because the shuffling would
 happen just once.
 
+#### Reading files
+
+You can read and include Unicode files like this:
+
+```yaml
+- plugin: snowfakery.standard_plugins.file.File
+
+- object: TextData
+  fields:
+    encoded_data:
+      - File.file_data:
+          encoding: utf-8
+          file: ../CODE_OF_CONDUCT.md
+```
+
+`utf-8` is the default encoding, so you could remove that declaration from
+the example if you want. Other popular text encodings are `ascii`, `big5`,
+`latin-1` and `shift_jis`. The complete list includes more than
+[100 encodings](https://docs.python.org/3/library/codecs.html#standard-encodings).
+
+You can read and include Binary files like this:
+
+```yaml
+- plugin: snowfakery.standard_plugins.base64.Base64
+- plugin: snowfakery.standard_plugins.file.File
+
+- object: BinaryData
+  fields:
+    encoded_data:
+      Base64.encode:
+        - File.file_data:
+            encoding: binary
+            file: salesforce/example.pdf
+```
+
+Other encodings of binary data are not currently supported
+and output streams will generally not support raw binary
+data being written to them. It is relatively easy to make
+plugins that does other encodings by building on the code
+in [`File.py`](https://github.com/SFDO-Tooling/Snowfakery/blob/main/snowfakery/standard_plugins/file.py).
+
+### Salesforce Plugin
+
+There are several features planned for the Salesforce Plugin, but
+the first is support for Person Accounts.
+
+#### Creating and Referencing Person Accounts
+
+You can use Person Accounts like this:
+
+```yaml
+- plugin: snowfakery.standard_plugins.Salesforce
+- object: Account
+  fields:
+    FirstName:
+      fake: first_name
+    LastName:
+      fake: last_name
+    PersonMailingStreet:
+      fake: street_address
+    PersonMailingCity:
+      fake: city
+    PersonContactId:
+      Salesforce.SpecialObject: PersonContact
+```
+
+This will generate a placeholder object in your recipe which can
+be referred to by other templates like so:
+
+```yaml
+- object: User
+  fields:
+    Username:
+      fake: email
+    ...
+    ContactId:
+      reference: Account.PersonContactId
+```
+
+CumulusCI will fix up the references during data load. If you run into
+errors, please verify that the Account object is being loaded before
+the others that refer to the PersonContactId. If not, you may need to
+write a CumulusCI mapping file to ensure that it does.
+
+The `Salesforce.SpecialObject` function cannot currently be used for any other
+SObject or in any other context. It must always generate a `PersonContact`
+in the `PersonContactId` field.
+
+There is also an alternate syntax which allows nicknaming:
+
+```yaml
+...
+- object: Account
+  fields:
+    PersonContactId:
+      Salesforce.SpecialObject:
+        name: PersonContact
+        nickname: PCPC
+- object: User
+  fields:
+    ContactId:
+      reference: PCPC
+```
+
+#### ContentVersions
+
+Files can be used as Salesforce ContentVersions like this:
+
+```yaml
+- plugin: snowfakery.standard_plugins.base64.Base64
+- plugin: snowfakery.standard_plugins.file.File
+- object: Account
+  nickname: FileOwner
+  fields:
+    Name:
+      fake: company
+- object: ContentVersion
+  nickname: FileAttachment
+  fields:
+    Title: Attachment for ${{Account.Name}}
+    PathOnClient: example.pdf
+    Description: example.pdf
+    VersionData:
+      Base64.encode:
+        - File.file_data:
+            encoding: binary
+            file: ${{PathOnClient}}
+    FirstPublishLocationId:
+      reference: Account
+```
+
 ### Custom Plugins
+
+#### How Snowfakery Finds Plugins
+
+The basic format is:
+
+```yaml
+- plugin: package.module.classname
+```
+
+Which is equivalent to the Python:
+
+```python
+from package.module import classname
+```
+
+If the module name and the classname are the same,
+this can be shortened to:
+
+```yaml
+- plugin: package.classname
+```
+
+In that case, Snowfakery will automatically expand it to 
+
+```python
+from package.classname import classname
+```
+
+Fewer keystrokes are better than more, so plugin providers are
+encouraged to create plugins where the module name and
+class name are the same.
+
+Snowfakery will look for the plugin or provider in these places:
+
+- the [Python path](https://docs.python.org/3/library/sys.html#sys.path),
+- in a `plugins` directory in the same directory as the recipe,
+- in a `plugins` directory below the current working directory and
+- in a subdirectory of the user's home directory called `.snowfakery/plugins`.
+
+So for example, if you had a Snowfakery file like this:
+
+```yaml
+- plugin: salesforce.org.DoGood
+```
+
+named `do_goodders/do_gooder.recipe.yml`
+
+You could make a file named `do_gooders/plugins/salesforce/org/DoGood.py`
+
+And that file would contain a class like this:
+
+```python
+from snowfakery.plugins import SnowfakeryPlugin
+
+class DoGood(SnowfakeryPlugin):
+    """Plugin which generates a summation helper"""
+    ...
+```
+
+#### Writing Plugins
 
 To write a new Plugin, make a class that inherits from `SnowfakeryPlugin` and implements either the `custom_functions()` method or a `Functions` nested class. The nested class is simple: each method represents a function to expose in the namespace. In this case the function name would be `DoublingPlugin.double`.
 
@@ -1808,13 +2023,19 @@ class SummationPlugin(SnowfakeryPlugin):
             return Summation(total, step)
 ```
 
+### Custom Providers
+
+To write a new Provider, please refer to the documentation for Faker at https://faker.readthedocs.io/en/master/#providers
+
 ## Using Snowfakery with Salesforce
 
 Snowfakery recipes that generate Salesforce records are just like any
 other Snowfakery recipes. You use SObject names for the 'objects'.
-There are several examples [in the Snowfakery repository](https://github.com/SFDO-Tooling/Snowfakery/tree/master/examples/salesforce)
+There are several examples [in the Snowfakery repository](https://github.com/SFDO-Tooling/Snowfakery/tree/main/examples/salesforce)
 
 To specify a record type for a record, just put the Record Type’s API Name in a field named RecordType.
+
+Person Account support is provided the [Salesforce Plugin](#salesforce-plugin).
 
 The process of actually generating the data into a Salesforce
 org happens through CumulusCI as described below.
@@ -1829,7 +2050,7 @@ creates Snowfakery.
 The easiest way to learn about CumulusCI (and to learn how to
 install it) is with its [Trailhead Trail](https://trailhead.salesforce.com/en/content/learn/trails/build-applications-with-cumulusci).
 
-CumulusCI's documentation [describes](https://cumulusci.readthedocs.io/en/latest/cookbook.html#large-volume-data-synthesis-with-snowfakery)
+CumulusCI's documentation [describes](https://cumulusci.readthedocs.io/en/latest/data.html?highlight=snowfakery#generate-fake-data)
 how to use it with Snowfakery. Here is a short example:
 
 ```s
@@ -1839,7 +2060,7 @@ $ cci task run generate_and_load_from_yaml -o generator_yaml examples/salesforce
 
 You can (and more often will) use generate_and_load_from_yaml from
 within a flow captured in in a `cumulusci.yml`, like the one in
-the [Snowfakery repo](https://github.com/SFDO-Tooling/Snowfakery/tree/master/cumulusci.yml).
+the [Snowfakery repo](https://github.com/SFDO-Tooling/Snowfakery/tree/main/cumulusci.yml).
 
 If you have CumulusCI configured and you would like to test this,
 you can do so like this (the Snowfakery repo itself has a
@@ -1938,23 +2159,15 @@ generate_data(
 )
 ```
 
-The parameters to the function closely mirror the arguments to the
-[Command Line Interface](#commmand-line-interface). Their type signatures
-are:
+Detailed information is available in [Embedding Snowfakery into Python Applications](./embedding.md)
 
-```python
-generate_data(
-    yaml_file: Union[Path, str],
-    option: List[Tuple[str, str]] = [],
-    dburl: str = None,
-    target_number: Optional[Tuple[int, str]] = None,
-    debug_internals: bool = False,
-    output_format: str = None,
-    output_file: Path = None,
-    output_folder: Path = None,
-    continuation_file: Path = None,
-)
-```
+## Security Profiile of Snowfakery
+
+Snowfakery should be considered a domain-specific programming language with
+access to most of the power of Python. It can load Python plugins and
+call Python methods. It would be unwise to run untrusted recipes in an
+environment that has access to secure resources such as passwords, network
+connections, etc.
 
 ## Internal Software Architecture
 

@@ -4,6 +4,53 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 1.8.1
+
+Fixed packaging issue.
+
+## Snowfakery 1.8
+
+Fix regression when an SObject declares a RecordType on some records
+but not others.  #301
+
+Add a new feature for integrating with CumulusCI's Load architecture.
+This feature will obsolete most (hopefully all) uses of mapping.yml with Snowfakery.  Documentation for it will be in CumulusCI. #290
+
+## Snowfakery 1.7
+
+Adds support for Salesforce Person Accounts to Snowfakery.
+See the documentation for details. (#283)
+
+## Snowfakery 1.6.1
+
+Fix regression: Can set RecordType on objects with names that
+are SQL keywords (like Case).  (#277)
+
+## Snowfakery 1.6
+
+Record types can now be specified with `random_choice`. #273
+
+Plugins are now searched for in relative directories called "plugins"
+as well as a directory under the user's home directory. See the docs
+for more information. #229
+
+Snowfakery can now generate SQL text as an output format. The specific
+schema is compatible with CCI's data loader, but can be used in other
+contexts. #162
+
+Add a `snowfakery_filename` variable to allow injecting the
+recipe filename into recipe output.
+#249
+
+Add NULL to Snowfakery formulas #239
+
+Allow references to be indirect and include dots in them.
+Consequently, dots and other punctuation are now disallowed in
+nicknames and discouraged in object/table names. #186
+
+Snowfakery's default branch is now main, so references to
+master should be updated.
+
 ## Snowfakery 1.5
 
 Adds a "random_reference" feature to allow randomized

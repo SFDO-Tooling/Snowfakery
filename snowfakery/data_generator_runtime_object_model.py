@@ -48,7 +48,13 @@ class FieldDefinition(ABC):
 
 
 class VariableDefinition:
-    """Defines a mutable variable"""
+    """Defines a mutable variable. Like:
+
+    - var: Foo
+      value: Bar
+    """
+
+    # TODO: Add an example
 
     tablename = None
 
@@ -210,7 +216,7 @@ class ObjectTemplate:
 
 
 class SimpleValue(FieldDefinition):
-    """A value with no sub-structure (although it could hold a template)
+    """A value with no sub-structure (although it could hold a formula)
 
     - object: abc
       fields:
@@ -338,13 +344,6 @@ class StructuredValue(FieldDefinition):
         return (
             f"<StructuredValue: {self.function_name} (*{self.args}, **{self.kwargs})>"
         )
-
-
-class ReferenceValue(StructuredValue):
-    """- object: foo
-    fields:
-      - reference:
-          Y"""
 
 
 class FieldFactory:

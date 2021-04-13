@@ -4,16 +4,24 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 with open("requirements.txt") as requirements_file:
-    requirements = [req.replace("==", ">=").strip() for req in requirements_file]
+    requirements = [
+        req.split("#")[0].replace("==", ">=").strip() for req in requirements_file
+    ]
 
 with open("requirements_dev.txt") as dev_requirements_file:
     test_requirements = [
-        req for req in dev_requirements_file if not req.startswith("-")
+        req.split("#")[0] for req in dev_requirements_file if not req.startswith("-")
     ]
 
 # get the version into a global variable named "version"
 with open("snowfakery/version.txt") as f:
     version = f.read().strip()
+
+packages = [
+    p
+    for p in setuptools.find_namespace_packages()
+    if p.startswith("snowfakery") and not p.startswith("snowfakery.docs")
+]
 
 setuptools.setup(
     name="snowfakery",
@@ -29,7 +37,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/SFDO-Tooling/Snowfakery",
-    packages=setuptools.find_packages(),
+    packages=packages,
     package_dir={"snowfakery": "snowfakery"},
     include_package_data=True,
     classifiers=[

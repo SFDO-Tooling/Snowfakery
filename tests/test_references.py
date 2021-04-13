@@ -3,9 +3,10 @@ from unittest import mock
 
 import pytest
 
-from snowfakery.data_generator import generate, StoppingCriteria
+from snowfakery.data_generator import generate
 from test_parse_samples import find_row
 from snowfakery.data_gen_exceptions import DataGenError
+from snowfakery.api import StoppingCriteria
 
 simple_parent = """                     #1
 - object: A                             #2
@@ -204,6 +205,65 @@ class TestReferences:
 
         assert "Bob" in str(e.value)
         assert "Bill" in str(e.value)
+
+    def test_dotted_references(self, generated_rows):
+        yaml = """
+        - object: A
+          fields:
+            num: 5
+        - object: B
+          fields:
+            A:
+              reference: A
+        - object: C
+          fields:
+            BRef:
+              reference: B
+            D:
+              reference: BRef.A
+        """
+        generate(StringIO(yaml), {}, None)
+        assert generated_rows.row_values(2, "D") == "A(1)"
+
+    def test_dotted_references_broken(self, generated_rows):
+        yaml = """
+        - object: A
+          fields:
+            num: 5
+        - object: B
+          fields:
+            A:
+              reference: A
+        - object: C
+          fields:
+            BRef:
+              reference: B
+            D:
+              reference: QQQ.A
+        """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml), {}, None)
+        assert "QQQ.A" in str(e.value)
+
+    def test_dotted_references_broken_2(self, generated_rows):
+        yaml = """
+        - object: A
+          fields:
+            num: 5
+        - object: B
+          fields:
+            A:
+              reference: A
+        - object: C
+          fields:
+            BRef:
+              reference: B
+            D:
+              reference: BRef.QQQ
+        """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml), {}, None)
+        assert "BRef.QQQ" in str(e.value)
 
     def test_forward_reference__iterations(self, generated_rows):
         yaml = """

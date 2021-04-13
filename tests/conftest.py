@@ -1,8 +1,11 @@
 import sys
 from pathlib import Path
 from unittest.mock import patch
+from contextlib import contextmanager
 
 import pytest
+import yaml
+from sqlalchemy import create_engine
 
 try:
     import cumulusci
@@ -51,3 +54,32 @@ def generated_rows(request):
 def disable_typeguard():
     with patch("typeguard.check_argument_types", lambda *args, **kwargs: ...):
         yield
+
+
+@pytest.fixture(scope="function")
+def generate_in_tmpdir(tmpdir):
+    from snowfakery import generate_data
+
+    tmpdir = Path(tmpdir)
+
+    @contextmanager
+    def doit(recipe_data, *args, **kwargs):
+        db = tmpdir / "testdb.db"
+        dburl = f"sqlite:///{db}"
+        recipe = tmpdir / "recipe.yml"
+        mapping_file = tmpdir / "mapping.yml"
+        recipe.write_text(recipe_data)
+        generate_data(
+            recipe,
+            *args,
+            generate_cci_mapping_file=mapping_file,
+            dburl=dburl,
+            should_create_cci_record_type_tables=True,
+            **kwargs,
+        )
+        mapping = yaml.safe_load(mapping_file.read_text())
+        e = create_engine(dburl)
+        with e.connect() as connection:
+            yield mapping, connection
+
+    return doit

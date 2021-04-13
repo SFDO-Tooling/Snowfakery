@@ -4,8 +4,9 @@ from io import StringIO
 
 import pytest
 
-from snowfakery.data_generator import merge_options, generate, StoppingCriteria
+from snowfakery.data_generator import merge_options, generate
 from snowfakery.data_gen_exceptions import DataGenNameError, DataGenError
+from snowfakery.data_generator_runtime import StoppingCriteria
 
 
 class TestDataGenerator(unittest.TestCase):

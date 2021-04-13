@@ -1,0 +1,6 @@
+- sf_object: Account
+  api: REST
+  priority: high
+
+- sf_object: Opportunity
+  api: bulk

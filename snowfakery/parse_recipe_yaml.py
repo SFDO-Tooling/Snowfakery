@@ -2,9 +2,9 @@ from os import fsdecode
 from numbers import Number
 from datetime import date
 from contextlib import contextmanager
-from collections import namedtuple
 from pathlib import Path
 from typing import IO, List, Dict, Union, Tuple, Any, Iterable, Sequence, Mapping
+from warnings import warn
 
 import yaml
 from yaml.composer import Composer
@@ -17,11 +17,11 @@ from .data_generator_runtime_object_model import (
     FieldFactory,
     SimpleValue,
     StructuredValue,
-    ReferenceValue,
     Statement,
+    Definition,
 )
 
-from snowfakery.plugins import resolve_plugin
+from snowfakery.plugins import resolve_plugins, LineTracker, ParserMacroPlugin
 import snowfakery.data_gen_exceptions as exc
 
 SHARED_OBJECT = "#SHARED_OBJECT"
@@ -29,8 +29,6 @@ SHARED_OBJECT = "#SHARED_OBJECT"
 TemplateLike = Union[ObjectTemplate, StructuredValue]
 ###
 #   The entry point to this is parse_recipe
-
-LineTracker = namedtuple("LineTracker", ["filename", "line_num"])
 
 
 class ParseResult:
@@ -87,6 +85,7 @@ class ParseContext:
         self.line_numbers = {}
         self.options = []
         self.table_infos = {}
+        self.parser_macros_plugins = {}
 
     def line_num(self, obj=None) -> Dict:
         if not obj:
@@ -161,9 +160,7 @@ def parse_structured_value_args(
         return parse_field_value("", args, context, False)
 
 
-def parse_structured_value(
-    name: str, field: Dict, context: ParseContext
-) -> StructuredValue:
+def parse_structured_value(name: str, field: Dict, context: ParseContext) -> Definition:
     """Parse something that might look like:
 
     {'choose': ['Option1', 'Option2', 'Option3', 'Option4'], '__line__': 9}
@@ -182,10 +179,16 @@ def parse_structured_value(
             f"Extra keys for field {name} : {top_level}", **context.line_num(field)
         )
     [[function_name, args]] = top_level
-    args = parse_structured_value_args(args, context)
-    if function_name == "reference":
-        return ReferenceValue(function_name, args, **context.line_num(field))
+    plugin = None
+    if "." in function_name:
+        namespace, name = function_name.split(".")
+        plugin = context.parser_macros_plugins.get(namespace)
+    if plugin:
+        func = getattr(plugin, name)
+        rc = func(context, args)
+        return rc
     else:
+        args = parse_structured_value_args(args, context)
         return StructuredValue(function_name, args, **context.line_num(field))
 
 
@@ -311,7 +314,13 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
         parse_inclusions(yaml_sobj, fields, friends, context)
         fields.extend(parse_fields(parsed_template.fields or {}, context))
         friends.extend(parse_friends(parsed_template.friends or [], context))
-        sobj_def["nickname"] = parsed_template.nickname
+        sobj_def["nickname"] = nickname = parsed_template.nickname
+        if nickname and not nickname.isidentifier():
+            warn(
+                f"{nickname} is not a valid nickname.\n"
+                "Future versions of Snowfakery may disallow it."
+            )
+
         sobj_def["just_once"] = parsed_template.just_once or False
         sobj_def["line_num"] = parsed_template.line_num.line_num
         sobj_def["filename"] = parsed_template.line_num.filename
@@ -537,13 +546,17 @@ def parse_top_level_elements(path: Path, data: List, context: ParseContext):
     statements.extend(parse_included_files(path, data, context))
     context.options.extend(top_level_objects["option"])
     context.macros.update({obj["macro"]: obj for obj in top_level_objects["macro"]})
+    plugin_specs = [
+        (obj["plugin"], obj["__line__"]) for obj in top_level_objects["plugin"]
+    ]
+    plugin_near_recipe = path.parent / "plugins"
     context.plugins.extend(
-        [
-            resolve_plugin(obj["plugin"], obj["__line__"])
-            for obj in top_level_objects["plugin"]
-        ]
+        resolve_plugins(plugin_specs, search_paths=[plugin_near_recipe])
     )
     statements.extend(top_level_objects["statement"])
+    for pluginbase, plugin in context.plugins:
+        if pluginbase == ParserMacroPlugin:
+            context.parser_macros_plugins[plugin.__name__] = plugin()
     return statements
 
 
@@ -565,7 +578,7 @@ def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
 
     if not isinstance(data, list):
         raise exc.DataGenSyntaxError(
-            "Generator file should be a list (use '-' on top-level lines)",
+            "Recipe file should be a list (use '-' on top-level lines)",
             stream_name,
             1,
         )

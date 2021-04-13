@@ -29,6 +29,7 @@ geckodriver.log
 **/.sfdx
 htmlcov/
 .pytest_cache/
+pytestdebug.log
 pip-wheel-metadata
 .mypy_cache/
 /docs/_build
@@ -36,6 +37,7 @@ pip-wheel-metadata
 .cci
 results_junit.xml
 test_results.json
+temp
 
 # Salesforce / SFDX / CCI
 .cci

@@ -8,8 +8,14 @@ from snowfakery.data_generator_runtime_object_model import (
     DataGenError,
     DataGenValueError,
 )
+from snowfakery.parse_recipe_yaml import ParseResult
+from snowfakery.data_generator_runtime import (
+    RuntimeContext,
+    Interpreter,
+    Globals,
+)
 
-from snowfakery.data_generator_runtime import RuntimeContext, Interpreter, Globals
+from snowfakery.api import SnowfakeryApplication
 
 from snowfakery.output_streams import DebugOutputStream
 
@@ -20,9 +26,21 @@ ftl = FakerTemplateLibrary([])
 line = {"filename": "abc.yml", "line_num": 42}
 
 
+class FakeParseResult(ParseResult):
+    def __init__(self):
+        self.tables = ()
+        self.templates = ()
+        self.statements = ()
+
+
 def standard_runtime():
     output_stream = DebugOutputStream()
-    interpreter = Interpreter(output_stream=output_stream, globals=Globals())
+    interpreter = Interpreter(
+        output_stream=output_stream,
+        parent_application=SnowfakeryApplication(),
+        parse_result=FakeParseResult(),
+        globals=Globals(),
+    )
     runtime_context = RuntimeContext(interpreter=interpreter)
     interpreter.current_context = runtime_context
     return runtime_context

@@ -1,6 +1,10 @@
-from typing import Any, Callable, Mapping, Union
+import sys
+
+from typing import Any, Callable, Mapping, Union, NamedTuple, List, Tuple
 from importlib import import_module
 from datetime import date, datetime
+from pathlib import Path
+from unittest.mock import patch
 
 import yaml
 from yaml.representer import Representer
@@ -14,6 +18,12 @@ from numbers import Number
 
 
 Scalar = Union[str, Number, date, datetime, None]
+FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
+
+
+class LineTracker(NamedTuple):
+    filename: str
+    line_num: int
 
 
 class SnowfakeryPlugin:
@@ -67,6 +77,15 @@ class SnowfakeryPlugin:
         pass
 
 
+class ParserMacroPlugin:
+    """Abstract base class for plugins that generate code.
+
+    Note that these are currently undocumented and their
+    interface is not necessarily stable."""
+
+    pass
+
+
 class PluginContext:
     "Exposes certain stable internals to plugins"
 
@@ -107,27 +126,77 @@ def lazy(func: Any) -> Callable:
     return func
 
 
-def resolve_plugin(plugin: str, lineinfo) -> object:
-    "Resolve a plugin to a class"
-    module_name, class_name = plugin.rsplit(".", 1)
+def resolve_plugins(
+    plugin_specs: List[Tuple[str, object]], search_paths: List[Union[str, Path]]
+):
+    "Resolve a list of plugins and lineinfos"
+    cwd_plugins = "./plugins"
+    user_plugins = Path.home() / ".snowfakery/plugins"
+    new_sys_path = [
+        *sys.path,
+        *(str(p) for p in search_paths),
+        str(cwd_plugins),
+        str(user_plugins),
+    ]
 
-    try:
-        module = import_module(module_name)
-    except ModuleNotFoundError as e:
+    with patch.object(sys, "path", new_sys_path):
+        return [resolve_plugin(*plugin_spec) for plugin_spec in plugin_specs]
+
+
+def resolve_plugin(plugin: str, lineinfo) -> object:
+    """Resolve a plugin to a class"""
+    cls = _resolve_plugin_alternatives(plugin)
+    if not cls:
         raise exc.DataGenImportError(
-            f"Cannot find plugin: {e}", lineinfo.filename, lineinfo.line_num
+            f"Cannot find plugin: {plugin}", lineinfo.filename, lineinfo.line_num
         )
-    cls = getattr(module, class_name)
+
     if issubclass(cls, FakerProvider):
         return (FakerProvider, cls)
     elif issubclass(cls, SnowfakeryPlugin):
         return (SnowfakeryPlugin, cls)
+    elif issubclass(cls, ParserMacroPlugin):
+        return (ParserMacroPlugin, cls)
     else:
         raise exc.DataGenTypeError(
             f"{cls} is not a Faker Provider nor Snowfakery Plugin",
             lineinfo.filename,
             lineinfo.line_num,
         )
+
+
+def _resolve_plugin_alternatives(plugin):
+    """Interpret the plugin declaration in 2 ways.
+    Return it when we find one that matches.
+
+    1. The new way, which allows shorter declarations.
+    2. The old way, which required everything to be spelled out.
+
+    In other words:
+
+    - plugin: foo.bar.Baz
+
+    Means.
+
+    1. The new way:
+
+    from foo.bar.Baz import Baz
+
+    2. The old way:
+
+    from foo.bar import Baz
+    """
+    prefix, class_name = plugin.rsplit(".", 1)
+    testnames = [plugin + "." + class_name, plugin]
+
+    for testname in testnames:
+        module_name, class_name = testname.rsplit(".", 1)
+        try:
+            module = import_module(module_name)
+            if hasattr(module, class_name):
+                return getattr(module, class_name)
+        except ModuleNotFoundError:
+            pass
 
 
 class PluginResult:

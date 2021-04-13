@@ -36,8 +36,6 @@ class Test_CLI_CCI:
             url = f"sqlite:///{t}/foo.db"
             generate_cli.main(
                 [
-                    "--cci-mapping-file",
-                    str(sample_mapping_yaml),
                     str(sample_accounts_yaml),
                     "--dburl",
                     url,

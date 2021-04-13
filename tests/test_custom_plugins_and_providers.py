@@ -1,8 +1,8 @@
 from io import StringIO
 import math
 import operator
+from base64 import b64decode
 
-from snowfakery.data_generator import generate
 from snowfakery import SnowfakeryPlugin, lazy
 from snowfakery.plugins import PluginResult
 from snowfakery.data_gen_exceptions import (
@@ -10,8 +10,9 @@ from snowfakery.data_gen_exceptions import (
     DataGenTypeError,
     DataGenImportError,
 )
-from snowfakery.output_streams import JSONOutputStream
+from snowfakery import generate_data
 
+generate = generate_data
 
 from unittest import mock
 import pytest
@@ -91,7 +92,7 @@ class TestCustomFakerProvider:
                 fake:
                     microservice
         """
-        generate(StringIO(yaml), {})
+        generate_data(StringIO(yaml))
         assert row_values(write_row_mock, 0, "service_name")
 
 
@@ -104,7 +105,7 @@ class TestCustomPlugin:
             service_name: saascrmlightning
         """
         with pytest.raises(DataGenTypeError) as e:
-            generate(StringIO(yaml), {})
+            generate_data(StringIO(yaml))
         assert "TestCustomPlugin" in str(e.value)
         assert ":2" in str(e.value)
 
@@ -116,7 +117,7 @@ class TestCustomPlugin:
             service_name: saascrmlightning
         """
         with pytest.raises(DataGenImportError) as e:
-            generate(StringIO(yaml), {})
+            generate_data(StringIO(yaml))
         assert "xyzzy" in str(e.value)
 
     @mock.patch(write_row_path)
@@ -129,7 +130,7 @@ class TestCustomPlugin:
                 SimpleTestPlugin.double: 2
             six: ${{SimpleTestPlugin.double(3)}}
         """
-        generate(StringIO(yaml), {})
+        generate_data(StringIO(yaml))
         assert row_values(write_row_mock, 0, "four") == 4
         assert row_values(write_row_mock, 0, "six") == 6
 
@@ -141,7 +142,7 @@ class TestCustomPlugin:
           fields:
             pi: ${{Math.pi}}
         """
-        generate(StringIO(yaml), {})
+        generate_data(StringIO(yaml))
         assert row_values(write_row_mock, 0, "pi") == math.pi
 
     @mock.patch(write_row_path)
@@ -155,7 +156,7 @@ class TestCustomPlugin:
             eleven: ${{Math.round(10.7)}}
             min: ${{Math.min(144, 200, 100)}}
         """
-        generate(StringIO(yaml), {})
+        generate_data(StringIO(yaml))
         assert row_values(write_row_mock, 0, "sqrt") == 12
         assert row_values(write_row_mock, 0, "max") == 200
         assert row_values(write_row_mock, 0, "eleven") == 11
@@ -170,7 +171,7 @@ class TestCustomPlugin:
             twelve:
                 Math.sqrt: ${{Math.min(144, 169)}}
         """
-        generate(StringIO(yaml), {})
+        generate_data(StringIO(yaml))
         assert row_values(write_row_mock, 0, "twelve") == 12
 
     @mock.patch(write_row_path)
@@ -187,10 +188,17 @@ class TestCustomPlugin:
                         - 3
         """
         with StringIO() as s:
-            output_stream = JSONOutputStream(s)
-            generate(StringIO(yaml), {}, output_stream)
-            output_stream.close()
+            generate_data(StringIO(yaml), output_file=s, output_format="json")
             assert eval(s.getvalue())[0]["some_value"] == 3
+
+    def test_binary(self, generated_rows):
+        sample = "examples/binary.recipe.yml"
+        with open(sample) as f:
+            generate(f)
+        b64data = generated_rows.table_values("BinaryData", 0)["encoded_data"]
+        rawdata = b64decode(b64data)
+        assert rawdata.startswith(b"%PDF-1.3")
+        assert b"Helvetica" in rawdata
 
 
 class PluginThatNeedsState(SnowfakeryPlugin):
@@ -235,7 +243,7 @@ class TestContextVars:
                     name: OBJ4
                     path: ${{PluginThatNeedsState.object_path()}}
         """
-        generate(StringIO(yaml), {})
+        generate_data(StringIO(yaml))
 
         assert row_values(write_row, 0, "path") == "ROOT.OBJ1.OBJ2"
         assert row_values(write_row, 1, "path") == "ROOT.OBJ1"
@@ -256,7 +264,7 @@ class TestContextVars:
                 - DoubleVisionPlugin.do_it_twice:
                     - ${{PluginThatNeedsState.count()}}
         """
-        generate(StringIO(yaml), {})
+        generate_data(StringIO(yaml))
 
         assert row_values(write_row, 0, "some_value") == "abc : abc"
         assert row_values(write_row, 0, "some_value_2") == "1 : 2"
@@ -270,8 +278,11 @@ class TestContextVars:
                 WrongTypePlugin.return_bad_type: 5  #6
         """
         with pytest.raises(DataGenError) as e:
-            generate(StringIO(yaml))
+            generate_data(StringIO(yaml))
         assert 6 > e.value.line_num >= 3
+
+    def test_plugin_paths(self, generated_rows):
+        generate_data("tests/test_plugin_paths.yml")
 
     def test_missing_attributes(self):
         yaml = """
@@ -282,7 +293,7 @@ class TestContextVars:
                 WrongTypePlugin.abcdef: 5  #6
         """
         with pytest.raises(DataGenError) as e:
-            generate(StringIO(yaml))
+            generate_data(StringIO(yaml))
         assert 6 > e.value.line_num >= 3
 
     def test_null_attributes(self):
@@ -294,5 +305,5 @@ class TestContextVars:
                 WrongTypePlugin.junk: 5  #6
         """
         with pytest.raises(DataGenError) as e:
-            generate(StringIO(yaml))
+            generate_data(StringIO(yaml))
         assert 6 > e.value.line_num >= 3

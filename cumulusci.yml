@@ -58,6 +58,13 @@ tasks:
             num_records: 100
             num_records_tablename: Opportunity
 
+    generate_content_documents:
+        class_path: cumulusci.tasks.bulkdata.generate_and_load_data_from_yaml.GenerateAndLoadDataFromYaml
+        options:
+            generator_yaml: examples/salesforce/ContentVersion.recipe.yml
+            num_records: 10
+            num_records_tablename: Account
+
 flows:
     test_everything:
         steps:
@@ -79,6 +86,8 @@ flows:
                 task: generate_opportunity_contact_roles
             9:
                 task: generate_opportunities_and_contacts
+            10:
+                task: generate_content_documents
 
     contacts_for_accounts:
         steps:
@@ -94,3 +103,31 @@ flows:
                     generator_yaml: examples/salesforce/ContactsForAccounts.recipe.yml
                     num_records: 100
                     num_records_tablename: Contact
+
+    person_accounts_and_community_users:
+        # only for use with the persons_and_communities org shape
+        steps:
+            1: # test assigning user profiles
+                task: query
+                options:
+                    object: Profile
+                    query: "select Id from Profile where Name='High Volume Customer Portal User'"
+                    result_file: temp/temp_profiles.csv
+            2: # fixes "UNKNOWN_EXCEPTION, portal account owner must have a role"
+                task: execute_anon
+                options:
+                    apex: >
+                        UserRole ur = new UserRole(Name = 'CEO');
+                        insert ur;
+                        update new User(Id = UserInfo.getUserId(), UserRoleId = ur.Id);
+            3:
+                task: generate_and_load_from_yaml
+                options:
+                    generator_yaml: examples/salesforce/person-accounts-plugin.recipe.yml
+                    num_records: 5
+                    num_records_tablename: User
+
+orgs:
+    scratch:
+        person_and_communities:
+            config_file: orgs/persons_and_communities.json
