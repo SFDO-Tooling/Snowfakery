@@ -292,7 +292,7 @@ def parse_inclusions(
 def check_identifier(name: T.Optional[str], source: dict, context: str):
     if not name:
         return
-    badchars = [char for char in '."' if char in name]
+    badchars = set('."')
     if set(name).intersection(badchars):
         line_info = source["__line__"]
         warn(
