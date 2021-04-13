@@ -4,6 +4,15 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+
+## Snowfakery 1.9
+
+Snowfakery's APIs have expanded. The changes should be backwards-compatible.
+
+Add support for embedding external files (text or base64 binary).
+
+Add support specifically for Salesforce ContentVersion.
+
 ## Snowfakery 1.8.1
 
 Fixed packaging issue.
