@@ -64,7 +64,7 @@ class FakeSimpleSalesforce:
 fake_sf_client = FakeSimpleSalesforce(
     {
         "SELECT count() FROM Account": {"totalSize": 10},
-        "SELECT Id FROM Account LIMIT 2": {"records": [{"Id": "FAKEID0"}]},
+        "SELECT Id FROM Account LIMIT 1": {"records": [{"Id": "FAKEID0"}]},
         "SELECT Id FROM Account LIMIT 1 OFFSET 0": {"records": [{"Id": "FAKEID0"}]},
         "SELECT Id FROM Account LIMIT 1 OFFSET 5": {"records": [{"Id": "FAKEID5"}]},
     }

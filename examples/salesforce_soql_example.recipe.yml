@@ -37,5 +37,5 @@
     FirstName: ${{User2.FirstName}}
     LastName: ${{User2.LastName}}
     OwnerId:
-      SOQLQuery.reference_record:
+      SOQLQuery.query_record:
         query_from: User where FirstName='User'

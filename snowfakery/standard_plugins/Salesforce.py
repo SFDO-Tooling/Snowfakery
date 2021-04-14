@@ -243,13 +243,8 @@ class SOQLQuery(SalesforceConnectionMixin, SnowfakeryPlugin):
             return self._query_record(query)
 
         def query_record(self, query_from, fields="Id"):
-            query = f"SELECT {fields} FROM {query_from} LIMIT 2"
+            query = f"SELECT {fields} FROM {query_from} LIMIT 1"
             return self._query_record(query)
-
-        def reference_record(self, query_from):
-            query = f"SELECT Id FROM {query_from} LIMIT 2"
-            results = self._query_record(query)
-            return results["Id"]
 
         def _query_record(self, query):
             qr = self.context.plugin.sf.query(query)

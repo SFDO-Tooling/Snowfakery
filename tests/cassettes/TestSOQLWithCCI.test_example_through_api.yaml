@@ -118,7 +118,7 @@ interactions:
       Request-Headers:
       - Elided
     method: GET
-    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=SELECT+Id%2C+FirstName%2C+LastName+FROM+User+where+FirstName%3D%27User%27+LIMIT+2
+    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=SELECT+Id%2C+FirstName%2C+LastName+FROM+User+where+FirstName%3D%27User%27+LIMIT+1
   response:
     body:
       string: "{\n  \"totalSize\" : 1,\n  \"done\" : true,\n  \"records\" : [ {\n
