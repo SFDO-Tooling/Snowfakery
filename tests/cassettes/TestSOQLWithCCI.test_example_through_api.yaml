@@ -5,7 +5,7 @@ interactions:
       Request-Headers:
       - Elided
     method: POST
-    uri: https://orgname.salesforce.com/services/data/v50.0/sobjects/Account/
+    uri: https://orgname.my.salesforce.com/services/data/v50.0/sobjects/Account/
   response:
     body:
       string: "{\n  \"id\" : \"001ACCOUNTID\",\n  \"success\" : true,\n  \"errors\"
@@ -21,10 +21,10 @@ interactions:
       Request-Headers:
       - Elided
     method: GET
-    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=SELECT+count%28%29+FROM+Account
+    uri: https://orgname.my.salesforce.com/services/data/v50.0/query/?q=SELECT+count%28%29+FROM+Account
   response:
     body:
-      string: "{\n  \"totalSize\" : 59,\n  \"done\" : true,\n  \"records\" : [ ]\n}"
+      string: "{\n  \"totalSize\" : 22,\n  \"done\" : true,\n  \"records\" : [ ]\n}"
     headers:
       Response-Headers: Elided
     status:
@@ -36,7 +36,7 @@ interactions:
       Request-Headers:
       - Elided
     method: GET
-    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=SELECT+Id+FROM+Account+LIMIT+1+OFFSET+1
+    uri: https://orgname.my.salesforce.com/services/data/v50.0/query/?q=SELECT+Id+FROM+Account+LIMIT+1+OFFSET+1
   response:
     body:
       string: "{\n  \"totalSize\" : 1,\n  \"done\" : true,\n  \"records\" : [ {\n
@@ -53,7 +53,7 @@ interactions:
       Request-Headers:
       - Elided
     method: GET
-    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=SELECT+count%28%29+FROM+User
+    uri: https://orgname.my.salesforce.com/services/data/v50.0/query/?q=SELECT+count%28%29+FROM+User
   response:
     body:
       string: "{\n  \"totalSize\" : 7,\n  \"done\" : true,\n  \"records\" : [ ]\n}"
@@ -68,11 +68,11 @@ interactions:
       Request-Headers:
       - Elided
     method: GET
-    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=SELECT+LastName+FROM+User+LIMIT+1+OFFSET+1
+    uri: https://orgname.my.salesforce.com/services/data/v50.0/query/?q=SELECT+LastName+FROM+User+LIMIT+1+OFFSET+1
   response:
     body:
       string: "{\n  \"totalSize\" : 1,\n  \"done\" : true,\n  \"records\" : [ {\n
-        \   \"attributes\" : {\n      \"type\" : \"User\",\n      \"url\" : \"/services/data/v50.0/sobjects/User/0051100000AK6GsAAL\"\n
+        \   \"attributes\" : {\n      \"type\" : \"User\",\n      \"url\" : \"/services/data/v50.0/sobjects/User/0051100000AfzjBAAR\"\n
         \   },\n    \"LastName\" : \"Platform Integration User\"\n  } ]\n}"
     headers:
       Response-Headers: Elided
@@ -85,7 +85,7 @@ interactions:
       Request-Headers:
       - Elided
     method: GET
-    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=SELECT+count%28%29+FROM+User
+    uri: https://orgname.my.salesforce.com/services/data/v50.0/query/?q=SELECT+count%28%29+FROM+User
   response:
     body:
       string: "{\n  \"totalSize\" : 7,\n  \"done\" : true,\n  \"records\" : [ ]\n}"
@@ -100,12 +100,12 @@ interactions:
       Request-Headers:
       - Elided
     method: GET
-    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=SELECT+Id%2C+FirstName%2C+LastName+FROM+User+LIMIT+1+OFFSET+1
+    uri: https://orgname.my.salesforce.com/services/data/v50.0/query/?q=SELECT+Id%2C+FirstName%2C+LastName+FROM+User+LIMIT+1+OFFSET+1
   response:
     body:
       string: "{\n  \"totalSize\" : 1,\n  \"done\" : true,\n  \"records\" : [ {\n
-        \   \"attributes\" : {\n      \"type\" : \"User\",\n      \"url\" : \"/services/data/v50.0/sobjects/User/0051100000AK6GsAAL\"\n
-        \   },\n    \"Id\" : \"0051100000AK6GsAAL\",\n    \"FirstName\" : null,\n
+        \   \"attributes\" : {\n      \"type\" : \"User\",\n      \"url\" : \"/services/data/v50.0/sobjects/User/0051100000AfzjBAAR\"\n
+        \   },\n    \"Id\" : \"0051100000AfzjBAAR\",\n    \"FirstName\" : null,\n
         \   \"LastName\" : \"Platform Integration User\"\n  } ]\n}"
     headers:
       Response-Headers: Elided
@@ -118,13 +118,30 @@ interactions:
       Request-Headers:
       - Elided
     method: GET
-    uri: https://orgname.salesforce.com/services/data/v50.0/query/?q=SELECT+Id%2C+FirstName%2C+LastName+FROM+User+where+FirstName%3D%27User%27+LIMIT+1
+    uri: https://orgname.my.salesforce.com/services/data/v50.0/query/?q=SELECT+Id%2C+FirstName%2C+LastName+FROM+User+where+FirstName%3D%27User%27+LIMIT+1
   response:
     body:
       string: "{\n  \"totalSize\" : 1,\n  \"done\" : true,\n  \"records\" : [ {\n
-        \   \"attributes\" : {\n      \"type\" : \"User\",\n      \"url\" : \"/services/data/v50.0/sobjects/User/0051100000AK5zYAAT\"\n
-        \   },\n    \"Id\" : \"0051100000AK5zYAAT\",\n    \"FirstName\" : \"User\",\n
+        \   \"attributes\" : {\n      \"type\" : \"User\",\n      \"url\" : \"/services/data/v50.0/sobjects/User/0051100000AfzZ4AAJ\"\n
+        \   },\n    \"Id\" : \"0051100000AfzZ4AAJ\",\n    \"FirstName\" : \"User\",\n
         \   \"LastName\" : \"User\"\n  } ]\n}"
+    headers:
+      Response-Headers: Elided
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.my.salesforce.com/services/data/v50.0/query/?q=SELECT+Id+FROM+User+where+FirstName%3D%27User%27+LIMIT+1
+  response:
+    body:
+      string: "{\n  \"totalSize\" : 1,\n  \"done\" : true,\n  \"records\" : [ {\n
+        \   \"attributes\" : {\n      \"type\" : \"User\",\n      \"url\" : \"/services/data/v50.0/sobjects/User/0051100000AfzZ4AAJ\"\n
+        \   },\n    \"Id\" : \"0051100000AfzZ4AAJ\"\n  } ]\n}"
     headers:
       Response-Headers: Elided
     status:

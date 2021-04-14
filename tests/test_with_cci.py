@@ -145,7 +145,6 @@ class TestSOQLWithCCI:
                 AccountId:
                     SOQLQuery.query_random: Account
         """
-        sf.Account.create({"Name": "Company2"})
         with pytest.raises(DataGenError):
             generate(StringIO(yaml), {})
 
