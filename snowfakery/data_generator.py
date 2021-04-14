@@ -12,7 +12,7 @@ from .data_generator_runtime import Globals, Interpreter
 from .data_gen_exceptions import DataGenError
 from . import SnowfakeryPlugin
 from .utils.yaml_utils import SnowfakeryDumper, hydrate
-
+from snowfakery.standard_plugins.faker_provider import Provider
 
 # This tool is essentially a three stage interpreter.
 #
@@ -132,6 +132,8 @@ def generate(
 
     # parse the YAML and any it refers to
     parse_result = parse_recipe(open_yaml_file)
+    parse_result.plugins.append((FakerProvider, Provider))
+    # parse_result.plugins.append("snowfakery.standard_plugins.faker_provider")
 
     faker_providers, snowfakery_plugins = process_plugins(parse_result.plugins)
 
