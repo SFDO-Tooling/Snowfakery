@@ -73,13 +73,13 @@ fake_sf_client = FakeSimpleSalesforce(
 
 class TestSOQLNoCCI:
     @patch(
-        "snowfakery.standard_plugins.salesforce.SOQLQuery.sf",
+        "snowfakery.standard_plugins.Salesforce.SOQLQuery.sf",
         wraps=fake_sf_client,
     )
-    @patch("snowfakery.standard_plugins.salesforce.randrange", lambda *arg, **kwargs: 5)
+    @patch("snowfakery.standard_plugins.Salesforce.randrange", lambda *arg, **kwargs: 5)
     def test_soql_plugin_random(self, fake_sf_client, generated_rows):
         yaml = """
-            - plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
+            - plugin: snowfakery.standard_plugins.Salesforce.SOQLQuery
             - object: Contact
               fields:
                 FirstName: Suzy
@@ -92,13 +92,13 @@ class TestSOQLNoCCI:
         assert generated_rows.row_values(0, "AccountId") == "FAKEID5"
 
     @patch(
-        "snowfakery.standard_plugins.salesforce.SOQLQuery.sf",
+        "snowfakery.standard_plugins.Salesforce.SOQLQuery.sf",
         wraps=fake_sf_client,
     )
-    @patch("snowfakery.standard_plugins.salesforce.randrange", lambda *arg, **kwargs: 5)
+    @patch("snowfakery.standard_plugins.Salesforce.randrange", lambda *arg, **kwargs: 5)
     def test_soql_plugin_record(self, fake_sf_client, generated_rows):
         yaml = """
-            - plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
+            - plugin: snowfakery.standard_plugins.Salesforce.SOQLQuery
             - object: Contact
               fields:
                 FirstName: Suzy
@@ -112,12 +112,12 @@ class TestSOQLNoCCI:
 
 
 class TestSOQLWithCCI:
-    @patch("snowfakery.standard_plugins.salesforce.randrange", lambda *arg, **kwargs: 0)
+    @patch("snowfakery.standard_plugins.Salesforce.randrange", lambda *arg, **kwargs: 0)
     @pytest.mark.vcr()
     @skip_if_cumulusci_missing
     def test_soql(self, sf, org_config, generated_rows):
         yaml = """
-            - plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
+            - plugin: snowfakery.standard_plugins.Salesforce.SOQLQuery
             - object: Contact
               fields:
                 FirstName: Suzy
@@ -139,7 +139,7 @@ class TestSOQLWithCCI:
     @pytest.mark.vcr()
     def test_missing_orgname(self, sf):
         yaml = """
-            - plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
+            - plugin: snowfakery.standard_plugins.Salesforce.SOQLQuery
             - object: Contact
               fields:
                 AccountId:
@@ -152,7 +152,7 @@ class TestSOQLWithCCI:
     # TODO: add tests for SOQLDatasets
     #       ensure that all documented params/methods are covered.
 
-    @patch("snowfakery.standard_plugins.salesforce.randrange", lambda *arg, **kwargs: 1)
+    @patch("snowfakery.standard_plugins.Salesforce.randrange", lambda *arg, **kwargs: 1)
     @skip_if_cumulusci_missing
     @pytest.mark.vcr()
     def test_example_through_api(self, sf, generated_rows, org_config):
@@ -168,7 +168,7 @@ class TestSOQLWithCCI:
             Path(__file__).parent.parent / "examples/salesforce_soql_example.recipe.yml"
         )
         with unittest.mock.patch(
-            "snowfakery.standard_plugins.salesforce._get_sf_connection"
+            "snowfakery.standard_plugins.Salesforce._get_sf_connection"
         ) as conn:
             conn.side_effect = ImportError(
                 "cumulusci module cannot be loaded by snowfakery"

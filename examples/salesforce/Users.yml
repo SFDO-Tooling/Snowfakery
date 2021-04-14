@@ -1,0 +1,28 @@
+- object: User
+  nickname: SimpleUser
+  fields:
+    Alias: Grace
+    Username: a${{random_number(0, 10000)}}${{fake.email}}
+    LastName:
+      fake: last_name
+    Email:
+      fake: email
+    TimeZoneSidKey: America/Bogota
+    LocaleSidKey: en_US
+    EmailEncodingKey: UTF-8
+    LanguageLocaleKey: en_US
+
+- object: User
+  nickname: RandomizedUser
+  fields:
+    Username:
+      fake: email
+    LastName:
+      fake: last_name
+    Email:
+      fake: email
+    Alias: Grace
+    TimeZoneSidKey: America/Bogota
+    LocaleSidKey: en_US
+    EmailEncodingKey: UTF-8
+    LanguageLocaleKey: en_US

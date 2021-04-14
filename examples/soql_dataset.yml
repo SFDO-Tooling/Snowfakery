@@ -1,4 +1,4 @@
-- plugin: snowfakery.standard_plugins.salesforce.SOQLDataset
+- plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
 - object: Contact
   count: 10
   fields:

@@ -1355,7 +1355,7 @@ by a Snowfakery recipe with pre-existing information.
 For example, to connect to a random record:
 
 ```yaml
-  - plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
+  - plugin: snowfakery.standard_plugins.Salesforce.SOQLQuery
   - object: Contact
     fields:
       FirstName: Suzy
@@ -1368,7 +1368,7 @@ By default `query_random` selects the `Id` of the record. You can select
 a different field using this more elaborate syntax:
 
 ```yaml
-- plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
+- plugin: snowfakery.standard_plugins.Salesforce.SOQLQuery
 - object: Contact
   fields:
     FirstName: Suzy
@@ -1382,7 +1382,7 @@ You can also query for multiple fields, in case you would like to
 use them together:
 
 ```yaml
-- plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
+- plugin: snowfakery.standard_plugins.Salesforce.SOQLQuery
 - var: User1
   value:
     SOQLQuery.query_random:
@@ -1400,7 +1400,7 @@ You can query for specific records with a standard `WHERE` or `LIMIT`
 clause:
 
 ```yaml
-- plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
+- plugin: snowfakery.standard_plugins.Salesforce.SOQLQuery
 - var: User2
   value:
     SOQLQuery.query_random:
@@ -1424,7 +1424,7 @@ If you will be connecting with thousands or millions of records from Salesforce,
 which will be downloaded and used offline:
 
 ```yaml
-- plugin: snowfakery.standard_plugins.salesforce.SOQLDataset
+- plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
 - object: Contact
   count: 10
   fields:
@@ -1440,7 +1440,7 @@ Just as with CSV or SQLite datasets, you can either iterate over the records
 from top to bottom, or use a random ordering:
 
 ```yaml
-- plugin: snowfakery.standard_plugins.salesforce.SOQLDataset
+- plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
 - object: Contact
   count: 10
   fields:

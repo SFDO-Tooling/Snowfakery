@@ -1,4 +1,4 @@
-- plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
+- plugin: snowfakery.standard_plugins.Salesforce.SOQLQuery
 - object: Contact
   fields:
     FirstName: Suzy
@@ -6,7 +6,7 @@
     AccountId:
       SOQLQuery.query_random: Account
 
-- plugin: snowfakery.standard_plugins.salesforce.SOQLQuery
+- plugin: snowfakery.standard_plugins.Salesforce.SOQLQuery
 - object: Contact
   fields:
     FirstName: Suzy
@@ -36,3 +36,6 @@
   fields:
     FirstName: ${{User2.FirstName}}
     LastName: ${{User2.LastName}}
+    OwnerId:
+      SOQLQuery.reference_record:
+        query_from: User where FirstName='User'
