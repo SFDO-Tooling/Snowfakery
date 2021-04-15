@@ -184,12 +184,19 @@ def parse_structured_value(name: str, field: Dict, context: ParseContext) -> Def
         namespace, name = function_name.split(".")
         plugin = context.parser_macros_plugins.get(namespace)
     if plugin:
-        func = getattr(plugin, name)
-        rc = func(context, args)
-        return rc
-    else:
-        args = parse_structured_value_args(args, context)
-        return StructuredValue(function_name, args, **context.line_num(field))
+        try:
+            func = getattr(plugin, name)
+            rc = func(context, args)
+            return rc
+        except AttributeError as e:
+            # check if this is a regular runtime function. If so,
+            # fall-through and handle it as if we had never
+            # tried to parse it as a macro plugin
+            if not hasattr(plugin, "Functions") and not hasattr(plugin.Functions, name):
+                raise e
+
+    args = parse_structured_value_args(args, context)
+    return StructuredValue(function_name, args, **context.line_num(field))
 
 
 def parse_field_value(

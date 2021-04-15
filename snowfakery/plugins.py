@@ -140,7 +140,10 @@ def resolve_plugins(
     ]
 
     with patch.object(sys, "path", new_sys_path):
-        return [resolve_plugin(*plugin_spec) for plugin_spec in plugin_specs]
+        plugins = []
+        for plugin_spec in plugin_specs:
+            plugins.extend(resolve_plugin(*plugin_spec))
+        return plugins
 
 
 def resolve_plugin(plugin: str, lineinfo) -> object:
@@ -151,12 +154,18 @@ def resolve_plugin(plugin: str, lineinfo) -> object:
             f"Cannot find plugin: {plugin}", lineinfo.filename, lineinfo.line_num
         )
 
+    categories = []
+
     if issubclass(cls, FakerProvider):
-        return (FakerProvider, cls)
-    elif issubclass(cls, SnowfakeryPlugin):
-        return (SnowfakeryPlugin, cls)
-    elif issubclass(cls, ParserMacroPlugin):
-        return (ParserMacroPlugin, cls)
+        categories.append((FakerProvider, cls))
+    else:
+        if issubclass(cls, SnowfakeryPlugin):
+            categories.append((SnowfakeryPlugin, cls))
+        if issubclass(cls, ParserMacroPlugin):
+            categories.append((ParserMacroPlugin, cls))
+
+    if categories:
+        return categories
     else:
         raise exc.DataGenTypeError(
             f"{cls} is not a Faker Provider nor Snowfakery Plugin",

@@ -33,7 +33,56 @@ MAX_SALESFORCE_OFFSET = 2000  # Any way around this?
 ns = "snowfakery.standard_plugins.Salesforce.SOQLQuery"
 
 
-class Salesforce(ParserMacroPlugin):
+class SalesforceConnectionMixin:
+    _sf_connection = None
+    allowed_options = [PluginOption(f"{ns}.orgname", str)]
+
+    @property
+    def sf(self):
+        if not self._sf_connection:
+            self._sf_connection, self._bulk = _get_sf_connection(self._orgname)
+        return self._sf_connection
+
+    def bulk(self):
+        if not self._bulk:
+            self._sf_connection, self._bulk = _get_sf_connection(self._orgname)
+        return self._bulk
+
+    @property
+    def _orgname(self):
+        fieldvars = self.context.field_vars()
+        try:
+            return fieldvars[f"{ns}.orgname"]
+        except KeyError:
+            raise DataGenNameError(
+                "Orgname is not specified. Use --plugin-option orgname <yourorgname>",
+                None,
+                None,
+            )
+
+    def _query_record(self, query):
+        qr = self.sf.query(query)
+        records = qr.get("records")
+        if not records:
+            raise DataGenValueError(f"No records returned by query {query}", None, None)
+        elif len(records) > 1:
+            raise DataGenValueError(
+                f"Multiple records returned by query {query}", None, None
+            )
+        record = records[0]
+        if "attributes" in record:
+            del record["attributes"]
+        if len(record.keys()) == 1:
+            return tuple(record.values())[0]
+        else:
+            return PluginResult(record)
+
+
+class Salesforce(ParserMacroPlugin, SnowfakeryPlugin, SalesforceConnectionMixin):
+    def __init__(self, *args, **kwargs):
+        args = args or [None]
+        super().__init__(*args, **kwargs)
+
     def SpecialObject(self, context, args) -> ObjectTemplate:
         """Currently there is only one special object defined: PersonContact"""
         sobj, nickname = self._parse_special_args(args)
@@ -95,12 +144,66 @@ class Salesforce(ParserMacroPlugin):
 
         return sobj, nickname
 
+    # FIXME: This code is not documented or tested
     def ContentFile(self, context, args) -> ObjectTemplate:
         return {
             "Base64.encode": [
                 {"File.file_data": {"encoding": "binary", "file": args.get("path")}}
             ]
         }
+
+    def PermissionSetAssignments(self, context, args) -> ObjectTemplate:
+        names = args.get("names")
+        if not isinstance(names, str):
+            raise DataGenValueError(
+                f"string `names` not specified for PermissionSetAssignments: {names}"
+            )
+        names = names.split(",")
+        line_info = context.line_num()
+        decls = [self._generate_psa(context, line_info, name) for name in names]
+
+        return ObjectTemplate(
+            "__wrapper_for_permission_sets",
+            filename=line_info["filename"],
+            line_num=line_info["line_num"],
+            friends=decls,
+        )
+
+    def _generate_psa(self, context, line_info, name):
+        fields = {"AssigneeId": ("Use")}
+
+        query = f"PermissionSet where Name = '{name}'"
+
+        fields = [
+            FieldFactory(
+                "PermissionSetId",
+                StructuredValue(
+                    "SOQLQuery.query_record", {"query_from": query}, **line_info
+                ),
+                **line_info,
+            ),
+            FieldFactory(
+                "AssigneeId",
+                StructuredValue("reference", ["User"], **line_info),
+                **line_info,
+            ),
+        ]
+
+        new_template = ObjectTemplate(
+            "PermissionSetAssignment",
+            filename=line_info["filename"],
+            line_num=line_info["line_num"],
+            fields=fields,
+        )
+        context.register_template(new_template)
+        return new_template
+
+    class Functions:
+        def ProfileId(self, name):
+            query = f"select Id from Profile where Name='{name}'"
+            return self.context.plugin._query_record(query)
+
+        Profile = ProfileId
 
 
 class SOQLDatasetImpl(DatasetBase):
@@ -196,34 +299,6 @@ def _create_db(fieldnames, results):
     return tempdir, dburl
 
 
-class SalesforceConnectionMixin:
-    _sf_connection = None
-    allowed_options = [PluginOption(f"{ns}.orgname", str)]
-
-    @property
-    def sf(self):
-        if not self._sf_connection:
-            self._sf_connection, self._bulk = _get_sf_connection(self._orgname)
-        return self._sf_connection
-
-    def bulk(self):
-        if not self._bulk:
-            self._sf_connection, self._bulk = _get_sf_connection(self._orgname)
-        return self._bulk
-
-    @property
-    def _orgname(self):
-        fieldvars = self.context.field_vars()
-        try:
-            return fieldvars[f"{ns}.orgname"]
-        except KeyError:
-            raise DataGenNameError(
-                "Orgname is not specified. Use --plugin-option orgname <yourorgname>",
-                None,
-                None,
-            )
-
-
 class SOQLDataset(SalesforceConnectionMixin, DatasetPluginBase):
     def __init__(self, *args, **kwargs):
         self.dataset_impl = SOQLDatasetImpl(self)
@@ -240,30 +315,11 @@ class SOQLQuery(SalesforceConnectionMixin, SnowfakeryPlugin):
             query = f"SELECT {fields} FROM {query_from} LIMIT 1 OFFSET {rand_offset}"
 
             # todo: use CompositeParallelSalesforce to cache 200 at a time
-            return self._query_record(query)
+            return self.context.plugin._query_record(query)
 
         def query_record(self, query_from, fields="Id"):
             query = f"SELECT {fields} FROM {query_from} LIMIT 1"
-            return self._query_record(query)
-
-        def _query_record(self, query):
-            qr = self.context.plugin.sf.query(query)
-            records = qr.get("records")
-            if not records:
-                raise DataGenValueError(
-                    f"No records returned by query {query}", None, None
-                )
-            elif len(records) > 1:
-                raise DataGenValueError(
-                    f"Multiple records returned by query {query}", None, None
-                )
-            record = records[0]
-            if "attributes" in record:
-                del record["attributes"]
-            if len(record.keys()) == 1:
-                return tuple(record.values())[0]
-            else:
-                return PluginResult(record)
+            return self.context.plugin._query_record(query)
 
 
 def _get_sf_connection(orgname):
