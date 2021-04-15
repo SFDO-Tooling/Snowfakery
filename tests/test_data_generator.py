@@ -7,6 +7,7 @@ import pytest
 from snowfakery.data_generator import merge_options, generate
 from snowfakery.data_gen_exceptions import DataGenNameError, DataGenError
 from snowfakery.data_generator_runtime import StoppingCriteria
+from snowfakery import data_gen_exceptions as exc
 
 
 class TestDataGenerator(unittest.TestCase):
@@ -110,3 +111,40 @@ persistent_nicknames: {}
         """
         with self.assertRaises(DataGenError):
             generate(StringIO(yaml), stopping_criteria=StoppingCriteria("baz", 3))
+
+    def test_nested_just_once_fails__friends(self):
+        yaml = """
+            - object: X
+              friends:
+              - object: foo
+                nickname: Foo
+                just_once: True
+                fields:
+                    A: 25
+            - object: bar
+              fields:
+                foo_reference:
+                    reference: Foo
+                A: ${{Foo.A}}
+            - object: baz
+              fields:
+                bar_reference:
+                    reference: bar
+            """
+        continuation_file = StringIO()
+        with self.assertRaises(exc.DataGenSyntaxError):
+            generate(StringIO(yaml), generate_continuation_file=continuation_file)
+
+    def test_nested_just_once_fails__fields(self):
+        yaml = """
+            - object: X
+              fields:
+                xyzzy:
+                    - object: foo
+                        nickname: Foo
+                        just_once: True
+                        fields:
+                            A: 25
+            """
+        with self.assertRaises(exc.DataGenSyntaxError):
+            generate(StringIO(yaml))
