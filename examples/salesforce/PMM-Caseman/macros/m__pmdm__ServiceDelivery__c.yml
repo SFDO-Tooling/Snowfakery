@@ -1,0 +1,20 @@
+- macro: m__pmdm__ServiceDelivery__c
+  fields:
+    OwnerId:
+      reference: User
+    pmdm__Quantity__c:
+      random_number:
+        min: 0
+        max: 20
+    pmdm__DeliveryDate__c:
+      date_between:
+        start_date: ${{__DATES.__first_month}}
+        end_date: today
+
+    pmdm__Service_Provider__c:
+      reference:
+        - random_choice:
+          - Jodie Cash
+          - Stuart Buttersfeld
+          - Jayla Adams
+          - Simone Park

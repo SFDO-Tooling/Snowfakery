@@ -1,0 +1,36 @@
+- macro: m__Case
+  fields:
+      OwnerId:
+        reference: User
+      Status: 
+        random_choice:
+          - New
+          - Working
+          - Escalated
+          - Closed
+      Priority:
+        random_choice:
+          - Low
+          - Medium
+          - High
+      caseman__ReferralOrganization__c:
+        reference:
+          - random_choice:
+            - 127 St Community Center
+            - Front Street Mission
+            - YMCA
+            - Mission Street Support Network
+            - Charity Village Services
+            - 2020 Community Service Agency
+            - Pinnacle Ministry
+            - ABC Children's Services
+            - Sanctuary
+      Origin:
+        random_choice:
+          - Email
+          - Phone
+          - Website
+          # - Community       # customizations
+          # - Text Session
+          # - Chat
+

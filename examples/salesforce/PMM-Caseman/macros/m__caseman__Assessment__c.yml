@@ -1,0 +1,15 @@
+- macro: m__caseman__Assessment__c
+  fields:
+    OwnerId:
+      reference: User
+    caseman__Client__c:
+      reference: Contact
+    caseman__Intake__c:
+      reference: caseman__Intake__c
+    caseman__ProgramEngagement__c: 
+      reference: pmdm__ProgramEngagement__c
+    caseman__AssessmentCompletedDate__c: ${{date(caseman__ProgramEngagement__c.pmdm__StartDate__c) + relativedelta(days=random_number(2,7))}}
+    caseman__TotalScore__c:
+      random_number:
+        min: 35
+        max: 100

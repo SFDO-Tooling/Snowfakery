@@ -1,0 +1,109 @@
+- object: pmdm__Service__c
+  just_once: True
+  nickname: Job Application Workshops
+  fields:
+      Name: Job Application Workshops
+      pmdm__Program__c:
+        reference: Job Training
+      pmdm__Status__c: Active
+      pmdm__UnitOfMeasurement__c: Hours
+
+- object: pmdm__Service__c
+  just_once: True
+  nickname: Job Interview Workshops
+  fields:
+      Name: Job Interview Workshops
+      pmdm__Program__c:
+        reference: Job Training
+      pmdm__Status__c: Active
+      pmdm__UnitOfMeasurement__c: Hours
+
+- object: pmdm__Service__c
+  just_once: True
+  nickname: Soft Skills Training
+  fields:
+      Name: Soft Skills Training
+      pmdm__Program__c:
+        reference: Job Training
+      pmdm__Status__c: Active
+      pmdm__UnitOfMeasurement__c: Hours
+
+- object: pmdm__Service__c
+  just_once: True
+  nickname: Food Pantry
+  fields:
+      Name: Food Pantry
+      pmdm__Program__c:
+        reference: Basic Needs Support
+      pmdm__Status__c: Active
+      pmdm__UnitOfMeasurement__c: Grocery Bags
+
+- object: pmdm__Service__c
+  just_once: True
+  nickname: Hygiene Kits
+  fields:
+      Name: Hygiene Kits
+      pmdm__Program__c:
+        reference: Basic Needs Support
+      pmdm__Status__c: Active
+      pmdm__UnitOfMeasurement__c: Kits
+
+- object: pmdm__Service__c
+  just_once: True
+  nickname: Clothing Shop
+  fields:
+      Name: Clothing Shop
+      pmdm__Program__c:
+        reference: Basic Needs Support
+      pmdm__Status__c: Active
+      pmdm__UnitOfMeasurement__c: Articles of clothing
+
+- object: pmdm__Service__c
+  just_once: True
+  nickname: 1:1 Housing Placement Coaching
+  fields:
+      Name: 1:1 Housing Placement Coaching
+      pmdm__Program__c:
+        reference: Intensive Case Management
+      pmdm__Status__c: Active
+      pmdm__UnitOfMeasurement__c: Hours
+
+- object: pmdm__Service__c
+  just_once: True
+  nickname: 1:1 Job Skills Coaching
+  fields:
+      Name: 1:1 Job Skills Coaching
+      pmdm__Program__c:
+        reference: Intensive Case Management
+      pmdm__Status__c: Active
+      pmdm__UnitOfMeasurement__c: Hours
+
+- object: pmdm__Service__c
+  just_once: True
+  nickname: Assistance completing housing applications
+  fields:
+      Name: Assistance completing housing applications
+      pmdm__Program__c:
+        reference: Intensive Case Management
+      pmdm__Status__c: Active
+      pmdm__UnitOfMeasurement__c: Applications
+
+- object: pmdm__Service__c
+  just_once: True
+  nickname: Assistance completing forms to gain other types of assistance
+  fields:
+      Name: Assistance completing forms to gain other types of assistance
+      pmdm__Program__c:
+        reference: Intensive Case Management
+      pmdm__Status__c: Active
+      pmdm__UnitOfMeasurement__c: Applications
+
+- object: pmdm__Service__c
+  just_once: True
+  nickname: Accompany clients to appointments with other agencies
+  fields:
+      Name: Accompany clients to appointments with other agencies
+      pmdm__Program__c:
+        reference: Intensive Case Management
+      pmdm__Status__c: Active
+      pmdm__UnitOfMeasurement__c: Hours

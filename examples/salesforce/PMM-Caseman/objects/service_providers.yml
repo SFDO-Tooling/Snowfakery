@@ -1,0 +1,39 @@
+- object: Account
+  just_once: True
+  nickname: STEPS
+  fields:
+    Name: STEPS
+
+- object: Contact
+  nickname: Jodie Cash
+  fields:
+    FirstName: Jodie
+    LastName: Cash
+    Title: Senior Case Manager
+    AccountId:
+      reference: STEPS
+- object: Contact
+  nickname: Stuart Buttersfeld
+  fields:
+    FirstName: Stuart
+    LastName: Buttersfeld
+    Title: Case Manager
+    AccountId:
+      reference: STEPS
+- object: Contact
+  nickname: Jayla Adams
+  fields:
+    FirstName: Jayla
+    LastName: Adams
+    Title: Program Manager
+    AccountId:
+      reference: STEPS
+- object: Contact
+  nickname: Simone Park
+  fields:
+    FirstName: Simone
+    LastName: Park
+    Title: Case Manager
+    AccountId:
+      reference: STEPS
+

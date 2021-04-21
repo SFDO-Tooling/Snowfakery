@@ -1,0 +1,20 @@
+- plugin: snowfakery.standard_plugins.datasets.Dataset
+- macro: m__User
+  fields:
+    Username: user-${{datetime(year=2021,month=01,day=01).now().timestamp()}}-${{random_number(10000,100000)}}@pmm-caseman-demo.org
+    FirstName:
+      fake: first_name
+    LastName:
+      fake: last_name
+    Email:
+      fake: email
+    Alias: ${{FirstName[0:8]}}
+    TimeZoneSidKey: America/Bogota
+    LocaleSidKey: en_US
+    EmailEncodingKey: UTF-8
+    __profile_row:
+      Dataset.iterate:
+        dataset: profiles.csv
+    ProfileId: ${{__profile_row.Id}}
+
+    LanguageLocaleKey: en_US

@@ -1,0 +1,33 @@
+- macro: m__caseman__Intake__c
+  fields:
+    OwnerId:
+      reference: User
+    Name: ${{Contact.FirstName}} ${{Contact.LastName}} ${{date(pmdm__ProgramCohort__c.pmdm__EndDate__c) - relativedelta(months=random_number(min=1, max=10))}} Intake
+    caseman__stage__c:
+      random_choice:
+        Not Started: 10%
+        In Progress: 20%
+        Awaiting Client Input: 15%
+        In Review: 20%
+        Not Approved: 5%
+        Approved: 30%
+    caseman__result__c:
+      if:
+        - choice:
+            when: ${{caseman__stage__c=='Approved'}}
+            pick: Approved
+        - choice:
+            when: ${{caseman__stage__c=='Not Approved'}}
+            pick:
+              random_choice:
+                - "Not Approved: Client Declined Services"
+                - "Not Approved: Referred Elsewhere"
+                - "Not Approved: Rejected"
+        - choice:
+            pick: Pending
+    caseman__CloseDate__c:
+      if:
+        - choice:
+            when: ${{caseman__stage__c=='Approved'}}
+            pick: ${{date(pmdm__ProgramCohort__c.pmdm__EndDate__c) - relativedelta(weeks=random_number(min=2, max=3))}}
+        - choice:

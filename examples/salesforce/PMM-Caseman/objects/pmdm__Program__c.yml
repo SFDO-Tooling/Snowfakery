@@ -1,0 +1,26 @@
+- object: pmdm__Program__c
+  just_once: True
+  nickname: Job Training
+  fields:
+    Name: Job Training
+    pmdm__ProgramIssueArea__c: Employment
+    pmdm__Status__c: Active
+    pmdm__StartDate__c: ${{__DATES.__first_month}}
+
+- object: pmdm__Program__c
+  just_once: True
+  nickname: Basic Needs Support
+  fields:
+    Name: Basic Needs Support
+    pmdm__ProgramIssueArea__c: Food and Nutrition
+    pmdm__Status__c: Active
+    pmdm__StartDate__c: ${{__DATES.__first_month}}
+
+- object: pmdm__Program__c
+  just_once: True
+  nickname: Intensive Case Management
+  fields:
+    Name: Intensive Case Management
+    pmdm__ProgramIssueArea__c: Housing
+    pmdm__Status__c: Active
+    pmdm__StartDate__c: ${{__DATES.__first_month}}

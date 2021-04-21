@@ -1,0 +1,19 @@
+- macro: m__pmdm__ProgramCohort__c
+  fields:
+    __start_month: ${{random_number(0, __DATES.__total_months)}}
+    pmdm__StartDate__c: ${{ today - relativedelta(months=__start_month)}}
+    pmdm__EndDate__c: ${{ date(pmdm__StartDate__c) + relativedelta(months=3)}}
+    __quarter: ${{Helpers.round((date(pmdm__StartDate__c).month % 12)/4)+1}}
+    Name: Q${{__quarter}} ${{date(pmdm__StartDate__c).year}} ${{pmdm__Program__c.Name}} Cohort
+    OwnerId:
+      reference: User
+    pmdm__Status__c:
+      if:
+        - choice:
+            when: ${{date(pmdm__EndDate__c)>today}}
+            pick: Active
+        - choice:
+            pick:
+              random_choice:
+                Canceled: 13%
+                Completed: 87%

@@ -1,0 +1,34 @@
+- macro: m__pmdm__ProgramEngagement__c
+  fields:
+    OwnerId:
+      reference: User
+    Name: "${{Contact.Name}} ${{StartDate}}: ${{pmdm__ProgramCohort__c.Name}}"
+    pmdm__Stage__c:
+      random_choice:
+        Applied: 10%
+        Application Denied: 5%
+        Enrolled: 10%
+        Active: 10%
+        Completed: 55%
+        Waitlisted: 5%
+        Withdrawn: 5%
+    pmdm__Contact__c:
+      reference: Contact
+    pmdm__Role__c:
+      random_choice:
+        Client: 90%
+        Volunteer: 5%
+        Service Provider: 5%
+    pmdm__ApplicationDate__c: ${{date(pmdm__ProgramCohort__c.pmdm__StartDate__c) - relativedelta(days=random_number(min=3, max=30))}}
+    pmdm__StartDate__c: ${{pmdm__ProgramCohort__c.pmdm__StartDate__c}}
+    pmdm__EndDate__c: ${{date(pmdm__ProgramCohort__c.pmdm__EndDate__c)}}
+    # caseman__Satisfaction__c:  # TODO Is this a customization?
+    #   if:
+    #     - choice:
+    #         when: ${{pmdm__Stage__c=='Completed'}}
+    #         pick:
+    #           random_number:
+    #             min: 2
+    #             max: 10
+    #     - choice:
+

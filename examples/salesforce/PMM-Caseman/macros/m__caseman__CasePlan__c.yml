@@ -1,0 +1,29 @@
+- macro: m__caseman__CasePlan__c
+  fields:
+    OwnerId:
+      reference: User
+    caseman__Status__c:
+      random_choice:
+        - Not Started
+        - In Progress
+        - Completed
+    caseman__InProgressDate__c:
+      if:
+        - choice:
+            when: ${{caseman__Status__c=='In Progress'}}
+            pick:
+              date_between:
+                start_date: -3y
+                end_date: today
+        - choice:
+            pick:
+    caseman__CompletedDate__c:
+      if:
+        - choice:
+            when: ${{caseman__Status__c=='Completed'}}
+            pick:
+              date_between:
+                start_date: -3y
+                end_date: today
+        - choice:
+            pick:

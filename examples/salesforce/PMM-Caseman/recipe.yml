@@ -1,0 +1,191 @@
+
+- plugin: datasets.plugins.helpers.Helpers
+- include_file: macros/m__dates.yml
+- include_file: macros/m__Client.yml
+- include_file: macros/m__Users.yml
+- include_file: objects/pmdm__Program__c.yml
+- include_file: objects/pmdm__Service__c.yml
+- include_file: macros/m__pmdm__ProgramCohort__c.yml
+- include_file: objects/service_providers.yml
+- include_file: macros/m__caseman__Intake__c.yml
+- include_file: macros/m__pmdm__ProgramEngagement__c.yml
+- include_file: macros/m__Case.yml
+- include_file: macros/m__caseman__Assessment__c.yml
+- include_file: macros/m__caseman__CasePlan__c.yml
+- include_file: macros/m__pmdm__ServiceDelivery__c.yml
+- include_file: objects/ReferringOrgs.yml
+
+# glue everything together
+- macro: m__ProgramCohort__relationsips
+  include: m__pmdm__ProgramCohort__c
+  fields:
+    pmdm__Program__c:
+      random_choice:
+        - reference: Job Training
+        - reference: Basic Needs Support
+        - reference: Intensive Case Management
+  friends:
+    - object: Contact
+      include: m__Client
+      nickname: Client
+      count:
+        random_number:
+          min: 5
+          max: 15
+      friends:
+        - object: caseman__Intake__c
+          include: m__caseman__Intake__c
+          fields:
+            caseman__Contact__c:
+              reference: Contact
+        - object: pmdm__ProgramEngagement__c
+          include: m__pmdm__ProgramEngagement__c
+          fields:
+            pmdm__ProgramCohort__c:
+              reference: pmdm__ProgramCohort__c
+            pmdm__Program__c:
+              reference: pmdm__ProgramCohort__c.pmdm__Program__c
+            caseman__Intake__c:
+              reference: caseman__Intake__c
+          friends:
+            - object: caseman__Assessment__c
+              include: m__caseman__Assessment__c
+
+        - object: Case
+          include: m__Case
+          count:
+              random_number:
+                min: 1
+                max: 5
+          fields:
+              caseman__Program__c:
+                reference: pmdm__ProgramCohort__c.pmdm__Program__c
+              Subject:
+                random_choice:
+                  - Tutoring needed
+                  - Advice sought
+                  - Support request
+                  - Job Training
+                  - Job Interview Workshops
+                  - Job Application Workshops
+                  - Soft Skills Training
+                  - Basic Needs Support
+                  - Food Pantry
+                  - Hygiene Kits
+                  - Clothing Needs
+                  - Housing Needed
+                  - Assistance completing housing applications
+                  - Assistance completing forms to gain other types of assistance
+                  - Accompany clients to appointments with other agencies
+              ContactId:
+                reference: Client
+              caseman__Intake__c:
+                reference:
+                  caseman__Intake__c
+              RecordType: InboundReferral
+
+        - object: caseman__CasePlan__c
+          include: m__caseman__CasePlan__c
+          fields:
+            caseman__Contact__c:
+              reference: Contact
+            Name: ${{Contact.FirstName}} ${{Contact.LastName}} - Case Plan
+          friends:
+            - object: caseman__Goal__c
+              fields:
+                  caseman__Status__c:
+                    random_choice:
+                      - Not Started
+                      - In Progress
+                      - Completed
+                      - On Hold
+                      - Abandoned
+                  caseman__CasePlan__c:
+                    reference: caseman__CasePlan__c
+                  caseman__Contact__c:
+                    reference: Contact
+                  caseman__ProgramEngagement__c:
+                    reference: pmdm__ProgramEngagement__c
+
+        - object: pmdm__ServiceDelivery__c
+          include: m__pmdm__ServiceDelivery__c
+          fields:
+            pmdm__Contact__c:
+              reference: Client
+            pmdm__ProgramEngagement__c:
+              reference: pmdm__ProgramEngagement__c
+            pmdm__Service__c:
+              if:
+                - choice: 
+                    when: ${{pmdm__ProgramCohort__c.pmdm__Program__c.Name == 'Job Training'}}
+                    pick:
+                      random_choice:
+                        - reference: Job Application Workshops
+                        - reference: Job Interview Workshops
+                        - reference: Job Interview Workshops
+                - choice: 
+                    when: ${{pmdm__ProgramCohort__c.pmdm__Program__c.Name == 'Basic Needs Support'}}
+                    pick:
+                      random_choice:
+                        - reference: Food Pantry
+                        - reference: Hygiene Kits
+                        - reference: Clothing Shop
+                  
+                - choice: 
+                    when: ${{pmdm__ProgramCohort__c.pmdm__Program__c.Name == 'Intensive Case Management'}}
+                    pick:
+                      random_choice:
+                        - reference: 1:1 Housing Placement Coaching
+                        - reference: 1:1 Job Skills Coaching
+                        - reference: Assistance completing housing applications
+                        - reference: Assistance completing forms to gain other types of assistance
+                        - reference: Accompany clients to appointments with other agencies
+                        
+
+- object: User
+  include: m__User
+  just_once: True
+
+- object: pmdm__ProgramCohort__c
+  include: m__ProgramCohort__relationsips
+  count: 200
+
+- object: User
+  include: m__User
+  just_once: True
+
+- object: pmdm__ProgramCohort__c
+  include: m__ProgramCohort__relationsips
+  nickname: Current Job Training
+  fields:
+    pmdm__Program__c:
+      - reference: Job Training
+    pmdm__StartDate__c: ${{ today - relativedelta(days=7)}}
+    pmdm__EndDate__c: ${{ date(pmdm__StartDate__c) + relativedelta(months=3)}}
+
+
+- object: User
+  include: m__User
+  just_once: True
+
+- object: pmdm__ProgramCohort__c
+  include: m__ProgramCohort__relationsips
+  nickname: Current Basic Needs Support
+  fields:
+    pmdm__Program__c:
+      - reference: Basic Needs Support
+    pmdm__StartDate__c: ${{ today - relativedelta(days=7)}}
+    pmdm__EndDate__c: ${{ date(pmdm__StartDate__c) + relativedelta(months=3)}}
+
+- object: User
+  include: m__User
+  just_once: True
+
+- object: pmdm__ProgramCohort__c
+  include: m__ProgramCohort__relationsips
+  nickname: Current Intensive Case Management
+  fields:
+    pmdm__Program__c:
+      - reference: Intensive Case Management
+    pmdm__StartDate__c: ${{ today - relativedelta(days=7)}}
+    pmdm__EndDate__c: ${{ date(pmdm__StartDate__c) + relativedelta(months=3)}}

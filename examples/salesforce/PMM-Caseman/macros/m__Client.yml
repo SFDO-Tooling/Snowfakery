@@ -1,0 +1,82 @@
+- macro: GenderedNameStuff
+  fields:
+    __gender:
+      random_choice:
+        female_declared: 48%
+        male_declared: 42%
+        non_binary_declared: 5%
+        undeclared: 5%
+    OwnerId:
+      reference: User
+    caseman__Pronouns__c:
+      if:
+        - choice:
+            when: ${{__gender=='female_declared'}}
+            pick: she/her/hers
+        - choice:
+            when: ${{__gender=='male_declared'}}
+            pick: he/him/his
+        - choice:
+            when: ${{__gender=='non_binary_declared'}}
+            pick: they/them/theirs
+        - choice:
+            when: ${{__gender=='undeclared'}}
+            pick: other/ask me
+    Gender__c:
+      if:
+        - choice:
+            when: ${{__gender=='female_declared'}}
+            pick: Female
+        - choice:
+            when: ${{__gender=='male_declared'}}
+            pick: Male
+        - choice:
+            when: ${{__gender=='non_binary_declared'}}
+            pick: Non-Binary
+        - choice:
+            when: ${{__gender=='undeclared'}}
+            pick: Prefer Not To Say
+    FirstName:
+      if:
+        - choice:
+            when: ${{__gender=='female_declared'}}
+            pick:
+              fake: first_name_female
+        - choice:
+            when: ${{__gender=='male_declared'}}
+            pick:
+              fake: first_name_male
+        - choice:
+            when: ${{__gender=='non_binary_declared'}}
+            pick:
+              fake: first_name_nonbinary
+        - choice:
+            when: ${{__gender=='undeclared'}}
+            pick:
+              fake: first_name_nonbinary
+    LastName:
+      fake: last_name
+
+- macro: m__Client
+  include: GenderedNameStuff
+  fields:
+    OwnerId:
+      reference: User
+    Birthdate:
+      date_between:
+          start_date: 1935-11-8
+          end_date: 2004-11-8
+    Phone:
+      fake: phone_number
+    Email:
+      fake: email
+    MailingStreet:
+      fake: street_address
+    MailingCity:
+      fake: city
+    MailingState:
+      fake: state
+    MailingPostalCode:
+      fake: postalcode
+    MailingCountry: United States
+    RecordType: Client

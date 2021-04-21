@@ -1,0 +1,53 @@
+- object: Account
+  just_once: True
+  nickname: 127 St Community Center
+  fields:
+    Name: 127 St. Community Center
+
+- object: Account
+  just_once: True
+  nickname: Front Street Mission
+  fields:
+    Name: Front Street Mission
+
+- object: Account
+  just_once: True
+  nickname: YMCA
+  fields:
+    Name: YMCA
+
+- object: Account
+  just_once: True
+  nickname: Mission Street Support Network
+  fields:
+    Name: Mission Street Support Network
+
+- object: Account
+  just_once: True
+  nickname: Charity Village Services
+  fields:
+    Name: Charity Village Services
+
+- object: Account
+  just_once: True
+  nickname: 2020 Community Service Agency
+  fields:
+    Name: 2020 Community Service Agency
+
+- object: Account
+  just_once: True
+  nickname: Pinnacle Ministry
+  fields:
+    Name: Pinnacle Ministry
+
+- object: Account
+  just_once: True
+  nickname: ABC Children's Services
+  fields:
+    Name: ABC Children's Services
+
+- object: Account
+  just_once: True
+  nickname: Sanctuary
+  fields:
+    Name: Sanctuary
