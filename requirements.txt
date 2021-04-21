@@ -1,4 +1,4 @@
-SQLAlchemy==1.3.23          # pin this pending evaluaton
+SQLAlchemy==1.4.10          # pin this pending evaluaton
 Faker==6.6.3
 jinja2==2.11.3
 PyYAML==5.4.1
