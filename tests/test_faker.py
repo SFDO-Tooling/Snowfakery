@@ -110,3 +110,32 @@ class TestFaker(unittest.TestCase):
         the_date = row_values(write_row_mock, 0, "date")
         assert (date.today() - the_date).days > 80
         assert (date.today() - the_date).days < 130
+
+    @mock.patch(write_row_path)
+    def test_snowfakery_names(self, write_row_mock):
+        yaml = """
+        - object: A
+          fields:
+            fn:
+              fake: FirstName
+            ln:
+              fake: LastName
+            un:
+              fake: UserName
+            un2:
+              fake: username
+            alias:
+              fake: Alias
+            email:
+              fake: Email
+            danger_mail:
+              fake: RealisticMaybeRealEmail
+            email2:
+              fake: email
+        """
+        generate(StringIO(yaml), {}, None)
+        assert "_" in row_values(write_row_mock, 0, "un")
+        assert "@" in row_values(write_row_mock, 0, "un2")
+        assert len(row_values(write_row_mock, 0, "alias")) < 8
+        assert "@example" in row_values(write_row_mock, 0, "email")
+        assert "@" in row_values(write_row_mock, 0, "danger_mail")
