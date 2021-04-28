@@ -551,7 +551,46 @@ Generate fake data using functions from the [faker](https://github.com/joke2k/fa
       fake: state
 ```
 
-You can fake all sorts of stuff. Names, addresses, Latin text, English sentences, URLs, etc. The complete list is here:
+You can fake all sorts of stuff. Names, addresses, Latin text, English sentences, URLs, etc. There are two lists of fake names you can pull from, a Snowfakery-specific list,
+and the broader faker list.
+
+The Snowfakery names are:
+
+- Username: a globally unique username in the shape of an email address
+
+- Alias: a short string that looks like a first name.
+
+- FirstName, LastName: Localized first and last name
+
+- Email: An email address using one of the standard "example" domains (such as example.com, example.org, etc.)
+
+- RealisticMaybeRealEmail: An email address which looks
+more real (because it uses domains like google.com,
+yahoo.com, etc.) and may accidentally actually overlap
+with a real email address. Be careful using this if
+you might send actual emails to the addresses!
+
+For example, you can use these like this:
+
+```yaml
+# examples/salesforce/users.yml
+- object: User
+  fields:
+    Username:
+      fake: Username
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+    Email:
+      fake: Email
+    Alias:
+      fake: Alias
+```
+
+It doesn't matter if you use upper or lower case for fake names.
+
+The complete list is here:
 
 <https://faker.readthedocs.io/en/stable/providers.html>
 
