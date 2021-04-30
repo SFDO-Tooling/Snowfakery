@@ -115,6 +115,8 @@ class TestFaker(unittest.TestCase):
     @mock.patch(write_row_path)
     def test_snowfakery_names(self, write_row_mock):
         yaml = """
+        - var: snowfakery_locale
+          value: ja_JP
         - object: A
           fields:
             fn:
@@ -133,6 +135,8 @@ class TestFaker(unittest.TestCase):
               fake: RealisticMaybeRealEmail
             email2:
               fake: email
+            state:
+              fake: state
         """
         generate(StringIO(yaml), {}, None)
         assert "_" in row_values(write_row_mock, 0, "un")
@@ -141,6 +145,7 @@ class TestFaker(unittest.TestCase):
         assert "@example" in row_values(write_row_mock, 0, "email")
         assert "@" in row_values(write_row_mock, 0, "email2")
         assert "@" in row_values(write_row_mock, 0, "danger_mail")
+        assert row_values(write_row_mock, 0, "state")
 
     @mock.patch(write_row_path)
     def test_fallthrough_to_faker(self, write_row_mock):

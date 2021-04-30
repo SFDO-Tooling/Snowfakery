@@ -24,6 +24,8 @@ class FakeNames(T.NamedTuple):
     def RealisticMaybeRealEmail(self):
         return self.f.email()
 
+    def State(self):
+        return self.f.administrative_unit()
 
 class FakeData:
     """Wrapper Faker which adds Salesforce names and case insensitivity."""
