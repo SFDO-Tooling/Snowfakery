@@ -4,6 +4,7 @@ import string
 
 from faker import Faker
 from jinja2 import Template
+from snowfakery.fakedata.fake_data_generator import FakeData
 
 
 class StringGenerator:
@@ -44,13 +45,20 @@ class FakerTemplateLibrary:
 
     def __init__(self, faker_providers: Sequence[object], locale=None):
         self.locale = locale
-        self.faker = Faker(self.locale, use_weighting=False)
+
+        # TODO: Push this all down into FakeData
+        faker = Faker(self.locale, use_weighting=False)
         for provider in faker_providers:
-            self.faker.add_provider(provider)
+            faker.add_provider(provider)
+
+        self.fake_data = FakeData(faker)
+
+    def _get_fake_data(self, name):
+        return self.fake_data._get_fake_data(name)
 
     def __getattr__(self, name):
         return StringGenerator(
-            lambda *args, **kwargs: self.faker.format(name, *args, **kwargs)
+            lambda *args, **kwargs: self.fake_data.format(name, *args, **kwargs)
         )
 
 
