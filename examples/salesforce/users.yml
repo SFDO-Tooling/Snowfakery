@@ -1,0 +1,12 @@
+- object: User
+  fields:
+    Username:
+      fake: Username
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+    Email:
+      fake: Email
+    Alias:
+      fake: Alias
