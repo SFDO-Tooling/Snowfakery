@@ -130,6 +130,14 @@ def resolve_plugins(
     plugin_specs: List[Tuple[str, object]], search_paths: List[Union[str, Path]]
 ):
     "Resolve a list of plugins and lineinfos"
+    with plugin_path(search_paths):
+        plugins = []
+        for plugin_spec in plugin_specs:
+            plugins.extend(resolve_plugin(*plugin_spec))
+        return plugins
+
+
+def plugin_path(search_paths):
     cwd_plugins = "./plugins"
     user_plugins = Path.home() / ".snowfakery/plugins"
     new_sys_path = [
@@ -138,17 +146,12 @@ def resolve_plugins(
         str(cwd_plugins),
         str(user_plugins),
     ]
-
-    with patch.object(sys, "path", new_sys_path):
-        plugins = []
-        for plugin_spec in plugin_specs:
-            plugins.extend(resolve_plugin(*plugin_spec))
-        return plugins
+    return patch.object(sys, "path", new_sys_path)
 
 
 def resolve_plugin(plugin: str, lineinfo) -> object:
     """Resolve a plugin to a class"""
-    cls = _resolve_plugin_alternatives(plugin)
+    cls = resolve_plugin_alternatives(plugin)
     if not cls:
         raise exc.DataGenImportError(
             f"Cannot find plugin: {plugin}", lineinfo.filename, lineinfo.line_num
@@ -174,7 +177,7 @@ def resolve_plugin(plugin: str, lineinfo) -> object:
         )
 
 
-def _resolve_plugin_alternatives(plugin):
+def resolve_plugin_alternatives(plugin):
     """Interpret the plugin declaration in 2 ways.
     Return it when we find one that matches.
 
@@ -203,6 +206,7 @@ def _resolve_plugin_alternatives(plugin):
         try:
             module = import_module(module_name)
             if hasattr(module, class_name):
+                assert getattr(module, class_name)
                 return getattr(module, class_name)
         except ModuleNotFoundError:
             pass

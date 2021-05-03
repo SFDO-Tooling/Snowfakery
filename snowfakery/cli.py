@@ -13,6 +13,14 @@ if __name__ == "__main__":  # pragma: no cover
     sys.path.append(str(Path(__file__).parent.parent))
 
 
+class FormatChoice(click.Choice):
+    def convert(self, value, param, ctx):
+        if isinstance(value, str) and "." in value:
+            return value
+
+        return super().convert(value, param, ctx)
+
+
 def eval_arg(arg):
     if arg.isnumeric():
         return int(float(arg))
@@ -53,7 +61,11 @@ def int_string_tuple(ctx, param, value=None):
     help="URL for database to save data to. "
     "Use sqlite:///foo.db if you don't have one set up.",
 )
-@click.option("--output-format", "output_format", type=click.Choice(file_extensions))
+@click.option(
+    "--output-format",
+    "output_format",
+    type=FormatChoice(file_extensions, case_sensitive=False),
+)
 @click.option("--output-folder", "output_folder", type=click.Path(), default=".")
 @click.option("--output-file", "-o", "output_files", type=click.Path(), multiple=True)
 @click.option(
@@ -142,7 +154,6 @@ def generate_cli(
             * https://snowfakery.readthedocs.io/en/docs/
     """
     output_files = list(output_files) if output_files else []
-    output_format = output_format.lower() if output_format else None
     validate_options(
         yaml_file,
         option,
