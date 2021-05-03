@@ -37,14 +37,16 @@
         dataset: ../../temp/temp_profiles.csv
     ProfileId: ${{__datasetid.Id}}
     LanguageLocaleKey: en_US
+    FirstName:
+      fake: FirstName
     LastName:
-      fake: last_name
+      fake: LastName
     Username:
-      fake: email
+      fake: Username
     Email:
       fake: email
-    Alias: Word
-    CommunityNickname:
-      fake: word
+    Alias:
+      fake: Alias
+    CommunityNickname: ${{ Alias }}
     ContactId:
       reference: Account.PersonContactId
