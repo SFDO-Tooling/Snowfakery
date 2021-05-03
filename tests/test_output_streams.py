@@ -25,7 +25,8 @@ from snowfakery.cli import generate_cli
 from tests.utils import named_temporary_file_path
 
 
-sample_yaml = Path(__file__).parent / "include_parent.yml"
+sample_yaml = Path(__file__).parent / "forward_reference.yml"
+sample_output = [{"_table": "A", "id": 1, "B": 1}, {"_table": "B", "id": 1, "A": 1}]
 
 
 def normalize(row):
@@ -221,14 +222,8 @@ class TestJSONOutputStream(OutputCommonTests):
         with redirect_stdout(x):
             generate_cli.callback(yaml_file=sample_yaml, output_format="json")
         data = json.loads(x.getvalue())
-        assert data == [
-            {
-                "_table": "Account",
-                "id": 1,
-                "name": "Default Company Name",
-                "ShippingCountry": "Canada",
-            }
-        ]
+        print(data)
+        assert data == sample_output
 
     def test_null(self):
         yaml = """
@@ -346,5 +341,29 @@ class TestExternalOutputStream:
             )
         assert (
             x.getvalue()
-            == "Account - {'id': 1, 'name': 'Default Company Name', 'ShippingCountry': 'Canada'}\n"
+            == """A - {'id': 1, 'B': 'B(1)'}
+B - {'id': 1, 'A': 'A(1)'}
+"""
         )
+
+    def test_external_output_stream_yaml(self):
+        x = StringIO()
+        with redirect_stdout(x):
+            generate_cli.callback(
+                yaml_file=sample_yaml, output_format="examples.YamlOutputStream"
+            )
+        expected = """- object: A
+  nickname: row_1
+  fields:
+    id: 1
+    B:
+      reference: row_1
+- object: B
+  nickname: row_1
+  fields:
+    id: 1
+    A:
+      reference: row_1
+"""
+        print(x.getvalue())
+        assert x.getvalue() == expected
