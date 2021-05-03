@@ -336,3 +336,16 @@ class TestSQLTextOutputStream(unittest.TestCase, OutputCommonTests):
                 for table_name in table_names
             }
             return tables
+
+
+class TestExternalOutputStream:
+    def test_external_output_stream(self):
+        x = StringIO()
+        with redirect_stdout(x):
+            generate_cli.callback(
+                yaml_file=sample_yaml, output_format="package1.TestOutputStream"
+            )
+        assert (
+            x.getvalue()
+            == "Account - {'id': 1, 'name': 'Default Company Name', 'ShippingCountry': 'Canada'}\n"
+        )

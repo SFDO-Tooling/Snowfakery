@@ -388,7 +388,7 @@ class TestCLIOptionChecking:
                         "--dburl",
                         f"sqlite:///{t}/foo.db",
                         "--output-format",
-                        "JSON",
+                        "json",
                     ],
                     standalone_mode=False,
                 )
@@ -408,7 +408,7 @@ class TestCLIOptionChecking:
         assert "apping-file" in str(e.value)
 
     def test_cli_errors__cannot_infer_output_format(self):
-        with pytest.raises(ClickException, match="Unknown format or file"):
+        with pytest.raises(ClickException, match="No format supplied"):
             with TemporaryDirectory() as t:
                 generate_cli.main(
                     [
