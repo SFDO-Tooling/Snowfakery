@@ -146,7 +146,7 @@ But in case you’re in a hurry: In this case we're creating 3 Person objects. E
 
 <img src='images/img1.png' id='PJUACATPCzI' alt='Relationship diagram' width='800' height='190'>Later, we’ll discuss how we could have just 2 PetFood objects which are shared. We’ll also discuss how we could randomly select a Pet species or Food.
 
-## Outputs
+### Outputs
 
 Snowfakery builds on a tool called SQLAlchemy, so it gets a variety of database connectors for free:
 
@@ -167,7 +167,7 @@ The complete list of file-based (as opposed to database-based) formats are:
 - DOT - A Graphviz file for use with graphviz command line or [web-based](http://graphviz.it/) [tools](https://dreampuf.github.io/GraphvizOnline) (no endorsement intended!)
 - SVG, SVGZ, JPEG, PS PNG - Graphic formats which can be created if graphviz is installed.
 
-## Objects
+### Objects
 
 The main, core concept in the language is an “*Object Template*”. It basically represents instructions on how to create a *Row* (or multiple rows) in a database. Rows in turn represent real-world entities like People,  Places or Things and that’s why we use the keyword “Object”. "Record" is another term for "Row"
 
@@ -268,7 +268,7 @@ There is no explicit relationship between the animals and the people in this cas
 
 You can also use this feature for [Many to One](#many-to-one-relationships).
 
-## Relationships
+### Relationships
 
 Relationships are a big part of what makes Snowfakery different than the dozens(!) of tools for data generation out there. For example, we can relate pets to their owners like this:
 
@@ -302,9 +302,8 @@ Person(id=3, name=Lisa King, pet=Animal(3))
 
 In addition, we can relate pets and owners “bidirectionally”, like this:
 
-secret_life_of_pets.yml
-
 ```yaml
+# snowfakery/docs/examples/secret_life_of_pets.yml
 - object: Person
   count: 3
   fields:
@@ -406,7 +405,7 @@ The basic rule is that the last row (object) created with the nickname is the on
 
 ## Function Blocks
 
-Fields can refer to functions which randomize, compute or look up data. We can do that by nesting the function name under the field name or by using formulas. ([Simple Formulas](#simple-formulas))
+Fields can refer to functions which randomize, compute or look up data. We can do that by nesting the function name under the field name or by using formulas. ([Formulas](#simple-formulas))
 
 ### Reference
 
@@ -776,84 +775,6 @@ some_number: A number ${{random_number(min=5, max=10)}}
 
 The `when` clause can be a Python formula and it will be interpreted as a boolean similar to how Python would do it. The first `when` clause that matches is selected. The last `choice` clause should have no `when` clause, and it is a fallback which is selected if the others do not match.
 
-## Formula functions and variables
-
-The functions below are designed to be used inside of formulas:
-
-The `child_index` variable returns a counter of how many objects from this template were generated
-during the execution of the nearest parent template. It resets each time the parent template is
-executed again.
-
-```yaml
-child_index: Child number ${{child_index}}
-```
-
-The `id` variable returns a unique identifier for the current Object/Row to allow you to construct unique identifiers.
-
-```yaml
-fields:
-  name: ${{fake.last_name}} Household ${{id}}
-```
-
-The `today` variable returns a date
-representing the current date. This date
-will not chanage during the execution of
-a single recipe.
-
-The `fake` variable gives access to faker as described elsewhere in this documentation.
-
-The `snowfakery_filename` variable represents the file containing the template. This is useful
-for relative paths.
-
-The `date` function can either coerce a string into a date object for calculations OR generate
-a new date object from year/month/day parts:
-
-```yaml
-    the_date: ${{date("2018-10-30")}}
-    another_date: ${{date(year=2018, month=11, day=30)}}
-```
-
-The `relativedelta` [function](https://dateutil.readthedocs.io/en/stable/relativedelta.html) 
-from `dateutil` is available for use in calculations like this:
-
-```yaml
-${{ date(Date_Established__c) + relativedelta(months=child_index) }}
-```
-
-Some plugins may also be interested in a `template` variable which has an `id` attributes represents a unique identifier for the current template. Look at
-[datasets.py](https://github.com/SFDO-Tooling/Snowfakery/blob/main/snowfakery/standard_plugins/datasets.py) to see one use-case where the template's ID can used to differentiate between two otherwise identical datasets.
-
-### NULL
-
-The value `NULL` can be used to represent a missing value as in the recipe
-below:
-
-First, we can make `NULL` an option with `random_choice`:
-
-```yaml
-- object: foo
-  count: 10
-  fields:
-    EndDate:
-      random_choice:
-        - date_between:
-            start_date: 2018-01-01
-            end_date: 2021-12-12
-        - NULL
-```
-
-Then, in another field you can test whether the value is `NULL` or not:
-
-```yaml
-    DateSupplied:
-      if:
-        - choice:
-            when: ${{ EndDate!=NULL }}
-            pick: "Yes"
-        - choice:
-            pick: "No"
-```
-
 ## Macros
 
 Macros allow you to re-use groups of fields instead of repeating them manually.
@@ -974,7 +895,7 @@ You can include a file by a relative path:
 
 This pulls in all of the declarations from that file. That file can itself include other files.
 
-## Simple Formulas
+## Formulas
 
 Sometimes you would like to include data from another field into the one you are defining now. You can do that with the formula language.
 
@@ -992,7 +913,7 @@ Sometimes you would like to include data from another field into the one you are
     message: Thanks for buying ${{num_items}} items @ $${{per_item_price}} each!
 ```
 
-## Formula Language
+### Formula Language
 
 You can make your data more dynamic by using formulas. Formulas use the same functions described in [Function Blocks](#function-blocks), but they can be used inline like this:
 
@@ -1020,45 +941,96 @@ The relevant section of the Jinja document is called  [Expressions](https://jinj
 
 In theory you could use Jinja keywords like `${% if` (as opposed to `{% if`) but it isn’t clear under what circumstances that would be necessary.
 
-## Template File Options
+### Formula functions and variables
 
-Hard-coding the exact number of records to create into a template file is not always the ideal thing.
+The functions below are designed to be used inside of formulas:
 
-You can pass options (numbers, strings, booleans) to your generator recipe from a command line.
+#### `child_index`
 
-The first step is to declare the options in your template file:
+The `child_index` variable returns a counter of how many objects from this template were generated
+during the execution of the nearest parent template. It resets each time the parent template is
+executed again.
 
 ```yaml
-- option: num_accounts
-  default: 10
+child_index: Child number ${{child_index}}
 ```
 
-If you do not specify a default, the option is required and the template will not be processed without it.
+#### `id`
 
-In your recipe, you use the value by referring to it in a formula:
+The `id` variable returns a unique identifier for the current Object/Row to allow you to construct unique identifiers.
 
 ```yaml
-- object: Account
-  count: ${{num_accounts}}
+fields:
+  name: ${{fake.last_name}} Household ${{id}}
 ```
 
-Of course you can do any math you want in the formula:
+#### `today`
+
+The `today` variable returns a date
+representing the current date. This date
+will not chanage during the execution of
+a single recipe.
+
+#### `fake.`
+
+The `fake` function and variable both generate fake data as described elsewhere in this documentation.
+
+#### `snowfakery_filename`
+
+The `snowfakery_filename` variable represents the file containing the template. This is useful
+for relative paths.
+
+#### `date`
+
+The `date` function can either coerce a string into a date object for calculations OR generate
+a new date object from year/month/day parts:
 
 ```yaml
-- object: Account
-  count: ${{num_accounts / 2}}
-    field:
-        type: A
-- object: Account
-  count: ${{num_accounts / 2}}
-    field:
-        type: B
+    the_date: ${{date("2018-10-30")}}
+    another_date: ${{date(year=2018, month=11, day=30)}}
 ```
 
-And then you pass that option like this:
+#### `relativedelta`
+
+The `relativedelta` [function](https://dateutil.readthedocs.io/en/stable/relativedelta.html) 
+from `dateutil` is available for use in calculations like this:
 
 ```yaml
-    --option numaccounts 10
+${{ date(Date_Established__c) + relativedelta(months=child_index) }}
+```
+
+Some plugins may also be interested in a `template` variable which has an `id` attribute which represents a unique identifier for the current template. Look at
+[datasets.py](https://github.com/SFDO-Tooling/Snowfakery/blob/main/snowfakery/standard_plugins/datasets.py) to see one use-case where the template's ID can used to differentiate between two otherwise identical datasets.
+
+#### NULL
+
+The value `NULL` can be used to represent a missing value as in the recipe
+below:
+
+First, we can make `NULL` an option with `random_choice`:
+
+```yaml
+- object: foo
+  count: 10
+  fields:
+    EndDate:
+      random_choice:
+        - date_between:
+            start_date: 2018-01-01
+            end_date: 2021-12-12
+        - NULL
+```
+
+Then, in another field you can test whether the value is `NULL` or not:
+
+```yaml
+    DateSupplied:
+      if:
+        - choice:
+            when: ${{ EndDate!=NULL }}
+            pick: "Yes"
+        - choice:
+            pick: "No"
 ```
 
 ## Command Line Interface
@@ -1344,6 +1316,48 @@ And here's how to use the "hidden fields"([#hidden-fields-and-objects]) feature:
           EmployedBy:
             reference: Company
 ```
+
+### Template File Options
+
+Hard-coding the exact number of records to create into a template file is not always the ideal thing.
+
+You can pass options (numbers, strings, booleans) to your generator recipe from a command line.
+
+The first step is to declare the options in your template file:
+
+```yaml
+- option: num_accounts
+  default: 10
+```
+
+If you do not specify a default, the option is required and the template will not be processed without it.
+
+In your recipe, you use the value by referring to it in a formula:
+
+```yaml
+- object: Account
+  count: ${{num_accounts}}
+```
+
+Of course you can do any math you want in the formula:
+
+```yaml
+- object: Account
+  count: ${{num_accounts / 2}}
+    field:
+        type: A
+- object: Account
+  count: ${{num_accounts / 2}}
+    field:
+        type: B
+```
+
+And then you pass that option like this:
+
+```yaml
+    --option numaccounts 10
+```
+
 
 
 ## Plugins and Providers
@@ -2200,7 +2214,7 @@ generate_data(
 
 Detailed information is available in [Embedding Snowfakery into Python Applications](./embedding.md)
 
-## Security Profiile of Snowfakery
+## Security Profile of Snowfakery
 
 Snowfakery should be considered a domain-specific programming language with
 access to most of the power of Python. It can load Python plugins and
