@@ -333,7 +333,7 @@ Person(id=3, name=Corey Zamora, pet=Animal(3))
 
 <img src='images/img4.png' id='PJUACAKTd0o' alt='Relationship Diagram'>
 
-The relationship from the `Person` to the `Animal` is called `pet` and it is expressed simply by embedding the template for Animal in the field named `pet`. 
+The relationship from the `Person` to the `Animal` is called `pet` and it is expressed simply by embedding the template for Animal in the field named `pet`.
 
 The relationship from `Animal` to `Person` is called `owner` and it is expressed using the `reference` function. The function looks up the YAML tree for the relevant Person row.
 
@@ -1039,19 +1039,18 @@ You can learn the list of options available in the latest version
 like this:
 
 ```s
-$ snowfakery --help
 Usage: snowfakery [OPTIONS] YAML_FILE
 
       Generates records from a YAML file
 
       Records can go to:
           * stdout (default)
-          * JSON file (--output_format=json --output-file=foo.json)
-          * diagram file (--output_format=png --output-file=foo.png)
+          * JSON file (--output-format=json --output-file=foo.json)
+          * diagram file (--output-format=png --output-file=foo.png)
           * a database identified by --dburl (e.g. --dburl sqlite:////tmp/foo.db)
           * or to a directory as a set of CSV files (--output-format=csv --output-folder=csvfiles)
 
-      Diagram output depends on the installation of graphviz 
+      Diagram output depends on the installation of graphviz
       (https://www.graphviz.org/download/)
 
       Full documentation here:
@@ -1063,7 +1062,8 @@ Options:
                                   sqlite:///foo.db if you don't have one set
                                   up.
 
-  --output-format [JSON|json|txt|csv|sql|PNG|png|SVG|svg|svgz|jpeg|jpg|ps|dot]  --output-folder PATH
+  --output-format [JSON|json|txt|csv|sql|PNG|png|SVG|svg|svgz|jpeg|jpg|ps|dot]
+  --output-folder PATH
   -o, --output-file PATH
   --option EVAL_ARG...            Options to send to the recipe YAML.
   --target-number TEXT...         Target options for the recipe YAML in the
@@ -1071,7 +1071,6 @@ Options:
                                   Account'.
 
   --debug-internals / --no-debug-internals
-  --cci-mapping-file PATH
   --generate-cci-mapping-file FILENAME
                                   Generate a CumulusCI mapping file for the
                                   dataset
@@ -1083,6 +1082,9 @@ Options:
 
   --continuation-file FILENAME    Continue generating a dataset where
                                   'continuation-file' left off
+
+  --load-declarations FILE        Declarations to mix into the generated
+                                  mapping file
 
   --version                       Show the version and exit.
   --help                          Show this message and exit.
@@ -1627,100 +1629,11 @@ data being written to them. It is relatively easy to make
 plugins that does other encodings by building on the code
 in [`File.py`](https://github.com/SFDO-Tooling/Snowfakery/blob/main/snowfakery/standard_plugins/file.py).
 
-## Salesforce Plugin
-
-There are several features planned for the Salesforce Plugin, but
-the first is support for Person Accounts.
-
-### Creating and Referencing Person Accounts
-
-You can use Person Accounts like this:
-
-```yaml
-- plugin: snowfakery.standard_plugins.Salesforce
-- object: Account
-  fields:
-    FirstName:
-      fake: first_name
-    LastName:
-      fake: last_name
-    PersonMailingStreet:
-      fake: street_address
-    PersonMailingCity:
-      fake: city
-    PersonContactId:
-      Salesforce.SpecialObject: PersonContact
-```
-
-This will generate a placeholder object in your recipe which can
-be referred to by other templates like so:
-
-```yaml
-- object: User
-  fields:
-    Username:
-      fake: email
-    ...
-    ContactId:
-      reference: Account.PersonContactId
-```
-
-CumulusCI will fix up the references during data load. If you run into
-errors, please verify that the Account object is being loaded before
-the others that refer to the PersonContactId. If not, you may need to
-write a CumulusCI mapping file to ensure that it does.
-
-The `Salesforce.SpecialObject` function cannot currently be used for any other
-SObject or in any other context. It must always generate a `PersonContact`
-in the `PersonContactId` field.
-
-There is also an alternate syntax which allows nicknaming:
-
-```yaml
-...
-- object: Account
-  fields:
-    PersonContactId:
-      Salesforce.SpecialObject:
-        name: PersonContact
-        nickname: PCPC
-- object: User
-  fields:
-    ContactId:
-      reference: PCPC
-```
-
-### ContentVersions
-
-Files can be used as Salesforce ContentVersions like this:
-
-```yaml
-- plugin: snowfakery.standard_plugins.base64.Base64
-- plugin: snowfakery.standard_plugins.file.File
-- object: Account
-  nickname: FileOwner
-  fields:
-    Name:
-      fake: company
-- object: ContentVersion
-  nickname: FileAttachment
-  fields:
-    Title: Attachment for ${{Account.Name}}
-    PathOnClient: example.pdf
-    Description: example.pdf
-    VersionData:
-      Base64.encode:
-        - File.file_data:
-            encoding: binary
-            file: ${{PathOnClient}}
-    FirstPublishLocationId:
-      reference: Account
-```
 
 ### Custom Plugins and Providers
 
 Snowfakery can be extended with custom plugins and fake data
-providers as described in [Extending Snowfakery with Python Code](./extending.md)
+providers as described in [Extending Snowfakery with Python Code](./extending.md).
 
 ## Using Snowfakery with Salesforce
 
@@ -1728,45 +1641,8 @@ Snowfakery recipes that generate Salesforce records are just like any
 other Snowfakery recipes. You use SObject names for the 'objects'.
 There are several examples [in the Snowfakery repository](https://github.com/SFDO-Tooling/Snowfakery/tree/main/examples/salesforce)
 
-To specify a record type for a record, just put the Record Type’s API Name in a field named RecordType.
-
-Person Account support is provided the [Salesforce Plugin](#salesforce-plugin).
-
-The process of actually generating the data into a Salesforce
-org happens through CumulusCI as described below.
-
-### Using Snowfakery within CumulusCI
-
-[CumulusCI](http://www.github.com/SFDO-Tooling/CumulusCI) is a
-tool and framework for building portable automation for
-Salesforce projects. It is created by the same team that
-creates Snowfakery.
-
-The easiest way to learn about CumulusCI (and to learn how to
-install it) is with its [Trailhead Trail](https://trailhead.salesforce.com/en/content/learn/trails/build-applications-with-cumulusci).
-
-CumulusCI's documentation [describes](https://cumulusci.readthedocs.io/en/latest/data.html?highlight=snowfakery#generate-fake-data)
-how to use it with Snowfakery. Here is a short example:
-
-```s
-$ cci task run generate_and_load_from_yaml -o generator_yaml examples/salesforce/Contact.recipe.yml -o num_records 300 -o num_records_tablename Contact --org qa
-...
-```
-
-You can (and more often will) use generate_and_load_from_yaml from
-within a flow captured in in a `cumulusci.yml`, like the one in
-the [Snowfakery repo](https://github.com/SFDO-Tooling/Snowfakery/tree/main/cumulusci.yml).
-
-If you have CumulusCI configured and you would like to test this,
-you can do so like this (the Snowfakery repo itself has a
-`cumulusci.yml`):
-
-```s
-$ git clone https://github.com/SFDO-Tooling/Snowfakery.git
-$ cd Snowfakery
-$ cci task run generate_opportunities_and_contacts
-$ cci flow run test_everything
-```
+Salesforce-specific patterns and tools are described in
+[Using Snowfakery with Salesforce](salesforce.md)
 
 ## Using Snowfakery with Databases
 
@@ -1779,7 +1655,7 @@ makes it easy to use the Python command 'pip' to manage your
 Python environment. For example you could install Python
 using the standard installers from `python.org` and then
 you would run the following commands to create and use a venv with the
-Postgres plugin:
+Postgres package:
 
 ```bash
 
