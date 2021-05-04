@@ -1,0 +1,5 @@
+- plugin: tla_provider.Provider
+- object: Company
+  fields:
+    technology:
+      fake: ThreeLetterAcronym
