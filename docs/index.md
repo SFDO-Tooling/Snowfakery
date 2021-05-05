@@ -971,9 +971,18 @@ representing the current date. This date
 will not chanage during the execution of
 a single recipe.
 
-#### `fake.`
+#### `fake:` and `fake.`
 
-The `fake` function and variable both generate fake data as described elsewhere in this documentation.
+The `fake:` function and `fake.` namespace both generate fake data as described elsewhere in this documentation.
+
+```yaml
+# examples/two_fakers.yml
+- object: Contact
+  fields:
+    FirstName:
+      fake: FirstName
+    LastName: ${{fake.LastName}}
+```
 
 #### `snowfakery_filename`
 
@@ -992,7 +1001,7 @@ a new date object from year/month/day parts:
 
 #### `relativedelta`
 
-The `relativedelta` [function](https://dateutil.readthedocs.io/en/stable/relativedelta.html) 
+The `relativedelta` [function](https://dateutil.readthedocs.io/en/stable/relativedelta.html)
 from `dateutil` is available for use in calculations like this:
 
 ```yaml
