@@ -30,7 +30,7 @@ skip_if_cumulusci_missing = pytest.mark.skipif(
 
 
 class Test_CLI_CCI:
-    @skip_if_cumulusci_missing
+    # @skip_if_cumulusci_missing
     def test_mapping_file(self):
         with TemporaryDirectory() as t:
             url = f"sqlite:///{t}/foo.db"
@@ -134,8 +134,9 @@ class TestSOQLWithCCI:
         assert org_config.name
         sf.Account.create({"Name": "Company"})
         generate(StringIO(yaml), plugin_options={"orgname": org_config.name})
+        assert len(generated_rows.mock_calls) == 2
 
-    @skip_if_cumulusci_missing
+    # @skip_if_cumulusci_missing
     @pytest.mark.vcr()
     def test_missing_orgname(self, sf):
         yaml = """
@@ -152,7 +153,7 @@ class TestSOQLWithCCI:
     #       ensure that all documented params/methods are covered.
 
     @patch("snowfakery.standard_plugins.Salesforce.randrange", lambda *arg, **kwargs: 1)
-    @skip_if_cumulusci_missing
+    # @skip_if_cumulusci_missing
     @pytest.mark.vcr()
     def test_example_through_api(self, sf, generated_rows, org_config):
         sf.Account.create({"Name": "Company3"})
