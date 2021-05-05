@@ -250,10 +250,39 @@ class JsonApiOutputStream(FileOutputStream):
             self.first_row = False
         else:
             self.stream.write(",\n")
-        # For JSON:API documents the table name becomes the object type for
+
+        # Regular fields
+        attributes = {}
+        relationships = {}
+        for name, field in row.items():
+            if isinstance(field, dict):
+                relationships[name] = field
+            else:
+                attributes[name] = field
+
+        # For JSON:API documents, the table name becomes the object type for
         # each row and fields are put into an attributes child object.
-        values = {"type": tablename, "id": row.get("id"), "attributes": {**row}}
+        values = {
+            "type": tablename,
+            "id": row.get("id"),
+            "attributes": attributes,
+            "relationships": relationships,
+        }
         self.stream.write(json.dumps(values))
+
+    def flatten(
+        self,
+        sourcetable: str,
+        fieldname: str,
+        source_row_dict: Dict,
+        target_object_row: Union[ObjectRow, NicknameSlot],
+    ) -> Union[str, int]:
+        return {
+            "data": {
+                "id": target_object_row.id,
+                "type": target_object_row._tablename,
+            }
+        }
 
     def close(self) -> Optional[Sequence[str]]:
         if not self.first_row:
