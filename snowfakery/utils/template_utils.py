@@ -58,7 +58,7 @@ class FakerTemplateLibrary:
 
     def __getattr__(self, name):
         return StringGenerator(
-            lambda *args, **kwargs: self.fake_data.format(name, *args, **kwargs)
+            lambda *args, **kwargs: self.fake_data._get_fake_data(name, *args, **kwargs)
         )
 
 
