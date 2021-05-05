@@ -44,9 +44,8 @@ So for example, if you had a Snowfakery file like this:
 - plugin: salesforce.org.DoGood
 ```
 
-named `do_goodders/do_gooder.recipe.yml`
-
-You could make a file named `do_gooders/plugins/salesforce/org/DoGood.py`
+named `do_goodders/do_gooder.recipe.yml`,
+you could make a file named `do_gooders/plugins/salesforce/org/DoGood.py`
 
 And that file would contain a class like this:
 
@@ -54,31 +53,45 @@ And that file would contain a class like this:
 from snowfakery.plugins import SnowfakeryPlugin
 
 class DoGood(SnowfakeryPlugin):
-    """Plugin which generates a summation helper"""
+    """Plugin which does good stuff"""
     ...
 ```
 
 ## Writing Plugins
 
-To write a new Plugin, make a class that inherits from `SnowfakeryPlugin` and implements either the `custom_functions()` method or a `Functions` nested class. The nested class is simple: each method represents a function to expose in the namespace. In this case the function name would be `DoublingPlugin.double`.
+To write a new Plugin, make a class that inherits from `SnowfakeryPlugin` and implements either the `custom_functions()` method or a `Functions` nested class. The nested class is simple: each method represents a function to expose in the namespace. In this case the
+namespace would be `DoublingPlugin` and the function name `double`:
+
+```yaml
+# examples/use_doubling_plugin.yml
+- plugin: mypackage.DoublingPlugin
+- object: sixer
+  fields:
+    six:
+      DoublingPlugin.double: 3
+```
 
 ```python
+# examples/plugins/mypackage/DoublingPlugin.py
+from snowfakery import SnowfakeryPlugin
+
+
 class DoublingPlugin(SnowfakeryPlugin):
     class Functions:
         def double(self, value):
             return value * 2
 ```
 
-Alternately, you can implement the custom_functions method to return an
-object with the attributes that implement your namespace:
+Alternately, you can implement the `custom_functions` method.
+
+In this case you return a Python object that implements your
+methods.
 
 ```python
 class Doubler:
   def double(self, value):
       return value * 2
-```
 
-```python
 class DoublingPlugin(SnowfakeryPlugin):
     def custom_functions(self, *args, **kwargs):
         return Doubler()
@@ -88,7 +101,7 @@ Make sure to accept `*args` and `**kwargs` to allow for future extensibility of 
 
 Despite the name, plugins can also include data values rather than functions in either form of plugin. Plugins essentially use Python's `getattr` to find attributes, properties, methods or functions in the namespace of the object you return from `custom_functions()`.
 
-Plugin functions can store persistent information in a Python dictionary called self.context.context_vars(). It will always be supplied to your plugin. For example, here is a simple plugin that counts:
+Plugin functions can store persistent information in a Python dictionary obtained by calling `self.context.context_vars()`. It will always be supplied to your plugin. For example, here is a simple plugin that counts:
 
 ```python
 class PluginThatCounts(SnowfakeryPlugin):
@@ -103,16 +116,16 @@ class PluginThatCounts(SnowfakeryPlugin):
 Plugins also have access to a dictionary called `self.context.field_vars()` which
 represents the values that would be available to a formula running in the same context.
 
-Plugins can return normal Python primitive types, datetime.date, `ObjectRow` or `PluginResult` objects. `ObjectRow` objects represent new output records/objects. `PluginResult` objects
-expose a namespace that other code can access through dot-notation. PluginResults can be
+Plugins can return normal Python primitive types, `datetime.date`, `ObjectRow` or `PluginResult` objects. `ObjectRow` objects represent new output records/objects. `PluginResult` objects
+expose a namespace that other code can access through dot-notation. `PluginResult` instances can be
 initialized with either a dict or an object that exposes the namespace through Python
-getattr().
+`getattr()`.
 
 If your plugin generates some special kind of data value which should be serializable
-as a primitive type (usually a string), subclass PluginResult and add a `simplify`
-method to your PluginResult. That method should return a Python primitive value.
+as a primitive type (usually a string), subclass `PluginResult` and add a `simplify()`
+method to your subclass. That method should return a Python primitive value.
 
-In the rare event that a plugin has a function which need its arguments to be passed to it unevaluated, for later (perhaps conditional) evaluation, you can use the `@snowfakery.lazy decorator`. Then you can evaluate the arguments with `self.context.evaluate()`.
+In the rare event that a plugin has a function which need its arguments to be passed to it unevaluated, for later (perhaps conditional) evaluation, you can use the `@snowfakery.lazy` decorator. Then you can evaluate the arguments with `self.context.evaluate()`.
 
 For example:
 
@@ -121,13 +134,13 @@ class DoubleVisionPlugin(SnowfakeryPlugin):
     class Functions:
         @lazy
         def do_it_twice(self, value):
-            "Evaluates its argument 0 times or twice"
+            "Evaluates its argument twice into a string"
             rc = f"{self.context.evaluate(value)} : {self.context.evaluate(value)}"
 
-          return rc
+            return rc
 ```
 
-Every second time this is called, it will evaluate its argument twice, and stick the two results into a string. For example, if it were called with a call to `random_number`, you would get two different random numbers rather than the same number twice. If it were called with the counter from above, you would get two different counter values in the string.
+The method will evaluate its argument twice, and stick the two results into a string. For example, if it were called with a call to `random_number`, you would get two different random numbers rather than the same number twice. If it were called with the counter from above, you would get two different counter values in the string.
 
 ```yaml
   - plugin: tests.test_custom_plugins_and_providers.DoubleVisionPlugin
@@ -147,9 +160,9 @@ This would output an `OBJ` row with values:
 Occasionally you might write a plugin which needs to evaluate its
 parameters lazily but doesn't care about the internals of the values
 because it just returns it to some parent context. In that case,
-use `context.evaluate_raw` instead of `context.evaluate`.
+use `context.evaluate_raw()` instead of `context.evaluate()`.
 
-Plugins that require "memory" or "state" are possible using PluginResult
+Plugins that require "memory" or "state" are possible using `PluginResult`
 objects or subclasses. Consider a plugin that generates child objects
 that include values that sum up values on child objects to a value specified on a parent:
 

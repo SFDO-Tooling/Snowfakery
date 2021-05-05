@@ -76,7 +76,7 @@ To specify a Record Type for a record, just put the Record Type’s API Name in 
 ## Creating and Referencing Person Accounts
 
 There are several features planned for the Salesforce Plugin, but
-the first is support for Person Accounts.
+the one supported currently is for Person Accounts.
 
 You can use Person Accounts like this:
 
