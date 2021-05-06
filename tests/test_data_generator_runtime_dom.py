@@ -1,4 +1,4 @@
-import unittest
+import pytest
 from unittest import mock
 from snowfakery.data_generator_runtime_object_model import (
     FieldFactory,
@@ -49,7 +49,7 @@ def standard_runtime():
 x = standard_runtime()
 
 
-class TestDataGeneratorRuntimeDom(unittest.TestCase):
+class TestDataGeneratorRuntimeDom:
     def test_field_recipe_string(self):
         definition = SimpleValue("abc", "abc.yml", 10)
         repr(definition)
@@ -92,11 +92,11 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
 
     def test_fail_render_object_template(self):
         o = ObjectTemplate("abcd", filename="abc.yml", line_num=10)
-        with self.assertRaises(DataGenError):
+        with pytest.raises(DataGenError):
             o.generate_rows(None, standard_runtime())
 
     def test_fail_render_weird_type(self):
-        with self.assertRaises((DataGenError, TypeError)):
+        with pytest.raises((DataGenError, TypeError)):
             o = ObjectTemplate(
                 "abcd",
                 filename="abc.yml",
@@ -112,7 +112,7 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
             o.generate_rows(DebugOutputStream(), standard_runtime())
 
     def test_fail_render_weird_template(self):
-        with self.assertRaises(DataGenError):
+        with pytest.raises(DataGenError):
             o = ObjectTemplate(
                 "abcd",
                 filename="abc.yml",
@@ -128,24 +128,24 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
             o.generate_rows(DebugOutputStream(), standard_runtime())
 
     def test_structured_value_errors(self):
-        with self.assertRaises(DataGenError) as e:
+        with pytest.raises(DataGenError) as e:
             StructuredValue("this.that.foo", [], **line).render(standard_runtime())
-        assert "only one" in str(e.exception)
+        assert "only one" in str(e.value)
 
-        with self.assertRaises(DataGenError) as e:
+        with pytest.raises(DataGenError) as e:
             StructuredValue("bar", [], **line).render(standard_runtime())
-        assert "Cannot find func" in str(e.exception)
-        assert "bar" in str(e.exception)
+        assert "Cannot find func" in str(e.value)
+        assert "bar" in str(e.value)
 
-        with self.assertRaises(DataGenError) as e:
+        with pytest.raises(DataGenError) as e:
             StructuredValue("xyzzy.abc", [], **line).render(standard_runtime())
-        assert "Cannot find defini" in str(e.exception)
-        assert "xyzzy" in str(e.exception)
+        assert "Cannot find defini" in str(e.value)
+        assert "xyzzy" in str(e.value)
 
-        with self.assertRaises(DataGenError) as e:
+        with pytest.raises(DataGenError) as e:
             StructuredValue("this.abc", [], **line).render(standard_runtime())
-        assert "Cannot find defini" in str(e.exception)
-        assert "abc" in str(e.exception)
+        assert "Cannot find defini" in str(e.value)
+        assert "abc" in str(e.value)
 
     def test_old_jinja_syntax(self):
         definition = SimpleValue("<<5*3>>", "abc.yml", 10)
@@ -167,5 +167,5 @@ class TestDataGeneratorRuntimeDom(unittest.TestCase):
         o = ObjectTemplate("abcd", filename="abc.yml", line_num=10)
         field = mock.MagicMock()
         field.name = "foo"
-        with self.assertRaises(DataGenValueError):
+        with pytest.raises(DataGenValueError):
             o._check_type(field, int, standard_runtime())
