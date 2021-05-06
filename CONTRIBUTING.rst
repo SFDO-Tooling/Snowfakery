@@ -72,6 +72,10 @@ Ready to contribute? Here's how to set up Snowfakery for local development.
 
    $ pytest --cov
 
+   or
+
+   $ pytest --cov --cov-report=html
+
 7. Push your changes to GitHub and submit a pull request. The base branch should 
 be a new feature branch that we create to receive the changes (contact us to create 
 the branch). This allows us to test the changes using our build system before 

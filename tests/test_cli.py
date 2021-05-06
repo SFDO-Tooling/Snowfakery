@@ -164,6 +164,13 @@ class TestGenerateFromCLI:
                 standalone_mode=False,
             )
 
+    def test_sql_output_file(self):
+        with TemporaryDirectory() as t:
+            generate_cli.main(
+                [str(sample_yaml), "--output-file", Path(t) / "foo.sql"],
+                standalone_mode=False,
+            )
+
     def test_from_cli__target_number(self, capsys):
         generate_cli.main(
             [str(sample_yaml), "--target-number", "Account", "5"], standalone_mode=False
@@ -357,7 +364,7 @@ class TestGenerateFromCLI:
             )
             assert Path(tempdir, "foo", "Account.csv").exists()
 
-    def test_output_folder__eror(self):
+    def test_output_folder__error(self):
         with TemporaryDirectory() as tempdir, pytest.raises(ClickException):
             generate_cli.main(
                 [
