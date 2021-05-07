@@ -117,6 +117,7 @@ class TestImageOuputStreams:
             png = Path(t) / "out.png"
             svg = Path(t) / "out.svg"
             txt = Path(t) / "out.txt"
+            dot = Path(t) / "out.dot"
             generate_cli.main(
                 [
                     str(sample_yaml),
@@ -126,9 +127,13 @@ class TestImageOuputStreams:
                     svg,
                     "--output-file",
                     txt,
+                    "--output-file",
+                    dot,
                 ],
                 standalone_mode=False,
             )
-            assert png.exists()
-            assert svg.exists()
+            assert png.read_bytes().startswith(b"\x89PNG\r\n")
+            assert svg.read_bytes().startswith(b"<?xml"), svg.read_bytes()[0:5]
+            assert svg.read_bytes().startswith(b"<?xml"), svg.read_bytes()[0:5]
+            assert dot.read_bytes().startswith(b"/* Ge"), dot.read_bytes()[0:5]
             assert txt.exists()

@@ -1,5 +1,5 @@
 from io import StringIO
-import unittest
+import pytest
 
 from snowfakery.data_generator import generate
 from snowfakery.data_gen_exceptions import (
@@ -33,22 +33,22 @@ yaml3 = """
 """
 
 
-class TestErrors(unittest.TestCase):
+class TestErrors:
     def test_name_error(self):
-        with self.assertRaises(DataGenNameError) as e:
+        with pytest.raises(DataGenNameError) as e:
             generate(StringIO(yaml1), {}, None)
-        assert str(e.exception)[-2:] == ":3"
+        assert str(e.value)[-2:] == ":3"
 
     def test_syntax_error(self):
-        with self.assertRaises(DataGenSyntaxError) as e:
+        with pytest.raises(DataGenSyntaxError) as e:
             generate(StringIO(yaml2), {}, None)
-        assert str(e.exception)[-2:] == ":2"
+        assert str(e.value)[-2:] == ":2"
 
     def test_funcname_error(self):
-        with self.assertRaises(DataGenError) as e:
+        with pytest.raises(DataGenError) as e:
             generate(StringIO(yaml3))
-        assert "xyzzy" in str(e.exception)
-        assert e.exception.line_num >= 5
+        assert "xyzzy" in str(e.value)
+        assert e.value.line_num >= 5
 
     def test_conflicting_declarations_error(self):
         yaml = """
@@ -59,9 +59,9 @@ class TestErrors(unittest.TestCase):
             X:                                  #6
                 xyzzy: abcde                    #7
         """
-        with self.assertRaises(DataGenError) as e:
+        with pytest.raises(DataGenError) as e:
             generate(StringIO(yaml))
-        assert 4 > e.exception.line_num >= 2
+        assert 4 > e.value.line_num >= 2
 
     def test_extra_keys(self):
         yaml = """
@@ -72,9 +72,9 @@ class TestErrors(unittest.TestCase):
             X:                                  #6
                 xyzzy: abcde                    #7
         """
-        with self.assertRaises(DataGenError) as e:
+        with pytest.raises(DataGenError) as e:
             generate(StringIO(yaml))
-        assert 4 > e.exception.line_num >= 2
+        assert 4 > e.value.line_num >= 2
 
     def test_missing_param(self):
         yaml = """
@@ -85,16 +85,16 @@ class TestErrors(unittest.TestCase):
                 name:
                     fake:
         """
-        with self.assertRaises(DataGenError) as e:
+        with pytest.raises(DataGenError) as e:
             generate(StringIO(yaml))
-        assert "Cannot evaluate function" in str(e.exception)
-        assert ":6" in str(e.exception)
+        assert "Cannot evaluate function" in str(e.value)
+        assert ":6" in str(e.value)
 
     def test_yaml_error(self):
         yaml = """
         - object: B                             #2
             velcro: C                             #3
         """
-        with self.assertRaises(DataGenSyntaxError) as e:
+        with pytest.raises(DataGenSyntaxError) as e:
             generate(StringIO(yaml), {}, None)
-        assert str(e.exception)[-2:] == ":3"
+        assert str(e.value)[-2:] == ":3"
