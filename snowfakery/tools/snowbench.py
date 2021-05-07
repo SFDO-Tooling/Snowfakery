@@ -12,7 +12,10 @@ from sqlalchemy import create_engine, inspect
 from snowfakery import generate_data
 
 benchmark_1 = Path(__file__).parent / "benchmark_1.yml"
-locale.setlocale(locale.LC_ALL, "")
+try:
+    locale.setlocale(locale.LC_ALL, "")
+except locale.Error as e:
+    print(str(e))
 
 
 @click.command()
