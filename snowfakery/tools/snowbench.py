@@ -4,17 +4,21 @@ from time import time, sleep
 from tempfile import TemporaryDirectory
 from pathlib import Path
 from collections import defaultdict
+import locale
 
 import click
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 
 from snowfakery import generate_data
 
+benchmark_1 = Path(__file__).parent / "benchmark_1.yml"
+locale.setlocale(locale.LC_ALL, "")
+
 
 @click.command()
-@click.argument("recipe", type=click.Path())
-@click.argument("num-records", type=int)
-@click.argument("num-records-tablename", type=str)
+@click.argument("recipe", type=click.Path(), default=str(benchmark_1))
+@click.option("--num-records", type=int, default=100_000)
+@click.option("--num-records-tablename", type=str, default="Account")
 @click.option("--number-of-processes", type=int, default=0)
 @click.option("--number-of-threads", type=int, default=0)
 def snowbench(
@@ -40,9 +44,21 @@ def snowbench(
     execution process is spawned off into a sub-process instead
     of being executed inline.
     """
-    with TemporaryDirectory() as tempdir:
+    with TemporaryDirectory() as tempdir, click.progressbar(
+        label="Benchmarking", length=num_records
+    ) as progress_bar:
+
         start = time()
-        Thread(daemon=True, target=status, args=[tempdir]).start()
+        Thread(
+            daemon=True,
+            target=status,
+            args=[
+                tempdir,
+                num_records,
+                num_records_tablename,
+                progress_bar,
+            ],
+        ).start()
         if not number_of_processes and not number_of_threads:
             print(
                 "--number-of-processes and --number-of-threads not supplied.\n"
@@ -59,7 +75,8 @@ def snowbench(
                 number_of_processes,
                 number_of_threads,
             )
-        report_databases(tempdir, start)
+        progress_bar.update(num_records)
+        report_databases(tempdir, start, num_records_tablename)
 
 
 def multithreaded_test(
@@ -105,44 +122,45 @@ def count_databases(tempdir):
     return dict(counts)
 
 
-def status(tempdir):
+def status(tempdir, num_records, num_records_tablename, progress_bar):
     start = time()
     sleep(2)
+    previous_count = 0
     for i in range(1, 10 ** 20):
-        print(".", end="", flush=True)
         sleep(1)
-        if i % 60 == 0:
+        if i in (2, 5, 10, 20, 30, 45, 90, 150) or (i % 60 == 0):
             print()
-            report_databases(tempdir, start)
-        elif i % 20 == 0:
-            print()
-            for f in Path(tempdir).glob("*.db"):
-                print(f"{f} : {f.stat().st_size:,}")
+            current_count = report_databases(tempdir, start, num_records_tablename)
+            progress_bar.update(current_count - previous_count)
+            previous_count = current_count
 
 
-def report_databases(tempdir, start_time):
+def report_databases(tempdir, start_time, relevant_table_name):
+    print()
+    print()
     counts = count_databases(tempdir)
     for name, count in counts.items():
-        print(name, count)
+        print(name, f"{count:n}")
     total = sum(counts.values())
     duration = time() - start_time
-
     print(
-        f"{total:,} records /",
-        f"{int(duration):,} seconds =~",
-        f"{int(total / duration):,}",
+        f"{total:n} records /",
+        f"{int(duration):n} seconds =~",
+        f"{int(total / duration):n}",
         "records per second",
-        f"\n= {int((total / duration) * 3600):,}",
+        f"\n= {int((total / duration) * 3600):n}",
         "records per hour",
-        f"\n= {int((total / duration) * 3600 *24):,}",
+        f"\n= {int((total / duration) * 3600 *24):n}",
         "records per day",
     )
+    return counts[relevant_table_name]
 
 
 def count_database(filename, counts):
     dburl = f"sqlite:///{filename}?mode=ro"
     engine = create_engine(dburl)
-    tables = engine.table_names()
+    insp = inspect(engine)
+    tables = insp.get_table_names()
     for table in tables:
         counts[table] += count_table(engine, table)
     return counts
