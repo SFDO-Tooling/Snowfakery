@@ -44,7 +44,9 @@ class FieldDefinition(ABC):
             raise fix_exception(message, self, e) from e
         except Exception as e:
             message = message.format(*args, **kwargs)
-            raise DataGenError(f"{message} : {str(e)}", self.filename, self.line_num)
+            raise DataGenError(
+                f"{message} : {str(e)}", self.filename, self.line_num
+            ) from e
 
 
 class VariableDefinition:

@@ -1,5 +1,4 @@
 from io import StringIO
-import unittest
 from unittest import mock
 
 
@@ -19,7 +18,7 @@ structured_values_with_templates = """  #1
 write_row_path = "snowfakery.output_streams.DebugOutputStream.write_row"
 
 
-class TestStructuredValues(unittest.TestCase):
+class TestStructuredValues:
     @mock.patch(write_row_path)
     def test_structured_values(self, write_row):
         generate(StringIO(structured_values_with_templates), {}, None)
