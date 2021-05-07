@@ -61,6 +61,16 @@ class TestFaker:
         assert len(row_values(write_row_mock, 0, "country")) == 2
 
     @mock.patch(write_row_path)
+    def test_fake_inline_overrides(self, write_row_mock):
+        yaml = """
+        - object: OBJ
+          fields:
+            name: ${{fake.FirstName}} ${{fake.LastName}}
+        """
+        generate(StringIO(yaml), {}, None)
+        assert len(row_values(write_row_mock, 0, "name").split(" ")) == 2
+
+    @mock.patch(write_row_path)
     def test_fake_two_params_flat(self, write_row_mock):
         yaml = """
         - object: OBJ
