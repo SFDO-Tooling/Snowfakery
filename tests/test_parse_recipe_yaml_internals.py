@@ -1,6 +1,6 @@
-import unittest
 from unittest import mock
 from os import fsencode, path
+import pytest
 
 from snowfakery.parse_recipe_yaml import (
     parse_element,
@@ -15,7 +15,7 @@ from tempfile import TemporaryDirectory
 linenum = {"__line__": LineTracker("f", 5)}
 
 
-class TestParseElement(unittest.TestCase):
+class TestParseElement:
     def test_parse_element(self):
         result = parse_element(
             {"object": "a", "b": "c", **linenum},
@@ -28,14 +28,14 @@ class TestParseElement(unittest.TestCase):
 
     def test_missing_element(self):
         # b is missing
-        with self.assertRaises(DataGenError):
+        with pytest.raises(DataGenError):
             parse_element(
                 {"object": "a", **linenum}, "object", {"b": str}, {}, ParseContext()
             )
 
     def test_unknown_element(self):
         # b is missing
-        with self.assertRaises(DataGenError):
+        with pytest.raises(DataGenError):
             parse_element(
                 {"object": "a", "q": "z", **linenum}, "object", {}, {}, ParseContext()
             )
@@ -59,14 +59,14 @@ class TestParseElement(unittest.TestCase):
         assert result.q is None
 
 
-class TestCategorizeTopLevelObjects(unittest.TestCase):
+class TestCategorizeTopLevelObjects:
     def test_categorize_top_level_objects(self):
         objects = [{"object": "a", **linenum}]
         tlos = categorize_top_level_objects(objects, ParseContext())
         assert tlos["statement"][0]["object"] == "a"
 
     def test_unknown_top_level_objects(self):
-        with self.assertRaises(DataGenError):
+        with pytest.raises(DataGenError):
             objects = [{"unknown": "a", **linenum}]
             categorize_top_level_objects(objects, ParseContext())
 

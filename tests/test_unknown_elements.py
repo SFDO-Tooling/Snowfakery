@@ -1,11 +1,11 @@
 from io import StringIO
-import unittest
+import pytest
 
 from snowfakery.data_generator import generate
 from snowfakery.data_gen_exceptions import DataGenError
 
 
-class TestFaker(unittest.TestCase):
+class TestFaker:
     def test_top_field_unknown(self):
         yaml = """
         - bobject: OBJ
@@ -14,7 +14,7 @@ class TestFaker(unittest.TestCase):
                 fake:
                     first_name
         """
-        with self.assertRaises(DataGenError):
+        with pytest.raises(DataGenError):
             generate(StringIO(yaml), {}, None)
 
     def test_secondary_field_unknown(self):
@@ -25,5 +25,5 @@ class TestFaker(unittest.TestCase):
                 fake:
                     first_name
         """
-        with self.assertRaises(DataGenError):
+        with pytest.raises(DataGenError):
             generate(StringIO(yaml), {}, None)

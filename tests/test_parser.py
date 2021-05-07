@@ -1,5 +1,4 @@
 from io import StringIO
-import unittest
 
 from datetime import date
 
@@ -8,7 +7,7 @@ import pytest
 from snowfakery.parse_recipe_yaml import parse_recipe
 
 
-class TestParseGenerator(unittest.TestCase):
+class TestParseGenerator:
     def test_parser_simple(self):
         yamlstr = """
         - object: OBJ
