@@ -1,5 +1,4 @@
 from io import StringIO
-import unittest
 from unittest import mock
 from datetime import date
 
@@ -12,7 +11,7 @@ def row_values(write_row_mock, index, value):
     return write_row_mock.mock_calls[index][1][1][value]
 
 
-class TestFaker(unittest.TestCase):
+class TestFaker:
     @mock.patch(write_row_path)
     def test_fake_block_simple(self, write_row_mock):
         yaml = """
