@@ -1,4 +1,3 @@
-import unittest
 from pathlib import Path
 from io import StringIO
 
@@ -184,7 +183,7 @@ class TestGenerateMapping:
         assert mapping["Insert Ref"]["lookups"]["targ"]["table"] == "Target"
 
 
-class TestBuildDependencies(unittest.TestCase):
+class TestBuildDependencies:
     def test_build_dependencies_simple(self):
         parent_deps = [
             Dependency("parent", "child", "son"),
@@ -211,7 +210,7 @@ class TestBuildDependencies(unittest.TestCase):
         [repr(o) for o in deps]
 
 
-class TestTableIsFree(unittest.TestCase):
+class TestTableIsFree:
     def test_table_is_free_simple(self):
         # Child depends on parent and parent hasn't been sorted out yet -> false
         assert not _table_is_free(
