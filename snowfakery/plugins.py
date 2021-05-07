@@ -11,7 +11,7 @@ from yaml.representer import Representer
 from faker.providers import BaseProvider as FakerProvider
 
 import snowfakery.data_gen_exceptions as exc
-from .utils.yaml_utils import SnowfakeryDumper
+from snowfakery.utils.yaml_utils import SnowfakeryDumper
 
 from numbers import Number
 
@@ -125,6 +125,11 @@ def resolve_plugins(
     plugin_specs: List[Tuple[str, object]], search_paths: List[Union[str, Path]]
 ):
     "Resolve a list of plugins and lineinfos"
+    with plugin_path(search_paths):
+        return [resolve_plugin(*plugin_spec) for plugin_spec in plugin_specs]
+
+
+def plugin_path(search_paths):
     cwd_plugins = "./plugins"
     user_plugins = Path.home() / ".snowfakery/plugins"
     new_sys_path = [
@@ -134,13 +139,12 @@ def resolve_plugins(
         str(user_plugins),
     ]
 
-    with patch.object(sys, "path", new_sys_path):
-        return [resolve_plugin(*plugin_spec) for plugin_spec in plugin_specs]
+    return patch.object(sys, "path", new_sys_path)
 
 
 def resolve_plugin(plugin: str, lineinfo) -> object:
     """Resolve a plugin to a class"""
-    cls = _resolve_plugin_alternatives(plugin)
+    cls = resolve_plugin_alternatives(plugin)
     if not cls:
         raise exc.DataGenImportError(
             f"Cannot find plugin: {plugin}", lineinfo.filename, lineinfo.line_num
@@ -160,7 +164,7 @@ def resolve_plugin(plugin: str, lineinfo) -> object:
         )
 
 
-def _resolve_plugin_alternatives(plugin):
+def resolve_plugin_alternatives(plugin):
     """Interpret the plugin declaration in 2 ways.
     Return it when we find one that matches.
 
@@ -189,6 +193,7 @@ def _resolve_plugin_alternatives(plugin):
         try:
             module = import_module(module_name)
             if hasattr(module, class_name):
+                assert getattr(module, class_name)
                 return getattr(module, class_name)
         except ModuleNotFoundError:
             pass
