@@ -131,7 +131,7 @@ persistent_nicknames: {}
                     reference: bar
             """
         continuation_file = StringIO()
-        with self.assertRaises(exc.DataGenSyntaxError):
+        with pytest.raises(exc.DataGenSyntaxError):
             generate(StringIO(yaml), generate_continuation_file=continuation_file)
 
     def test_nested_just_once_fails__fields(self):
@@ -145,5 +145,5 @@ persistent_nicknames: {}
                         fields:
                             A: 25
             """
-        with self.assertRaises(exc.DataGenSyntaxError):
+        with pytest.raises(exc.DataGenSyntaxError):
             generate(StringIO(yaml))
