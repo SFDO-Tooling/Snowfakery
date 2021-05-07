@@ -31,6 +31,11 @@ jobs:
       - name: Report Coverage
         run: coveralls
 
+      - name: Test snowbench
+        run: |
+          python setup.py install
+          snowbench examples/basic-salesforce.recipe.yml 10_000 Account --number-of-processes 4
+
   windows:
     name: "Windows"
     runs-on: windows-latest

@@ -33,7 +33,12 @@ setuptools.setup(
         "relations between tables. Every row is faked data, but also "
         "unique and random, like a snowflake."
     ),
-    entry_points={"console_scripts": ["snowfakery=snowfakery.cli:main"]},
+    entry_points={
+        "console_scripts": [
+            "snowfakery=snowfakery.cli:main",
+            "snowbench=snowfakery.tools.snowbench:main",
+        ]
+    },
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/SFDO-Tooling/Snowfakery",
