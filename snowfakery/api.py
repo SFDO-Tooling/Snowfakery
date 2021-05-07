@@ -10,13 +10,8 @@ from snowfakery.data_generator import generate
 
 from snowfakery.output_streams import (
     DebugOutputStream,
-    SqlDbOutputStream,
-    SqlTextOutputStream,
-    JSONOutputStream,
-    CSVOutputStream,
-    ImageOutputStream,
-    GraphvizOutputStream,
     MultiplexOutputStream,
+    SqlDbOutputStream,
 )
 from snowfakery.generate_mapping_from_recipe import mapping_from_recipe_templates
 from snowfakery.salesforce import create_cci_record_type_tables
@@ -32,25 +27,21 @@ from snowfakery.data_generator_runtime import (
 OpenFileLike = T.Union[T.TextIO, LazyFile]
 FileLike = T.Union[OpenFileLike, Path, str]
 
-graphic_file_extensions = [
-    "PNG",
-    "png",
-    "SVG",
-    "svg",
-    "svgz",
-    "jpeg",
-    "jpg",
-    "ps",
-    "dot",
-]
+OUTPUT_FORMATS = {
+    "png": "snowfakery.output_streams.ImageOutputStream",
+    "svg": "snowfakery.output_streams.ImageOutputStream",
+    "svgz": "snowfakery.output_streams.ImageOutputStream",
+    "jpeg": "snowfakery.output_streams.ImageOutputStream",
+    "jpg": "snowfakery.output_streams.ImageOutputStream",
+    "ps": "snowfakery.output_streams.ImageOutputStream",
+    "dot": "snowfakery.output_streams.GraphvizOutputStream",
+    "json": "snowfakery.output_streams.JSONOutputStream",
+    "txt": "snowfakery.output_streams.DebugOutputStream",
+    "csv": "snowfakery.output_streams.CSVOutputStream",
+    "sql": "snowfakery.output_streams.SqlTextOutputStream",
+}
 
-file_extensions = [
-    "JSON",
-    "json",
-    "txt",
-    "csv",
-    "sql",
-] + graphic_file_extensions
+file_extensions = tuple(OUTPUT_FORMATS.keys())
 
 
 class SnowfakeryApplication:
@@ -245,44 +236,52 @@ def _get_output_streams(dburls, output_files, output_format, output_folder):
         for dburl in dburls:
             output_streams.append(SqlDbOutputStream.from_url(dburl))
 
-        # JSON and SQL are the only output formats (other than debug) that can go on stdout
-        if output_format == "json" and not output_files:
-            output_streams.append(JSONOutputStream(sys.stdout))
+        if output_format and not output_files:
+            output_stream_cls = get_output_stream_class(output_format)
 
-        if output_format == "sql" and not output_files:
-            output_streams.append(SqlTextOutputStream(sys.stdout))
+            if output_stream_cls.is_text and not output_files:
+                output_streams.append(output_stream_cls(sys.stdout))
 
-        if output_format == "csv":
-            output_streams.append(CSVOutputStream(output_folder))
+            if output_stream_cls.uses_folder:
+                output_streams.append(output_stream_cls(output_folder))
 
         if output_files:
             for f in output_files:
+                format = output_format
                 if output_folder and isinstance(f, (str, Path)):
                     f = Path(output_folder, f)  # put the file in the output folder
                 file_context = open_file_like(f, "w")
                 path, open_file = onexit.enter_context(file_context)
-                if output_format:
-                    format = output_format
-                elif path:
-                    format = output_format or Path(path).suffix[1:]
-                else:
+                if path and not format:
+                    format = Path(path).suffix[1:].lower()
+
+                if not format:
                     raise exc.DataGenError("No format supplied or inferrable")
 
-                if format == "json":
-                    output_streams.append(JSONOutputStream(open_file))
-                elif format == "sql":
-                    output_streams.append(SqlTextOutputStream(open_file))
-                elif format == "txt":
-                    output_streams.append(DebugOutputStream(open_file))
-                elif format == "dot":
-                    output_streams.append(GraphvizOutputStream(open_file))
-                elif format in graphic_file_extensions:
-                    output_streams.append(ImageOutputStream(open_file, format))
-                else:
-                    raise exc.DataGenError(
-                        f"Unknown format or file extension: {format}"
-                    )
+                output_stream_cls = get_output_stream_class(format)
+                if output_stream_cls.uses_path:
+                    open_file.close()
+                    open_file = path
+                output_streams.append(output_stream_cls(open_file, format=format))
+
         yield output_streams
+
+
+def get_output_stream_class(output_format):
+    from snowfakery.plugins import resolve_plugin_alternatives, plugin_path
+
+    if "." in output_format:
+        output_stream_classname = output_format
+    else:
+        output_format = output_format.lower() if output_format else None
+        output_stream_classname = OUTPUT_FORMATS.get(output_format)
+    if not output_stream_classname:
+        raise exc.DataGenError(f"Unknown format or file extension: {output_format}")
+    with plugin_path([]):
+        rc = resolve_plugin_alternatives(output_stream_classname)
+    if not rc:
+        raise exc.DataGenError(f"Cannot load {output_stream_classname}")
+    return rc
 
 
 def gather_declarations(yaml_file, load_declarations):
