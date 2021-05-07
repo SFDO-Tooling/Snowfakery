@@ -1,8 +1,7 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
-import unittest
 from sqlalchemy import create_engine
-
+import pytest
 
 from snowfakery.cli import generate_cli
 
@@ -17,8 +16,8 @@ sample_accounts_yaml = Path(__file__).parent / "gen_sf_standard_objects.yml"
 sample_yaml = Path(__file__).parent / "include_parent.yml"
 
 
-class Test_CLI_CCI(unittest.TestCase):
-    @unittest.skipUnless(cumulusci, "CumulusCI not installed")
+class Test_CLI_CCI:
+    @pytest.mark.skipif(not cumulusci, reason="CumulusCI not installed")
     def test_mapping_file(self):
         with TemporaryDirectory() as t:
             url = f"sqlite:///{t}/foo.db"

@@ -37,15 +37,12 @@ class FakeData:
             v.lower(): v for v in dir(self.fake_names) if not v.startswith("_")
         }
 
-    def format(self, *args, **kwargs):
-        return self.faker.format(*args, **kwargs)
-
-    def _get_fake_data(self, origname):
+    def _get_fake_data(self, origname, *args, **kwargs):
         # faker names are all lower-case
         name = origname.lower()
         if name in self._lowers:
             meth = getattr(self.fake_names, self._lowers[name])
-            return meth()
+            return meth(*args, **kwargs)
         else:
             try:
                 # TODO: look for FooBar as foo_bar

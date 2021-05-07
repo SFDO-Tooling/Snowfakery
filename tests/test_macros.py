@@ -1,4 +1,3 @@
-import unittest
 from unittest import mock
 from io import StringIO
 import pytest
@@ -9,7 +8,7 @@ import snowfakery.data_gen_exceptions as exc
 write_row_path = "snowfakery.output_streams.DebugOutputStream.write_row"
 
 
-class TestMacros(unittest.TestCase):
+class TestMacros:
     @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
     def test_field_includes(self, write_row):
         yaml = """
