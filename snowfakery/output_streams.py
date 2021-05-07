@@ -41,6 +41,12 @@ class OutputStream(ABC):
         type(None): noop,
         bool: int,
     }
+    uses_folder = False
+    uses_path = False
+    is_text = False
+
+    def __init__(self, filename, **kwargs):
+        pass
 
     def create_or_validate_tables(self, tables: Dict[str, TableInfo]) -> None:
         pass
@@ -144,12 +150,22 @@ class SmartStream:
             return [f"Generated {self.stream.name}"]
 
 
-class FileOutputStream(OutputStream, SmartStream):
+class FileOutputStream(OutputStream):
     """Base class for all file/stream-based OutputStreams"""
+
+    def __init__(self, stream_or_path=None, **kwargs):
+        self.smart_stream = SmartStream(stream_or_path)
+        self.write = self.smart_stream.write
+        self.stream = self.smart_stream.stream
+
+    def close(self):
+        return self.smart_stream.close()
 
 
 class DebugOutputStream(FileOutputStream):
     """Simplified output for debugging Snowfakery files."""
+
+    is_text = True
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
         values = ", ".join([f"{key}={value}" for key, value in row.items()])
@@ -171,8 +187,10 @@ CSVContext = namedtuple("CSVContext", ["dictwriter", "file"])
 class CSVOutputStream(OutputStream):
     """Output stream that generates a directory of CSV files."""
 
-    def __init__(self, output_folder):
-        super().__init__()
+    uses_folder = True
+
+    def __init__(self, output_folder, **kwargs):
+        super().__init__(None, **kwargs)
         self.target_path = Path(output_folder)
         if not Path.exists(self.target_path):
             Path.mkdir(self.target_path, exist_ok=True)
@@ -218,10 +236,11 @@ class JSONOutputStream(FileOutputStream):
         datetime.date: str,
         datetime.datetime: str,
     }
+    is_text = True
 
-    def __init__(self, file):
+    def __init__(self, file, **kwargs):
         assert file
-        super().__init__(file)
+        super().__init__(file, **kwargs)
         self.first_row = True
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
@@ -244,7 +263,7 @@ class SqlDbOutputStream(OutputStream):
 
     should_close_session = False
 
-    def __init__(self, engine: Engine, mappings: None = None):
+    def __init__(self, engine: Engine, mappings: None = None, **kwargs):
         if mappings:
             warn("Please do not pass mappings argument to __init__", DeprecationWarning)
         self.buffered_rows = defaultdict(list)
@@ -323,11 +342,13 @@ class SqlTextOutputStream(FileOutputStream):
     """Output stream to generate a SQL text file"""
 
     mode = "wt"
+    is_text = True
 
-    def __init__(self, stream_or_path=None):
+    def __init__(self, stream_or_path=None, **kwargs):
         self.text_output = SmartStream(stream_or_path)
         self.tempdir = TemporaryDirectory()
         self.sql_db = self._init_db()
+        super().__init__(**kwargs)
 
     def _init_db(self):
         "Initialize a db through an owned output stream"
@@ -405,10 +426,12 @@ def find_name_in_dict(d):
 class GraphvizOutputStream(FileOutputStream):
     """Generates a Graphviz .dot file"""
 
-    def __init__(self, path):
+    is_text = True
+
+    def __init__(self, path, **kwargs):
         import gvgen
 
-        super().__init__(path)
+        super().__init__(path, **kwargs)
 
         self.nodes = {}
         self.links = []
@@ -476,8 +499,9 @@ class ImageOutputStream(OutputStream):
     """Output an Image file in a graphviz supported format."""
 
     mode = "wb"
+    uses_path = True
 
-    def __init__(self, path, format):
+    def __init__(self, path, format, **kwargs):
         self.path = path
         self.format = format
         self.tempdir = TemporaryDirectory()
@@ -516,8 +540,9 @@ class ImageOutputStream(OutputStream):
 class MultiplexOutputStream(OutputStream):
     """Generate multiple output streams at once."""
 
-    def __init__(self, outputstreams):
+    def __init__(self, outputstreams, **kwargs):
         self.outputstreams = outputstreams
+        super().__init__(None, **kwargs)
 
     def create_or_validate_tables(self, tables: Dict[str, TableInfo]) -> None:
         for stream in self.outputstreams:
