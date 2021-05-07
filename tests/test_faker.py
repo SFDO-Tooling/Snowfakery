@@ -1,7 +1,8 @@
 from io import StringIO
-import unittest
 from unittest import mock
 from datetime import date
+
+import pytest
 
 from snowfakery.data_generator import generate
 from snowfakery import data_gen_exceptions as exc
@@ -13,7 +14,7 @@ def row_values(write_row_mock, index, value):
     return write_row_mock.mock_calls[index][1][1][value]
 
 
-class TestFaker(unittest.TestCase):
+class TestFaker:
     @mock.patch(write_row_path)
     def test_fake_block_simple(self, write_row_mock):
         yaml = """
@@ -171,7 +172,7 @@ class TestFaker(unittest.TestCase):
             xyzzy:
               fake: xyzzy
         """
-        with self.assertRaises(exc.DataGenError) as e:
+        with pytest.raises(exc.DataGenError) as e:
             generate(StringIO(yaml), {}, None)
-        assert "xyzzy" in str(e.exception)
-        assert "fake" in str(e.exception)
+        assert "xyzzy" in str(e.value)
+        assert "fake" in str(e.value)
