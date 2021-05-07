@@ -55,7 +55,10 @@ Ready to contribute? Here's how to set up Snowfakery for local development.
 
 1. Fork the Snowfakery repo on GitHub.
 2. Clone your fork to your local workspace.
-3. Create and activate fresh virtual environment using virtualenv. (Google this if you don't know how)
+3. Create and activate fresh virtual environment using virtualenv.
+(Google this if you don't know how). If you name your virtualenv
+"myenv" then it will be ignored by by git due to our .gitignore file.
+Or you could make it outside of the project repo.
 4. Install development requirements::
 
     $ pip install -r requirements_dev.txt
