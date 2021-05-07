@@ -2,7 +2,10 @@ from io import StringIO
 from unittest import mock
 from datetime import date
 
+import pytest
+
 from snowfakery.data_generator import generate
+from snowfakery import data_gen_exceptions as exc
 
 write_row_path = "snowfakery.output_streams.DebugOutputStream.write_row"
 
@@ -109,3 +112,57 @@ class TestFaker:
         the_date = row_values(write_row_mock, 0, "date")
         assert (date.today() - the_date).days > 80
         assert (date.today() - the_date).days < 130
+
+    @mock.patch(write_row_path)
+    def test_snowfakery_names(self, write_row_mock):
+        yaml = """
+        - object: A
+          fields:
+            fn:
+              fake: FirstName
+            ln:
+              fake: LastName
+            un:
+              fake: UserNAME
+            un2:
+              fake: username
+            alias:
+              fake: Alias
+            email:
+              fake: Email
+            danger_mail:
+              fake: RealisticMaybeRealEmail
+            email2:
+              fake: email
+        """
+        generate(StringIO(yaml), {}, None)
+        assert "_" in row_values(write_row_mock, 0, "un")
+        assert "@" in row_values(write_row_mock, 0, "un2")
+        assert len(row_values(write_row_mock, 0, "alias")) <= 8
+        assert "@example" in row_values(write_row_mock, 0, "email")
+        assert "@" in row_values(write_row_mock, 0, "email2")
+        assert "@" in row_values(write_row_mock, 0, "danger_mail")
+
+    @mock.patch(write_row_path)
+    def test_fallthrough_to_faker(self, write_row_mock):
+        yaml = """
+        - object: A
+          fields:
+            SSN:
+              fake: ssn
+        """
+        generate(StringIO(yaml), {}, None)
+        assert row_values(write_row_mock, 0, "SSN")
+
+    @mock.patch(write_row_path)
+    def test_error_handling(self, write_row_mock):
+        yaml = """
+        - object: A
+          fields:
+            xyzzy:
+              fake: xyzzy
+        """
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml), {}, None)
+        assert "xyzzy" in str(e.value)
+        assert "fake" in str(e.value)

@@ -8,7 +8,7 @@ data_imports = pathlib.Path(__file__).parent / "BDI_generator.yml"
 standard_objects = pathlib.Path(__file__).parent / "gen_sf_standard_objects.yml"
 npsp_standard_objects = pathlib.Path(__file__).parent / "gen_npsp_standard_objects.yml"
 simple_salesforce = (
-    pathlib.Path(__file__).parent / ".." / "examples" / "simple-salesforce.yml"
+    pathlib.Path(__file__).parent / ".." / "examples" / "basic-salesforce.recipe.yml"
 )
 
 

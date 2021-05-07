@@ -4,6 +4,27 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 1.10
+
+Snowfakery now has some of its own built-in "Fake data types". For example "FirstName"
+(instead of first_name) and "Username" (which is like a Salesforce Username). 
+These new names should be more intuitive for Salesforce users. PR #343
+
+Fake "emails" now use domains based on "example.com" and similar domains specified in
+RFC 2606. This ensure that they are never real email addresses. Broader domain
+email addressses are still available as described in th documentation. PR #343
+
+Fake names are now case agnostic. FIRSTname, firstNAME, firstname, FIRSTNAME,
+etc. are all identical. PR #343
+
+## Snowfakery 1.9
+
+Snowfakery's APIs have expanded. The changes should be backwards-compatible. #315
+
+Add support for embedding external files (text or base64 binary). #322
+
+Add support specifically for Salesforce ContentVersion. #322
+
 ## Snowfakery 1.8.1
 
 Fixed packaging issue.

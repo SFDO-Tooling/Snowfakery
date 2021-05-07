@@ -497,9 +497,8 @@ class EvaluationNamespace(NamedTuple):
         "Return mapping of functions that can be used in YAML block functions"
         return {**self.field_funcs(), "fake": self.fake}
 
-    # todo: remove this special case
     def fake(self, name):
-        return str(getattr(self.runtime_context.faker_template_library, name))
+        return str(self.runtime_context.faker_template_library._get_fake_data(name))
 
     def field_vars(self):
         return {**self.simple_field_vars(), **self.field_funcs()}
