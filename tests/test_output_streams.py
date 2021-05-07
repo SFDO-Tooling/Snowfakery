@@ -1,4 +1,3 @@
-import unittest
 from abc import ABC, abstractmethod
 from io import StringIO
 import json
@@ -138,7 +137,7 @@ class OutputCommonTests(ABC):
         )
 
 
-class TestSqlDbOutputStream(unittest.TestCase, OutputCommonTests):
+class TestSqlDbOutputStream(OutputCommonTests):
     def do_output(self, yaml):
         with named_temporary_file_path() as f:
             url = f"sqlite:///{f}"
@@ -256,7 +255,7 @@ class TestJSONOutputStream(OutputCommonTests):
             assert s.getvalue() == ""
 
 
-class TestCSVOutputStream(unittest.TestCase, OutputCommonTests):
+class TestCSVOutputStream(OutputCommonTests):
     def do_output(self, yaml):
         with TemporaryDirectory() as t:
             output_stream = CSVOutputStream(Path(t) / "csvoutput")
@@ -313,7 +312,7 @@ class TestCSVOutputStream(unittest.TestCase, OutputCommonTests):
         )  # CSV is no way of distingushing null from empty str
 
 
-class TestSQLTextOutputStream(unittest.TestCase, OutputCommonTests):
+class TestSQLTextOutputStream(OutputCommonTests):
     def do_output(self, yaml):
         with named_temporary_file_path() as f:
             path = str(f) + ".sql"
