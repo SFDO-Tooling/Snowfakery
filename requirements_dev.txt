@@ -5,7 +5,7 @@ coveralls==3.0.1
 flake8==3.9.1
 myst-parser==0.13.7
 pre-commit==2.12.1
-pytest==6.2.3
+pytest==6.2.4
 pytest-cov==2.11.1
 Sphinx==3.5.4
 typeguard==2.10.0   # do not upgrade until #181 is fixed
