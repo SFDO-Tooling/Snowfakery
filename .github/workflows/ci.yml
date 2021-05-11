@@ -34,7 +34,7 @@ jobs:
       - name: Test snowbench
         run: |
           python setup.py install
-          snowbench examples/basic-salesforce.recipe.yml 10_000 Account --number-of-processes 4
+          snowbench examples/basic-salesforce.recipe.yml --num-records 10_000  --num-records-tablename Account --number-of-processes 4
           snowbench
 
   windows:
