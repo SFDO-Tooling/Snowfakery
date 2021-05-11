@@ -180,7 +180,6 @@ def snowfakery(recipe, num_records, tablename, outputfile):
     generate_data(
         recipe,
         target_number=(num_records, tablename),
-        output_format="txt",
         dburl=output,
     )
 
