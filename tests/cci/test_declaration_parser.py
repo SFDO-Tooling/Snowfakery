@@ -159,3 +159,7 @@ class TestDeclarationParser:
         """
         )
         SObjectRuleDeclarationFile.parse_from_yaml(s)
+
+    def test_parse_from_path(self):
+        sample_yaml = Path(__file__).parent / "mapping_mixins-override.load.yml"
+        SObjectRuleDeclarationFile.parse_from_yaml(sample_yaml)
