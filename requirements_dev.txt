@@ -1,11 +1,11 @@
 -r requirements.txt
-black==21.4b2
+black==21.5b0
 coverage==5.5
 coveralls==3.0.1
-flake8==3.9.1
-myst-parser==0.13.7
+flake8==3.9.2
+myst-parser==0.14.0
 pre-commit==2.12.1
-pytest==6.2.3
+pytest==6.2.4
 pytest-cov==2.11.1
 pytest-vcr==1.0.2
 vcrpy==4.1.1
@@ -16,3 +16,7 @@ tox==3.23.0
 vcrpy==4.1.1
 cumulusci>=3.34.1
 numpy>=1.20.1
+Sphinx==3.5.4      # pin this until Myst is happy with Sphinx 4
+typeguard==2.10.0   # do not upgrade until #181 is fixed
+faker-microservice==2.0.0  # for testing
+tox==3.23.1
