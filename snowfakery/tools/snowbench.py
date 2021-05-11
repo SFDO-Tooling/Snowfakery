@@ -174,7 +174,7 @@ def count_table(engine, tablename):
 
 
 def snowfakery(recipe, num_records, tablename, outputfile):
-    assert Path(recipe).exists()
+    assert Path(recipe).exists(), recipe
     output = f"sqlite:///{outputfile}"
     print(output)
     generate_data(
