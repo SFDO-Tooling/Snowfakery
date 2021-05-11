@@ -3,6 +3,7 @@ project:
     name: Snowfakery
     dependencies:
         - github: https://github.com/SalesforceFoundation/NPSP
+    source_format: sfdx
 
 sources:
     npsp:
