@@ -6,7 +6,7 @@ And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” an
 
 ## Snowfakery 1.11
 
-Add a simple benchmarking tool available with the command `bench`. #346
+Add a simple benchmarking tool available with the command `snowbench`. #346
 
 Update the namespace used for inline fakes to support the same new names as
 block-based fakes. (i.e. ${{fake.FirstName}} is the same as fake: FirstName) #357
