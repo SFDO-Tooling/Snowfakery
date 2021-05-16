@@ -6,7 +6,7 @@ flake8==3.9.2
 myst-parser==0.14.0
 pre-commit==2.12.1
 pytest==6.2.4
-pytest-cov==2.11.1
+pytest-cov==2.12.0
 Sphinx==3.5.4      # pin this until Myst is happy with Sphinx 4
 typeguard==2.10.0   # do not upgrade until #181 is fixed
 faker-microservice==2.0.0  # for testing
