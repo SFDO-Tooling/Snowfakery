@@ -146,7 +146,7 @@ But in case you’re in a hurry: In this case we're creating 3 Person objects. E
 
 <img src='images/img1.png' id='PJUACATPCzI' alt='Relationship diagram' width='800' height='190'>Later, we’ll discuss how we could have just 2 PetFood objects which are shared. We’ll also discuss how we could randomly select a Pet species or Food.
 
-## Outputs
+### Outputs
 
 Snowfakery builds on a tool called SQLAlchemy, so it gets a variety of database connectors for free:
 
@@ -167,7 +167,7 @@ The complete list of file-based (as opposed to database-based) formats are:
 - DOT - A Graphviz file for use with graphviz command line or [web-based](http://graphviz.it/) [tools](https://dreampuf.github.io/GraphvizOnline) (no endorsement intended!)
 - SVG, SVGZ, JPEG, PS PNG - Graphic formats which can be created if graphviz is installed.
 
-## Objects
+### Objects
 
 The main, core concept in the language is an “*Object Template*”. It basically represents instructions on how to create a *Row* (or multiple rows) in a database. Rows in turn represent real-world entities like People,  Places or Things and that’s why we use the keyword “Object”. "Record" is another term for "Row"
 
@@ -268,7 +268,7 @@ There is no explicit relationship between the animals and the people in this cas
 
 You can also use this feature for [Many to One](#many-to-one-relationships).
 
-## Relationships
+### Relationships
 
 Relationships are a big part of what makes Snowfakery different than the dozens(!) of tools for data generation out there. For example, we can relate pets to their owners like this:
 
@@ -302,9 +302,8 @@ Person(id=3, name=Lisa King, pet=Animal(3))
 
 In addition, we can relate pets and owners “bidirectionally”, like this:
 
-secret_life_of_pets.yml
-
 ```yaml
+# snowfakery/docs/examples/secret_life_of_pets.yml
 - object: Person
   count: 3
   fields:
@@ -334,7 +333,7 @@ Person(id=3, name=Corey Zamora, pet=Animal(3))
 
 <img src='images/img4.png' id='PJUACAKTd0o' alt='Relationship Diagram'>
 
-The relationship from the `Person` to the `Animal` is called `pet` and it is expressed simply by embedding the template for Animal in the field named `pet`. 
+The relationship from the `Person` to the `Animal` is called `pet` and it is expressed simply by embedding the template for Animal in the field named `pet`.
 
 The relationship from `Animal` to `Person` is called `owner` and it is expressed using the `reference` function. The function looks up the YAML tree for the relevant Person row.
 
@@ -406,7 +405,7 @@ The basic rule is that the last row (object) created with the nickname is the on
 
 ## Function Blocks
 
-Fields can refer to functions which randomize, compute or look up data. We can do that by nesting the function name under the field name or by using formulas. ([Simple Formulas](#simple-formulas))
+Fields can refer to functions which randomize, compute or look up data. We can do that by nesting the function name under the field name or by using formulas. ([Formulas](#simple-formulas))
 
 ### Reference
 
@@ -776,84 +775,6 @@ some_number: A number ${{random_number(min=5, max=10)}}
 
 The `when` clause can be a Python formula and it will be interpreted as a boolean similar to how Python would do it. The first `when` clause that matches is selected. The last `choice` clause should have no `when` clause, and it is a fallback which is selected if the others do not match.
 
-## Formula functions and variables
-
-The functions below are designed to be used inside of formulas:
-
-The `child_index` variable returns a counter of how many objects from this template were generated
-during the execution of the nearest parent template. It resets each time the parent template is
-executed again.
-
-```yaml
-child_index: Child number ${{child_index}}
-```
-
-The `id` variable returns a unique identifier for the current Object/Row to allow you to construct unique identifiers.
-
-```yaml
-fields:
-  name: ${{fake.last_name}} Household ${{id}}
-```
-
-The `today` variable returns a date
-representing the current date. This date
-will not chanage during the execution of
-a single recipe.
-
-The `fake` variable gives access to faker as described elsewhere in this documentation.
-
-The `snowfakery_filename` variable represents the file containing the template. This is useful
-for relative paths.
-
-The `date` function can either coerce a string into a date object for calculations OR generate
-a new date object from year/month/day parts:
-
-```yaml
-    the_date: ${{date("2018-10-30")}}
-    another_date: ${{date(year=2018, month=11, day=30)}}
-```
-
-The `relativedelta` [function](https://dateutil.readthedocs.io/en/stable/relativedelta.html) 
-from `dateutil` is available for use in calculations like this:
-
-```yaml
-${{ date(Date_Established__c) + relativedelta(months=child_index) }}
-```
-
-Some plugins may also be interested in a `template` variable which has an `id` attributes represents a unique identifier for the current template. Look at
-[datasets.py](https://github.com/SFDO-Tooling/Snowfakery/blob/main/snowfakery/standard_plugins/datasets.py) to see one use-case where the template's ID can used to differentiate between two otherwise identical datasets.
-
-### NULL
-
-The value `NULL` can be used to represent a missing value as in the recipe
-below:
-
-First, we can make `NULL` an option with `random_choice`:
-
-```yaml
-- object: foo
-  count: 10
-  fields:
-    EndDate:
-      random_choice:
-        - date_between:
-            start_date: 2018-01-01
-            end_date: 2021-12-12
-        - NULL
-```
-
-Then, in another field you can test whether the value is `NULL` or not:
-
-```yaml
-    DateSupplied:
-      if:
-        - choice:
-            when: ${{ EndDate!=NULL }}
-            pick: "Yes"
-        - choice:
-            pick: "No"
-```
-
 ## Macros
 
 Macros allow you to re-use groups of fields instead of repeating them manually.
@@ -974,7 +895,7 @@ You can include a file by a relative path:
 
 This pulls in all of the declarations from that file. That file can itself include other files.
 
-## Simple Formulas
+## Formulas
 
 Sometimes you would like to include data from another field into the one you are defining now. You can do that with the formula language.
 
@@ -992,7 +913,7 @@ Sometimes you would like to include data from another field into the one you are
     message: Thanks for buying ${{num_items}} items @ $${{per_item_price}} each!
 ```
 
-## Formula Language
+### Formula Language
 
 You can make your data more dynamic by using formulas. Formulas use the same functions described in [Function Blocks](#function-blocks), but they can be used inline like this:
 
@@ -1020,45 +941,105 @@ The relevant section of the Jinja document is called  [Expressions](https://jinj
 
 In theory you could use Jinja keywords like `${% if` (as opposed to `{% if`) but it isn’t clear under what circumstances that would be necessary.
 
-## Template File Options
+### Formula functions and variables
 
-Hard-coding the exact number of records to create into a template file is not always the ideal thing.
+The functions below are designed to be used inside of formulas:
 
-You can pass options (numbers, strings, booleans) to your generator recipe from a command line.
+#### `child_index`
 
-The first step is to declare the options in your template file:
+The `child_index` variable returns a counter of how many objects from this template were generated
+during the execution of the nearest parent template. It resets each time the parent template is
+executed again.
 
 ```yaml
-- option: num_accounts
-  default: 10
+child_index: Child number ${{child_index}}
 ```
 
-If you do not specify a default, the option is required and the template will not be processed without it.
+#### `id`
 
-In your recipe, you use the value by referring to it in a formula:
+The `id` variable returns a unique identifier for the current Object/Row to allow you to construct unique identifiers.
 
 ```yaml
-- object: Account
-  count: ${{num_accounts}}
+fields:
+  name: ${{fake.last_name}} Household ${{id}}
 ```
 
-Of course you can do any math you want in the formula:
+#### `today`
+
+The `today` variable returns a date
+representing the current date. This date
+will not chanage during the execution of
+a single recipe.
+
+#### `fake:` and `fake.`
+
+The `fake:` function and `fake.` namespace both generate fake data as described elsewhere in this documentation.
 
 ```yaml
-- object: Account
-  count: ${{num_accounts / 2}}
-    field:
-        type: A
-- object: Account
-  count: ${{num_accounts / 2}}
-    field:
-        type: B
+# examples/two_fakers.yml
+- object: Contact
+  fields:
+    FirstName:
+      fake: FirstName
+    LastName: ${{fake.LastName}}
 ```
 
-And then you pass that option like this:
+#### `snowfakery_filename`
+
+The `snowfakery_filename` variable represents the file containing the template. This is useful
+for relative paths.
+
+#### `date`
+
+The `date` function can either coerce a string into a date object for calculations OR generate
+a new date object from year/month/day parts:
 
 ```yaml
-    --option numaccounts 10
+    the_date: ${{date("2018-10-30")}}
+    another_date: ${{date(year=2018, month=11, day=30)}}
+```
+
+#### `relativedelta`
+
+The `relativedelta` [function](https://dateutil.readthedocs.io/en/stable/relativedelta.html)
+from `dateutil` is available for use in calculations like this:
+
+```yaml
+${{ date(Date_Established__c) + relativedelta(months=child_index) }}
+```
+
+Some plugins may also be interested in a `template` variable which has an `id` attribute which represents a unique identifier for the current template. Look at
+[datasets.py](https://github.com/SFDO-Tooling/Snowfakery/blob/main/snowfakery/standard_plugins/datasets.py) to see one use-case where the template's ID can used to differentiate between two otherwise identical datasets.
+
+#### NULL
+
+The value `NULL` can be used to represent a missing value as in the recipe
+below:
+
+First, we can make `NULL` an option with `random_choice`:
+
+```yaml
+- object: foo
+  count: 10
+  fields:
+    EndDate:
+      random_choice:
+        - date_between:
+            start_date: 2018-01-01
+            end_date: 2021-12-12
+        - NULL
+```
+
+Then, in another field you can test whether the value is `NULL` or not:
+
+```yaml
+    DateSupplied:
+      if:
+        - choice:
+            when: ${{ EndDate!=NULL }}
+            pick: "Yes"
+        - choice:
+            pick: "No"
 ```
 
 ## Command Line Interface
@@ -1067,19 +1048,18 @@ You can learn the list of options available in the latest version
 like this:
 
 ```s
-$ snowfakery --help
 Usage: snowfakery [OPTIONS] YAML_FILE
 
       Generates records from a YAML file
 
       Records can go to:
           * stdout (default)
-          * JSON file (--output_format=json --output-file=foo.json)
-          * diagram file (--output_format=png --output-file=foo.png)
+          * JSON file (--output-format=json --output-file=foo.json)
+          * diagram file (--output-format=png --output-file=foo.png)
           * a database identified by --dburl (e.g. --dburl sqlite:////tmp/foo.db)
           * or to a directory as a set of CSV files (--output-format=csv --output-folder=csvfiles)
 
-      Diagram output depends on the installation of graphviz 
+      Diagram output depends on the installation of graphviz
       (https://www.graphviz.org/download/)
 
       Full documentation here:
@@ -1091,7 +1071,8 @@ Options:
                                   sqlite:///foo.db if you don't have one set
                                   up.
 
-  --output-format [JSON|json|txt|csv|sql|PNG|png|SVG|svg|svgz|jpeg|jpg|ps|dot]  --output-folder PATH
+  --output-format [JSON|json|txt|csv|sql|PNG|png|SVG|svg|svgz|jpeg|jpg|ps|dot]
+  --output-folder PATH
   -o, --output-file PATH
   --option EVAL_ARG...            Options to send to the recipe YAML.
   --target-number TEXT...         Target options for the recipe YAML in the
@@ -1099,7 +1080,6 @@ Options:
                                   Account'.
 
   --debug-internals / --no-debug-internals
-  --cci-mapping-file PATH
   --generate-cci-mapping-file FILENAME
                                   Generate a CumulusCI mapping file for the
                                   dataset
@@ -1111,6 +1091,9 @@ Options:
 
   --continuation-file FILENAME    Continue generating a dataset where
                                   'continuation-file' left off
+
+  --load-declarations FILE        Declarations to mix into the generated
+                                  mapping file
 
   --version                       Show the version and exit.
   --help                          Show this message and exit.
@@ -1345,6 +1328,65 @@ And here's how to use the "hidden fields"([#hidden-fields-and-objects]) feature:
             reference: Company
 ```
 
+### Template File Options
+
+Hard-coding the exact number of records to create into a template file is not always the ideal thing.
+
+You can pass options (numbers, strings, booleans) to your generator recipe from a command line.
+
+The first step is to declare the options in your template file:
+
+```yaml
+- option: num_accounts
+  default: 10
+```
+
+If you do not specify a default, the option is required and the template will not be processed without it.
+
+In your recipe, you use the value by referring to it in a formula:
+
+```yaml
+- object: Account
+  count: ${{num_accounts}}
+```
+
+Of course you can do any math you want in the formula:
+
+```yaml
+- object: Account
+  count: ${{num_accounts / 2}}
+    field:
+        type: A
+- object: Account
+  count: ${{num_accounts / 2}}
+    field:
+        type: B
+```
+
+And then you pass that option like this:
+
+```yaml
+    --option numaccounts 10
+```
+
+### Using Snowfakery within Python
+
+You can embed Snowfakery in a Python application like this:
+
+```python
+from snowfakery import generate_data
+
+generate_data(
+    yaml_file="examples/company.yml",
+    option=[("A", "B")],
+    target_number=(20, "Employee"),
+    debug_internals=True,
+    output_format="json",
+    output_file=outfile,
+)
+```
+
+Detailed information is available in [Embedding Snowfakery into Python Applications](./embedding.md)
 
 ## Plugins and Providers
 
@@ -1356,9 +1398,7 @@ You include either Plugins or Providers in a Snowfakery file like this:
 - plugin: package.module.classname
 ```
 
-### Built-in Plugins
-
-#### Advanced Math
+### Advanced Math
 
 Snowfakery has a "Math" plugin which gives you access to all features from Python's
 [`math`](https://docs.python.org/3/library/math.html) module plus
@@ -1385,11 +1425,11 @@ Or:
       twelve: ${Math.sqrt}
 ```
 
-#### External datasets
+### External datasets
 
 Snowfakery can incorporate data from external CSV files or databases as datasets.
 
-##### Iterating over CSV datasets
+#### Iterating over CSV datasets
 
 Here is an example of a simple CSV-based dataset:
 
@@ -1451,7 +1491,7 @@ There are two ways you can think of and use this data: a) using CSV data
 to "enrich" your fake data with real or pre-generated data or b) using
 Snowfakery to "enrich" your real or pre-generated data with fake data.
 
-##### Iterating over Salesforce datasets
+#### Iterating over Salesforce datasets
 
 CumulusCI can also be used to download CSV data for enrichment as follows.
 
@@ -1494,11 +1534,11 @@ Of course you will need to adjust the paths based on your directory structure.
 
 Snowfakery will soon have built-in features for querying SOQL so you may also want to evaluate those as an alternative to this technique.
 
-##### Iterating over SQL database datasets
+#### Iterating over SQL database datasets
 
 If the reference to a dataset is a URL instead, Snowfakery will attempt to use
 it as a reference to a database. Out of the box  Snowfakery supports
-`sqlite:///` urls as described in the documentation for 
+`sqlite:///` urls as described in the documentation for
 [SQL Alchemy](https://docs.sqlalchemy.org/en/13/core/engines.html#sqlite).
 
 That would look exactly like above except for this line:
@@ -1521,7 +1561,7 @@ to use like this:
         table: addresses
 ```
 
-##### Shuffling Data
+#### Shuffling Data
 
 If you would rather the rows be pulled out in random order, you
 have two options. The simplest thing is to shuffle it in your
@@ -1533,8 +1573,7 @@ Snowfakery recipe like this:
         dataset: addresses.csv
 ```
 
-
-##### Shuffling data in advance
+#### Shuffling data in advance
 
 If you experience performance or memory usage problems with big datasets,
 you might want to shuffle your data into a random order  before using it
@@ -1558,7 +1597,7 @@ recipe once. It could, however, save you time if you  were running
 the Snowfakery recipe over and over, because the shuffling would
 happen just once.
 
-#### Reading files
+### Reading files
 
 You can read and include Unicode files like this:
 
@@ -1599,360 +1638,11 @@ data being written to them. It is relatively easy to make
 plugins that does other encodings by building on the code
 in [`File.py`](https://github.com/SFDO-Tooling/Snowfakery/blob/main/snowfakery/standard_plugins/file.py).
 
-### Salesforce Plugin
 
-There are several features planned for the Salesforce Plugin, but
-the first is support for Person Accounts.
+### Custom Plugins and Providers
 
-#### Creating and Referencing Person Accounts
-
-You can use Person Accounts like this:
-
-```yaml
-- plugin: snowfakery.standard_plugins.Salesforce
-- object: Account
-  fields:
-    FirstName:
-      fake: first_name
-    LastName:
-      fake: last_name
-    PersonMailingStreet:
-      fake: street_address
-    PersonMailingCity:
-      fake: city
-    PersonContactId:
-      Salesforce.SpecialObject: PersonContact
-```
-
-This will generate a placeholder object in your recipe which can
-be referred to by other templates like so:
-
-```yaml
-- object: User
-  fields:
-    Username:
-      fake: email
-    ...
-    ContactId:
-      reference: Account.PersonContactId
-```
-
-CumulusCI will fix up the references during data load. If you run into
-errors, please verify that the Account object is being loaded before
-the others that refer to the PersonContactId. If not, you may need to
-write a CumulusCI mapping file to ensure that it does.
-
-The `Salesforce.SpecialObject` function cannot currently be used for any other
-SObject or in any other context. It must always generate a `PersonContact`
-in the `PersonContactId` field.
-
-There is also an alternate syntax which allows nicknaming:
-
-```yaml
-...
-- object: Account
-  fields:
-    PersonContactId:
-      Salesforce.SpecialObject:
-        name: PersonContact
-        nickname: PCPC
-- object: User
-  fields:
-    ContactId:
-      reference: PCPC
-```
-
-#### ContentVersions
-
-Files can be used as Salesforce ContentVersions like this:
-
-```yaml
-- plugin: snowfakery.standard_plugins.base64.Base64
-- plugin: snowfakery.standard_plugins.file.File
-- object: Account
-  nickname: FileOwner
-  fields:
-    Name:
-      fake: company
-- object: ContentVersion
-  nickname: FileAttachment
-  fields:
-    Title: Attachment for ${{Account.Name}}
-    PathOnClient: example.pdf
-    Description: example.pdf
-    VersionData:
-      Base64.encode:
-        - File.file_data:
-            encoding: binary
-            file: ${{PathOnClient}}
-    FirstPublishLocationId:
-      reference: Account
-```
-
-### Custom Plugins
-
-#### How Snowfakery Finds Plugins
-
-The basic format is:
-
-```yaml
-- plugin: package.module.classname
-```
-
-Which is equivalent to the Python:
-
-```python
-from package.module import classname
-```
-
-If the module name and the classname are the same,
-this can be shortened to:
-
-```yaml
-- plugin: package.classname
-```
-
-In that case, Snowfakery will automatically expand it to 
-
-```python
-from package.classname import classname
-```
-
-Fewer keystrokes are better than more, so plugin providers are
-encouraged to create plugins where the module name and
-class name are the same.
-
-Snowfakery will look for the plugin or provider in these places:
-
-- the [Python path](https://docs.python.org/3/library/sys.html#sys.path),
-- in a `plugins` directory in the same directory as the recipe,
-- in a `plugins` directory below the current working directory and
-- in a subdirectory of the user's home directory called `.snowfakery/plugins`.
-
-So for example, if you had a Snowfakery file like this:
-
-```yaml
-- plugin: salesforce.org.DoGood
-```
-
-named `do_goodders/do_gooder.recipe.yml`
-
-You could make a file named `do_gooders/plugins/salesforce/org/DoGood.py`
-
-And that file would contain a class like this:
-
-```python
-from snowfakery.plugins import SnowfakeryPlugin
-
-class DoGood(SnowfakeryPlugin):
-    """Plugin which generates a summation helper"""
-    ...
-```
-
-#### Writing Plugins
-
-To write a new Plugin, make a class that inherits from `SnowfakeryPlugin` and implements either the `custom_functions()` method or a `Functions` nested class. The nested class is simple: each method represents a function to expose in the namespace. In this case the function name would be `DoublingPlugin.double`.
-
-```python
-class DoublingPlugin(SnowfakeryPlugin):
-    class Functions:
-        def double(self, value):
-            return value * 2
-```
-
-Alternately, you can implement the custom_functions method to return an
-object with the attributes that implement your namespace:
-
-```python
-class Doubler:
-  def double(self, value):
-      return value * 2
-```
-
-```python
-class DoublingPlugin(SnowfakeryPlugin):
-    def custom_functions(self, *args, **kwargs):
-        return Doubler()
-```
-
-Make sure to accept `*args` and `**kwargs` to allow for future extensibility of the method signature.
-
-Despite the name, plugins can also include data values rather than functions in either form of plugin. Plugins essentially use Python's `getattr` to find attributes, properties, methods or functions in the namespace of the object you return from `custom_functions()`.
-
-Plugin functions can store persistent information in a Python dictionary called self.context.context_vars(). It will always be supplied to your plugin. For example, here is a simple plugin that counts:
-
-```python
-class PluginThatCounts(SnowfakeryPlugin):
-    class Functions:
-        def count(self):
-            context_vars = self.context.context_vars()
-            context_vars.setdefault("count", 0)
-            context_vars["count"] += 1
-            return context_vars["count"]
-```
-
-Plugins also have access to a dictionary called `self.context.field_vars()` which
-represents the values that would be available to a formula running in the same context.
-
-Plugins can return normal Python primitive types, datetime.date, `ObjectRow` or `PluginResult` objects. `ObjectRow` objects represent new output records/objects. `PluginResult` objects
-expose a namespace that other code can access through dot-notation. PluginResults can be
-initialized with either a dict or an object that exposes the namespace through Python 
-getattr().
-
-If your plugin generates some special kind of data value which should be serializable
-as a primitive type (usually a string), subclass PluginResult and add a `simplify`
-method to your PluginResult. That method should return a Python primitive value.
-
-In the rare event that a plugin has a function which need its arguments to be passed to it unevaluated, for later (perhaps conditional) evaluation, you can use the `@snowfakery.lazy decorator`. Then you can evaluate the arguments with `self.context.evaluate()`. 
-
-For example:
-
-```python
-class DoubleVisionPlugin(SnowfakeryPlugin):
-    class Functions:
-        @lazy
-        def do_it_twice(self, value):
-            "Evaluates its argument 0 times or twice"
-            rc = f"{self.context.evaluate(value)} : {self.context.evaluate(value)}"
-
-          return rc
-```
-
-Every second time this is called, it will evaluate its argument twice, and stick the two results into a string. For example, if it were called with a call to `random_number`, you would get two different random numbers rather than the same number twice. If it were called with the counter from above, you would get two different counter values in the string.
-
-```yaml
-  - plugin: tests.test_custom_plugins_and_providers.DoubleVisionPlugin
-  - object: OBJ
-    fields:
-      some_value:
-          - DoubleVisionPlugin.do_it_twice:
-              - abc
-```
-
-This would output an `OBJ` row with values:
-
-```python
-  {'id': 1, 'some_value': 'abc : abc', 'some_value_2': '1 : 2'})
-```
-
-Occasionally you might write a plugin which needs to evaluate its
-parameters lazily but doesn't care about the internals of the values
-because it just returns it to some parent context. In that case,
-use `context.evaluate_raw` instead of `context.evaluate`.
-
-Plugins that require "memory" or "state" are possible using PluginResult
-objects or subclasses. Consider a plugin that generates child objects
-that include values that sum up values on child objects to a value specified on a parent:
-
-```yaml
-# examples/sum_child_values.yml
-# This shows how you could create a plugin or feature where
-# a parent object generates child objects which sum up
-# to any particular value.
-
-- plugin: examples.sum_totals.SummationPlugin
-- var: summation_helper
-  value:
-    SummationPlugin.summer:
-      total: 100
-      step: 10
-
-- object: ParentObject__c
-  count: 10
-  fields:
-    MinimumChildObjectAmount__c: 10
-    MinimumStep: 5
-    TotalAmount__c: ${{summation_helper.total}}
-  friends:
-    - object: ChildObject__c
-      count: ${{summation_helper.count}}
-      fields:
-        Parent__c:
-          reference: ParentObject__c
-        Amount__c: ${{summation_helper.next_amount}}
-        RunningTotal__c: ${{summation_helper.running_total}}
-```
-
-This would generate values like this:
-
-```json
-ParentObject__c(id=1, MinimumChildObjectAmount__c=10, MinimumStep=5, TotalAmount__c=100)
-ChildObject__c(id=1, Parent__c=ParentObject__c(1), Amount__c=60, RunningTotal__c=60)
-ChildObject__c(id=2, Parent__c=ParentObject__c(1), Amount__c=20, RunningTotal__c=80)
-ChildObject__c(id=3, Parent__c=ParentObject__c(1), Amount__c=20, RunningTotal__c=100)
-
-ParentObject__c(id=2, MinimumChildObjectAmount__c=10, MinimumStep=5, TotalAmount__c=100)
-ChildObject__c(id=4, Parent__c=ParentObject__c(2), Amount__c=40, RunningTotal__c=40)
-ChildObject__c(id=5, Parent__c=ParentObject__c(2), Amount__c=20, RunningTotal__c=60)
-ChildObject__c(id=6, Parent__c=ParentObject__c(2), Amount__c=40, RunningTotal__c=100)
-
-ParentObject__c(id=3, MinimumChildObjectAmount__c=10, MinimumStep=5, TotalAmount__c=100)
-ChildObject__c(id=7, Parent__c=ParentObject__c(3), Amount__c=10, RunningTotal__c=10)
-ChildObject__c(id=8, Parent__c=ParentObject__c(3), Amount__c=40, RunningTotal__c=50)
-ChildObject__c(id=9, Parent__c=ParentObject__c(3), Amount__c=10, RunningTotal__c=60)
-ChildObject__c(id=10, Parent__c=ParentObject__c(3), Amount__c=10, RunningTotal__c=70)
-ChildObject__c(id=11, Parent__c=ParentObject__c(3), Amount__c=30, RunningTotal__c=100)
-```
-
-Here is the plugin implementation:
-
-```python
-# examples/sum_totals.py
-from random import randint, shuffle
-
-from snowfakery.plugins import SnowfakeryPlugin, PluginResult
-
-
-def parts(total, step):
-    """Split a number into a randomized set of 'pieces'.
-    The pieces add up to the number. E.g.
-
-    parts(12, 3) -> [3, 6, 3]
-    parts(16, 4) -> [8, 4, 4]
-
-    >>> assert len(parts(12, 3)) > 1
-    >>> assert sum(parts(12, 3)) == 12
-    """
-    assert total % step == 0
-    pieces = []
-
-    while sum(pieces) < total:
-        top = (total - sum(pieces)) / step
-        pieces.append(randint(1, top) * step)
-
-    shuffle(pieces)
-    return pieces
-
-
-class Summation(PluginResult):
-    """Represent a group of pieces"""
-
-    def __init__(self, total, step):
-        self.total = total
-        self.pieces = parts(total, step)
-        super().__init__(None)
-
-    @property
-    def count(self, null=None):
-        return len(self.pieces)
-
-    @property
-    def next_amount(self):
-        rc = self.pieces.pop()
-        return rc
-
-
-class SummationPlugin(SnowfakeryPlugin):
-    """Plugin which generates a summataion helper"""
-
-    class Functions:
-        def summer(self, total, step):
-            return Summation(total, step)
-```
-
-### Custom Providers
-
-To write a new Provider, please refer to the documentation for Faker at https://faker.readthedocs.io/en/master/#providers
+Snowfakery can be extended with custom plugins and fake data
+providers as described in [Extending Snowfakery with Python Code](./extending.md).
 
 ## Using Snowfakery with Salesforce
 
@@ -1960,45 +1650,8 @@ Snowfakery recipes that generate Salesforce records are just like any
 other Snowfakery recipes. You use SObject names for the 'objects'.
 There are several examples [in the Snowfakery repository](https://github.com/SFDO-Tooling/Snowfakery/tree/main/examples/salesforce)
 
-To specify a record type for a record, just put the Record Type’s API Name in a field named RecordType.
-
-Person Account support is provided the [Salesforce Plugin](#salesforce-plugin).
-
-The process of actually generating the data into a Salesforce
-org happens through CumulusCI as described below.
-
-### Using Snowfakery within CumulusCI
-
-[CumulusCI](http://www.github.com/SFDO-Tooling/CumulusCI) is a
-tool and framework for building portable automation for
-Salesforce projects. It is created by the same team that
-creates Snowfakery.
-
-The easiest way to learn about CumulusCI (and to learn how to
-install it) is with its [Trailhead Trail](https://trailhead.salesforce.com/en/content/learn/trails/build-applications-with-cumulusci).
-
-CumulusCI's documentation [describes](https://cumulusci.readthedocs.io/en/latest/data.html?highlight=snowfakery#generate-fake-data)
-how to use it with Snowfakery. Here is a short example:
-
-```s
-$ cci task run generate_and_load_from_yaml -o generator_yaml examples/salesforce/Contact.recipe.yml -o num_records 300 -o num_records_tablename Contact --org qa
-...
-```
-
-You can (and more often will) use generate_and_load_from_yaml from
-within a flow captured in in a `cumulusci.yml`, like the one in
-the [Snowfakery repo](https://github.com/SFDO-Tooling/Snowfakery/tree/main/cumulusci.yml).
-
-If you have CumulusCI configured and you would like to test this,
-you can do so like this (the Snowfakery repo itself has a
-`cumulusci.yml`):
-
-```s
-$ git clone https://github.com/SFDO-Tooling/Snowfakery.git
-$ cd Snowfakery
-$ cci task run generate_opportunities_and_contacts
-$ cci flow run test_everything
-```
+Salesforce-specific patterns and tools are described in
+[Using Snowfakery with Salesforce](salesforce.md)
 
 ## Using Snowfakery with Databases
 
@@ -2011,7 +1664,7 @@ makes it easy to use the Python command 'pip' to manage your
 Python environment. For example you could install Python
 using the standard installers from `python.org` and then
 you would run the following commands to create and use a venv with the
-Postgres plugin:
+Postgres package:
 
 ```bash
 
@@ -2069,26 +1722,7 @@ does not.
 - Singleton: A singleton is an Object Template that generates a single row regardless of how many times the recipe is iterated over.
 - YAML: YAML is a relatively simple, human-readable format. You can learn more about it at [yaml.org](http://yaml.org/). But you can also just pick up the basics of it by reading along.
 
-## Using Snowfakery within Python
-
-You can embed Snowfakery in a Python application like this:
-
-```python
-from snowfakery import generate_data
-
-generate_data(
-    yaml_file="examples/company.yml",
-    option=[("A", "B")],
-    target_number=(20, "Employee"),
-    debug_internals=True,
-    output_format="json",
-    output_file=outfile,
-)
-```
-
-Detailed information is available in [Embedding Snowfakery into Python Applications](./embedding.md)
-
-## Security Profiile of Snowfakery
+## Security Profile of Snowfakery
 
 Snowfakery should be considered a domain-specific programming language with
 access to most of the power of Python. It can load Python plugins and
