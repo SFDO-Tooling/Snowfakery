@@ -46,7 +46,7 @@ class FakeData:
         else:
             try:
                 # TODO: look for FooBar as foo_bar
-                return getattr(self.faker, name)()
+                return getattr(self.faker, name)(**kwargs)
             except AttributeError:
                 pass
 
