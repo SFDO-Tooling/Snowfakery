@@ -4,10 +4,19 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 1.11
+
+Add a simple benchmarking tool available with the command `snowbench`. #346
+
+Update the namespace used for inline fakes to support the same new names as
+block-based fakes. (i.e. ${{fake.FirstName}} is the same as fake: FirstName) #357
+
+Fix a bug which caused problems outputting images. #351
+
 ## Snowfakery 1.10
 
 Snowfakery now has some of its own built-in "Fake data types". For example "FirstName"
-(instead of first_name) and "Username" (which is like a Salesforce Username). 
+(instead of first_name) and "Username" (which is like a Salesforce Username).
 These new names should be more intuitive for Salesforce users. PR #343
 
 Fake "emails" now use domains based on "example.com" and similar domains specified in
@@ -60,8 +69,7 @@ schema is compatible with CCI's data loader, but can be used in other
 contexts. #162
 
 Add a `snowfakery_filename` variable to allow injecting the
-recipe filename into recipe output.
-#249
+recipe filename into recipe output. #249
 
 Add NULL to Snowfakery formulas #239
 
