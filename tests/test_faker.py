@@ -163,6 +163,19 @@ class TestFaker:
         assert row_values(write_row_mock, 0, "SSN")
 
     @mock.patch(write_row_path)
+    def test_faker_kwargs(self, write_row_mock):
+        yaml = """
+        - object: A
+          fields:
+            neg:
+              fake.random_int:
+                min: -5
+                max: -1
+        """
+        generate(StringIO(yaml), {}, None)
+        assert -5 <= row_values(write_row_mock, 0, "neg") <= -1
+
+    @mock.patch(write_row_path)
     def test_error_handling(self, write_row_mock):
         yaml = """
         - object: A
