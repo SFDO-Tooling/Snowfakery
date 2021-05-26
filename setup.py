@@ -3,12 +3,12 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-with open("requirements.txt") as requirements_file:
+with open("requirements/prod.txt") as requirements_file:
     requirements = [
         req.split("#")[0].replace("==", ">=").strip() for req in requirements_file
     ]
 
-with open("requirements_dev.txt") as dev_requirements_file:
+with open("requirements/dev.txt") as dev_requirements_file:
     test_requirements = [
         req.split("#")[0] for req in dev_requirements_file if not req.startswith("-")
     ]
