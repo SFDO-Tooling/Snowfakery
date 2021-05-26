@@ -1,8 +1,8 @@
 SQLAlchemy==1.4.15
 Faker==8.2.1
-jinja2==3.0.1
+jinja2<3
 PyYAML==5.4.1
-click==8.0.1
+click<8
 python-dateutil==2.8.1
 gvgen==1.0
 pydantic==1.8.2
