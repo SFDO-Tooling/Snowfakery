@@ -207,6 +207,7 @@ class TestGenerateFromCLI:
                 output_files=["foo.txt"],
             )
         assert "xyzzy" in str(e.value)
+        Path("foo.txt").unlink()
 
     def test_from_cli__continuation(self, capsys):
         with TemporaryDirectory() as t:
