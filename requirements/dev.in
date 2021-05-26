@@ -1,0 +1,14 @@
+-r requirements.txt
+black
+coverage
+coveralls
+flake8
+myst-parser
+pip-tools
+pre-commit
+pytest
+pytest-cov
+Sphinx
+typeguard
+faker-microservice
+tox
