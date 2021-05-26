@@ -53,4 +53,5 @@ setuptools.setup(
     python_requires=">=3.6",
     install_requires=requirements,
     tests_require=test_requirements,
+    data_files=[("requirements", ["requirements/prod.txt", "requirements/dev.txt"])],
 )
