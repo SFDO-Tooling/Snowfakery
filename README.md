@@ -2,7 +2,7 @@
 
 # Snowfakery Documentation
 
-Snowfakery is a tool for generating fake data that has relations between tables. Every row is faked data, but also unique and random, like a snowflake. 
+Snowfakery is a tool for generating fake data that has relations between tables. Every row is faked data, but also unique and random, like a snowflake.
 
 To tell Snowfakery what data you want to generate, you need to write a Recipe file in YAML.
 
@@ -10,3 +10,22 @@ Snowfakery can write its output to stdout, or any database accessible to SQLAlch
 
 [Documentation](https://snowfakery.readthedocs.io)
 
+## Contributing
+
+To contribute to snowfakery you will first need to setup a [virtual environment](https://docs.python.org/3/tutorial/venv.html).
+Once you have youre virtual environment, you can install dependencies via pip:
+
+`pip install -r requirements_dev.txt`
+
+Or you can install dependencies via pip tools:
+
+```python
+pip install pip-tools
+make dev-install
+```
+
+Now you're all set for contributing to Snowfakery!
+
+### Updating Dependencies
+
+Performing dependency updates is easy. Just run `make update-deps` and commit any changes to `requirements/prod.txt` and `requirements/dev.txt`.
