@@ -79,6 +79,7 @@ class TableInfo:
 
 class ParseContext:
     current_parent_object = None
+    top_level = True
 
     def __init__(self):
         self.macros = {}
@@ -135,6 +136,10 @@ class ParseContext:
         )
         self.table_infos[template.tablename] = table_info
         table_info.register(template)
+
+    @property
+    def top_level(self):
+        return self.current_parent_object is None
 
 
 def removeline_numbers(dct: Dict) -> Dict:
@@ -319,6 +324,8 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
         },
         context=context,
     )
+    if not context.top_level and parsed_template.just_once:
+        raise exc.DataGenSyntaxError("just_once can only be used at the top level")
 
     assert yaml_sobj
     with context.change_current_parent_object(yaml_sobj):
