@@ -1,0 +1,9 @@
+SQLAlchemy
+Faker
+jinja2
+PyYAML
+click
+python-dateutil
+gvgen
+pydantic
+typing_extensions
