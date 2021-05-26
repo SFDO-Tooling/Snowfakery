@@ -6,7 +6,16 @@ And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” an
 
 ## Snowfakery 1.12
 
+Fix a regression: In some contexts it was impossible to call Faker with either
+positional arguments or keyword arguments. It is now possible to call with
+keyword arguments again. Positional arguments are still disallowed and older
+recipes may need to be updated to use keyword arguments. (#388)
 
+e.g. `${{fake.sentence(nb_words=4)}}` instead of `${{fake.sentence(4)}}`
+
+Snowfakery now informs you that it is not possible to use `just_once` in
+a nested context. Previously, the results of doing so were unpredictable.
+(#333)
 
 ## Snowfakery 1.11
 
