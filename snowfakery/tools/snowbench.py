@@ -185,7 +185,7 @@ def snowfakery(recipe, num_records, tablename, outputfile):
 
 
 def main():
-    snowbench.main(prog_name="bench")
+    snowbench.main(prog_name="snowbench")
 
 
 if __name__ == "__main__":  # pragma: no cover
