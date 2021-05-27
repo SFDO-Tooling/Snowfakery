@@ -196,8 +196,12 @@ toml==0.10.2
     #   pre-commit
     #   pytest
     #   tox
-tox==3.23.1
+tox-gh-actions==2.5.0
     # via -r requirements/dev.in
+tox==3.23.1
+    # via
+    #   -r requirements/dev.in
+    #   tox-gh-actions
 typed-ast==1.4.3
     # via black
 typeguard==2.10.0
