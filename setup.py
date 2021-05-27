@@ -1,17 +1,28 @@
+import re
 import setuptools
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 with open("requirements/prod.txt") as requirements_file:
-    requirements = [
-        req.split("#")[0].replace("==", ">=").strip() for req in requirements_file
-    ]
+    requirements = []
+    for req in requirements_file.read().splitlines():
+        # skip comments and hash lines
+        if re.match(r"\s*#", req) or re.match(r"\s*--hash", req):
+            continue
+        else:
+            req = req.split(" ")[0]
+            requirements.append(req)
 
 with open("requirements/dev.txt") as dev_requirements_file:
-    test_requirements = [
-        req.split("#")[0] for req in dev_requirements_file if not req.startswith("-")
-    ]
+    requirements = []
+    for req in requirements_file.read().splitlines():
+        # skip comments and hash lines
+        if re.match(r"\s*#", req) or re.match(r"\s*--hash", req):
+            continue
+        else:
+            req = req.split(" ")[0]
+            requirements.append(req)
 
 # get the version into a global variable named "version"
 with open("snowfakery/version.txt") as f:
