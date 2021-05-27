@@ -15,14 +15,14 @@ with open("requirements/prod.txt") as requirements_file:
             requirements.append(req)
 
 with open("requirements/dev.txt") as dev_requirements_file:
-    requirements = []
-    for req in requirements_file.read().splitlines():
+    dev_requirements = []
+    for req in dev_requirements_file.read().splitlines():
         # skip comments and hash lines
         if re.match(r"\s*#", req) or re.match(r"\s*--hash", req):
             continue
         else:
             req = req.split(" ")[0]
-            requirements.append(req)
+            dev_requirements.append(req)
 
 # get the version into a global variable named "version"
 with open("snowfakery/version.txt") as f:
@@ -63,6 +63,6 @@ setuptools.setup(
     ],
     python_requires=">=3.6",
     install_requires=requirements,
-    tests_require=test_requirements,
+    tests_require=dev_requirements,
     data_files=[("requirements", ["requirements/prod.txt", "requirements/dev.txt"])],
 )
