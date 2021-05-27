@@ -92,7 +92,7 @@ def _table_is_free(table_name, dependencies, sorted_tables):
 
 
 def sort_dependencies(inferred_dependencies, declared_dependencies, tables):
-    """"Sort the dependencies to output tables in the right order."""
+    """Sort the dependencies to output tables in the right order."""
     dependencies = {**inferred_dependencies, **declared_dependencies}
     sorted_tables = []
 
@@ -125,7 +125,7 @@ def mappings_from_sorted_tables(
     reference_fields: dict,
     declarations: T.Mapping[str, SObjectRuleDeclaration],
 ):
-    """Generate mapping.yml data structures. """
+    """Generate mapping.yml data structures."""
     mappings = {}
     for table_name in table_order:
         table = tables[table_name]
