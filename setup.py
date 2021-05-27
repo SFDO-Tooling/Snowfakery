@@ -1,28 +1,29 @@
 import re
 import setuptools
 
-with open("README.md", "r") as fh:
-    long_description = fh.read()
+from typing import List
 
-with open("requirements/prod.txt") as requirements_file:
+
+def parse_requirements_file(requirements_file) -> List[str]:
     requirements = []
     for req in requirements_file.read().splitlines():
         # skip comments and hash lines
         if re.match(r"\s*#", req) or re.match(r"\s*--hash", req):
-            continue
+            return
         else:
             req = req.split(" ")[0]
             requirements.append(req)
+    return requirements
+
+
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
+with open("requirements/prod.txt") as requirements_file:
+    requirements = parse_requirements_file(requirements_file)
 
 with open("requirements/dev.txt") as dev_requirements_file:
-    dev_requirements = []
-    for req in dev_requirements_file.read().splitlines():
-        # skip comments and hash lines
-        if re.match(r"\s*#", req) or re.match(r"\s*--hash", req):
-            continue
-        else:
-            req = req.split(" ")[0]
-            dev_requirements.append(req)
+    dev_requirements = parse_requirements_file(dev_requirements_file)
 
 # get the version into a global variable named "version"
 with open("snowfakery/version.txt") as f:
