@@ -12,9 +12,7 @@ greenlet==1.1.0
     # via sqlalchemy
 gvgen==1.0
     # via -r requirements/prod.in
-importlib-metadata==4.2.0
-    # via sqlalchemy
-jinja2==2.11.3
+jinja2==3.0.1
     # via -r requirements/prod.in
 markupsafe==2.0.1
     # via jinja2
@@ -35,7 +33,4 @@ text-unidecode==1.3
 typing-extensions==3.10.0.0
     # via
     #   -r requirements/prod.in
-    #   importlib-metadata
     #   pydantic
-zipp==3.4.1
-    # via importlib-metadata
