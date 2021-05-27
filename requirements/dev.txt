@@ -24,7 +24,7 @@ cfgv==3.3.0
     # via pre-commit
 chardet==4.0.0
     # via requests
-click==7.1.2
+click==8.0.1
     # via
     #   -r requirements/prod.txt
     #   black
@@ -68,17 +68,6 @@ idna==2.10
     # via requests
 imagesize==1.2.0
     # via sphinx
-importlib-metadata==4.2.0
-    # via
-    #   -r requirements/prod.txt
-    #   flake8
-    #   pep517
-    #   pluggy
-    #   pre-commit
-    #   pytest
-    #   sqlalchemy
-    #   tox
-    #   virtualenv
 iniconfig==1.1.1
     # via pytest
 jinja2==2.11.3
@@ -202,16 +191,11 @@ tox==3.23.1
     # via
     #   -r requirements/dev.in
     #   tox-gh-actions
-typed-ast==1.4.3
-    # via black
 typeguard==2.10.0
     # via -r requirements/dev.in
 typing-extensions==3.10.0.0
     # via
     #   -r requirements/prod.txt
-    #   black
-    #   importlib-metadata
-    #   markdown-it-py
     #   pydantic
 urllib3==1.26.5
     # via requests
@@ -219,11 +203,6 @@ virtualenv==20.4.7
     # via
     #   pre-commit
     #   tox
-zipp==3.4.1
-    # via
-    #   -r requirements/prod.txt
-    #   importlib-metadata
-    #   pep517
 
 # The following packages are considered to be unsafe in a requirements file:
 pip==21.1.2
