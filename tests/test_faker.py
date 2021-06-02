@@ -2,6 +2,8 @@ from io import StringIO
 from unittest import mock
 from datetime import date
 
+import pytest
+
 from snowfakery.data_generator import generate
 from snowfakery import data_gen_exceptions as exc
 
@@ -183,7 +185,7 @@ class TestFaker:
             xyzzy:
               fake: xyzzy
         """
-        with self.assertRaises(exc.DataGenError) as e:
+        with pytest.raises(exc.DataGenError) as e:
             generate(StringIO(yaml), {}, None)
-        assert "xyzzy" in str(e.exception)
-        assert "fake" in str(e.exception)
+        assert "xyzzy" in str(e.value)
+        assert "fake" in str(e.value)
