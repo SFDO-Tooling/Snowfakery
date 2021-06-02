@@ -73,38 +73,38 @@ fake_sf_client = FakeSimpleSalesforce(
 
 class TestSOQLNoCCI:
     @patch(
-        "snowfakery.standard_plugins.Salesforce.SOQLQuery.sf",
+        "snowfakery.standard_plugins.Salesforce.SalesforceConnection.sf",
         wraps=fake_sf_client,
     )
     @patch("snowfakery.standard_plugins.Salesforce.randrange", lambda *arg, **kwargs: 5)
     def test_soql_plugin_random(self, fake_sf_client, generated_rows):
         yaml = """
-            - plugin: snowfakery.standard_plugins.Salesforce.SOQLQuery
+            - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
             - object: Contact
               fields:
                 FirstName: Suzy
                 LastName: Salesforce
                 AccountId:
-                    SOQLQuery.query_random: Account
+                    SalesforceQuery.random_record: Account
         """
         generate(StringIO(yaml), plugin_options={"orgname": "blah"})
         assert fake_sf_client.mock_calls
         assert generated_rows.row_values(0, "AccountId") == "FAKEID5"
 
     @patch(
-        "snowfakery.standard_plugins.Salesforce.SOQLQuery.sf",
+        "snowfakery.standard_plugins.Salesforce.SalesforceConnection.sf",
         wraps=fake_sf_client,
     )
     @patch("snowfakery.standard_plugins.Salesforce.randrange", lambda *arg, **kwargs: 5)
     def test_soql_plugin_record(self, fake_sf_client, generated_rows):
         yaml = """
-            - plugin: snowfakery.standard_plugins.Salesforce.SOQLQuery
+            - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
             - object: Contact
               fields:
                 FirstName: Suzy
                 LastName: Salesforce
                 AccountId:
-                    SOQLQuery.query_record: Account
+                    SalesforceQuery.find_record: Account
         """
         generate(StringIO(yaml), plugin_options={"orgname": "blah"})
         assert fake_sf_client.mock_calls
@@ -117,19 +117,19 @@ class TestSOQLWithCCI:
     @skip_if_cumulusci_missing
     def test_soql(self, sf, org_config, generated_rows):
         yaml = """
-            - plugin: snowfakery.standard_plugins.Salesforce.SOQLQuery
+            - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
             - object: Contact
               fields:
                 FirstName: Suzy
                 LastName: Salesforce
                 AccountId:
-                    SOQLQuery.query_random: Account
+                    SalesforceQuery.random_record: Account
             - object: Contact
               fields:
                 FirstName: Sammy
                 LastName: Salesforce
                 AccountId:
-                    SOQLQuery.query_random: Account
+                    SalesforceQuery.random_record: Account
         """
         assert org_config.name
         sf.Account.create({"Name": "Company"})
@@ -140,11 +140,11 @@ class TestSOQLWithCCI:
     @pytest.mark.vcr()
     def test_missing_orgname(self, sf):
         yaml = """
-            - plugin: snowfakery.standard_plugins.Salesforce.SOQLQuery
+            - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
             - object: Contact
               fields:
                 AccountId:
-                    SOQLQuery.query_random: Account
+                    SalesforceQuery.random_record: Account
         """
         with pytest.raises(DataGenError):
             generate(StringIO(yaml), {})

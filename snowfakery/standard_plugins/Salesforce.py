@@ -30,12 +30,14 @@ from snowfakery.parse_recipe_yaml import TableInfo
 
 MAX_SALESFORCE_OFFSET = 2000  # Any way around this?
 
-ns = "snowfakery.standard_plugins.Salesforce.SOQLQuery"
+ns = "snowfakery.standard_plugins.Salesforce.SalesforceQuery"
 
 
-class SalesforceConnectionMixin:
+class SalesforceConnection:
     _sf_connection = None
-    allowed_options = [PluginOption(f"{ns}.orgname", str)]
+
+    def __init__(self, context):
+        self.context = context
 
     @property
     def sf(self):
@@ -54,13 +56,14 @@ class SalesforceConnectionMixin:
         try:
             return fieldvars[f"{ns}.orgname"]
         except KeyError:
+
             raise DataGenNameError(
                 "Orgname is not specified. Use --plugin-option orgname <yourorgname>",
                 None,
                 None,
             )
 
-    def _query_record(self, query):
+    def query_single_record(self, query):
         qr = self.sf.query(query)
         records = qr.get("records")
         if not records:
@@ -76,6 +79,21 @@ class SalesforceConnectionMixin:
             return tuple(record.values())[0]
         else:
             return PluginResult(record)
+
+    def query(self, *args, **kwargs):
+        return self.sf.query(*args, **kwargs)
+
+
+class SalesforceConnectionMixin:
+    _sf_connection = None
+    allowed_options = [PluginOption(f"{ns}.orgname", str)]
+
+    @property
+    def sf_connection(self):
+        assert self.context
+        if not self._sf_connection:
+            self._sf_connection = SalesforceConnection(self.context)
+        return self._sf_connection
 
 
 class Salesforce(ParserMacroPlugin, SnowfakeryPlugin, SalesforceConnectionMixin):
@@ -178,7 +196,7 @@ class Salesforce(ParserMacroPlugin, SnowfakeryPlugin, SalesforceConnectionMixin)
             FieldFactory(
                 "PermissionSetId",
                 StructuredValue(
-                    "SOQLQuery.query_record", {"query_from": query}, **line_info
+                    "SalesforceQuery.find_record", {"from": query}, **line_info
                 ),
                 **line_info,
             ),
@@ -201,7 +219,7 @@ class Salesforce(ParserMacroPlugin, SnowfakeryPlugin, SalesforceConnectionMixin)
     class Functions:
         def ProfileId(self, name):
             query = f"select Id from Profile where Name='{name}'"
-            return self.context.plugin._query_record(query)
+            return self.context.plugin.sf_connection.query_single_record(query)
 
         Profile = ProfileId
 
@@ -221,22 +239,26 @@ class SOQLDatasetImpl(DatasetBase):
 
     @property
     def sf(self):
-        return self.plugin.sf
+        return self.plugin.sf_connection.sf
 
     @property
     def bulk(self):
-        return self.plugin.bulk
+        return self.plugin.sf_connection.bulk
 
     def _compose_query(self, kwargs):
-        fields = kwargs.get("fields")
-        sobject = kwargs.get("sobject")
-        where = kwargs.get("where")
+        kwargs = kwargs.copy()
+        fields = kwargs.pop("fields")
+        sobject = kwargs.pop("from")
+        where = kwargs.pop("where")
 
         if not fields:
-            raise DataGenError("SOQL Dataset needs a fields", None, None)
+            raise DataGenError("SOQL Dataset needs a 'fields' list", None, None)
 
-        if not sobject:
-            raise DataGenError("SOQL Dataset needs an sobject", None, None)
+        if not where:
+            raise DataGenError("SOQL Dataset needs a 'from'", None, None)
+
+        if kwargs:
+            raise DataGenError(f"Unknown argument: {tuple(kwargs.keys())}")
 
         query = f"SELECT {fields} FROM {sobject} "
         if where:
@@ -244,8 +266,8 @@ class SOQLDatasetImpl(DatasetBase):
         return query
 
     def _load_dataset(self, iteration_mode, rootpath, kwargs):
-        fields = kwargs.get("fields")
         query = self._compose_query(kwargs)
+        fields = kwargs.get("fields")
         fieldnames = [f.strip() for f in fields.split(",")]
         qs = self.get_query_operation(
             sobject=None,
@@ -285,15 +307,13 @@ def _create_db(fieldnames, results):
     dburl = f"sqlite:///{tempfile}"
     with SqlDbOutputStream.from_url(dburl) as db:
         ti = TableInfo("data")
-        ti.fields = {
-            fieldname: None for fieldname in fieldnames if fieldname.lower() != "id"
-        }
+        ti.fields = {fieldname: None for fieldname in fieldnames}
         db.create_or_validate_tables({"data": ti})
         for row in results:
             row_dict = {fieldname: result for fieldname, result in zip(fieldnames, row)}
-            print(row_dict)
+            # print(row_dict)
             db.write_row("data", row_dict)
-        print(list(db.engine.execute("select * from data")))
+        # print(list(db.engine.execute("select * from data")))
         db.flush()
         db.close()
     return tempdir, dburl
@@ -305,21 +325,50 @@ class SOQLDataset(SalesforceConnectionMixin, DatasetPluginBase):
         super().__init__(*args, **kwargs)
 
 
-class SOQLQuery(SalesforceConnectionMixin, SnowfakeryPlugin):
+class SalesforceQuery(SalesforceConnectionMixin, SnowfakeryPlugin):
     class Functions:
-        def query_random(self, query_from, fields="Id"):
-            count_q = self.context.plugin.sf.query(f"SELECT count() FROM {query_from}")
-            count = count_q["totalSize"]
+        def random_record(self, *args, fields="Id", where=None, **kwargs):
+
+            context_vars = self.context.context_vars()
+            context_vars.setdefault("count_query_cache", {})
+
+            # "from" has to be handled separately because its a Python keyword
+            query_from = self._parse_from_from_args(args, kwargs)
+
+            if not query_from:
+                raise ValueError("Need to specify a table as 'from' argument")
+
+            # TODO: Test WHERE
+            where_clause = f" WHERE {where}" if where else ""
+            count_query = f"SELECT count() FROM {query_from}{where_clause}"
+            count_result = self.context.plugin.sf_connection.query(count_query)
+
+            count = count_result["totalSize"]
             mx = min(count, MAX_SALESFORCE_OFFSET)
+            context_vars["count_query_cache"][count_query] = mx
             rand_offset = randrange(0, mx)
-            query = f"SELECT {fields} FROM {query_from} LIMIT 1 OFFSET {rand_offset}"
-
+            query = f"SELECT {fields} FROM {query_from}{where_clause} LIMIT 1 OFFSET {rand_offset}"
             # todo: use CompositeParallelSalesforce to cache 200 at a time
-            return self.context.plugin._query_record(query)
+            return self.context.plugin.sf_connection.query_single_record(query)
 
-        def query_record(self, query_from, fields="Id"):
-            query = f"SELECT {fields} FROM {query_from} LIMIT 1"
-            return self.context.plugin._query_record(query)
+        def find_record(self, *args, fields="Id", where=None, **kwargs):
+            query_from = self._parse_from_from_args(args, kwargs)
+            where_clause = f" WHERE {where}" if where else ""
+            query = f"SELECT {fields} FROM {query_from}{where_clause} LIMIT 1"
+            return self.context.plugin.sf_connection.query_single_record(query)
+
+        def _parse_from_from_args(self, args, kwargs):
+            if kwargs:
+                query_from = kwargs.pop("from", None)
+
+                if kwargs:
+                    raise ValueError(f"Unknown arguments: {tuple(kwargs.keys())}")
+            elif args:
+                if len(args) != 1 or not isinstance(args[0], str):
+                    raise ValueError(f"Only one string argument allowed, not: {args}")
+                query_from = args[0]
+
+            return query_from
 
 
 def _get_sf_connection(orgname):

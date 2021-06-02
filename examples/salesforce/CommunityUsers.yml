@@ -1,5 +1,5 @@
 - plugin: snowfakery.standard_plugins.Salesforce
-- plugin: snowfakery.standard_plugins.Salesforce.SOQLQuery
+- plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
 
 - object: User
   fields:
@@ -31,15 +31,17 @@
         AssigneeId:
           reference: User
         PermissionSetId:
-          SOQLQuery.query_record:
-            query_from: PermissionSet where Name='ActionPlans'
+          SalesforceQuery.find_record:
+            from: PermissionSet
+            where: Name='ActionPlans'
     - object: PermissionSetAssignment
       fields:
         AssigneeId:
           reference: User
         PermissionSetId:
-          SOQLQuery.query_record:
-            query_from: PermissionSet where Name='ActionPlans'
+          SalesforceQuery.find_record:
+            from: PermissionSet
+            where: Name='ActionPlans'
 
     # __permissionSets:
     # Salesforce.PermissionSetAssignments:
@@ -51,14 +53,14 @@
     #         AssigneeId:
     #           reference: User
     #         PermissionSetId:
-    #           SOQLQuery.query_record:
+    #           SalesforceQuery.find_record:
     #             query_from: PermissionSet where Name='ActionPlans'
     #     - object: PermissionSetAssignment
     #       fields:
     #         AssigneeId:
     #           reference: User
     #         PermissionSetId:
-    #           SOQLQuery.query_record:
+    #           SalesforceQuery.find_record:
     #             query_from: PermissionSet where Name='ActionPlans'
   # - object: PermissionSetAssignment
 
@@ -66,7 +68,7 @@
   #       AssigneeId:
   #         reference: User
   #       PermissionSetId:
-  #         SOQLQuery.query_record:
+  #         SalesforceQuery.find_record:
   #           query_from: PermissionSet where Name='CallCoachingUser'
 - object: User
   nickname: RandomizedUser

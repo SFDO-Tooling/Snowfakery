@@ -1,0 +1,8 @@
+- object: Campaign
+  count: 10
+  fields:
+    Name: ${{fake.Name}} Campaign
+
+- object: Campaign
+  fields:
+    Name: Our Campaign

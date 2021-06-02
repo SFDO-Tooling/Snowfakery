@@ -104,6 +104,23 @@ flows:
                     num_records: 100
                     num_records_tablename: Contact
 
+    campaign_members_for_campaigns:
+        steps:
+            1:
+                task: generate_and_load_from_yaml
+                options:
+                    generator_yaml: examples/salesforce/Campaign.recipe.yml
+
+            2:
+                task: generate_and_load_from_yaml
+                options:
+                    generator_yaml: examples/salesforce/CampaignMembers-random.recipe.yml
+
+            3:
+                task: generate_and_load_from_yaml
+                options:
+                    generator_yaml: examples/salesforce/CampaignMembers-first.recipe.yml
+
     person_accounts_and_community_users:
         # only for use with the persons_and_communities org shape
         steps:
@@ -121,6 +138,8 @@ flows:
                         insert ur;
                         update new User(Id = UserInfo.getUserId(), UserRoleId = ur.Id);
             3:
+                task: update_admin_profile
+            4:
                 task: generate_and_load_from_yaml
                 options:
                     generator_yaml: examples/salesforce/person-accounts-plugin.recipe.yml
@@ -129,5 +148,5 @@ flows:
 
 orgs:
     scratch:
-        person_and_communities:
+        persons_and_communities:
             config_file: orgs/persons_and_communities.json

@@ -337,7 +337,8 @@ class SqlDbOutputStream(OutputStream):
                         key: None for key in inferred_tables[tablename].fields.keys()
                     },
                 )
-                self.table_info[tablename].fallback_dict["id"] = None  # id is special
+                # id is special
+                self.table_info[tablename].fallback_dict.setdefault("id", None)
 
 
 # backwards-compatible name for CCI
@@ -396,12 +397,19 @@ def create_tables_from_inferred_fields(tables, engine, metadata):
     """Create tables based on dictionary of tables->field-list."""
     with engine.connect() as conn:
         for table_name, table in tables.items():
-            columns = [
-                Column(field_name, Unicode(255))
-                for field_name in table.fields
-                if field_name != "id"
+            columns = [Column(field_name, Unicode(255)) for field_name in table.fields]
+            id_column_as_list = [
+                column for column in columns if column.name.lower() == "id"
             ]
-            id_column = Column("id", Integer(), primary_key=True, autoincrement=True)
+
+            # this code primarily supports using this function for
+            # the SOQLDataSet and other datasets where ID may already exists
+            if id_column_as_list:
+                id_column = id_column_as_list[0]
+            else:
+                id_column = Column(
+                    "id", Integer(), primary_key=True, autoincrement=True
+                )
 
             t = Table(table_name, metadata, id_column, *columns)
             if t.exists():
