@@ -1,0 +1,41 @@
+- plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+- object: Contact
+  fields:
+    FirstName: Suzy
+    LastName: Salesforce
+    AccountId:
+      SalesforceQuery.random_record: Account
+
+- plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+- object: Contact
+  fields:
+    FirstName: Suzy
+    LastName:
+      SalesforceQuery.random_record:
+        from: User
+        fields: LastName
+
+- var: User1
+  value:
+    SalesforceQuery.random_record:
+      from: User
+      fields: Id, FirstName, LastName
+
+- object: Contact
+  fields:
+    FirstName: ${{User1.FirstName}}
+    LastName: ${{User1.LastName}}
+
+- var: User2
+  value:
+    SalesforceQuery.find_record:
+      from: User where FirstName='User'
+      fields: Id, FirstName, LastName
+
+- object: Contact
+  fields:
+    FirstName: ${{User2.FirstName}}
+    LastName: ${{User2.LastName}}
+    OwnerId:
+      SalesforceQuery.find_record:
+        from: User where FirstName='User'
