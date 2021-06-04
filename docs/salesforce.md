@@ -103,12 +103,12 @@ Perhaps you do not care which Campaign you connect to:
 ```
 
 As you can see, `find_record` looks for a particular record, and returns the first
-one that Salesforce fnds. `random_record` looks for an random record out of the
+one that Salesforce finds. `random_record` looks for an random record out of the
 first 2000 Salesforce finds. The 2000-record scope limit is based on a Salesforce
 limitation and future versions of Snowfakery may incorporate a workaround.
 
 NOTE: The features we are discussing in this section are for linking to records
-that are in the Salesforce org before the recipe iteration started. These features
+that are in the Salesforce org _before_ the recipe iteration started. These features
 are not for linking to records created by the recipe itself.
 
 Sometimes we want to do more than just link to the other record. For example,
