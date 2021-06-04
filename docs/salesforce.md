@@ -182,6 +182,8 @@ use `SOQLDataset.shuffle`:
       SOQLDataset.shuffle:
         fields: Id, FirstName, LastName
         from: User
+    # The next line depends on the users having particular
+    # permissions.
     OwnerId: ${{__users_from_salesforce.Id}}
     FirstName: ${{__users_from_salesforce.FirstName}}
     LastName: ${{__users_from_salesforce.LastName}}

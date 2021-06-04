@@ -45,8 +45,9 @@ class SalesforceConnection:
 
     _sf = None
 
-    def __init__(self, context):
-        self.context = context
+    def __init__(self, get_orgname):
+        self.get_orgname = get_orgname
+        self.logger = getLogger(__name__)
 
     @property
     def sf(self):
@@ -64,16 +65,7 @@ class SalesforceConnection:
     @property
     def orgname(self):
         """Look up the orgname in the scope"""
-        fieldvars = self.context.field_vars()
-        try:
-            return fieldvars[plugin_option_name]
-        except KeyError:
-
-            raise DataGenNameError(
-                "Orgname is not specified. Use --plugin-option orgname <yourorgname>",
-                None,
-                None,
-            )
+        return self.get_orgname()
 
     def query(self, *args, **kwargs):
         """Query Salesforce through simple_salesforce"""
@@ -148,8 +140,20 @@ class SalesforceConnectionMixin:
     def sf_connection(self):
         assert self.context
         if not self._sf_connection:
-            self._sf_connection = SalesforceConnection(self.context)
+            self._sf_connection = SalesforceConnection(self.get_orgname)
         return self._sf_connection
+
+    def get_orgname(self):
+        """Look up the orgname in the scope"""
+        fieldvars = self.context.field_vars()
+        try:
+            return fieldvars[plugin_option_name]
+        except KeyError:
+            raise DataGenNameError(
+                "Orgname is not specified. Use --plugin-option orgname <yourorgname>",
+                None,
+                None,
+            )
 
 
 class Salesforce(ParserMacroPlugin, SnowfakeryPlugin, SalesforceConnectionMixin):
@@ -291,7 +295,6 @@ class SOQLDatasetImpl(DatasetBase):
         self.get_query_operation = get_query_operation
         self.DataOperationStatus = DataOperationStatus
         self.plugin = plugin
-        self.logger = getLogger(__name__)
         super().__init__(*args, **kwargs)
 
     @property
