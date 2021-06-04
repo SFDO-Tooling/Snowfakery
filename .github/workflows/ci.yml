@@ -52,7 +52,7 @@ jobs:
           make dev-install
 
       - name: Run Tests
-        run: pytest
+        run: python -m pytest
 
   coveralls_done:
     name: Finalize coveralls

@@ -8,7 +8,8 @@ from cumulusci.tests.pytest_plugins.pytest_sf_vcr import (
     salesforce_vcr,
 )
 
-from cumulusci.tests.util import DummyOrgConfig
+from cumulusci.tests.util import DummyOrgConfig, DummyKeychain
+from cumulusci.core.exceptions import ServiceNotConfigured
 
 DUMMY_ORGNAME = "pytest_sf_orgconnect_dummy_orgconfig"
 
@@ -23,9 +24,10 @@ def fallback_org_config():
                 "id": "ORGID/ORGID",
             },
             DUMMY_ORGNAME,
+            keychain=DummyKeychain(),
         )
 
-    original_get_org = None
+    original_get_org = original_load_keychain = None
 
     def get_org(self, name: str):
         if name == DUMMY_ORGNAME:
@@ -33,12 +35,30 @@ def fallback_org_config():
         else:
             return original_get_org(self, name)
 
+    def _load_keychain(self):
+        try:
+            return original_load_keychain(self)
+        except Exception:
+            self.keychain = DummyKeychain()
+
+            def no_services(*args, **kwargs):
+                raise ServiceNotConfigured()
+
+            self.keychain.get_service = no_services
+            if self.project_config is not None:
+                self.project_config.keychain = self.keychain
+
     p = patch(
         "cumulusci.cli.runtime.CliRuntime.get_org",
         get_org,
     )
     original_get_org = p.get_original()[0]
-    with p:
+    p2 = patch(
+        "cumulusci.cli.runtime.CliRuntime._load_keychain",
+        _load_keychain,
+    )
+    original_load_keychain = p2.get_original()[0]
+    with p, p2:
         yield fallback_org_config
 
 
