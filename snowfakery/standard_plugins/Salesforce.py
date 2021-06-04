@@ -1,3 +1,13 @@
+from random import randrange
+from logging import getLogger
+from tempfile import TemporaryDirectory
+from pathlib import Path
+
+from salesforce_bulk import SalesforceBulk
+
+from cumulusci.cli.runtime import CliRuntime
+from cumulusci.salesforce_api.utils import get_simple_salesforce_connection
+
 from snowfakery.plugins import ParserMacroPlugin
 from snowfakery.data_generator_runtime_object_model import (
     ObjectTemplate,
@@ -6,12 +16,6 @@ from snowfakery.data_generator_runtime_object_model import (
     StructuredValue,
 )
 from snowfakery import data_gen_exceptions as exc
-from random import randrange
-from logging import getLogger
-from tempfile import TemporaryDirectory
-from pathlib import Path
-
-from salesforce_bulk import SalesforceBulk
 
 from snowfakery.plugins import SnowfakeryPlugin, PluginOption, PluginResult
 from snowfakery.data_gen_exceptions import (
@@ -30,31 +34,39 @@ from snowfakery.parse_recipe_yaml import TableInfo
 
 MAX_SALESFORCE_OFFSET = 2000  # Any way around this?
 
-ns = "snowfakery.standard_plugins.Salesforce.SalesforceQuery"
+# the option name that the user specifies on the CLI or API is just "orgname"
+# but using this long name internally prevents us from clashing with the
+# user's variable names.
+plugin_option_name = "snowfakery.standard_plugins.Salesforce.SalesforceQuery.orgname"
 
 
 class SalesforceConnection:
-    _sf_connection = None
+    """Helper layer above simple_salesforce and salesforce_bulk"""
+
+    _sf = None
 
     def __init__(self, context):
         self.context = context
 
     @property
     def sf(self):
-        if not self._sf_connection:
-            self._sf_connection, self._bulk = _get_sf_connection(self._orgname)
-        return self._sf_connection
+        """simple_salesfore client"""
+        if not self._sf:
+            self._sf, self._bulk = self._get_sf_clients(self.orgname)
+        return self._sf
 
     def bulk(self):
+        """salesforce_bulk client"""
         if not self._bulk:
-            self._sf_connection, self._bulk = _get_sf_connection(self._orgname)
+            self._sf, self._bulk = self._get_sf_clients(self.orgname)
         return self._bulk
 
     @property
-    def _orgname(self):
+    def orgname(self):
+        """Look up the orgname in the scope"""
         fieldvars = self.context.field_vars()
         try:
-            return fieldvars[f"{ns}.orgname"]
+            return fieldvars[plugin_option_name]
         except KeyError:
 
             raise DataGenNameError(
@@ -63,7 +75,13 @@ class SalesforceConnection:
                 None,
             )
 
+    def query(self, *args, **kwargs):
+        """Query Salesforce through simple_salesforce"""
+        return self.sf.query(*args, **kwargs)
+
     def query_single_record(self, query):
+        """Query Salesforce through simple_salesforce and
+        validate that query returns 1 and only 1 record"""
         qr = self.sf.query(query)
         records = qr.get("records")
         if not records:
@@ -80,13 +98,51 @@ class SalesforceConnection:
         else:
             return PluginResult(record)
 
-    def query(self, *args, **kwargs):
-        return self.sf.query(*args, **kwargs)
+    def compose_query(self, context_name, **kwargs):
+        kwargs = kwargs.copy()
+        fields = kwargs.pop("fields", None)
+        sobject = kwargs.pop("from", None)
+        where = kwargs.pop("where", None)
+
+        if not fields:
+            raise DataGenError(f"{context_name} needs a 'fields' list")
+
+        if not sobject:
+            raise DataGenError(f"{context_name} needs a 'from'")
+
+        if kwargs:
+            raise DataGenError(
+                f"Unknown argument in {context_name}: {tuple(kwargs.keys())}"
+            )
+
+        query = f"SELECT {fields} FROM {sobject} "
+        if where:
+            query += f" WHERE {where}"
+        return query
+
+    @staticmethod
+    def _get_sf_clients(orgname):
+        try:
+            runtime = CliRuntime(load_keychain=True)
+        except Exception as e:
+            raise DataGenError("CLI Runtime cannot be loaded", *e.args)
+
+        name, org_config = runtime.get_org(orgname)
+        sf = get_simple_salesforce_connection(runtime.project_config, org_config)
+        return sf, SalesforceConnection._init_bulk(sf, org_config)
+
+    @staticmethod
+    def _init_bulk(sf, org_config):
+        return SalesforceBulk(
+            host=org_config.instance_url.replace("https://", "").rstrip("/"),
+            sessionId=org_config.access_token,
+            API_version=sf.sf_version,
+        )
 
 
 class SalesforceConnectionMixin:
     _sf_connection = None
-    allowed_options = [PluginOption(f"{ns}.orgname", str)]
+    allowed_options = [PluginOption(plugin_option_name, str)]
 
     @property
     def sf_connection(self):
@@ -224,6 +280,7 @@ class Salesforce(ParserMacroPlugin, SnowfakeryPlugin, SalesforceConnectionMixin)
         Profile = ProfileId
 
 
+# TODO: Tests for this class
 class SOQLDatasetImpl(DatasetBase):
     def __init__(self, plugin, *args, **kwargs):
         from cumulusci.tasks.bulkdata.step import (
@@ -238,42 +295,18 @@ class SOQLDatasetImpl(DatasetBase):
         super().__init__(*args, **kwargs)
 
     @property
-    def sf(self):
-        return self.plugin.sf_connection.sf
-
-    @property
-    def bulk(self):
-        return self.plugin.sf_connection.bulk
-
-    def _compose_query(self, kwargs):
-        kwargs = kwargs.copy()
-        fields = kwargs.pop("fields")
-        sobject = kwargs.pop("from")
-        where = kwargs.pop("where")
-
-        if not fields:
-            raise DataGenError("SOQL Dataset needs a 'fields' list", None, None)
-
-        if not where:
-            raise DataGenError("SOQL Dataset needs a 'from'", None, None)
-
-        if kwargs:
-            raise DataGenError(f"Unknown argument: {tuple(kwargs.keys())}")
-
-        query = f"SELECT {fields} FROM {sobject} "
-        if where:
-            query += f" WHERE {where}"
-        return query
+    def sf_connection(self):
+        return self.plugin.sf_connection
 
     def _load_dataset(self, iteration_mode, rootpath, kwargs):
-        query = self._compose_query(kwargs)
+        query = self.sf_connection.compose_query("SOQLDataset", **kwargs)
         fields = kwargs.get("fields")
         fieldnames = [f.strip() for f in fields.split(",")]
         qs = self.get_query_operation(
             sobject=None,
             fields=fieldnames,
             api_options={},
-            context=self,
+            context=self.sf_connection,
             query=query,
             api=None,
         )
@@ -283,7 +316,7 @@ class SOQLDatasetImpl(DatasetBase):
             raise DataGenError(
                 f"Unable to query records for {query}: {','.join(qs.job_result.job_errors)}"
             )
-        self.tempdir, self.iterator = create_iterator(
+        self.tempdir, self.iterator = create_tempfile_sql_db_iterator(
             iteration_mode, fieldnames, qs.get_results()
         )
         return self.iterator
@@ -293,14 +326,13 @@ class SOQLDatasetImpl(DatasetBase):
         self.tempdir.close()
 
 
-def create_iterator(mode, fieldnames, results):
+def create_tempfile_sql_db_iterator(mode, fieldnames, results):
     tempdir, db_url = _create_db(fieldnames, results)
     rc = sql_dataset(db_url, "data", mode)
     return tempdir, rc
 
 
 def _create_db(fieldnames, results):
-    results = list(results)
     tempdir = TemporaryDirectory()
     tempfile = Path(tempdir.name) / "queryresults.db"
     # TODO: try a real tempdb: "sqlite:///"
@@ -311,9 +343,7 @@ def _create_db(fieldnames, results):
         db.create_or_validate_tables({"data": ti})
         for row in results:
             row_dict = {fieldname: result for fieldname, result in zip(fieldnames, row)}
-            # print(row_dict)
             db.write_row("data", row_dict)
-        # print(list(db.engine.execute("select * from data")))
         db.flush()
         db.close()
     return tempdir, dburl
@@ -327,8 +357,12 @@ class SOQLDataset(SalesforceConnectionMixin, DatasetPluginBase):
 
 class SalesforceQuery(SalesforceConnectionMixin, SnowfakeryPlugin):
     class Functions:
-        def random_record(self, *args, fields="Id", where=None, **kwargs):
+        @property
+        def _sf_connection(self):
+            return self.context.plugin.sf_connection
 
+        def random_record(self, *args, fields="Id", where=None, **kwargs):
+            """Query a random record."""
             context_vars = self.context.context_vars()
             context_vars.setdefault("count_query_cache", {})
 
@@ -341,7 +375,7 @@ class SalesforceQuery(SalesforceConnectionMixin, SnowfakeryPlugin):
             # TODO: Test WHERE
             where_clause = f" WHERE {where}" if where else ""
             count_query = f"SELECT count() FROM {query_from}{where_clause}"
-            count_result = self.context.plugin.sf_connection.query(count_query)
+            count_result = self._sf_connection.query(count_query)
 
             count = count_result["totalSize"]
             mx = min(count, MAX_SALESFORCE_OFFSET)
@@ -349,13 +383,14 @@ class SalesforceQuery(SalesforceConnectionMixin, SnowfakeryPlugin):
             rand_offset = randrange(0, mx)
             query = f"SELECT {fields} FROM {query_from}{where_clause} LIMIT 1 OFFSET {rand_offset}"
             # todo: use CompositeParallelSalesforce to cache 200 at a time
-            return self.context.plugin.sf_connection.query_single_record(query)
+            return self._sf_connection.query_single_record(query)
 
         def find_record(self, *args, fields="Id", where=None, **kwargs):
+            """Find a particular record"""
             query_from = self._parse_from_from_args(args, kwargs)
             where_clause = f" WHERE {where}" if where else ""
             query = f"SELECT {fields} FROM {query_from}{where_clause} LIMIT 1"
-            return self.context.plugin.sf_connection.query_single_record(query)
+            return self._sf_connection.query_single_record(query)
 
         def _parse_from_from_args(self, args, kwargs):
             if kwargs:
@@ -369,29 +404,3 @@ class SalesforceQuery(SalesforceConnectionMixin, SnowfakeryPlugin):
                 query_from = args[0]
 
             return query_from
-
-
-def _get_sf_connection(orgname):
-    try:
-        from cumulusci.cli.runtime import CliRuntime
-
-        from cumulusci.salesforce_api.utils import get_simple_salesforce_connection
-    except ImportError as e:
-        raise ImportError("cumulusci module cannot be loaded by snowfakery", *e.args)
-
-    try:
-        runtime = CliRuntime(load_keychain=True)
-    except Exception as e:
-        raise DataGenError("CLI Runtime cannot be loaded", *e.args)
-
-    name, org_config = runtime.get_org(orgname)
-    sf = get_simple_salesforce_connection(runtime.project_config, org_config)
-    return sf, _init_bulk(sf, org_config)
-
-
-def _init_bulk(sf, org_config):
-    return SalesforceBulk(
-        host=org_config.instance_url.replace("https://", "").rstrip("/"),
-        sessionId=org_config.access_token,
-        API_version=sf.sf_version,
-    )

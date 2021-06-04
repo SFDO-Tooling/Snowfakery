@@ -44,7 +44,7 @@ class REPLACING:
                     replacement,
                     being_replaced,
                     fromfile=being_replaced_filename,
-                    tofile="Docs",
+                    tofile=location,
                 ):
                     print(diff, end="")
             being_replaced.clear()
@@ -58,17 +58,21 @@ class START_EXAMPLE:
     """First line of a code example"""
 
     def next_state(line, location):
-        global replacement, being_replaced_filename
-        if line.startswith("#"):
-            filename = line.split("#")[1].strip()
-            assert Path(filename).exists(), location
-            with Path(filename).open() as f:
-                example_lines = f.readlines()
-            replacement = example_lines
-            being_replaced_filename = filename
-            return REPLACING, [line] + example_lines
-        else:
-            return OPEN, [line]
+        try:
+            global replacement, being_replaced_filename
+            if line.startswith("#"):
+                filename = line.split("#")[1].strip()
+                assert Path(filename).exists(), location
+                with Path(filename).open() as f:
+                    example_lines = f.readlines()
+                replacement = example_lines
+                being_replaced_filename = filename
+                return REPLACING, [line] + example_lines
+            else:
+                return OPEN, [line]
+        except Exception:
+            print("Error: ", line, location)
+            raise
 
 
 def check_triple_quote_alone(line, location):
@@ -81,7 +85,7 @@ def check_triple_quote_alone(line, location):
 TRIPLE_QUOTE = "```"
 
 
-def replace_samples(input_file) -> str:
+def replace_samples(input_file, filename: str) -> str:
     """Read an input file line by line and generate a string
     to write out."""
     lines = list(input_file)
@@ -99,7 +103,7 @@ def replace_samples(input_file) -> str:
 
 def replace_examples(filename):
     with open(filename) as f:
-        output = replace_samples(f)
+        output = replace_samples(f, filename)
     with open(filename, "w") as f:
         f.write(output)
 

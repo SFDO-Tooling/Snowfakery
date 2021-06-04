@@ -168,7 +168,7 @@ class TestSOQLWithCCI:
             Path(__file__).parent.parent / "examples/salesforce_soql_example.recipe.yml"
         )
         with unittest.mock.patch(
-            "snowfakery.standard_plugins.Salesforce._get_sf_connection"
+            "snowfakery.standard_plugins.Salesforce.SalesforceConnection._get_sf_clients"
         ) as conn:
             conn.side_effect = ImportError(
                 "cumulusci module cannot be loaded by snowfakery"

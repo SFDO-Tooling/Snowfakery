@@ -1,5 +1,6 @@
 import warnings
 from typing import IO, Tuple, Mapping, List, Dict, TextIO, Union
+import functools
 
 import yaml
 from faker.providers import BaseProvider as FakerProvider
@@ -10,7 +11,8 @@ from .output_streams import DebugOutputStream, OutputStream
 from .parse_recipe_yaml import parse_recipe
 from .data_generator_runtime import Globals, Interpreter
 from .data_gen_exceptions import DataGenError
-from . import SnowfakeryPlugin
+from .plugins import SnowfakeryPlugin, PluginOption
+
 from .utils.yaml_utils import SnowfakeryDumper, hydrate
 
 # This tool is essentially a three stage interpreter.
@@ -43,7 +45,7 @@ class ExecutionSummary:
 
 
 def merge_options(
-    option_definitions: List, user_options: Mapping, plugin_options: Mapping = None
+    option_definitions: List, user_options: Mapping, raw_plugin_options: Mapping = None
 ) -> Tuple[Dict, set]:
     """Merge/compare options specified by end-user to those declared in YAML file.
 
@@ -62,7 +64,7 @@ def merge_options(
     anything in the YAML generator file. The caller may want to warn the
     user about them or throw an error.
     """
-    options = plugin_options.copy() if plugin_options else {}
+    options = raw_plugin_options.copy() if raw_plugin_options else {}
     for option in option_definitions:
         name = option["option"]
         if user_options.get(name):
@@ -134,7 +136,7 @@ def generate(
 
     faker_providers, snowfakery_plugins = process_plugins(parse_result.plugins)
 
-    process_plugins_options(snowfakery_plugins, plugin_options or {})
+    plugin_options = process_plugins_options(snowfakery_plugins, plugin_options or {})
 
     # figure out how it relates to CLI-supplied generation variables
     options, extra_options = merge_options(
@@ -185,16 +187,35 @@ def generate(
     return ExecutionSummary(parse_result, runtime_context)
 
 
-def process_plugins_options(plugins: dict, plugin_options: dict):
-    # replace option short names with fully qualified names
-    for name, plugin in plugins.items():
-        options = getattr(plugin, "allowed_options", ())
-        for option in options:
-            option_short_name = option.name.rsplit(".", 1)[-1]
-            if option_short_name in plugin_options:
-                plugin_options[option.name] = plugin_options.get(option_short_name)
-            if option.name in plugin_options:
-                option.convert([plugin_options[option.name]])
+def process_plugins_options(
+    plugins: Mapping[str, SnowfakeryPlugin], raw_plugin_options: Mapping[str, object]
+) -> Mapping[str, object]:
+    """Replace option short names with fully qualified names
+       and convert types of options.
+    e.g. the option name that the user specifies on the CLI or API is just "orgname"
+         but we use the long name internally to aavoid clashing with the
+         user's variable names."""
+
+    allowed_options = collect_allowed_plugin_options(tuple(plugins.values()))
+    plugin_options = {}
+    for option in allowed_options:
+        option_long_name = option.name
+        option_short_name = option_long_name.rsplit(".", 1)[-1]
+        if option_short_name in raw_plugin_options:
+            plugin_options[option_long_name] = option.convert(
+                raw_plugin_options[option_short_name]
+            )
+        elif option_long_name in raw_plugin_options:
+            plugin_options[option_long_name] = option.convert(
+                raw_plugin_options[option_long_name]
+            )
+    return plugin_options
+
+
+def collect_allowed_plugin_options(plugins: Tuple) -> List[PluginOption]:
+    """Collect the list of every option allowed by every used plugin"""
+    all_option_lists = [getattr(plugin, "allowed_options", []) for plugin in plugins]
+    return functools.reduce(lambda x, y: x + y, all_option_lists, [])
 
 
 def initialize_globals(continuation_data, templates):

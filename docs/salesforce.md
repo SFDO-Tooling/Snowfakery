@@ -205,6 +205,21 @@ You may also specify a "where" clause to filter out irrelevant records:
     LastName: ${{__users_from_salesforce.LastName}}
 ```
 
+### Testing Queries
+
+In general, you can test Snowfakery files outside of CumulusCI to see if they work:
+
+```s
+$ snowfakery recipe.yml
+```
+
+If you have a recipe which depends on data from an org, specify the CumulusCI orgname
+like this:
+
+```s
+$ snowfakery recipe.yml --plugin-options orgname qa
+```
+
 ## Record Types
 
 To specify a Record Type for a record, just put the Record Type’s API Name in a field named RecordType.
