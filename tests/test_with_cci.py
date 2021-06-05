@@ -3,6 +3,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 from io import StringIO
+from contextlib import contextmanager
 
 from sqlalchemy import create_engine
 
@@ -149,11 +150,7 @@ class TestSOQLWithCCI:
         with pytest.raises(DataGenError):
             generate(StringIO(yaml), {})
 
-    # TODO: add tests for SOQLDatasets
-    #       ensure that all documented params/methods are covered.
-
     @patch("snowfakery.standard_plugins.Salesforce.randrange", lambda *arg, **kwargs: 1)
-    # @skip_if_cumulusci_missing
     @pytest.mark.vcr()
     def test_example_through_api(self, sf, generated_rows, org_config):
         sf.Account.create({"Name": "Company3"})
@@ -175,3 +172,120 @@ class TestSOQLWithCCI:
             )
             with pytest.raises(Exception, match="cumulusci module cannot be loaded"):
                 generate_data(filename, plugin_options={"orgname": "None"})
+
+
+# TODO: add tests for SOQLDatasets
+#       ensure that all documented params/methods are covered.
+class TestSOQLDatasets:
+    @pytest.mark.vcr()
+    def test_soql_dataset_shuffled(self, sf, org_config, generated_rows):
+        filename = (
+            Path(__file__).parent.parent / "examples/soql_dataset_shuffled.recipe.yml"
+        )
+
+        generate_data(filename, plugin_options={"orgname": org_config.name})
+        assert len(generated_rows.mock_calls) == 10
+
+        for mock_call in generated_rows.mock_calls:
+            row_type, row_data = mock_call[1]
+            assert row_type == "Contact"
+            assert row_data["OwnerId"].startswith("005")
+            assert row_data["LastName"]
+
+        # TODO: anon apex is better, so IDs don't end up in the VCR logs.
+        sf.restful(
+            "tooling/executeAnonymous",
+            {
+                "anonymousBody": "delete [SELECT Id FROM Contact WHERE Name LIKE 'TestUser%'];"
+            },
+        )
+
+    @pytest.mark.vcr()
+    def test_soql_dataset_in_order(self, sf, org_config, generated_rows):
+        filename = Path(__file__).parent.parent / "examples/soql_dataset.recipe.yml"
+
+        generate_data(filename, plugin_options={"orgname": org_config.name})
+        assert len(generated_rows.mock_calls) == 10
+
+        for mock_call in generated_rows.mock_calls:
+            row_type, row_data = mock_call[1]
+            assert row_type == "Contact"
+            assert row_data["OwnerId"].startswith("005")
+            assert row_data["LastName"]
+
+        first_user_lastname = sf.query("select LastName from User")["records"][0][
+            "LastName"
+        ]
+        assert generated_rows.mock_calls[0][1][1]["LastName"] == first_user_lastname
+
+        # TODO: anon apex is better, so IDs don't end up in the VCR logs.
+        sf.restful(
+            "tooling/executeAnonymous",
+            {
+                "anonymousBody": "delete [SELECT Id FROM Contact WHERE Name LIKE 'TestUser%'];"
+            },
+        )
+
+    @pytest.mark.vcr()
+    def test_soql_dataset_where(self, sf, org_config, generated_rows):
+        filename = (
+            Path(__file__).parent.parent / "examples/soql_dataset_where.recipe.yml"
+        )
+
+        generate_data(filename, plugin_options={"orgname": org_config.name})
+        assert len(generated_rows.mock_calls) == 10
+
+        for mock_call in generated_rows.mock_calls:
+            row_type, row_data = mock_call[1]
+            assert row_type == "Contact"
+            assert row_data["OwnerId"].startswith("005")
+            assert row_data["FirstName"].startswith("A")
+
+        # TODO: anon apex is better, so IDs don't end up in the VCR logs.
+        sf.restful(
+            "tooling/executeAnonymous",
+            {
+                "anonymousBody": "delete [SELECT Id FROM Contact WHERE Name LIKE 'TestUser%'];"
+            },
+        )
+
+    @pytest.mark.vcr()
+    def test_soql_dataset_bulk(self, sf, org_config, generated_rows):
+        filename = (
+            Path(__file__).parent.parent / "examples/soql_dataset_where.recipe.yml"
+        )
+
+        # pretend there are 5000 records in org
+        pretend_5000 = patch(
+            "simple_salesforce.api.Salesforce.restful",
+            lambda *args, **kwargs: {"sObjects": [{"name": "User", "count": 5000}]},
+        )
+        csv_data = """"Id","FirstName","LastName"
+"0051F00000nc59NQAQ","Automated","Process" """
+
+        @contextmanager
+        def download_file(*args, **kwargs):
+            yield StringIO(csv_data)
+
+        do_not_really_download = patch(
+            "cumulusci.tasks.bulkdata.step.download_file",
+            download_file,
+        )
+        with pretend_5000, do_not_really_download:
+            generate_data(filename, plugin_options={"orgname": org_config.name})
+
+        assert len(generated_rows.mock_calls) == 10
+
+        for mock_call in generated_rows.mock_calls:
+            row_type, row_data = mock_call[1]
+            assert row_type == "Contact"
+            assert row_data["OwnerId"].startswith("005")
+            assert row_data["FirstName"].startswith("A")
+
+        # TODO: anon apex is better, so IDs don't end up in the VCR logs.
+        sf.restful(
+            "tooling/executeAnonymous",
+            {
+                "anonymousBody": "delete [SELECT Id FROM Contact WHERE Name LIKE 'TestUser%'];"
+            },
+        )

@@ -7,7 +7,7 @@ from salesforce_bulk import SalesforceBulk
 
 from cumulusci.cli.runtime import CliRuntime
 from cumulusci.salesforce_api.utils import get_simple_salesforce_connection
-
+from cumulusci.tasks.bulkdata.step import DataApi
 from snowfakery.plugins import ParserMacroPlugin
 from snowfakery.data_generator_runtime_object_model import (
     ObjectTemplate,
@@ -56,6 +56,7 @@ class SalesforceConnection:
             self._sf, self._bulk = self._get_sf_clients(self.orgname)
         return self._sf
 
+    @property
     def bulk(self):
         """salesforce_bulk client"""
         if not self._bulk:
@@ -304,14 +305,15 @@ class SOQLDatasetImpl(DatasetBase):
     def _load_dataset(self, iteration_mode, rootpath, kwargs):
         query = self.sf_connection.compose_query("SOQLDataset", **kwargs)
         fields = kwargs.get("fields")
+        sobject = kwargs.get("from")
         fieldnames = [f.strip() for f in fields.split(",")]
         qs = self.get_query_operation(
-            sobject=None,
+            sobject=sobject,
             fields=fieldnames,
             api_options={},
             context=self.sf_connection,
             query=query,
-            api=None,
+            api=DataApi.SMART,
         )
 
         qs.query()
