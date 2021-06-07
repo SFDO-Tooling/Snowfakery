@@ -5,6 +5,7 @@ on: [push]
 env:
   COVERALLS_PARALLEL: true
   COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+  CUMULUSCI_KEY: ${{ secrets.CUMULUSCI_KEY }}
 
 jobs:
   test:
@@ -12,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.6", "3.7", "3.8"]
+        python-version: ["3.6", "3.7", "3.8", "3.9"]
     steps:
       - uses: "actions/checkout@v2"
       - uses: "actions/setup-python@v1"
@@ -43,7 +44,7 @@ jobs:
       - uses: "actions/checkout@v2"
       - uses: "actions/setup-python@v1"
         with:
-          python-version: "3.8"
+          python-version: "3.9"
 
       - name: "Install dependencies"
         run: |
@@ -53,6 +54,43 @@ jobs:
 
       - name: Run Tests
         run: python -m pytest
+
+  salesforce:
+    name: Test with Salesforce
+    runs-on: ubuntu-latest
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v1"
+        with:
+          python-version: "3.9"
+
+      - name: "Install dependencies"
+        run: |
+          python -VV
+          python -m pip install --upgrade pip pip-tools
+          make dev-install
+
+      - name: Install sfdx
+        run: |
+          mkdir sfdx
+          wget -qO- https://developer.salesforce.com/media/salesforce-cli/sfdx/channels/stable/sfdx-linux-x64.tar.xz | tar xJ -C sfdx --strip-components 1
+          echo $(realpath sfdx/bin) >> $GITHUB_PATH
+      - name: Authenticate Dev Hub
+        run: |
+          sfdx plugins --core
+          echo $SFDX_HUB_KEY_BASE64 | base64 --decode > sfdx.key
+          sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --jwtkeyfile sfdx.key --username $SFDX_HUB_USERNAME --setdefaultdevhubusername -a hub
+        env:
+          SFDX_HUB_KEY_BASE64: ${{ secrets.SFDX_HUB_KEY_BASE64 }}
+          SFDX_CLIENT_ID: ${{ secrets.SFDX_CLIENT_ID }}
+          SFDX_HUB_USERNAME: ${{ secrets.SFDX_HUB_USERNAME }}
+      - name: Run Snowfakery Tests
+        run: |
+          cci flow run test_everything --org dev
+      - name: Delete scratch org
+        if: always()
+        run: |
+          cci org scratch_delete dev
 
   coveralls_done:
     name: Finalize coveralls
