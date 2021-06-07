@@ -144,6 +144,7 @@ def generate_data(
     load_declarations: T.Sequence[
         FileLike
     ] = None,  # read these load declarations for CCI
+    plugin_options: T.Mapping = None,
 ) -> None:
     stopping_criteria = stopping_criteria_from_target_number(target_number)
     dburls = dburls or ([dburl] if dburl else [])
@@ -179,6 +180,7 @@ def generate_data(
             generate_continuation_file=open_new_continue_file,
             continuation_file=open_continuation_file,
             stopping_criteria=stopping_criteria,
+            plugin_options=plugin_options,
         )
 
         # This feature seems seldom useful. Delete it if it isn't missed

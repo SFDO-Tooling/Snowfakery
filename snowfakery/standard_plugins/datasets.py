@@ -150,61 +150,85 @@ class CSVDatasetRandomPermutationIterator(CSVDatasetLinearIterator):
         self.results = iter(rows)
 
 
-class Dataset(SnowfakeryPlugin):
+class DatasetBase:
     def __init__(self, *args, **kwargs):
         self.datasets = {}
-        super().__init__(*args, **kwargs)
+
+    def _iterate(self, plugin, iteration_mode, kwargs):
+        self.context = plugin.context
+        key = self._get_key(kwargs)
+        dataset_instance = self._get_dataset_instance(key, iteration_mode, kwargs)
+        rc = next(dataset_instance, None)
+        if not rc:
+            dataset_instance.start()
+            rc = next(dataset_instance, None)
+
+        assert rc is not None
+        return rc
+
+    def _get_key(self, kwargs):
+        dataset = kwargs.get("dataset")
+        tablename = kwargs.get("table")
+        uniq_name = kwargs.get("name") or self.context.unique_context_identifier()
+        return (dataset, tablename, uniq_name)
+
+    def _get_dataset_instance(self, key, iteration_mode, kwargs):
+        dataset_instance = self.datasets.get(key)
+        if not dataset_instance:
+            filename = self.context.field_vars()["template"].filename
+            assert filename
+            rootpath = Path(filename).parent
+            dataset_instance = self.datasets[key] = self._load_dataset(
+                iteration_mode, rootpath, kwargs
+            )
+        return dataset_instance
+
+    def _load_dataset(self, iteration_mode, rootpath, kwargs):
+        raise NotImplementedError()
 
     def close(self):
         for dataset in self.datasets.values():
             dataset.close()
 
+
+class FileDataset(DatasetBase):
+    def _load_dataset(self, iteration_mode, rootpath, kwargs):
+        dataset = kwargs.get("dataset")
+        tablename = kwargs.get("table")
+
+        with chdir(rootpath):
+            if "://" in dataset:
+                return sql_dataset(dataset, tablename, iteration_mode)
+            else:
+                filename = Path(dataset)
+
+                if not filename.exists():
+                    raise FileNotFoundError("File not found:" + str(filename))
+
+                if filename.suffix != ".csv":
+                    raise AssertionError(
+                        f"Filename extension must be .csv, not {filename.suffix}"
+                    )
+
+                if iteration_mode == "linear":
+                    return CSVDatasetLinearIterator(filename)
+                elif iteration_mode == "shuffle":
+                    return CSVDatasetRandomPermutationIterator(filename)
+
+
+class DatasetPluginBase(SnowfakeryPlugin):
     class Functions:
-        def iterate(self, *args, **kwargs):
-            return self._iterate(*args, **kwargs, iteration_mode="linear")
+        def iterate(self, **kwargs):
+            return self.context.plugin.dataset_impl._iterate(self, "linear", kwargs)
 
-        def shuffle(self, *args, **kwargs):
-            return self._iterate(*args, **kwargs, iteration_mode="shuffle")
+        def shuffle(self, **kwargs):
+            return self.context.plugin.dataset_impl._iterate(self, "shuffle", kwargs)
 
-        def _iterate(self, dataset, table=None, name=None, iteration_mode="linear"):
-            tablename = table
-            name = name or self.context.field_vars()["template"].id
-            key = (dataset, tablename, name)
-            dataset_instance = self.context.plugin.datasets.get(key)
-            if not dataset_instance:
-                filename = self.context.field_vars()["template"].filename
-                assert filename
-                rootpath = Path(filename).parent
-                dataset_instance = self.context.plugin.datasets[
-                    key
-                ] = self._load_dataset(dataset, tablename, rootpath, iteration_mode)
-            rc = next(dataset_instance, None)
-            if not rc:
-                dataset_instance.start()
-                rc = next(dataset_instance, None)
 
-            assert rc is not None
-            return rc
-
-        def _load_dataset(self, dataset, tablename, rootpath, iteration_mode):
-            with chdir(rootpath):
-                if "://" in dataset:
-                    return sql_dataset(dataset, tablename, iteration_mode)
-                else:
-                    filename = Path(dataset)
-
-                    if not filename.exists():
-                        raise FileNotFoundError("File not found:" + str(filename))
-
-                    if filename.suffix != ".csv":
-                        raise AssertionError(
-                            f"Filename extension must be .csv, not {filename.suffix}"
-                        )
-
-                    if iteration_mode == "linear":
-                        return CSVDatasetLinearIterator(filename)
-                    elif iteration_mode == "shuffle":
-                        return CSVDatasetRandomPermutationIterator(filename)
+class Dataset(DatasetPluginBase):
+    def __init__(self, *args, **kwargs):
+        self.dataset_impl = FileDataset()
+        super().__init__(*args, **kwargs)
 
 
 @contextmanager

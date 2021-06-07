@@ -13,3 +13,6 @@ typeguard==2.10.0   # do not upgrade until #181 is fixed
 faker-microservice
 tox
 tox-gh-actions      # needed for CI only
+pytest-vcr
+vcrpy
+responses

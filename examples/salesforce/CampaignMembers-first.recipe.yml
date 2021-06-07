@@ -1,0 +1,15 @@
+- plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+
+- object: Contact
+  fields:
+    FirstName: Bobby
+    LastName: McFerrin
+  friends:
+    - object: CampaignMember
+      fields:
+        ContactId:
+          reference: Contact
+        CampaignId:
+          SalesforceQuery.find_record:
+            from: Campaign
+            where: name='Our Campaign'

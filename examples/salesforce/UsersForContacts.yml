@@ -1,0 +1,25 @@
+- plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+- plugin: snowfakery.standard_plugins.Salesforce
+
+- object: User
+  fields:
+    __random_contact:
+      SalesforceQuery.random_record:
+        from: Contact
+        fields: Id, FirstName, LastName
+
+    FirstName: ${{__random_contact.FirstName}}
+    LastName: ${{__random_contact.LastName}}
+    Alias: Grace
+    Username:
+      fake: Username
+    Email: ${{Username}}
+    TimeZoneSidKey: America/Bogota
+    LocaleSidKey: en_US
+    EmailEncodingKey: UTF-8
+    LanguageLocaleKey: en_US
+    ProfileId:
+      SalesforceQuery.find_record:
+        from: Profile
+        where: Name='Identity User'
+    # ContactId: ${{__random_contact.Id}}

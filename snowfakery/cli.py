@@ -71,9 +71,9 @@ def int_string_tuple(ctx, param, value=None):
 @click.option(
     "--option",
     nargs=2,
-    type=eval_arg,  # TODO: test this more
+    type=eval_arg,
     multiple=True,
-    help="Options to send to the recipe YAML.",
+    help="Option to send to the recipe YAML in a format like 'OptName OptValue'. Specify multiple times if needed.",
 )
 @click.option(
     "--target-number",
@@ -107,6 +107,13 @@ def int_string_tuple(ctx, param, value=None):
     help="Continue generating a dataset where 'continuation-file' left off",
 )
 @click.option(
+    "--plugin-option",
+    nargs=2,
+    type=eval_arg,
+    multiple=True,
+    help="Option to send to a plugin in a format like 'OptName OptValue'. Specify multiple times if needed.",
+)  # options passed by an API instead of CLI
+@click.option(
     "--load-declarations",
     type=click.Path(exists=True, readable=True, dir_okay=False),
     help="Declarations to mix into the generated mapping file",
@@ -115,8 +122,8 @@ def int_string_tuple(ctx, param, value=None):
 @click.version_option(version=version, prog_name="snowfakery")
 def generate_cli(
     yaml_file,
-    option=[],
-    dburls=[],
+    option=(),
+    dburls=(),
     target_number=None,
     debug_internals=None,
     generate_cci_mapping_file=None,
@@ -125,6 +132,7 @@ def generate_cli(
     output_folder=None,
     continuation_file=None,
     generate_continuation_file=None,
+    plugin_option=(),
     should_create_cci_record_type_tables=False,
     load_declarations=None,
 ):
@@ -158,6 +166,7 @@ def generate_cli(
     )
     try:
         user_options = dict(option)
+        plugin_options = dict(plugin_option)
         generate_data(
             yaml_file=yaml_file,
             user_options=user_options,
@@ -172,6 +181,7 @@ def generate_cli(
             generate_continuation_file=generate_continuation_file,
             should_create_cci_record_type_tables=should_create_cci_record_type_tables,
             load_declarations=load_declarations,
+            plugin_options=plugin_options,
         )
     except DataGenError as e:
         if debug_internals:
