@@ -319,21 +319,14 @@ class SOQLDatasetImpl(DatasetBase):
             api=DataApi.SMART,
         )
 
-        errors = []
         try:
             qs.query()
         except Exception as e:
-            errors = [str(e)]
+            raise DataGenError(f"Unable to query records for {query}: {e}") from e
 
-        if (
-            qs.job_result
-            and qs.job_result.status is not self.DataOperationStatus.SUCCESS
-        ):
-            errors = qs.job_result.job_errors
-
-        if errors:
+        if qs.job_result.status is not self.DataOperationStatus.SUCCESS:
             raise DataGenError(
-                f"Unable to query records for {query}: {','.join(errors)}"
+                f"Unable to query records for {query}: {','.join(qs.job_result.job_errors)}"
             )
 
         self.tempdir, self.iterator = create_tempfile_sql_db_iterator(
