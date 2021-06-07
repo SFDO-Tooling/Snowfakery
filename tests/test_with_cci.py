@@ -97,6 +97,25 @@ class TestSOQLNoCCI:
         wraps=fake_sf_client,
     )
     @patch("snowfakery.standard_plugins.Salesforce.randrange", lambda *arg, **kwargs: 5)
+    def test_soql_plugin_no_query_from(self, fake_sf_client, generated_rows):
+        yaml = """
+            - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+            - object: Contact
+              fields:
+                FirstName: Suzy
+                LastName: Salesforce
+                AccountId:
+                    SalesforceQuery.random_record:
+                        where: Name='Foo'
+        """
+        with pytest.raises(DataGenError, match="Must supply 'from:'"):
+            generate(StringIO(yaml), plugin_options={"orgname": "blah"})
+
+    @patch(
+        "snowfakery.standard_plugins.Salesforce.SalesforceConnection.sf",
+        wraps=fake_sf_client,
+    )
+    @patch("snowfakery.standard_plugins.Salesforce.randrange", lambda *arg, **kwargs: 5)
     def test_soql_plugin_record(self, fake_sf_client, generated_rows):
         yaml = """
             - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
@@ -137,7 +156,6 @@ class TestSOQLWithCCI:
         generate(StringIO(yaml), plugin_options={"orgname": org_config.name})
         assert len(generated_rows.mock_calls) == 2
 
-    # @skip_if_cumulusci_missing
     @pytest.mark.vcr()
     def test_missing_orgname(self, sf):
         yaml = """
@@ -148,6 +166,31 @@ class TestSOQLWithCCI:
                     SalesforceQuery.random_record: Account
         """
         with pytest.raises(DataGenError):
+            generate(StringIO(yaml), {})
+
+    def test_random_record__extra_kwarg(self):
+        yaml = """
+            - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+            - object: Contact
+              fields:
+                AccountId:
+                    SalesforceQuery.random_record:
+                        xyzzy: Foo
+        """
+        with pytest.raises(DataGenError, match="xyzzy"):
+            generate(StringIO(yaml), {})
+
+    def test_random_record__extra_positional_arg(self):
+        yaml = """
+            - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+            - object: Contact
+              fields:
+                AccountId:
+                    SalesforceQuery.random_record:
+                        - foo
+                        - bar
+        """
+        with pytest.raises(DataGenError, match="Only one string argument allowed"):
             generate(StringIO(yaml), {})
 
     @patch("snowfakery.standard_plugins.Salesforce.randrange", lambda *arg, **kwargs: 1)
@@ -172,6 +215,35 @@ class TestSOQLWithCCI:
             )
             with pytest.raises(Exception, match="cumulusci module cannot be loaded"):
                 generate_data(filename, plugin_options={"orgname": "None"})
+
+    @pytest.mark.vcr()
+    def test_find_records_returns_nothing(self, org_config):
+        yaml = """
+            - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+            - object: Contact
+              fields:
+                FirstName: Suzy
+                LastName: Salesforce
+                AccountId:
+                    SalesforceQuery.find_record: Contract
+        """
+        with pytest.raises(DataGenError, match="No records returned"):
+            generate_data(StringIO(yaml), plugin_options={"orgname": org_config.name})
+
+    @pytest.mark.vcr()
+    def test_find_records_returns_multiple(self, org_config, sf, generated_rows):
+        yaml = """
+            - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+            - object: Contact
+              fields:
+                FirstName: Suzy
+                LastName: Salesforce
+                AccountId:
+                    SalesforceQuery.find_record: User
+        """
+        generate_data(StringIO(yaml), plugin_options={"orgname": org_config.name})
+        first_user_id = sf.query("select Id from User")["records"][0]["Id"]
+        assert generated_rows.mock_calls[0][1][1]["AccountId"] == first_user_id
 
 
 # TODO: add tests for SOQLDatasets
@@ -289,3 +361,44 @@ class TestSOQLDatasets:
                 "anonymousBody": "delete [SELECT Id FROM Contact WHERE Name LIKE 'TestUser%'];"
             },
         )
+
+    @pytest.mark.vcr()
+    def test_dataset_bad_query(self, org_config, sf, generated_rows):
+        yaml = """
+- plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
+- object: Contact
+  count: 10
+  fields:
+    __users_from_salesforce:
+      SOQLDataset.shuffle:
+        fields: Xyzzy
+        from: Xyzzy
+        """
+        with pytest.raises(DataGenError, match="Xyzzy"):
+            generate_data(StringIO(yaml), plugin_options={"orgname": org_config.name})
+
+    def test_dataset_no_fields(self, org_config, sf, generated_rows):
+        yaml = """
+- plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
+- object: Contact
+  count: 10
+  fields:
+    __users_from_salesforce:
+      SOQLDataset.shuffle:
+        junk: Junk2
+        """
+        with pytest.raises(DataGenError, match="SOQLDataset needs a 'fields' list"):
+            generate_data(StringIO(yaml), plugin_options={"orgname": org_config.name})
+
+    def test_dataset_no_from(self, org_config, sf, generated_rows):
+        yaml = """
+- plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
+- object: Contact
+  count: 10
+  fields:
+    __users_from_salesforce:
+      SOQLDataset.shuffle:
+        fields: Junk3
+        """
+        with pytest.raises(DataGenError, match="SOQLDataset needs a 'from'"):
+            generate_data(StringIO(yaml), plugin_options={"orgname": org_config.name})

@@ -1,0 +1,52 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.my.salesforce.com/services/data/v50.0/query/?q=SELECT+Id+FROM+User+LIMIT+1
+  response:
+    body:
+      string: "{\n  \"totalSize\" : 1,\n  \"done\" : true,\n  \"records\" : [ {\n
+        \   \"attributes\" : {\n      \"type\" : \"User\",\n      \"url\" : \"/services/data/v50.0/sobjects/User/0051F00000nc59NQAQ\"\n
+        \   },\n    \"Id\" : \"0051F00000nc59NQAQ\"\n  } ]\n}"
+    headers:
+      Content-Type:
+      - application/json;charset=UTF-8
+      Response-Headers: Elided
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.my.salesforce.com/services/data/v50.0/query/?q=select+Id+from+User
+  response:
+    body:
+      string: "{\n  \"totalSize\" : 7,\n  \"done\" : true,\n  \"records\" : [ {\n
+        \   \"attributes\" : {\n      \"type\" : \"User\",\n      \"url\" : \"/services/data/v50.0/sobjects/User/0051F00000nc59NQAQ\"\n
+        \   },\n    \"Id\" : \"0051F00000nc59NQAQ\"\n  }, {\n    \"attributes\" :
+        {\n      \"type\" : \"User\",\n      \"url\" : \"/services/data/v50.0/sobjects/User/0051F00000nc59SQAQ\"\n
+        \   },\n    \"Id\" : \"0051F00000nc59SQAQ\"\n  }, {\n    \"attributes\" :
+        {\n      \"type\" : \"User\",\n      \"url\" : \"/services/data/v50.0/sobjects/User/0051F00000nc59MQAQ\"\n
+        \   },\n    \"Id\" : \"0051F00000nc59MQAQ\"\n  }, {\n    \"attributes\" :
+        {\n      \"type\" : \"User\",\n      \"url\" : \"/services/data/v50.0/sobjects/User/0051F00000nc59QQAQ\"\n
+        \   },\n    \"Id\" : \"0051F00000nc59QQAQ\"\n  }, {\n    \"attributes\" :
+        {\n      \"type\" : \"User\",\n      \"url\" : \"/services/data/v50.0/sobjects/User/0051F00000nhhO1QAI\"\n
+        \   },\n    \"Id\" : \"0051F00000nhhO1QAI\"\n  }, {\n    \"attributes\" :
+        {\n      \"type\" : \"User\",\n      \"url\" : \"/services/data/v50.0/sobjects/User/0051F00000nhhlFQAQ\"\n
+        \   },\n    \"Id\" : \"0051F00000nhhlFQAQ\"\n  }, {\n    \"attributes\" :
+        {\n      \"type\" : \"User\",\n      \"url\" : \"/services/data/v50.0/sobjects/User/0051F00000nc59RQAQ\"\n
+        \   },\n    \"Id\" : \"0051F00000nc59RQAQ\"\n  } ]\n}"
+    headers:
+      Content-Type:
+      - application/json;charset=UTF-8
+      Response-Headers: Elided
+    status:
+      code: 200
+      message: OK
+version: 1
