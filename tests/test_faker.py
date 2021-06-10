@@ -165,6 +165,20 @@ class TestFaker:
         assert row_values(write_row_mock, 0, "SSN")
 
     @mock.patch(write_row_path)
+    def test_remove_underscores_from_faker(self, write_row_mock):
+        yaml = """
+        - object: A
+          fields:
+            pn1:
+              fake: PhoneNumber
+            pn2:
+              fake: phonenumber
+        """
+        generate(StringIO(yaml), {}, None)
+        assert row_values(write_row_mock, 0, "pn1")
+        assert row_values(write_row_mock, 0, "pn2")
+
+    @mock.patch(write_row_path)
     def test_faker_kwargs(self, write_row_mock):
         yaml = """
         - object: A
