@@ -173,10 +173,13 @@ class TestFaker:
               fake: PhoneNumber
             pn2:
               fake: phonenumber
+            pn3:
+              fake: phone_number
         """
         generate(StringIO(yaml), {}, None)
-        assert row_values(write_row_mock, 0, "pn1")
-        assert row_values(write_row_mock, 0, "pn2")
+        assert set(row_values(write_row_mock, 0, "pn1")).intersection("0123456789")
+        assert set(row_values(write_row_mock, 0, "pn2")).intersection("0123456789")
+        assert set(row_values(write_row_mock, 0, "pn3")).intersection("0123456789")
 
     @mock.patch(write_row_path)
     def test_faker_kwargs(self, write_row_mock):
