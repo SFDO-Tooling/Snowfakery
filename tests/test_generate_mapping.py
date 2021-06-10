@@ -13,6 +13,17 @@ from snowfakery.data_generator_runtime import Dependency
 from snowfakery import data_gen_exceptions as exc
 
 
+try:
+    import cumulusci
+except ImportError:
+    cumulusci = None
+
+
+skip_if_cumulusci_missing = pytest.mark.skipif(
+    not hasattr(cumulusci, "api"), reason="CumulusCI not installed"
+)
+
+
 class TestGenerateMapping:
     def test_simple_parent_child_reference(self):
         yaml = """
@@ -286,6 +297,7 @@ class TestRecordTypes:
 
 
 class TestPersonAccounts:
+    @skip_if_cumulusci_missing
     def test_basic_person_accounts(self, generate_in_tmpdir):
         recipe_data = """
           - plugin: snowfakery.standard_plugins.Salesforce
