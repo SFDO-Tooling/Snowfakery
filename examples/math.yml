@@ -3,3 +3,4 @@
   fields:
     twelve:
       Math.sqrt: ${{Math.min(144, 200)}}
+    pi: ${{Math.pi}}
