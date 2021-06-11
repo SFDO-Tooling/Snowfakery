@@ -40,7 +40,7 @@ class ExecutionSummary:
         self.templates = parse_results.templates
         self.intertable_dependencies = runtime_results.intertable_dependencies
 
-    def summarize_for_debugging(self):
+    def summarize_for_debugging(self):  # pragma: no cover
         return self.intertable_dependencies, self.templates
 
 

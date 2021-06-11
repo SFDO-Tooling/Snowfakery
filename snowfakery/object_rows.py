@@ -49,10 +49,6 @@ class ObjectRow:
         for slot, value in state.items():
             setattr(self, slot, value)
 
-    @property
-    def _name(self):
-        return self._values.get("name")
-
 
 class ObjectReference(yaml.YAMLObject):
     def __init__(self, tablename, id):
@@ -104,5 +100,5 @@ class NicknameSlot(ObjectReference):
         elif self.allocated_id == SlotState.CONSUMED:
             return SlotState.CONSUMED
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return f"<NicknameSlot {self._tablename} {self.status} {self.allocated_id}>"
