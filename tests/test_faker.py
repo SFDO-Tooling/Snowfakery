@@ -165,6 +165,23 @@ class TestFaker:
         assert row_values(write_row_mock, 0, "SSN")
 
     @mock.patch(write_row_path)
+    def test_remove_underscores_from_faker(self, write_row_mock):
+        yaml = """
+        - object: A
+          fields:
+            pn1:
+              fake: PhoneNumber
+            pn2:
+              fake: phonenumber
+            pn3:
+              fake: phone_number
+        """
+        generate(StringIO(yaml), {}, None)
+        assert set(row_values(write_row_mock, 0, "pn1")).intersection("0123456789")
+        assert set(row_values(write_row_mock, 0, "pn2")).intersection("0123456789")
+        assert set(row_values(write_row_mock, 0, "pn3")).intersection("0123456789")
+
+    @mock.patch(write_row_path)
     def test_faker_kwargs(self, write_row_mock):
         yaml = """
         - object: A
@@ -189,3 +206,14 @@ class TestFaker:
             generate(StringIO(yaml), {}, None)
         assert "xyzzy" in str(e.value)
         assert "fake" in str(e.value)
+
+    def test_faker_internals_are_invisible(self):
+        yaml = """
+        - object: A
+          fields:
+            xyzzy:
+              fake: seed
+        """
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml), {}, None)
+        assert "seed" in str(e.value)
