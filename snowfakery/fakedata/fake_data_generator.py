@@ -25,6 +25,8 @@ class FakeNames(T.NamedTuple):
         return self.f.email()
 
 
+# we will use this to exclude Faker's internal book-keeping methods
+# from our faker interface
 faker_class_attrs = set(dir(Faker))
 
 

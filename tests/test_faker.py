@@ -206,3 +206,14 @@ class TestFaker:
             generate(StringIO(yaml), {}, None)
         assert "xyzzy" in str(e.value)
         assert "fake" in str(e.value)
+
+    def test_faker_internals_are_invisible(self):
+        yaml = """
+        - object: A
+          fields:
+            xyzzy:
+              fake: seed
+        """
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml), {}, None)
+        assert "seed" in str(e.value)
