@@ -1,16 +1,20 @@
-import importlib.util
-
+import math
 from snowfakery.plugins import SnowfakeryPlugin
 
 
 class Math(SnowfakeryPlugin):
     def custom_functions(self, *args, **kwargs):
         "Expose math functions to Snowfakery"
-        mathmodule = importlib.util.find_spec("math")
-        math = importlib.util.module_from_spec(mathmodule)
 
-        math.round = round
-        math.min = min
-        math.max = max
+        class MathNamespace:
+            pass
 
-        return math
+        mathns = MathNamespace()
+        mathns.__dict__ = math.__dict__.copy()
+
+        mathns.pi = math.pi
+        mathns.round = round
+        mathns.min = min
+        mathns.max = max
+
+        return mathns
