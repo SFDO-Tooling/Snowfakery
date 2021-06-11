@@ -1,15 +1,23 @@
 from pytest import fixture
 
 
-from cumulusci.tests.pytest_plugins.pytest_sf_orgconnect import (
-    pytest_addoption,
-    sf_pytest_orgname,
-    org_config,
-    sf,
-    project_config,
-)
-from cumulusci.cli.runtime import CliRuntime
-from cumulusci.core.runtime import BaseCumulusCI
+try:
+    from cumulusci.tests.pytest_plugins.pytest_sf_orgconnect import (
+        pytest_addoption,
+        sf_pytest_orgname,
+        org_config,
+        sf,
+        project_config,
+    )
+    from cumulusci.cli.runtime import CliRuntime
+    from cumulusci.core.runtime import BaseCumulusCI
+
+except ImportError:
+    print("Salesforce features will not be tested")
+    pytest_sf_orgconnect = None
+
+    def sf_pytest_orgname(request):
+        return "OFFLINE_NO_ORG"
 
 
 @fixture(scope="session")

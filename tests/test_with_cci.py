@@ -19,6 +19,10 @@ try:
 except ImportError:
     cumulusci = False
 
+skip_if_cumulusci_missing = pytest.mark.skipif(
+    not hasattr(cumulusci, "api"), reason="CumulusCI not installed"
+)
+
 sample_mapping_yaml = Path(__file__).parent / "mapping_vanilla_sf.yml"
 sample_accounts_yaml = Path(__file__).parent / "gen_sf_standard_objects.yml"
 
@@ -131,10 +135,10 @@ class TestSOQLNoCCI:
         assert generated_rows.row_values(0, "AccountId") == "FAKEID0"
 
 
+@skip_if_cumulusci_missing
 class TestSOQLWithCCI:
     @patch("snowfakery.standard_plugins.Salesforce.randrange", lambda *arg, **kwargs: 0)
     @pytest.mark.vcr()
-    @skip_if_cumulusci_missing
     def test_soql(self, sf, org_config, generated_rows):
         yaml = """
             - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
@@ -248,6 +252,7 @@ class TestSOQLWithCCI:
 
 # TODO: add tests for SOQLDatasets
 #       ensure that all documented params/methods are covered.
+@skip_if_cumulusci_missing
 class TestSOQLDatasets:
     @pytest.mark.vcr()
     def test_soql_dataset_shuffled(self, sf, org_config, generated_rows):

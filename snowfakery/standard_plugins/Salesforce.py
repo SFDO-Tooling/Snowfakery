@@ -3,11 +3,6 @@ from logging import getLogger
 from tempfile import TemporaryDirectory
 from pathlib import Path
 
-from salesforce_bulk import SalesforceBulk
-
-from cumulusci.cli.runtime import CliRuntime
-from cumulusci.salesforce_api.utils import get_simple_salesforce_connection
-from cumulusci.tasks.bulkdata.step import DataApi
 from snowfakery.plugins import ParserMacroPlugin
 from snowfakery.data_generator_runtime_object_model import (
     ObjectTemplate,
@@ -114,10 +109,14 @@ class SalesforceConnection:
 
     @staticmethod
     def _get_sf_clients(orgname):
+
         try:
+            from cumulusci.cli.runtime import CliRuntime
+            from cumulusci.salesforce_api.utils import get_simple_salesforce_connection
+
             runtime = CliRuntime(load_keychain=True)
         except Exception as e:  # pragma: no cover
-            raise DataGenError("CLI Runtime cannot be loaded", *e.args)
+            raise DataGenError("CumulusCI Runtime cannot be loaded", *e.args)
 
         name, org_config = runtime.get_org(orgname)
         sf = get_simple_salesforce_connection(runtime.project_config, org_config)
@@ -125,6 +124,8 @@ class SalesforceConnection:
 
     @staticmethod
     def _init_bulk(sf, org_config):
+        from salesforce_bulk import SalesforceBulk
+
         return SalesforceBulk(
             host=org_config.instance_url.replace("https://", "").rstrip("/"),
             sessionId=org_config.access_token,
@@ -306,6 +307,8 @@ class SOQLDatasetImpl(DatasetBase):
         return self.plugin.sf_connection
 
     def _load_dataset(self, iteration_mode, rootpath, kwargs):
+        from cumulusci.tasks.bulkdata.step import DataApi
+
         query = self.sf_connection.compose_query("SOQLDataset", **kwargs)
         fields = kwargs.get("fields")
         sobject = kwargs.get("from")
