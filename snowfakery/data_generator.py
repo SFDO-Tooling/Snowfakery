@@ -193,7 +193,7 @@ def process_plugins_options(
     """Replace option short names with fully qualified names
        and convert types of options.
     e.g. the option name that the user specifies on the CLI or API is just "orgname"
-         but we use the long name internally to aavoid clashing with the
+         but we use the long name internally to avoid clashing with the
          user's variable names."""
 
     allowed_options = collect_allowed_plugin_options(tuple(plugins.values()))

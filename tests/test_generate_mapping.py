@@ -10,6 +10,7 @@ from snowfakery.generate_mapping_from_recipe import (
     _table_is_free,
 )
 from snowfakery.data_generator_runtime import Dependency
+from snowfakery.cci_mapping_files.post_processes import add_after_statements
 from snowfakery import data_gen_exceptions as exc
 
 
@@ -283,6 +284,24 @@ class TestRecordTypes:
             records = list(db.execute("SELECT * from Case_rt_mapping"))
             assert records == [("Bar", "Bar")], records
             assert mapping["Insert Case"]["fields"]["RecordTypeId"] == "recordtype"
+
+
+class TestAddAfterStatements:
+    def test_add_after_statements(self):
+        mappings = {
+            "Insert Child": {
+                "fields": {},
+                "lookups": {"parent": {"key_field": "parent", "table": "Parent"}},
+                "sf_object": "Child",
+                "table": "Child",
+            },
+            "Insert Parent": {"fields": {}, "sf_object": "Parent", "table": "Parent"},
+            "Insert Parent 2": {"fields": {}, "sf_object": "Parent", "table": "Parent"},
+        }
+        add_after_statements(mappings)
+        assert (
+            mappings["Insert Child"]["lookups"]["parent"]["after"] == "Insert Parent 2"
+        )
 
 
 class TestPersonAccounts:
