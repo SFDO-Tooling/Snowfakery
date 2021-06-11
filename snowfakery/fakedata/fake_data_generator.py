@@ -25,18 +25,20 @@ class FakeNames(T.NamedTuple):
         return self.f.email()
 
 
+faker_class_attrs = set(dir(Faker))
+
+
 class FakeData:
     """Wrapper for Faker which adds Salesforce names and case insensitivity."""
 
     def __init__(self, faker: Faker):
-        faker = faker
         fake_names = FakeNames(faker)
 
-        def obj_to_func_list(obj: object, canonicalizer: T.Callable):
+        def obj_to_func_list(obj: object, canonicalizer: T.Callable, ignore_list: set):
             return {
                 canonicalizer(name): getattr(obj, name)
                 for name in dir(obj)
-                if not name.startswith("_") and name != "seed"
+                if not name.startswith("_") and name not in ignore_list
             }
 
         # canonical form of names is lower-case, no underscores
@@ -44,10 +46,12 @@ class FakeData:
         # include faker names with no underscores to emulate salesforce
         # include snowfakery names defined above
         self.fake_names = {
-            **obj_to_func_list(faker, str.lower),
-            **obj_to_func_list(faker, lambda x: x.lower().replace("_", "")),
+            **obj_to_func_list(faker, str.lower, faker_class_attrs),
+            **obj_to_func_list(
+                faker, lambda x: x.lower().replace("_", ""), faker_class_attrs
+            ),
             # in case of conflict, snowfakery names "win" over Faker names
-            **obj_to_func_list(fake_names, str.lower),
+            **obj_to_func_list(fake_names, str.lower, set()),
         }
 
     def _get_fake_data(self, origname, *args, **kwargs):
