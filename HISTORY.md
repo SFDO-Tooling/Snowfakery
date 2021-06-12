@@ -4,6 +4,19 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 2.0
+
+Recipes can now merge in data from Salesforce. (#395)
+
+Output streams can now be specified as 3rd party libraries. Any Python classname
+can be passed to --output-format as long as it adheres to the OutputStream
+protocol as shown in examples/YamlOutputStream.py (#351)
+
+Snowfakery is thread-safe/multi-processor-ready and available for parallel usage
+in CumulusCI. (CumulusCI Repo)
+
+Snowfakery now supports a more intuitive and properly documented fake list. (TBD)
+
 ## Snowfakery 1.12
 
 Fix a regression: In some contexts it was impossible to call Faker with either
