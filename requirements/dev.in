@@ -3,7 +3,8 @@ black
 coverage
 coveralls
 flake8
-myst-parser
+# myst-parser     # is this actually needed???
+mkdocs
 pip-tools
 pre-commit
 pytest

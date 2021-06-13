@@ -14,19 +14,17 @@ appdirs==1.4.4
     #   fs
     #   virtualenv
 attrs==21.2.0
-    # via
-    #   markdown-it-py
-    #   pytest
-authlib==0.15.3
+    # via pytest
+authlib==0.15.4
     # via
     #   -r requirements/prod.txt
     #   cumulusci
     #   simple-salesforce
 babel==2.9.1
     # via sphinx
-black==21.5b2
+black==21.6b0
     # via -r requirements/dev.in
-certifi==2020.12.5
+certifi==2021.5.30
     # via
     #   -r requirements/prod.txt
     #   cumulusci
@@ -48,6 +46,7 @@ click==7.1.2
     #   -r requirements/prod.txt
     #   black
     #   cumulusci
+    #   mkdocs
     #   pip-tools
     #   snowfakery
 coloredlogs==15.0
@@ -69,8 +68,13 @@ cryptography==3.4.7
     #   authlib
     #   cumulusci
     #   jwcrypto
-cumulusci==3.36.0
+cumulusci==3.37.0
     # via -r requirements/prod.txt
+deprecated==1.2.12
+    # via
+    #   -r requirements/prod.txt
+    #   cumulusci
+    #   jwcrypto
 distlib==0.3.2
     # via virtualenv
 docopt==0.6.2
@@ -79,11 +83,10 @@ docutils==0.16
     # via
     #   -r requirements/prod.txt
     #   cumulusci
-    #   myst-parser
     #   sphinx
 faker-microservice==2.0.0
     # via -r requirements/dev.in
-faker==8.2.1
+faker==8.6.0
     # via
     #   -r requirements/prod.txt
     #   cumulusci
@@ -99,6 +102,8 @@ fs==2.4.13
     # via
     #   -r requirements/prod.txt
     #   cumulusci
+ghp-import==2.0.1
+    # via mkdocs
 github3.py==2.0.0
     # via
     #   -r requirements/prod.txt
@@ -118,7 +123,7 @@ humanfriendly==9.1
     #   -r requirements/prod.txt
     #   coloredlogs
     #   cumulusci
-identify==2.2.7
+identify==2.2.10
     # via pre-commit
 idna==2.10
     # via
@@ -132,12 +137,14 @@ immutables==0.15
     # via
     #   -r requirements/prod.txt
     #   contextvars
-importlib-metadata==4.0.1
+importlib-metadata==4.5.0
     # via
     #   -r requirements/prod.txt
     #   cumulusci
     #   flake8
     #   keyring
+    #   markdown
+    #   mkdocs
     #   pep517
     #   pluggy
     #   pre-commit
@@ -151,10 +158,10 @@ jinja2==2.11.3
     # via
     #   -r requirements/prod.txt
     #   cumulusci
-    #   myst-parser
+    #   mkdocs
     #   snowfakery
     #   sphinx
-jwcrypto==0.8
+jwcrypto==0.9
     # via
     #   -r requirements/prod.txt
     #   cumulusci
@@ -167,10 +174,8 @@ lxml==4.6.3
     # via
     #   -r requirements/prod.txt
     #   cumulusci
-markdown-it-py==1.1.0
-    # via
-    #   mdit-py-plugins
-    #   myst-parser
+markdown==3.3.4
+    # via mkdocs
 markupsafe==1.1.1
     # via
     #   -r requirements/prod.txt
@@ -178,18 +183,19 @@ markupsafe==1.1.1
     #   jinja2
 mccabe==0.6.1
     # via flake8
-mdit-py-plugins==0.2.8
-    # via myst-parser
+mergedeep==1.3.4
+    # via mkdocs
+mkdocs==1.2.1
+    # via -r requirements/dev.in
 multidict==5.1.0
     # via yarl
 mypy-extensions==0.4.3
     # via black
-myst-parser==0.14.0
-    # via -r requirements/dev.in
 nodeenv==1.6.0
     # via pre-commit
 packaging==20.9
     # via
+    #   mkdocs
     #   pytest
     #   sphinx
     #   tox
@@ -245,6 +251,7 @@ python-dateutil==2.8.1
     #   -r requirements/prod.txt
     #   cumulusci
     #   faker
+    #   ghp-import
     #   github3.py
     #   snowfakery
 pytz==2021.1
@@ -253,12 +260,15 @@ pytz==2021.1
     #   babel
     #   cumulusci
     #   fs
+pyyaml-env-tag==0.1
+    # via mkdocs
 pyyaml==5.4.1
     # via
     #   -r requirements/prod.txt
     #   cumulusci
-    #   myst-parser
+    #   mkdocs
     #   pre-commit
+    #   pyyaml-env-tag
     #   snowfakery
     #   vcrpy
 regex==2021.4.4
@@ -285,7 +295,7 @@ robotframework-lint==1.1
     # via
     #   -r requirements/prod.txt
     #   cumulusci
-robotframework-pabot==1.13
+robotframework-pabot==2.0.0
     # via
     #   -r requirements/prod.txt
     #   cumulusci
@@ -298,10 +308,15 @@ robotframework-requests==0.9.1
     # via
     #   -r requirements/prod.txt
     #   cumulusci
-robotframework-seleniumlibrary==4.5.0
+robotframework-seleniumlibrary==5.1.3
     # via
     #   -r requirements/prod.txt
     #   cumulusci
+robotframework-stacktrace==0.4.0
+    # via
+    #   -r requirements/prod.txt
+    #   cumulusci
+    #   robotframework-pabot
 robotframework==4.0.3
     # via
     #   -r requirements/prod.txt
@@ -310,6 +325,7 @@ robotframework==4.0.3
     #   robotframework-pabot
     #   robotframework-requests
     #   robotframework-seleniumlibrary
+    #   robotframework-stacktrace
 rst2ansi==0.1.5
     # via
     #   -r requirements/prod.txt
@@ -337,6 +353,7 @@ six==1.16.0
     #   -r requirements/prod.txt
     #   cumulusci
     #   fs
+    #   jwcrypto
     #   python-dateutil
     #   responses
     #   salesforce-bulk
@@ -350,9 +367,7 @@ snowfakery==1.12
     #   -r requirements/prod.txt
     #   cumulusci
 sphinx==3.5.4
-    # via
-    #   -r requirements/dev.in
-    #   myst-parser
+    # via -r requirements/dev.in
 sphinxcontrib-applehelp==1.0.2
     # via sphinx
 sphinxcontrib-devhelp==1.0.2
@@ -365,7 +380,7 @@ sphinxcontrib-qthelp==1.0.3
     # via sphinx
 sphinxcontrib-serializinghtml==1.1.5
     # via sphinx
-sqlalchemy==1.4.15
+sqlalchemy==1.4.17
     # via
     #   -r requirements/prod.txt
     #   cumulusci
@@ -403,7 +418,6 @@ typing-extensions==3.10.0.0
     #   black
     #   cumulusci
     #   importlib-metadata
-    #   markdown-it-py
     #   pydantic
     #   snowfakery
     #   yarl
@@ -417,7 +431,7 @@ uritemplate==3.0.1
     #   -r requirements/prod.txt
     #   cumulusci
     #   github3.py
-urllib3==1.26.4
+urllib3==1.26.5
     # via
     #   -r requirements/prod.txt
     #   cumulusci
@@ -432,8 +446,14 @@ virtualenv==20.4.7
     # via
     #   pre-commit
     #   tox
+watchdog==2.1.2
+    # via mkdocs
 wrapt==1.12.1
-    # via vcrpy
+    # via
+    #   -r requirements/prod.txt
+    #   cumulusci
+    #   deprecated
+    #   vcrpy
 xmltodict==0.12.0
     # via
     #   -r requirements/prod.txt

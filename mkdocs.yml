@@ -1,3 +1,17 @@
 site_name: Snowfakery documentation
+site_url: ""
 theme: readthedocs
 repo_url: https://github.com/SFDO-Tooling/Snowfakery/
+nav:
+  - index.md
+  - salesforce.md
+  - fakedata.md
+  - embedding.md
+  - extending.md
+markdown_extensions:
+  - toc:
+      permalink: True
+      toc_depth: 4
+plugins:
+  - search
+  - snowfakery_fakes # this causes a timeout on ReadTheDocs.org
