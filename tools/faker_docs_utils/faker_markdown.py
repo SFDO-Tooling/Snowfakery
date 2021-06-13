@@ -42,7 +42,7 @@ def locales_as_markdown(current_locale: str):
         except (ValueError, AttributeError):
             return None
         link_text = f"{locale} : {country_name}"
-        return f" - [{link_text}]({locale}.md)\n"
+        return f" - [{link_text}](fakedata/{locale}.md)\n"
 
     other_locales = [locale for locale in AVAILABLE_LOCALES if locale != current_locale]
     links = [format_link(locale) for locale in other_locales]
@@ -64,11 +64,12 @@ def generate_markdown_for_fakers(outfile, locale):
         f"""The basic concepts of fake data are described in
 the [main docs](index.md#fake-data).
 
-Current Locale: {locale} ({faker.current_country()})\n
-
 Our fake data can be localized to many languages. We have
 [detailed docs](https://snowfakery.readthedocs.io/en/feature-fake-data-docs/locales.html)
 about the other languages.
+
+Current Locale: {locale} ({faker.current_country()})\n
+
 """
     )
 
