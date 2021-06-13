@@ -15,5 +15,5 @@ markdown_extensions:
 plugins:
   - search
   - snowfakery_fakes:
-      # build_locales: True # do or do not generate locales
+      build_locales: True # do or do not generate locales
       # should be True on the fake-data-docs branch
