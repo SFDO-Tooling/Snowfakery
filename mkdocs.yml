@@ -5,7 +5,7 @@ repo_url: https://github.com/SFDO-Tooling/Snowfakery/
 nav:
   - index.md
   - salesforce.md
-  - fakedata.md
+  - Fake Data: fakedata.md
   - embedding.md
   - extending.md
 markdown_extensions:
