@@ -35,7 +35,7 @@ def country_for_locale(locale: str):
     return f.current_country()
 
 
-def other_locales(current_locale: str):
+def locales_as_markdown(current_locale: str):
     def format_link(locale: str):
         try:
             country_name = country_for_locale(locale)
@@ -59,20 +59,25 @@ def generate_markdown_for_fakers(outfile, locale):
         print(*args, **kwargs, file=outfile)
 
     output(f"# Fake Data: {locale}\n")
+
     output(
-        f"Current Locale: {locale} ({faker.current_country()}) [[Other Locales](#other-locales)]"
+        f"""The basic concepts of fake data are described in
+the [main docs](index.md#fake-data).
+
+Current Locale: {locale} ({faker.current_country()})\n
+
+Our fake data can be localized to many languages. We have
+[detailed docs](https://snowfakery.readthedocs.io/en/feature-fake-data-docs/locales.html)
+about the other languages.
+"""
     )
-    output()
+
     output("[TOC]\n")
 
     output("## Commonly Used\n")
     summarize_categories(output, [f for f in all_fakers if f.common], "", locale)
     output("## Rarely Used\n")
     summarize_categories(output, [f for f in all_fakers if not f.common], "", locale)
-    locales = other_locales(locale)
-    if locales:
-        output("## Other Locales\n")
-        output(locales)
 
 
 def summarize_categories(output, fakers, common: str, locale):
@@ -132,3 +137,15 @@ def generate_markdown_for_all_locales(path: Path, locales=AVAILABLE_LOCALES):
     for locale in locales:
         with Path(path, f"{locale}.md").open("w") as f:
             generate_markdown_for_fakers(f, locale)
+
+
+def generate_locales_index(path: Path):
+    with Path(path).open("w") as outfile:
+
+        def output(*args, **kwargs):
+            print(*args, **kwargs, file=outfile)
+
+        locales = locales_as_markdown(None)
+        if locales:
+            output("## Faker Locales\n")
+            output(locales)

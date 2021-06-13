@@ -33,6 +33,14 @@ class Plugin(BasePlugin):
         ):
             from tools.faker_docs_utils.faker_markdown import (
                 generate_markdown_for_all_locales,
+                generate_markdown_for_fakers,
+                generate_locales_index,
             )
 
-            generate_markdown_for_all_locales(faker_docs_dir)
+            fakerdocs_md = root_dir / "docs/fakedata.md"
+            with fakerdocs_md.open("w") as f:
+                generate_markdown_for_fakers(f, "en_US")
+
+            if self.config.get("build_locales"):
+                generate_markdown_for_all_locales(faker_docs_dir)
+                generate_locales_index("docs/locales.md")

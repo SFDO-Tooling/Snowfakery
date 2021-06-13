@@ -14,4 +14,6 @@ markdown_extensions:
       toc_depth: 4
 plugins:
   - search
-  - snowfakery_fakes # this causes a timeout on ReadTheDocs.org
+  - snowfakery_fakes:
+      # build_locales: True # do or do not generate locales
+      # should be True on the fake-data-docs branch
