@@ -1434,7 +1434,7 @@ other databases so we can have a sense of what works well and what
 does not.
 
 
-## Plugins and Providers
+### Plugins and Providers
 
 Plugins and Providers allow Snowfakery to be extended with Python code. A plugin adds new functions to Snowfakery. A Provider adds new capabilities to the Faker library which is exposed to Snowfakery users through the fake: keyword.
 
@@ -1444,9 +1444,9 @@ You include either Plugins or Providers in a Snowfakery file like this:
 - plugin: package.module.classname
 ```
 
-## Built-in Plugins
+### Built-in Plugins
 
-### Advanced Math
+#### Advanced Math
 
 Snowfakery has a "Math" plugin which gives you access to all features from Python's
 [`math`](https://docs.python.org/3/library/math.html) module plus
@@ -1701,7 +1701,9 @@ There are several examples [in the Snowfakery repository](https://github.com/SFD
 Salesforce-specific patterns and tools are described in
 [Using Snowfakery with Salesforce](salesforce.md)
 
-## Snowfakery Glossary
+## Appendices
+
+### Snowfakery Glossary
 
 - Object: When we think about our Rows in the context of each other, we often use the word “Object”. That’s because rows often *represent* real-world entities like houses (or at least their, addresses), organizations and people (in this case its acceptable to objectify people). See also: “Rows”
 - Object Template: These represent instructions on how to create a row, or multiple rows in a database. Each row represents a real-world Object.
@@ -1711,7 +1713,7 @@ Salesforce-specific patterns and tools are described in
 - Singleton: A singleton is an Object Template that generates a single row regardless of how many times the recipe is iterated over.
 - YAML: YAML is a relatively simple, human-readable format. You can learn more about it at [yaml.org](http://yaml.org/). But you can also just pick up the basics of it by reading along.
 
-## Security Profile of Snowfakery
+### Appendix: Security Profile of Snowfakery
 
 Snowfakery should be considered a domain-specific programming language with
 access to most of the power of Python. It can load Python plugins and
@@ -1720,7 +1722,7 @@ environment that has access to secure resources such as passwords, network
 connections, etc.
 
 
-## Appendix: The Age Old Puzzle
+### Appendix: The Age Old Puzzle
 
 ```yaml
     # As I was going to St. Ives,
