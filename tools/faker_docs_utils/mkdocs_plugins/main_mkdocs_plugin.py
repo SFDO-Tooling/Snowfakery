@@ -45,6 +45,12 @@ class Plugin(BasePlugin):
             with fakerdocs_md.open("w") as f:
                 generate_markdown_for_fakers(f, "en_US", main_header)
 
-            if self.config.get("build_locales"):
+            build_locales_env = os.environ.get("SF_MKDOCS_BUILD_LOCALES")
+            if build_locales_env:
+                build_locales = build_locales_env != "False"
+            else:
+                build_locales = self.config.get("build_locales")
+
+            if build_locales:
                 generate_markdown_for_all_locales(faker_docs_dir)
                 generate_locales_index("docs/locales.md")

@@ -71,6 +71,11 @@ Or you could make it outside of the project repo.
 
     $ pytest
 
+    Test the documentation like this:
+
+    $ make docs
+    $ open build/html/index.html
+
 7. Your new code should also have meaningful tests. One way to double check that
    your tests cover everything is to ensure that your new code has test code coverage:
 
