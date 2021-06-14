@@ -83,6 +83,8 @@ Our fake data can be localized to many languages. We have
 [detailed docs](https://snowfakery.readthedocs.io/en/feature-fake-data-docs/locales.html)
 about how to use fake data in each of the other languages.
 
+The default locale is `en_US`: United Statesian Engish.
+
 Let's say that you want to generate fake data for France instead of the
 United States.
 
@@ -139,7 +141,7 @@ We can even pick the locale randomly:
       - ja_JP # Japanese
       - en_CA # Canadian English
       - fr_FR # French from France
-      - fr_CA # Canadian Frencch
+      - fr_CA # Canadian French
       - de_DE # German from Germany
 - object: Account
   fields:

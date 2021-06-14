@@ -9,6 +9,8 @@ nav:
   - Fake Data: fakedata.md
   - embedding.md
   - extending.md
+extra_css:
+  - stylesheets/extra.css
 markdown_extensions:
   - toc:
       permalink: True
