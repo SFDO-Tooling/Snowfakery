@@ -13,7 +13,6 @@ try:
     from cumulusci.core.runtime import BaseCumulusCI
 
 except ImportError:
-    print("Salesforce features will not be tested")
     pytest_sf_orgconnect = None
 
     def sf_pytest_orgname(request):
