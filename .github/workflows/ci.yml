@@ -36,6 +36,25 @@ jobs:
           python setup.py install
           snowbench examples/basic-salesforce.recipe.yml 10_000 Account --number-of-processes 4
 
+  with_cci:
+    name: With CumulusCI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v1"
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: |
+          python -VV
+          python -m pip install --upgrade pip pip-tools
+          make dev-install
+          python -m pip install cumulusci
+
+      - name: Run Tests
+        run: python -m pytest
+
   windows:
     name: Windows ${{ matrix.python-version }}
     runs-on: windows-latest

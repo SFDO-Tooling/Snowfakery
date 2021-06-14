@@ -1,0 +1,40 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.my.salesforce.com/services/data/v50.0/limits/recordCount?sObjects=Xyzzy
+  response:
+    body:
+      string: "{\n  \"sObjects\" : [ ]\n}"
+    headers:
+      Content-Type:
+      - application/json;charset=UTF-8
+      Response-Headers: Elided
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.my.salesforce.com/services/data/v50.0/query/?q=SELECT+Xyzzy+FROM+Xyzzy+
+  response:
+    body:
+      string: "[ {\n  \"message\" : \"\\nSELECT Xyzzy FROM Xyzzy\\n                  ^\\nERROR
+        at Row:1:Column:19\\nsObject type 'Xyzzy' is not supported. If you are attempting
+        to use a custom object, be sure to append the '__c' after the entity name.
+        Please reference your WSDL or the describe call for the appropriate names.\",\n
+        \ \"errorCode\" : \"INVALID_TYPE\"\n} ]"
+    headers:
+      Content-Type:
+      - application/json;charset=UTF-8
+      Response-Headers: Elided
+    status:
+      code: 400
+      message: Bad Request
+version: 1

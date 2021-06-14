@@ -13,6 +13,17 @@ from snowfakery.data_generator_runtime import Dependency
 from snowfakery import data_gen_exceptions as exc
 
 
+try:
+    import cumulusci
+except ImportError:
+    cumulusci = None
+
+
+skip_if_cumulusci_missing = pytest.mark.skipif(
+    not hasattr(cumulusci, "api"), reason="CumulusCI not installed"
+)
+
+
 class TestGenerateMapping:
     def test_simple_parent_child_reference(self):
         yaml = """
@@ -286,6 +297,7 @@ class TestRecordTypes:
 
 
 class TestPersonAccounts:
+    @skip_if_cumulusci_missing
     def test_basic_person_accounts(self, generate_in_tmpdir):
         recipe_data = """
           - plugin: snowfakery.standard_plugins.Salesforce
@@ -332,6 +344,33 @@ class TestPersonAccounts:
         with pytest.raises(exc.DataGenError, match="Bar"):
             generate(StringIO(recipe_data), {}, None)
 
+    def test_special_object_not_string(self):
+        recipe_data = """
+          - plugin: snowfakery.standard_plugins.Salesforce
+          - object: Account
+            fields:
+              Foo:
+                Salesforce.SpecialObject:
+                  name: 5
+          """
+        with pytest.raises(
+            exc.DataGenError, match="`name` argument should be a string"
+        ):
+            generate(StringIO(recipe_data), {}, None)
+
+    def test_special_object_syntax_error(self):
+        recipe_data = """
+          - plugin: snowfakery.standard_plugins.Salesforce
+          - object: Account
+            fields:
+              Foo:
+                Salesforce.SpecialObject: 5
+          """
+        with pytest.raises(
+            exc.DataGenError, match="`name` argument should be a string"
+        ):
+            generate(StringIO(recipe_data), {}, None)
+
     def test_person_account_sample(self, generate_in_tmpdir):
         pa_sample = (
             Path(__file__).parent.parent
@@ -370,3 +409,23 @@ class TestPersonAccounts:
 
         with generate_in_tmpdir(recipe_data) as (mapping, db):
             self._standard_validations(mapping, db)
+
+    def test_person_accounts_bad_nickname(self, generate_in_tmpdir):
+        recipe_data = """
+          - plugin: snowfakery.standard_plugins.Salesforce
+          - object: Account
+            fields:
+              FirstName:
+                fake: first_name
+              LastName:
+                fake: last_name
+              PersonContactId:
+                Salesforce.SpecialObject:
+                  name: PersonContact
+                  nickname: 5
+          """
+
+        with pytest.raises(
+            exc.DataGenError, match="`nickname` argument should be a string"
+        ):
+            generate(StringIO(recipe_data), {}, None)
