@@ -157,7 +157,7 @@ another way that you can ensure that every synthetic record you
 create is associated with a distinct record from Salesforce.
 
 ```yaml
-# examples/soql_dataset.yml
+# examples/soql_dataset.recipe.yml
 - plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
 - object: Contact
   count: 10
@@ -169,13 +169,14 @@ create is associated with a distinct record from Salesforce.
     OwnerId: ${{__users_from_salesforce.Id}}
     FirstName: ${{__users_from_salesforce.FirstName}}
     LastName: ${{__users_from_salesforce.LastName}}
+    Username: TestUser${{fake.Username}}
 ```
 
 Or if you'd like them in a random order, you can
 use `SOQLDataset.shuffle`:
 
 ```yaml
-# examples/soql_dataset_shuffled.yml
+# examples/soql_dataset_shuffled.recipe.yml
 - plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
 - object: Contact
   count: 10
@@ -189,12 +190,13 @@ use `SOQLDataset.shuffle`:
     OwnerId: ${{__users_from_salesforce.Id}}
     FirstName: ${{__users_from_salesforce.FirstName}}
     LastName: ${{__users_from_salesforce.LastName}}
+    Username: TestUser${{fake.Username}}
 ```
 
 You may also specify a "where" clause to filter out irrelevant records:
 
 ```yaml
-# examples/soql_dataset_where.yml
+# examples/soql_dataset_where.recipe.yml
 - plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
 - object: Contact
   count: 10
@@ -203,7 +205,7 @@ You may also specify a "where" clause to filter out irrelevant records:
       SOQLDataset.shuffle:
         fields: Id, FirstName, LastName
         from: User
-        where: FirstName Like "A%"
+        where: FirstName Like 'A%'
     OwnerId: ${{__users_from_salesforce.Id}}
     FirstName: ${{__users_from_salesforce.FirstName}}
     LastName: ${{__users_from_salesforce.LastName}}
