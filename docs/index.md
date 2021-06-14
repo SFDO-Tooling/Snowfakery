@@ -245,27 +245,8 @@ You can generate many kinds of fake data using the `fake` function:
 
 You can fake all sorts of stuff. Names, addresses, Latin text, English sentences, URLs, etc.
 
-The complete list is in [it's own document](fakedata.md)
-
-For example, you can fake a user account like this:
-
-```yaml
-# examples/salesforce/simple-user.yml
-- object: User
-  fields:
-    Username:
-      fake: Username
-    FirstName:
-      fake: FirstName
-    LastName:
-      fake: LastName
-    Email:
-      fake: Email
-    Alias:
-      fake: Alias
-```
-
-It doesn't matter if you use upper or lower case for fake names.
+The complete list, along with other related features, can be found in
+the [Fake Data Tutorial](fakedata.md)
 
 ### Friends
 
@@ -552,7 +533,8 @@ Create a reference to a random, already-created row from some table.
 - object: Owner
   count: 10
   fields:
-    name: fake.name
+    name:
+      fake: Name
 - object: Pet
   count: 10
   fields:
@@ -576,66 +558,9 @@ github issue.
 
 ### `fake`
 
-FIXME: 
+Generate fake data. This function is defined in detail
+in the [Fake Data Tutorial](fakedata.md)
 
-You would install that provider like this:
-
-```s
-$ pip install faker_microservice
-```
-
-Here are some Python Faker providers:
-
-<https://faker.readthedocs.io/en/master/communityproviders.html>
-
-And you could make your own providers as well.
-
-Fake can be called as an inline function in an expression:
-
-```yaml
-FullName: ${{fake.FirstName}} Johnson
-```
-
-You can also call these functions with arguments as described in Faker's [documentation](https://faker.readthedocs.io/en/master/providers.html)
-
-```yaml
-- object: Example
-  field:
-    country: ${{fake.country_code(representation='alpha-2')}}
-```
-
-Or:
-
-```yaml
-- object: Example
-  field:
-    country: 
-      fake.country_code:
-          representation: 'alpha-2'
-```
-
-### International Fakes
-
-You can specify internationally appropriate fakes for many different kind of names (e.g. person, company) by setting the snowfakery_locale this:
-
-```yaml
-- var: snowfakery_locale
-  value: no_NO
-- object: person
-  fields:
-    name:
-      fake: name
-- var: snowfakery_locale
-  value: fr_FR
-- object: person
-  fields:
-    name:
-      fake: name
-```
-
-This will generate a “typical” Norwegian first name for the first person object and a French name for the second person object.
-
-You can infer which Faker providers are internationalizable by looking through the Faker [repository](https://github.com/joke2k/faker/tree/master/faker/providers) and seeing which directories have localizations. For example there are only three localizations of [credit card](https://github.com/joke2k/faker/tree/master/faker/providers) (who knew that credit cards were different in Iran and Russia) and dozens of localizations for [person name](https://github.com/joke2k/faker/tree/master/faker/providers/person).
 
 
 ### `date_between`
@@ -959,7 +884,8 @@ a single recipe.
 
 #### `fake:` and `fake.`
 
-The `fake:` function and `fake.` namespace both generate fake data as described elsewhere in this documentation.
+The `fake:` block function and `fake.` namespace both generate
+fake data as described in the [Fake Data Tutorial](fakedata.md).
 
 ```yaml
 # examples/two_fakers.yml

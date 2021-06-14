@@ -36,6 +36,8 @@ The description above might generate output like this:
 Account(id=1, Name=Nelson-Deleon, Description=Secured bandwidth-monitored moratorium, BillingStreet=2187 Kerry Way, BillingCity=Rangelland, BillingState=Colorado, BillingPostalCode=08388, BillingCountry=United States, Phone=001-738-530-9719)
 ```
 
+It doesn't matter if you use upper or lower case for fake names.
+
 ## Formulas
 
 Sometimes you might want to combine the fake data with other data
@@ -76,6 +78,10 @@ a nested syntax for that:
 ```
 
 ## Localization
+
+Our fake data can be localized to many languages. We have
+[detailed docs](https://snowfakery.readthedocs.io/en/feature-fake-data-docs/locales.html)
+about how to use fake data in each of the other languages.
 
 Let's say that you want to generate fake data for France instead of the
 United States.
@@ -161,5 +167,33 @@ The main Snowfakery documentation describes how to fake
 [dates](index.md#date-between) and [numbers](index.md#random-number).
 
 That's it. Those are all of the concepts you need.
+
+## Custom Faker Providers
+
+You can also include Faker extension libraries ("Providers") after
+you’ve added them to your Python install:
+
+```yaml
+ - plugin: faker_microservice.Provider
+ - object: OBJ
+    fields:
+    service_name:
+        fake:
+            microservice
+```
+
+You would install that provider like this:
+
+```s
+$ pip install faker_microservice
+```
+
+Here are some Python Faker providers:
+
+<https://faker.readthedocs.io/en/master/communityproviders.html>
+
+And you could make your own providers as well. Aaron Crossman
+has written [a tutorial](https://spinningcode.org/2021/06/snowfakery-custom-plugins-part-2/)
+about that process.
 
 ## Index of Fake Datatypes
