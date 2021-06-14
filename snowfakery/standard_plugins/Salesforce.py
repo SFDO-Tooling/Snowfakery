@@ -3,11 +3,6 @@ from logging import getLogger
 from tempfile import TemporaryDirectory
 from pathlib import Path
 
-from salesforce_bulk import SalesforceBulk
-
-from cumulusci.cli.runtime import CliRuntime
-from cumulusci.salesforce_api.utils import get_simple_salesforce_connection
-
 from snowfakery.plugins import ParserMacroPlugin
 from snowfakery.data_generator_runtime_object_model import (
     ObjectTemplate,
@@ -51,15 +46,15 @@ class SalesforceConnection:
 
     @property
     def sf(self):
-        """simple_salesfore client"""
+        """simple_salesforce client"""
         if not self._sf:
             self._sf, self._bulk = self._get_sf_clients(self.orgname)
         return self._sf
 
+    @property
     def bulk(self):
         """salesforce_bulk client"""
-        if not self._bulk:
-            self._sf, self._bulk = self._get_sf_clients(self.orgname)
+        self.sf  # initializes self._bulk as a side-effect
         return self._bulk
 
     @property
@@ -78,7 +73,7 @@ class SalesforceConnection:
         records = qr.get("records")
         if not records:
             raise DataGenValueError(f"No records returned by query {query}", None, None)
-        elif len(records) > 1:
+        elif len(records) > 1:  # pragma: no cover
             raise DataGenValueError(
                 f"Multiple records returned by query {query}", None, None
             )
@@ -114,10 +109,14 @@ class SalesforceConnection:
 
     @staticmethod
     def _get_sf_clients(orgname):
+
         try:
+            from cumulusci.cli.runtime import CliRuntime
+            from cumulusci.salesforce_api.utils import get_simple_salesforce_connection
+
             runtime = CliRuntime(load_keychain=True)
-        except Exception as e:
-            raise DataGenError("CLI Runtime cannot be loaded", *e.args)
+        except Exception as e:  # pragma: no cover
+            raise DataGenError("CumulusCI Runtime cannot be loaded", *e.args)
 
         name, org_config = runtime.get_org(orgname)
         sf = get_simple_salesforce_connection(runtime.project_config, org_config)
@@ -125,6 +124,8 @@ class SalesforceConnection:
 
     @staticmethod
     def _init_bulk(sf, org_config):
+        from salesforce_bulk import SalesforceBulk
+
         return SalesforceBulk(
             host=org_config.instance_url.replace("https://", "").rstrip("/"),
             sessionId=org_config.access_token,
@@ -212,13 +213,17 @@ class Salesforce(ParserMacroPlugin, SnowfakeryPlugin, SalesforceConnectionMixin)
             sobj = args["name"]
             if not isinstance(sobj, str):
                 raise exc.DataGenError(
-                    f"`name` argument should be a string {sobj}: {type(sobj)}"
+                    f"`name` argument should be a string, not `{sobj}`: ({type(sobj)})"
                 )
             nickname = args.get("nickname")
             if nickname and not isinstance(nickname, str):
                 raise exc.DataGenError(
-                    f"`nickname` argument should be a string {nickname}: {type(sobj)}"
+                    f"`nickname` argument should be a string, not `{nickname}``: ({type(sobj)})"
                 )
+        else:
+            raise exc.DataGenError(
+                f"`name` argument should be a string, not `{args}``: ({type(args)})"
+            )
 
         return sobj, nickname
 
@@ -302,23 +307,31 @@ class SOQLDatasetImpl(DatasetBase):
         return self.plugin.sf_connection
 
     def _load_dataset(self, iteration_mode, rootpath, kwargs):
+        from cumulusci.tasks.bulkdata.step import DataApi
+
         query = self.sf_connection.compose_query("SOQLDataset", **kwargs)
         fields = kwargs.get("fields")
+        sobject = kwargs.get("from")
         fieldnames = [f.strip() for f in fields.split(",")]
         qs = self.get_query_operation(
-            sobject=None,
+            sobject=sobject,
             fields=fieldnames,
             api_options={},
             context=self.sf_connection,
             query=query,
-            api=None,
+            api=DataApi.SMART,
         )
 
-        qs.query()
+        try:
+            qs.query()
+        except Exception as e:
+            raise DataGenError(f"Unable to query records for {query}: {e}") from e
+
         if qs.job_result.status is not self.DataOperationStatus.SUCCESS:
             raise DataGenError(
                 f"Unable to query records for {query}: {','.join(qs.job_result.job_errors)}"
             )
+
         self.tempdir, self.iterator = create_tempfile_sql_db_iterator(
             iteration_mode, fieldnames, qs.get_results()
         )
@@ -372,9 +385,6 @@ class SalesforceQuery(SalesforceConnectionMixin, SnowfakeryPlugin):
             # "from" has to be handled separately because its a Python keyword
             query_from = self._parse_from_from_args(args, kwargs)
 
-            if not query_from:
-                raise ValueError("Need to specify a table as 'from' argument")
-
             # TODO: Test WHERE
             where_clause = f" WHERE {where}" if where else ""
             count_query = f"SELECT count() FROM {query_from}{where_clause}"
@@ -396,6 +406,7 @@ class SalesforceQuery(SalesforceConnectionMixin, SnowfakeryPlugin):
             return self._sf_connection.query_single_record(query)
 
         def _parse_from_from_args(self, args, kwargs):
+            query_from = None
             if kwargs:
                 query_from = kwargs.pop("from", None)
 
@@ -405,5 +416,8 @@ class SalesforceQuery(SalesforceConnectionMixin, SnowfakeryPlugin):
                 if len(args) != 1 or not isinstance(args[0], str):
                     raise ValueError(f"Only one string argument allowed, not: {args}")
                 query_from = args[0]
+
+            if not query_from:
+                raise ValueError("Must supply 'from:'")
 
             return query_from
