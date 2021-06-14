@@ -11,7 +11,8 @@ from yaml.representer import Representer
 from faker.providers import BaseProvider as FakerProvider
 
 import snowfakery.data_gen_exceptions as exc
-from snowfakery.utils.yaml_utils import SnowfakeryDumper
+from .utils.yaml_utils import SnowfakeryDumper
+from .utils.collections import CaseInsensitiveDict
 
 from numbers import Number
 
@@ -100,6 +101,10 @@ class PluginContext:
             self.plugin.__class__.__name__
         )
 
+    def unique_context_identifier(self) -> str:
+        "An identifier that will be unique across iterations (but not portion invocations)"
+        return self.interpreter.current_context.unique_context_identifier
+
     def evaluate_raw(self, field_definition):
         """Evaluate the contents of a field definition"""
         return field_definition.render(self.interpreter.current_context)
@@ -126,7 +131,10 @@ def resolve_plugins(
 ):
     "Resolve a list of plugins and lineinfos"
     with plugin_path(search_paths):
-        return [resolve_plugin(*plugin_spec) for plugin_spec in plugin_specs]
+        plugins = []
+        for plugin_spec in plugin_specs:
+            plugins.extend(resolve_plugin(*plugin_spec))
+        return plugins
 
 
 def plugin_path(search_paths):
@@ -138,7 +146,6 @@ def plugin_path(search_paths):
         str(cwd_plugins),
         str(user_plugins),
     ]
-
     return patch.object(sys, "path", new_sys_path)
 
 
@@ -150,12 +157,18 @@ def resolve_plugin(plugin: str, lineinfo) -> object:
             f"Cannot find plugin: {plugin}", lineinfo.filename, lineinfo.line_num
         )
 
+    categories = []
+
     if issubclass(cls, FakerProvider):
-        return (FakerProvider, cls)
-    elif issubclass(cls, SnowfakeryPlugin):
-        return (SnowfakeryPlugin, cls)
-    elif issubclass(cls, ParserMacroPlugin):
-        return (ParserMacroPlugin, cls)
+        categories.append((FakerProvider, cls))
+    else:
+        if issubclass(cls, SnowfakeryPlugin):
+            categories.append((SnowfakeryPlugin, cls))
+        if issubclass(cls, ParserMacroPlugin):
+            categories.append((ParserMacroPlugin, cls))
+
+    if categories:
+        return categories
     else:
         raise exc.DataGenTypeError(
             f"{cls} is not a Faker Provider nor Snowfakery Plugin",
@@ -207,7 +220,7 @@ class PluginResult:
     PluginResults are serialized to continuation files as dicts."""
 
     def __init__(self, result: Mapping):
-        self.result = result
+        self.result = CaseInsensitiveDict(result)
 
     def __getattr__(self, name):
         # ensures that it won't recurse
@@ -221,6 +234,21 @@ class PluginResult:
 
     def __str__(self):
         return str(self.result)
+
+
+class PluginOption:
+    def __init__(self, name, typ):
+        self.name = name
+        self.type = typ
+
+    def convert(self, value):
+        try:
+            return self.type(value)
+        except TypeError as e:
+            raise TypeError(
+                f"{self.name} option is wrong type {type(value)} rather than {self.type}",
+                *e.args,
+            )
 
 
 # round-trip PluginResult objects through continuation YAML if needed.

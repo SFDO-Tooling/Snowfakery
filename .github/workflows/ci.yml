@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.6", "3.7", "3.8"]
+        python-version: ["3.6", "3.7", "3.8", "3.9"]
     steps:
       - uses: "actions/checkout@v2"
       - uses: "actions/setup-python@v1"
@@ -22,8 +22,8 @@ jobs:
       - name: "Install dependencies"
         run: |
           python -VV
-          python -m pip install --upgrade pip setuptools wheel
-          python -m pip install --upgrade coverage[toml] coveralls virtualenv tox tox-gh-actions
+          python -m pip install --upgrade pip pip-tools
+          make dev-install
 
       - name: "Run tox targets for ${{ matrix.python-version }}"
         run: python -m tox
@@ -37,23 +37,45 @@ jobs:
           snowbench snowfakery/tools/benchmark_1.yml --num-records 10_000  --num-records-tablename Account --number-of-processes 4
           snowbench
 
-  windows:
-    name: "Windows"
-    runs-on: windows-latest
+  with_cci:
+    name: With CumulusCI
+    runs-on: ubuntu-latest
     steps:
       - uses: "actions/checkout@v2"
       - uses: "actions/setup-python@v1"
         with:
-          python-version: "3.8"
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: |
+          python -VV
+          python -m pip install --upgrade pip pip-tools
+          make dev-install
+          python -m pip install cumulusci
+
+      - name: Run Tests
+        run: python -m pytest
+
+  windows:
+    name: Windows ${{ matrix.python-version }}
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ["3.6", "3.9"]
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v1"
+        with:
+          python-version: "${{ matrix.python-version }}"
 
       - name: "Install dependencies"
         run: |
           python -VV
-          python -m pip install --upgrade pip setuptools wheel
-          python -m pip install -r requirements_dev.txt
+          python -m pip install --upgrade pip pip-tools
+          make dev-install
 
       - name: Run Tests
-        run: pytest
+        run: python -m pytest
 
   coveralls_done:
     name: Finalize coveralls

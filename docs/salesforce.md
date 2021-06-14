@@ -49,6 +49,181 @@ $ cci flow run test_everything
 ...
 ```
 
+## Incorporating Information from Salesforce
+
+There are various cases where it might be helpful to relate newly created synthetic
+data to existing data in a Salesforce org. For example, that data might have
+been added in a previous CumulusCI task or some other process.
+
+For example, if you have a Campaign object and would like to associate
+Contacts to it through CampaignMembers.
+
+Here is an example were we query a particular Campaign object:
+
+```yaml
+# examples/salesforce/CampaignMembers-first.recipe.yml
+- plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+
+- object: Contact
+  fields:
+    FirstName: Bobby
+    LastName: McFerrin
+  friends:
+    - object: CampaignMember
+      fields:
+        ContactId:
+          reference: Contact
+        CampaignId:
+          SalesforceQuery.find_record:
+            from: Campaign
+            where: name='Our Campaign'
+```
+
+Perhaps you do not care which Campaign you connect to:
+
+```yaml
+# examples/salesforce/CampaignMembers-random.recipe.yml
+- plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+
+- object: Contact
+  count: 10
+  fields:
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+  friends:
+    - object: CampaignMember
+      fields:
+        ContactId:
+          reference: Contact
+        CampaignId:
+          SalesforceQuery.random_record:
+            from: Campaign
+```
+
+As you can see, `find_record` looks for a particular record, and returns the first
+one that Salesforce finds. `random_record` looks for an random record out of the
+first 2000 Salesforce finds. The 2000-record scope limit is based on a Salesforce
+limitation and future versions of Snowfakery may incorporate a workaround.
+
+NOTE: The features we are discussing in this section are for linking to records
+that are in the Salesforce org _before_ the recipe iteration started. These features
+are not for linking to records created by the recipe itself.
+
+Sometimes we want to do more than just link to the other record. For example,
+perhaps we want to create Users for Contacts and have the Users have the same
+name as the Contacts.
+
+```yaml
+# examples/salesforce/UsersForContacts.yml
+- plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+- plugin: snowfakery.standard_plugins.Salesforce
+
+- object: User
+  fields:
+    __random_contact:
+      SalesforceQuery.random_record:
+        from: Contact
+        fields: Id, FirstName, LastName
+
+    FirstName: ${{__random_contact.FirstName}}
+    LastName: ${{__random_contact.LastName}}
+    Alias: Grace
+    Username:
+      fake: Username
+    Email: ${{Username}}
+    TimeZoneSidKey: America/Bogota
+    LocaleSidKey: en_US
+    EmailEncodingKey: UTF-8
+    LanguageLocaleKey: en_US
+    ProfileId:
+      SalesforceQuery.find_record:
+        from: Profile
+        where: Name='Identity User'
+    # ContactId: ${{__random_contact.Id}}
+```
+
+In this case, the actual connection between the contact and
+the User is commented out because `Identity User` users cannot
+have Contacts, but you can see how you would connect a
+synthetic object to a pre-existing object, while also getting
+access to other fields.
+
+If you would like to use Salesforce query as a Dataset, that's
+another way that you can ensure that every synthetic record you
+create is associated with a distinct record from Salesforce.
+
+```yaml
+# examples/soql_dataset.recipe.yml
+- plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
+- object: Contact
+  count: 10
+  fields:
+    __users_from_salesforce:
+      SOQLDataset.iterate:
+        fields: Id, FirstName, LastName
+        from: User
+    OwnerId: ${{__users_from_salesforce.Id}}
+    FirstName: ${{__users_from_salesforce.FirstName}}
+    LastName: ${{__users_from_salesforce.LastName}}
+    Username: TestUser${{fake.Username}}
+```
+
+Or if you'd like them in a random order, you can
+use `SOQLDataset.shuffle`:
+
+```yaml
+# examples/soql_dataset_shuffled.recipe.yml
+- plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
+- object: Contact
+  count: 10
+  fields:
+    __users_from_salesforce:
+      SOQLDataset.shuffle:
+        fields: Id, FirstName, LastName
+        from: User
+    # The next line depends on the users having particular
+    # permissions.
+    OwnerId: ${{__users_from_salesforce.Id}}
+    FirstName: ${{__users_from_salesforce.FirstName}}
+    LastName: ${{__users_from_salesforce.LastName}}
+    Username: TestUser${{fake.Username}}
+```
+
+You may also specify a "where" clause to filter out irrelevant records:
+
+```yaml
+# examples/soql_dataset_where.recipe.yml
+- plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
+- object: Contact
+  count: 10
+  fields:
+    __users_from_salesforce:
+      SOQLDataset.shuffle:
+        fields: Id, FirstName, LastName
+        from: User
+        where: FirstName Like 'A%'
+    OwnerId: ${{__users_from_salesforce.Id}}
+    FirstName: ${{__users_from_salesforce.FirstName}}
+    LastName: ${{__users_from_salesforce.LastName}}
+```
+
+### Testing Queries
+
+In general, you can test Snowfakery files outside of CumulusCI to see if they work:
+
+```s
+$ snowfakery recipe.yml
+```
+
+If you have a recipe which depends on data from an org, specify the CumulusCI orgname
+like this:
+
+```s
+$ snowfakery recipe.yml --plugin-options orgname qa
+```
+
 ## Record Types
 
 To specify a Record Type for a record, just put the Record Type’s API Name in a field named RecordType.

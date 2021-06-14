@@ -114,5 +114,6 @@ def generate_data(
     generate_continuation_file: FileLike = None,  # place to generate continuation file
     should_create_cci_record_type_tables: bool = False,  # create CCI Record type tables?
     load_declarations: T.Sequence[FileLike] = None,  # read these load declarations for CCI 
+    plugin_options:Mapping = None,
 ) -> None:
 ```

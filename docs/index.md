@@ -572,7 +572,7 @@ you might send actual emails to the addresses!
 For example, you can use these like this:
 
 ```yaml
-# examples/salesforce/users.yml
+# examples/salesforce/simple-user.yml
 - object: User
   fields:
     Username:
@@ -1397,6 +1397,8 @@ You include either Plugins or Providers in a Snowfakery file like this:
 ```yaml
 - plugin: package.module.classname
 ```
+
+## Built-in Plugins
 
 ### Advanced Math
 
