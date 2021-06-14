@@ -1,0 +1,18 @@
+- object: Account
+  fields:
+    Name:
+      fake: Company
+    Description:
+      fake: CatchPhrase
+    BillingStreet:
+      fake: StreetAddress
+    BillingCity:
+      fake: City
+    BillingState:
+      fake: State
+    BillingPostalCode:
+      fake: PostalCode
+    BillingCountry:
+      fake: CurrentCountry
+    Phone:
+      fake: PhoneNumber

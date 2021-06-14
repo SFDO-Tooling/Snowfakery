@@ -49,7 +49,10 @@ def locales_as_markdown(current_locale: str):
     return " ".join(link for link in links if link)
 
 
-def generate_markdown_for_fakers(outfile, locale):
+standard_header = (Path(__file__).parent / "fakedata_header_short.md").read_text()
+
+
+def generate_markdown_for_fakers(outfile, locale: str, header: str = standard_header):
     faker = Faker(locale)
     fd = FakeData(faker)
 
@@ -58,20 +61,7 @@ def generate_markdown_for_fakers(outfile, locale):
     def output(*args, **kwargs):
         print(*args, **kwargs, file=outfile)
 
-    output(f"# Fake Data: {locale}\n")
-
-    output(
-        f"""The basic concepts of fake data are described in
-the [main docs](index.md#fake-data).
-
-Our fake data can be localized to many languages. We have
-[detailed docs](https://snowfakery.readthedocs.io/en/feature-fake-data-docs/locales.html)
-about the other languages.
-
-Current Locale: {locale} ({faker.current_country()})\n
-
-"""
-    )
+    output(header.format(locale=locale, current_country=faker.current_country()))
 
     output("[TOC]\n")
 
@@ -111,8 +101,6 @@ def output_faker(name, data, output, locale):
     samples = yaml_samples_for_docstring(name, data.fullname, data.doc, locale)
     samples = list(filter(None, samples))
     if samples:
-        output()
-        output("##### Samples")
         output()
         for sample in samples:
             yaml, out = sample

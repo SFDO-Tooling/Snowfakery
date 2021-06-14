@@ -37,9 +37,13 @@ class Plugin(BasePlugin):
                 generate_locales_index,
             )
 
+            fakerdocs_md_header = (
+                root_dir / "tools/faker_docs_utils/fakedata_header_full.md"
+            )
+            main_header = Path(fakerdocs_md_header).read_text()
             fakerdocs_md = root_dir / "docs/fakedata.md"
             with fakerdocs_md.open("w") as f:
-                generate_markdown_for_fakers(f, "en_US")
+                generate_markdown_for_fakers(f, "en_US", main_header)
 
             if self.config.get("build_locales"):
                 generate_markdown_for_all_locales(faker_docs_dir)

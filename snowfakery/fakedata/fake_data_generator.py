@@ -26,6 +26,14 @@ class FakeNames(T.NamedTuple):
         """
         return self.f.email()
 
+    def state(self):
+        """Return a state, province or other appropriate administrative unit"""
+        return self.f.administrative_unit()
+
+    def postalcode(self):
+        """Return watever counts as a postalcode for a particular locale"""
+        return self.f.postcode()
+
 
 # we will use this to exclude Faker's internal book-keeping methods
 # from our faker interface
