@@ -48,7 +48,7 @@ def snowbench(
     of being executed inline.
     """
     with TemporaryDirectory() as tempdir, click.progressbar(
-        label="Benchmarking", length=num_records
+        label="Benchmarking", length=num_records, show_eta=False
     ) as progress_bar:
 
         start = time()
