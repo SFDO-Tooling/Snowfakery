@@ -15,7 +15,7 @@ class DataGenError(Exception):
     def __str__(self):
         if self.line_num:
             location = f"\n near {self.filename}:{self.line_num}"
-        elif self.filename:  # pragma: no cover
+        elif self.filename:
             location = f"\n in {self.filename}"
         else:
             location = ""
