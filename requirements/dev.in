@@ -3,13 +3,12 @@ black
 coverage
 coveralls
 flake8
-# myst-parser     # is this actually needed???
 mkdocs
 pip-tools
 pre-commit
 pytest
 pytest-cov
-Sphinx<4      # pin this until Myst is happy with Sphinx 4
+Sphinx
 typeguard==2.10.0   # do not upgrade until #181 is fixed
 faker-microservice
 tox
