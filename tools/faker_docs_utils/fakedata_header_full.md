@@ -1,6 +1,6 @@
 # Fake data
 
-## Overview
+##### Overview
 
 Fake data comes in a few different flavours. Let's start with the
 most common pattern:
@@ -38,7 +38,7 @@ Account(id=1, Name=Nelson-Deleon, Description=Secured bandwidth-monitored morato
 
 It doesn't matter if you use upper or lower case for fake names.
 
-## Formulas
+##### Formulas
 
 Sometimes you might want to combine the fake data with other data
 in a single field. You can use formula syntaax for this.
@@ -62,7 +62,7 @@ for [fake: sentence](#fake-sentence) define `nb_words` and
     gibberish_words: ${{fake.Sentence(nb_words=10, variable_nb_words=False)}}
 ```
 
-## Block fakers with parameters
+##### Block fakers with parameters
 
 If you'd rather not use the formula syntax (${{ blah }}) there is also
 a nested syntax for that:
@@ -77,7 +77,7 @@ a nested syntax for that:
         variable_nb_words: False
 ```
 
-## Localization
+##### Localization
 
 Our fake data can be localized to many languages. We have
 [detailed docs](https://snowfakery.readthedocs.io/en/feature-fake-data-docs/locales.html)
@@ -161,14 +161,14 @@ We can even pick the locale randomly:
       fake: PhoneNumber
 ```
 
-## Fake Dates and Numbers
+##### Fake Dates and Numbers
 
 The main Snowfakery documentation describes how to fake
 [dates](index.md#date-between) and [numbers](index.md#random-number).
 
 That's it. Those are all of the concepts you need.
 
-## Custom Faker Providers
+##### Custom Faker Providers
 
 You can also include Faker extension libraries ("Providers") after
 you’ve added them to your Python install:
