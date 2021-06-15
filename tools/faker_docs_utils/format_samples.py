@@ -82,10 +82,10 @@ def yaml_sample(name, kwds, kw_example, locale):
         inline_example = f'"{inline_example}"'
 
     yaml_data = f"""
-    - object: Example
+    - object: SomeObject
       fields:
-        inline_example: {inline_example}
-        block_example: {block_example}"""
+        formula_field_example: {inline_example}
+        block_field_example: {block_example}"""
 
     if locale:
         locale_decl = f"""
