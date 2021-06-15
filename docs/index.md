@@ -1071,13 +1071,21 @@ Options:
                                   sqlite:///foo.db if you don't have one set
                                   up.
 
-  --output-format [JSON|json|txt|csv|sql|PNG|png|SVG|svg|svgz|jpeg|jpg|ps|dot]
+  --output-format [png|svg|svgz|jpeg|jpg|ps|dot|json|txt|csv|sql]
   --output-folder PATH
   -o, --output-file PATH
-  --option EVAL_ARG...            Options to send to the recipe YAML.
-  --target-number TEXT...         Target options for the recipe YAML in the
-                                  form of 'number tablename'. For example: '50
-                                  Account'.
+  --option EVAL_ARG...            Option to send to the recipe YAML in a
+                                  format like 'OptName OptValue'. Specify
+                                  multiple times if needed.
+
+  --target-number, --target-count TEXT...
+                                  Target record count for the recipe YAML in
+                                  the form of 'number tablename'. For example:
+                                  '50 Account' to generate roughly 50
+                                  accounts.
+
+  --reps INTEGER                  Target repetition count for the recipe YAML.
+                                  Use as an alternative to --target-number
 
   --debug-internals / --no-debug-internals
   --generate-cci-mapping-file FILENAME
@@ -1092,6 +1100,10 @@ Options:
   --continuation-file FILENAME    Continue generating a dataset where
                                   'continuation-file' left off
 
+  --plugin-option EVAL_ARG...     Option to send to a plugin in a format like
+                                  'OptName OptValue'. Specify multiple times
+                                  if needed.
+
   --load-declarations FILE        Declarations to mix into the generated
                                   mapping file
 
@@ -1101,7 +1113,23 @@ Options:
 
 ### Scaling up recipe execution
 
-From the command line you can control how many rows a recipe generates. You do this by specifying a "target count" and a "target tablename", like this:
+From the command line you can control how many rows a recipe generates.
+
+The simple way is:
+
+```s
+snowfakery accounts.yml --reps 1000
+```
+
+This will run the recipe 1000 times. Easy!
+
+But consider if the user wants to run a test against roughly 50,000 accounts. They
+could do a calculation to figure out how many reps, but this may be complex
+because Snowfakery has randomization features, so that a recipe might generate
+a random number of accounts in each run. Even for simpler recipes, doing the
+math may be a headache, especially if you are changing the recipe every day.
+
+A better solution is to specify the"target count" and a "target tablename", like this:
 
 ```s
 snowfakery accounts.yml --target-number 1000 Account
@@ -1145,7 +1173,6 @@ The [CSVW](https://www.w3.org/TR/tabular-data-primer/) JSON file is a sort of ma
 for all of the CSV files.
 
 ## Advanced Features
-
 
 ### Singletons with the "just_once" feature
 
