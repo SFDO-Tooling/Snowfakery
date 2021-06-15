@@ -78,8 +78,7 @@ common_fakes:
             fake: CatchPhrase
       - object: Account
         fields:
-          Name:
-            Name: ${{fake.Company}} Holdings
+          Name: ${{fake.Company}} Holdings
           Description: "Our Motto: ${{fake.CatchPhrase}}"
   year:
     example:
