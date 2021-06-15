@@ -101,6 +101,10 @@ def yaml_sample(name, kwds, kw_example, locale):
         print(str(e)[0:100])
         raise
 
+    return snowfakery_output_for(yaml_data)
+
+
+def snowfakery_output_for(yaml_data):
     with StringIO() as s:
         try:
             generate_data(StringIO(yaml_data), output_file=s, output_format="txt")

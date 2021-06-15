@@ -262,13 +262,13 @@ You can use Person Accounts like this:
 - object: Account
   fields:
     FirstName:
-      fake: first_name
+      fake: FirstName
     LastName:
-      fake: last_name
+      fake: LastName
     PersonMailingStreet:
-      fake: street_address
+      fake: StreetAddress
     PersonMailingCity:
-      fake: city
+      fake: City
     PersonContactId:
       Salesforce.SpecialObject: PersonContact
 ```

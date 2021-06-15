@@ -2,9 +2,13 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
+from yaml import dump as yaml_dump
 from faker import Faker
 from faker.config import AVAILABLE_LOCALES
-from tools.faker_docs_utils.format_samples import yaml_samples_for_docstring
+from tools.faker_docs_utils.format_samples import (
+    yaml_samples_for_docstring,
+    snowfakery_output_for,
+)
 from tools.faker_docs_utils.summarize_fakers import get_all_fakers
 
 from snowfakery.fakedata.fake_data_generator import FakeData
@@ -98,8 +102,12 @@ def output_faker(name, data, output, locale):
     output()
     link = f"[{data.source}]({data.url})"
     output("Source:", link)
-    samples = yaml_samples_for_docstring(name, data.fullname, data.doc, locale)
-    samples = list(filter(None, samples))
+    if data.sample:
+        example = yaml_dump(data.sample, sort_keys=False)
+        samples = [snowfakery_output_for(example)]
+    else:
+        samples = yaml_samples_for_docstring(name, data.fullname, data.doc, locale)
+        samples = list(filter(None, samples))
     if samples:
         output()
         for sample in samples:

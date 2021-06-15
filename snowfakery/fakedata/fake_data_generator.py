@@ -31,7 +31,7 @@ class FakeNames(T.NamedTuple):
         return self.f.administrative_unit()
 
     def postalcode(self):
-        """Return watever counts as a postalcode for a particular locale"""
+        """Return whatever counts as a postalcode for a particular locale"""
         return self.f.postcode()
 
 

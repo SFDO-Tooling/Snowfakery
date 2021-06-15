@@ -9,7 +9,9 @@ def get_all_fakers(faker):
     from snowfakery.utils.collections import CaseInsensitiveDict
 
     with (Path(__file__).parent / "docs_config.yml").open() as f:
-        common_fakes = yaml.safe_load(f)["common_fakes"]
+        yaml_data = yaml.safe_load(f)
+        common_fakes = yaml_data["common_fakes"]
+        uncommon_fakes = yaml_data["uncommon_fakes"]
 
     faker_infos = CaseInsensitiveDict()
     for name, meth in faker.fake_names.items():
@@ -21,6 +23,7 @@ def get_all_fakers(faker):
         filename = func.__code__.co_filename
         cls = meth.__self__.__class__
         fullname = cls.__module__ + "." + cls.__name__ + "." + meth.__name__
+        overrides = common_fakes.get(meth.__name__) or uncommon_fakes.get(meth.__name__)
         is_common = meth.__name__ in common_fakes
         if "/faker/" in filename:
             source = "faker"
@@ -41,7 +44,15 @@ def get_all_fakers(faker):
         faker_info = faker_infos.setdefault(
             friendly,
             FakerInfo(
-                friendly, fullname, [], url, source, category, doc or "", is_common
+                friendly,
+                fullname,
+                [],
+                url,
+                source,
+                category,
+                doc or "",
+                is_common,
+                overrides.get("example") if overrides else None,
             ),
         )
         faker_info.aliases.append(name)
@@ -58,6 +69,7 @@ class FakerInfo(T.NamedTuple):
     category: str
     doc: str
     common: bool
+    sample: str
 
 
 def _to_camel_case(snake_str):
