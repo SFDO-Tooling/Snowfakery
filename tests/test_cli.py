@@ -179,6 +179,12 @@ class TestGenerateFromCLI:
 
         assert len(re.findall(r"Account\(", stdout)) == 5
 
+    def test_from_cli__reps(self, capsys):
+        generate_cli.main([str(sample_yaml), "--reps", "3"], standalone_mode=False)
+        stdout = capsys.readouterr().out
+
+        assert len(re.findall(r"Account\(", stdout)) == 3
+
     def test_from_cli__explicit_format_txt(self, capsys):
         with named_temporary_file_path() as t:
             generate_cli.main(
