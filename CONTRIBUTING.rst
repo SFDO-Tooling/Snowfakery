@@ -72,7 +72,8 @@ Or you could make it outside of the project repo.
     $ pytest
 
     Test the documentation like this:
-
+    
+    $ pip install -e .
     $ make docs
     $ open build/html/index.html
 
