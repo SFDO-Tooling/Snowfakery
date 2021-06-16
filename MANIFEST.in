@@ -7,6 +7,7 @@ include README.rst
 include requirements.txt
 include requirements_dev.txt
 include snowfakery/version.txt
+include snowfakery/tools/benchmark_1.yml
 
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
