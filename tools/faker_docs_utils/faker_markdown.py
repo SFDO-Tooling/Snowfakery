@@ -112,14 +112,11 @@ def output_faker(name, data, output, locale):
         samples = [snowfakery_output_for(example)]
     else:
         samples = yaml_samples_for_docstring(name, data.fullname, data.doc, locale)
-        samples = list(filter(None, samples))
+    samples = list(filter(None, samples))
     if samples:
         output()
         for sample in samples:
-            try:
-                yaml, out = sample
-            except:  # FIXME!!!!
-                continue
+            yaml, out = sample
 
             output("Recipe:\n")
             output(indent(yaml))
