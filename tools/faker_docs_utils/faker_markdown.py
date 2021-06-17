@@ -103,7 +103,12 @@ def output_faker(name, data, output, locale):
     link = f"[{data.source}]({data.url})"
     output("Source:", link)
     if data.sample:
-        example = yaml_dump(data.sample, sort_keys=False)
+        if locale and locale != "en_US":
+            locale_header = [{"var": "snowfakery_locale", "value": locale}]
+            sample = locale_header + data.sample
+        else:
+            sample = data.sample
+        example = yaml_dump(sample, sort_keys=False)
         samples = [snowfakery_output_for(example)]
     else:
         samples = yaml_samples_for_docstring(name, data.fullname, data.doc, locale)
