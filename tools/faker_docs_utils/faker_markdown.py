@@ -92,7 +92,26 @@ def categorize(fakers):
     return {name: value for name, value in sorted(categories.items())}
 
 
-def output_faker(name, data, output, locale):
+def gather_samples(name, data, locale):
+    if data.sample:
+        if locale and locale != "en_US":
+            locale_header = [{"var": "snowfakery_locale", "value": locale}]
+            sample = locale_header + data.sample
+        else:
+            sample = data.sample
+        example = yaml_dump(sample, sort_keys=False)
+        samples = [snowfakery_output_for(data.name, example)]
+    else:
+        samples = yaml_samples_for_docstring(name, data.fullname, data.doc, locale)
+    samples = list(filter(None, samples))
+
+
+def output_faker(name: str, data: str, output: callable, locale: str):
+    samples = gather_samples(name, data, locale)
+    # if there isn't at least one sample, don't publish
+    if not samples:
+        return
+
     output(f"#### fake: {name}\n")
     if strip(data.doc):
         output(strip(data.doc))
@@ -102,17 +121,7 @@ def output_faker(name, data, output, locale):
     output()
     link = f"[{data.source}]({data.url})"
     output("Source:", link)
-    if data.sample:
-        if locale and locale != "en_US":
-            locale_header = [{"var": "snowfakery_locale", "value": locale}]
-            sample = locale_header + data.sample
-        else:
-            sample = data.sample
-        example = yaml_dump(sample, sort_keys=False)
-        samples = [snowfakery_output_for(example)]
-    else:
-        samples = yaml_samples_for_docstring(name, data.fullname, data.doc, locale)
-    samples = list(filter(None, samples))
+
     if samples:
         output()
         for sample in samples:
@@ -150,5 +159,8 @@ def generate_locales_index(path: Path):
 
         locales = locales_as_markdown(None)
         if locales:
-            output("## Faker Locales\n")
+            output("## Fake Data Locales\n")
+            output(
+                "Learn more about Snowfakery localization in the [Fake Data Tutorial](fakedata.md#localization)\n"
+            )
             output(locales)

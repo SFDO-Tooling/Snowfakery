@@ -28,9 +28,7 @@ class Plugin(BasePlugin):
             lru_cache(maxsize=10_000)(Factory._get_provider_class),
         )
 
-        with sys_path_patch, lru_patch, open(os.devnull, "w") as devnull, patch.object(
-            sys, "stdout", devnull
-        ):
+        with sys_path_patch, lru_patch:
             from tools.faker_docs_utils.faker_markdown import (
                 generate_markdown_for_all_locales,
                 generate_markdown_for_fakers,

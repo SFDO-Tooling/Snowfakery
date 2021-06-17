@@ -9,6 +9,8 @@ from snowfakery import generate_data
 
 from . import docstring
 
+ALREADY_GENERATED_ERROR_FOR = set()
+
 
 def samples_from_docstring(fullname, docstring_data):
     lines = docstring_data.split("\n")
@@ -61,7 +63,9 @@ def yaml_samples_for_docstring_sample_inner(name, sample, locale):
     try:
         kwds = extract_keywords(sample.kwargs)
     except Exception as e:
-        print("Cannot extract keywords", sample, str(e)[0:100])
+        if name not in ALREADY_GENERATED_ERROR_FOR:
+            ALREADY_GENERATED_ERROR_FOR.add(name)
+            print("Cannot extract keywords", sample, str(e)[0:100])
         return None
 
     name = name.split(".")[-1]
@@ -101,17 +105,20 @@ def yaml_sample(name, kwds, kw_example, locale):
         print(str(e)[0:100])
         raise
 
-    return snowfakery_output_for(yaml_data)
+    return snowfakery_output_for(name, yaml_data)
 
 
-def snowfakery_output_for(yaml_data):
+def snowfakery_output_for(name, yaml_data):
     with StringIO() as s:
         try:
             generate_data(StringIO(yaml_data), output_file=s, output_format="txt")
         except Exception as e:
-            print("Cannot generate")
-            print(yaml_data)
-            print(str(e)[0:100])
+            if name not in ALREADY_GENERATED_ERROR_FOR:
+                print(f"Cannot generate sample for {name}: {str(e)[0:50]}")
+                ALREADY_GENERATED_ERROR_FOR.add(name)
+
+            # print(yaml_data)
+            # print(str(e)[0:100])
         output = s.getvalue()
     if output:
         return yaml_data, output
