@@ -43,7 +43,7 @@ common_fakes:
       - object: Contact
         fields:
           FirstName: ${{fake.FirstNameFemale}} Beth
-          LastName: ${{fake.LastNameLastName}}-Jones
+          LastName: ${{fake.LastName}}-Jones
   first_name_male:
     example:
       - object: Contact

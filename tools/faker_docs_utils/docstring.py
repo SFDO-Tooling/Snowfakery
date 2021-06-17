@@ -1,6 +1,8 @@
 # Based on https://github.com/joke2k/faker/blob/2dac486e6d3b5f018feb524f6fa19917ec10299e/faker/sphinx/docstring.py
 # Copied under the provisions of the MIT License
 
+# Search for "snowfakery" to find optimizations we've made.
+
 # coding=utf-8
 import inspect
 import logging
@@ -198,7 +200,6 @@ class ProviderMethodDocstring:
             self._inject_default_sample_section()
 
         output = ""
-        eval_scope = self._generate_eval_scope()
         for sample in self._samples:
             command = _command_template.format(
                 method=self._method, kwargs=sample.kwargs
@@ -214,12 +215,8 @@ class ProviderMethodDocstring:
 
             try:
                 Faker.seed(sample.seed)
-                results = "\n".join(
-                    [
-                        self._stringify_result(eval(command, eval_scope))
-                        for _ in range(sample.size)
-                    ]
-                )
+                # optimization for the Snowfakery context
+                results = ""
             except Exception as e:
                 msg = f"Sample generation failed for method `{self._method}` with arguments `{sample.kwargs}`: {e}."
                 self._log_warning(msg)

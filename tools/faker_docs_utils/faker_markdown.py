@@ -103,7 +103,7 @@ def gather_samples(name, data, locale):
         samples = [snowfakery_output_for(data.name, example)]
     else:
         samples = yaml_samples_for_docstring(name, data.fullname, data.doc, locale)
-    samples = list(filter(None, samples))
+    return list(filter(None, samples))
 
 
 def output_faker(name: str, data: str, output: callable, locale: str):
@@ -148,6 +148,7 @@ def indent(yaml):
 def generate_markdown_for_all_locales(path: Path, locales=AVAILABLE_LOCALES):
     for locale in locales:
         with Path(path, f"{locale}.md").open("w") as f:
+            print(f.name)
             generate_markdown_for_fakers(f, locale)
 
 

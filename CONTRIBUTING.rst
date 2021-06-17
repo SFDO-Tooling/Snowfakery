@@ -71,13 +71,13 @@ Or you could make it outside of the project repo.
 
     $ pytest
 
-    Test the documentation like this:
-    
-    $ pip install -e .
+7. Build the docs like this: 
     $ make docs
     $ open build/html/index.html
 
-7. Your new code should also have meaningful tests. One way to double check that
+Set SF_MKDOCS_BUILD_LOCALES=False to skip building all locales
+
+8. Your new code should also have meaningful tests. One way to double check that
    your tests cover everything is to ensure that your new code has test code coverage:
 
    $ pytest --cov
