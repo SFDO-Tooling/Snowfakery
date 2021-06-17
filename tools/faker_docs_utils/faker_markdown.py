@@ -116,7 +116,11 @@ def output_faker(name, data, output, locale):
     if samples:
         output()
         for sample in samples:
-            yaml, out = sample
+            try:
+                yaml, out = sample
+            except:  # FIXME!!!!
+                continue
+
             output("Recipe:\n")
             output(indent(yaml))
             output("Outputs:\n")
