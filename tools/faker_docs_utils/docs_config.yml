@@ -170,24 +170,24 @@ common_fakes:
         fields:
           Name:
             fake: Company
-          BillingStreet:
+          BillingCountry:
             fake: Country
       - object: Account
         fields:
           Name: ${{fake.Company}} Holdings
-          BillingStreet: ${{fake.Country}}
+          BillingCountry: ${{fake.Country}}
   current_country:
     example:
       - object: Account
         fields:
           Name:
             fake: Company
-          BillingStreet:
+          BillingCountry:
             fake: CurrentCountry
       - object: Account
         fields:
           Name: ${{fake.Company}} Holdings
-          BillingStreet: ${{fake.CurrentCountry}}
+          BillingCountry: ${{fake.CurrentCountry}}
   time:
   paragraph:
   word:
