@@ -30,7 +30,9 @@ def strip(my_str):
     my_str = _RE_COMBINE_WHITESPACE.sub("", my_str)
     my_str = _RE_STRIP_SAMPLES.sub("", my_str).strip()
     my_str = _COMMENT_LINES_THAT_LOOK_LIKE_TITLES.sub(" #", my_str)
-    my_str = my_str.replace(":example", "Example:")
+    my_str = my_str.replace(":example", "\nExample:")
+    my_str = my_str.replace(":param", "\nParam:")
+    my_str = my_str.replace(":return", "\nReturn:")
     return my_str
 
 
