@@ -1,4 +1,4 @@
-# Fake Data: {locale}
+# Fake Data: {language} as spoken in {current_country} ({locale})
 
 The basic concepts of fake data are described in
 the [main tutorial](../fakedata.md#fake-data).

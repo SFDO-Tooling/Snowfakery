@@ -9,7 +9,8 @@ from tools.faker_docs_utils.format_samples import (
     yaml_samples_for_docstring,
     snowfakery_output_for,
 )
-from tools.faker_docs_utils.summarize_fakers import get_all_fakers
+from .summarize_fakers import get_all_fakers
+from .language_codes import language_codes
 
 from snowfakery.fakedata.fake_data_generator import FakeData
 
@@ -45,7 +46,8 @@ def locales_as_markdown(current_locale: str):
             country_name = country_for_locale(locale)
         except (ValueError, AttributeError):
             return None
-        link_text = f"{locale} : {country_name}"
+        language = language_codes[locale.split("_")[0]]
+        link_text = f"{language} as spoken in {country_name}: ({locale})"
         return f" - [{link_text}](fakedata/{locale}.md)\n"
 
     other_locales = [locale for locale in AVAILABLE_LOCALES if locale != current_locale]
@@ -58,6 +60,7 @@ standard_header = (Path(__file__).parent / "fakedata_header_short.md").read_text
 
 def generate_markdown_for_fakers(outfile, locale: str, header: str = standard_header):
     faker = Faker(locale)
+    language = language_codes[locale.split("_")[0]]
     fd = FakeData(faker)
 
     all_fakers = get_all_fakers(fd)
@@ -65,7 +68,12 @@ def generate_markdown_for_fakers(outfile, locale: str, header: str = standard_he
     def output(*args, **kwargs):
         print(*args, **kwargs, file=outfile)
 
-    output(header.format(locale=locale, current_country=faker.current_country()))
+    head_md = header.format(
+        locale=locale, current_country=faker.current_country(), language=language
+    )
+    output(
+        head_md,
+    )
 
     output("[TOC]\n")
 
