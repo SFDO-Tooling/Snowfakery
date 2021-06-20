@@ -101,8 +101,16 @@ class PluginContext:
             self.plugin.__class__.__name__
         )
 
+    def local_vars(self):
+        return self.interpreter.current_context.local_vars.setdefault(
+            self.plugin.__class__.__name__, {}
+        )
+
     def unique_context_identifier(self) -> str:
-        "An identifier that will be unique across iterations (but not portion invocations)"
+        """An identifier representing a template context that will be
+        unique across iterations (but not portion invocations). It
+        allows templates that do counting or iteration for a particular
+        template context."""
         return self.interpreter.current_context.unique_context_identifier
 
     def evaluate_raw(self, field_definition):

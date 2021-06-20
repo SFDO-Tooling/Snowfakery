@@ -14,6 +14,7 @@ from .template_funcs import StandardFuncs
 from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError
 import snowfakery  # noQA
 from snowfakery.object_rows import NicknameSlot, SlotState, ObjectRow
+from snowfakery.plugins import PluginContext, SnowfakeryPlugin
 
 OutputStream = "snowfakery.output_streams.OutputStream"
 VariableDefinition = "snowfakery.data_generator_runtime_object_model.VariableDefinition"
@@ -296,6 +297,8 @@ class Interpreter:
             raise DataGenNameError(
                 f"No template creating {stop_table_name}",
             )
+        faker_plugin = SnowfakeryPlugin(self)
+        self.faker_plugin_context = PluginContext(faker_plugin)
 
         self.faker_template_libraries = {}
 
@@ -318,7 +321,11 @@ class Interpreter:
     def faker_template_library(self, locale):
         rc = self.faker_template_libraries.get(locale)
         if not rc:
-            rc = FakerTemplateLibrary(self.faker_providers, locale)
+            rc = FakerTemplateLibrary(
+                self.faker_providers,
+                locale,
+                self.faker_plugin_context,
+            )
             self.faker_template_libraries[locale] = rc
         return rc
 
@@ -359,6 +366,7 @@ class RuntimeContext:
     obj: Optional[ObjectRow] = None
     template_evaluator_recipe = JinjaTemplateEvaluatorFactory()
     current_template = None
+    local_vars = None
 
     def __init__(
         self,
@@ -454,6 +462,9 @@ class RuntimeContext:
         return self.evaluation_namespace.field_vars()
 
     def context_vars(self, plugin_namespace):
+        """ "Variables which are inherited by child scopes"""
+        # This looks like a candidate for optimization.
+        # An unconditional object copy?
         local_plugin_vars = self._plugin_context_vars.get(plugin_namespace, {}).copy()
         self._plugin_context_vars[plugin_namespace] = local_plugin_vars
         return local_plugin_vars

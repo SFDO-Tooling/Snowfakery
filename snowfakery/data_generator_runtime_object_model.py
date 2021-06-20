@@ -136,7 +136,9 @@ class ObjectTemplate:
         except DataGenError:
             raise
         except Exception as e:
-            raise DataGenError(f"{message} : {str(e)}", self.filename, self.line_num)
+            raise DataGenError(
+                f"{message} : {str(e)}", self.filename, self.line_num
+            ) from e
 
     def _evaluate_count(self, context: RuntimeContext) -> int:
         """Evaluate the count expression to an integer"""
@@ -185,6 +187,7 @@ class ObjectTemplate:
 
     def _generate_fields(self, context: RuntimeContext, row: Dict) -> None:
         """Generate all of the fields of a row"""
+        context.local_vars = {}
         for field in self.fields:
             with self.exception_handling("Problem rendering value"):
                 row[field.name] = field.generate_value(context)
