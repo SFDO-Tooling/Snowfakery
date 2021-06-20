@@ -231,9 +231,6 @@ class TestFaker:
             """
         generate(StringIO(yaml))
         assert generated_rows.table_values(
-            "X", 0, "FirstName"
-        ) in generated_rows.table_values("X", 0, "Email")
-        assert generated_rows.table_values(
             "X", 0, "LastName"
         ) in generated_rows.table_values("X", 0, "Email")
 
@@ -269,9 +266,6 @@ class TestFaker:
                     fake: Email
             """
         generate(StringIO(yaml))
-        assert generated_rows.table_values(
-            "X", 2, "FirstName"
-        ) in generated_rows.table_values("X", 2, "Email")
         assert (
             generated_rows.table_values("X", 2)["LastName"]
             in generated_rows.table_values("X", 2)["Email"]
