@@ -115,12 +115,6 @@ class TestSOQLNoCCI:
         with pytest.raises(DataGenError, match="Must supply 'from:'"):
             generate(StringIO(yaml), plugin_options={"orgname": "blah"})
 
-    @patch(
-        "snowfakery.standard_plugins.Salesforce.SalesforceConnection.sf",
-        wraps=fake_sf_client,
-    )
-    @patch("snowfakery.standard_plugins.Salesforce.randrange", lambda *arg, **kwargs: 5)
-
     def test_soql_plugin_record(self, fake_sf_client, generated_rows):
         yaml = """
             - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
