@@ -350,3 +350,21 @@ class TestFaker:
         generate(StringIO(yaml))
         assert first_name.mock_calls
         assert not email.mock_calls
+
+    @mock.patch("faker.providers.person.en_US.Provider.first_name")
+    @mock.patch("faker.providers.internet.en_US.Provider.ascii_safe_email")
+    def test_disable_matching(self, email, first_name, generated_rows):
+
+        # no leakage between templ
+        yaml = """
+            - object: X
+              fields:
+                FirstName:
+                    fake: FirstName
+                LastName:
+                    fake: last_name
+                Email: ${{fake.email(matching=False)}}
+            """
+        generate(StringIO(yaml))
+        assert first_name.mock_calls
+        assert email.mock_calls

@@ -45,7 +45,7 @@ class FakeNames(T.NamedTuple):
 
     def _already_have(self, names: T.Sequence[str], matching: bool):
         if not matching:
-            return
+            return [None]
         already_created = self.faker_context.local_vars()
         vals = [already_created.get(name) for name in names]
         return vals
