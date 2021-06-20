@@ -77,16 +77,7 @@ immutables==0.15
     #   -r requirements/prod.txt
     #   contextvars
 importlib-metadata==4.5.0
-    # via
-    #   -r requirements/prod.txt
-    #   flake8
-    #   pep517
-    #   pluggy
-    #   pre-commit
-    #   pytest
-    #   sqlalchemy
-    #   tox
-    #   virtualenv
+    # via -r requirements/prod.txt
 iniconfig==1.1.1
     # via pytest
 jinja2==2.11.3
@@ -110,7 +101,7 @@ multidict==5.1.0
     # via yarl
 mypy-extensions==0.4.3
     # via black
-myst-parser==0.14.0
+myst-parser==0.15.1
     # via -r requirements/dev.in
 nodeenv==1.6.0
     # via pre-commit
@@ -221,18 +212,12 @@ tox==3.23.1
     # via
     #   -r requirements/dev.in
     #   tox-gh-actions
-typed-ast==1.4.3
-    # via black
 typeguard==2.10.0
     # via -r requirements/dev.in
 typing-extensions==3.10.0.0
     # via
     #   -r requirements/prod.txt
-    #   black
-    #   importlib-metadata
-    #   markdown-it-py
     #   pydantic
-    #   yarl
 urllib3==1.26.5
     # via
     #   requests
@@ -253,7 +238,6 @@ zipp==3.4.1
     # via
     #   -r requirements/prod.txt
     #   importlib-metadata
-    #   pep517
 
 # The following packages are considered to be unsafe in a requirements file:
 pip==21.1.2
