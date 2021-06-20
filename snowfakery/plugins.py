@@ -252,8 +252,8 @@ class PluginOption:
     def convert(self, value):
         try:
             return self.type(value)
-        except TypeError as e:
-            raise TypeError(
+        except (TypeError, ValueError) as e:
+            raise exc.DataGenTypeError(
                 f"{self.name} option is wrong type {type(value)} rather than {self.type}",
                 *e.args,
             )
