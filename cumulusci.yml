@@ -65,29 +65,36 @@ tasks:
             num_records: 10
             num_records_tablename: Account
 
+    generate_users_profiles_permission_sets:
+        class_path: cumulusci.tasks.bulkdata.generate_and_load_data_from_yaml.GenerateAndLoadDataFromYaml
+        options:
+            generator_yaml: examples/salesforce/ContentVersion.recipe.yml
+
 flows:
     test_everything:
         steps:
             1:
                 task: generate_sf_accounts
+            1.1:
+                task: generate_users_profiles_permission_sets
             2:
                 task: generate_sf_contacts
             3:
                 task: generate_sf_opportunities
             4:
-                flow: npsp:install_prod
-            5:
-                task: generate_npsp_accounts
-            6:
-                task: generate_npsp_contacts
-            7:
-                task: generate_npsp_opportunities
-            8:
-                task: generate_opportunity_contact_roles
-            9:
-                task: generate_opportunities_and_contacts
-            10:
                 task: generate_content_documents
+            5:
+                flow: npsp:install_prod
+            6:
+                task: generate_npsp_accounts
+            7:
+                task: generate_npsp_contacts
+            8:
+                task: generate_npsp_opportunities
+            9:
+                task: generate_opportunity_contact_roles
+            10:
+                task: generate_opportunities_and_contacts
 
     contacts_for_accounts:
         steps:

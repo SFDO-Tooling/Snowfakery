@@ -250,8 +250,6 @@ class TestSOQLWithCCI:
         assert generated_rows.mock_calls[0][1][1]["AccountId"] == first_user_id
 
 
-# TODO: add tests for SOQLDatasets
-#       ensure that all documented params/methods are covered.
 @skip_if_cumulusci_missing
 class TestSOQLDatasets:
     @pytest.mark.vcr()
@@ -380,6 +378,27 @@ class TestSOQLDatasets:
         from: Xyzzy
         """
         with pytest.raises(DataGenError, match="Xyzzy"):
+            generate_data(StringIO(yaml), plugin_options={"orgname": org_config.name})
+
+    @pytest.mark.vcr()
+    @patch(
+        "simple_salesforce.Salesforce.restful",
+        return_value={
+            "sObjects": [{"name": "Account", "count": 3000}]
+        },  # forces bulk mode
+    )
+    def test_dataset_bad_query_bulk(self, restful, org_config):
+        yaml = """
+- plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
+- object: Contact
+  count: 10
+  fields:
+    __users_from_salesforce:
+      SOQLDataset.shuffle:
+        fields: Xyzzy
+        from: Account
+        """
+        with pytest.raises(DataGenError, match="No such column 'Xyzzy' on entity"):
             generate_data(StringIO(yaml), plugin_options={"orgname": org_config.name})
 
     def test_dataset_no_fields(self, org_config, sf, generated_rows):

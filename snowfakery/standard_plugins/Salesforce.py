@@ -2,6 +2,7 @@ from random import randrange
 from logging import getLogger
 from tempfile import TemporaryDirectory
 from pathlib import Path
+from base64 import b64encode
 
 from snowfakery.plugins import ParserMacroPlugin
 from snowfakery.data_generator_runtime_object_model import (
@@ -227,66 +228,18 @@ class Salesforce(ParserMacroPlugin, SnowfakeryPlugin, SalesforceConnectionMixin)
 
         return sobj, nickname
 
-    # FIXME: This code is not documented or tested
-    def ContentFile(self, context, args) -> ObjectTemplate:
-        return {
-            "Base64.encode": [
-                {"File.file_data": {"encoding": "binary", "file": args.get("path")}}
-            ]
-        }
-
-    def PermissionSetAssignments(self, context, args) -> ObjectTemplate:
-        names = args.get("names")
-        if not isinstance(names, str):
-            raise DataGenValueError(
-                f"string `names` not specified for PermissionSetAssignments: {names}"
-            )
-        names = names.split(",")
-        line_info = context.line_num()
-        decls = [self._generate_psa(context, line_info, name) for name in names]
-
-        return ObjectTemplate(
-            "__wrapper_for_permission_sets",
-            filename=line_info["filename"],
-            line_num=line_info["line_num"],
-            friends=decls,
-        )
-
-    def _generate_psa(self, context, line_info, name):
-        fields = {"AssigneeId": ("Use")}
-
-        query = f"PermissionSet where Name = '{name}'"
-
-        fields = [
-            FieldFactory(
-                "PermissionSetId",
-                StructuredValue(
-                    "SalesforceQuery.find_record", {"from": query}, **line_info
-                ),
-                **line_info,
-            ),
-            FieldFactory(
-                "AssigneeId",
-                StructuredValue("reference", ["User"], **line_info),
-                **line_info,
-            ),
-        ]
-
-        new_template = ObjectTemplate(
-            "PermissionSetAssignment",
-            filename=line_info["filename"],
-            line_num=line_info["line_num"],
-            fields=fields,
-        )
-        context.register_template(new_template)
-        return new_template
-
     class Functions:
         def ProfileId(self, name):
             query = f"select Id from Profile where Name='{name}'"
             return self.context.plugin.sf_connection.query_single_record(query)
 
         Profile = ProfileId
+
+        def ContentFile(self, file: str):
+            template_path = Path(self.context.current_filename).parent
+
+            with open(template_path / file, "rb") as data:
+                return b64encode(data.read()).decode("ascii")
 
 
 # TODO: Tests for this class
