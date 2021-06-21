@@ -5,6 +5,7 @@ import pytest
 from snowfakery import generate_data
 from snowfakery.standard_plugins.Salesforce import SalesforceConnection
 from snowfakery import data_gen_exceptions as exc
+from tests.test_with_cci import skip_if_cumulusci_missing
 
 
 class TestSalesforceGen:
@@ -28,6 +29,7 @@ class TestSalesforceConnection:
 
 
 class TestSalesforcePlugin:
+    @skip_if_cumulusci_missing
     @pytest.mark.vcr()
     def test_profile_id(self, generated_rows, org_config):
         yaml = """
