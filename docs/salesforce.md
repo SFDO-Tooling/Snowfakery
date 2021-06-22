@@ -60,7 +60,7 @@ been added in a previous CumulusCI task or some other process.
 For example, if you have a Campaign object and would like to associate
 Contacts to it through CampaignMembers.
 
-Here is an example were we query a particular Campaign object:
+Here is an example where we query a particular Campaign object:
 
 ```yaml
 # examples/salesforce/CampaignMembers-first.recipe.yml
@@ -225,6 +225,9 @@ like this:
 ```s
 $ snowfakery recipe.yml --plugin-options orgname qa
 ```
+
+When you run the recipe in this way, it will connect to the org to pull data but
+not change data in the org at all.
 
 ## Record Types
 

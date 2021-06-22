@@ -76,12 +76,12 @@ fake_sf_client = FakeSimpleSalesforce(
 )
 
 
+@patch(
+    "snowfakery.standard_plugins.Salesforce.SalesforceConnection.sf",
+    wraps=fake_sf_client,
+)
+@patch("snowfakery.standard_plugins.Salesforce.randrange", lambda *arg, **kwargs: 5)
 class TestSOQLNoCCI:
-    @patch(
-        "snowfakery.standard_plugins.Salesforce.SalesforceConnection.sf",
-        wraps=fake_sf_client,
-    )
-    @patch("snowfakery.standard_plugins.Salesforce.randrange", lambda *arg, **kwargs: 5)
     def test_soql_plugin_random(self, fake_sf_client, generated_rows):
         yaml = """
             - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
@@ -115,11 +115,6 @@ class TestSOQLNoCCI:
         with pytest.raises(DataGenError, match="Must supply 'from:'"):
             generate(StringIO(yaml), plugin_options={"orgname": "blah"})
 
-    @patch(
-        "snowfakery.standard_plugins.Salesforce.SalesforceConnection.sf",
-        wraps=fake_sf_client,
-    )
-    @patch("snowfakery.standard_plugins.Salesforce.randrange", lambda *arg, **kwargs: 5)
     def test_soql_plugin_record(self, fake_sf_client, generated_rows):
         yaml = """
             - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
@@ -133,6 +128,23 @@ class TestSOQLNoCCI:
         generate(StringIO(yaml), plugin_options={"orgname": "blah"})
         assert fake_sf_client.mock_calls
         assert generated_rows.row_values(0, "AccountId") == "FAKEID0"
+
+    def test_soql_plugin_random__orgname_long(self, fake_sf_client, generated_rows):
+        yaml = """
+            - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+            - object: Contact
+              fields:
+                FirstName: Suzy
+                LastName: Salesforce
+                AccountId:
+                    SalesforceQuery.random_record: Account
+        """
+        plugin_option_name = (
+            "snowfakery.standard_plugins.Salesforce.SalesforceQuery.orgname"
+        )
+        generate(StringIO(yaml), plugin_options={plugin_option_name: "blah"})
+        assert fake_sf_client.mock_calls
+        assert generated_rows.row_values(0, "AccountId") == "FAKEID5"
 
 
 @skip_if_cumulusci_missing

@@ -8,7 +8,7 @@ click==7.1.2
     # via -r requirements/prod.in
 contextvars==2.4
     # via -r requirements/prod.in
-faker==8.8.0
+faker==8.8.1
     # via -r requirements/prod.in
 greenlet==1.1.0
     # via sqlalchemy
