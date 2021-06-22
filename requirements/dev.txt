@@ -4,19 +4,13 @@
 #
 #    pip-compile --allow-unsafe requirements/dev.in
 #
-alabaster==0.7.12
-    # via sphinx
 appdirs==1.4.4
     # via
     #   black
     #   virtualenv
 attrs==21.2.0
-    # via
-    #   markdown-it-py
-    #   pytest
-babel==2.9.1
-    # via sphinx
-black==21.5b2
+    # via pytest
+black==21.6b0
     # via -r requirements/dev.in
 certifi==2021.5.30
     # via requests
@@ -28,7 +22,6 @@ click==7.1.2
     # via
     #   -r requirements/prod.txt
     #   black
-    #   pip-tools
 contextvars==2.4
     # via -r requirements/prod.txt
 coverage==5.5
@@ -42,13 +35,9 @@ distlib==0.3.2
     # via virtualenv
 docopt==0.6.2
     # via coveralls
-docutils==0.16
-    # via
-    #   myst-parser
-    #   sphinx
 faker-microservice==2.0.0
     # via -r requirements/dev.in
-faker==8.6.0
+faker==8.8.1
     # via
     #   -r requirements/prod.txt
     #   faker-microservice
@@ -70,8 +59,6 @@ idna==2.10
     # via
     #   requests
     #   yarl
-imagesize==1.2.0
-    # via sphinx
 immutables==0.15
     # via
     #   -r requirements/prod.txt
@@ -80,7 +67,6 @@ importlib-metadata==4.5.0
     # via
     #   -r requirements/prod.txt
     #   flake8
-    #   pep517
     #   pluggy
     #   pre-commit
     #   pytest
@@ -90,41 +76,25 @@ importlib-metadata==4.5.0
 iniconfig==1.1.1
     # via pytest
 jinja2==2.11.3
-    # via
-    #   -r requirements/prod.txt
-    #   myst-parser
-    #   sphinx
-markdown-it-py==1.1.0
-    # via
-    #   mdit-py-plugins
-    #   myst-parser
+    # via -r requirements/prod.txt
 markupsafe==2.0.1
     # via
     #   -r requirements/prod.txt
     #   jinja2
 mccabe==0.6.1
     # via flake8
-mdit-py-plugins==0.2.8
-    # via myst-parser
 multidict==5.1.0
     # via yarl
 mypy-extensions==0.4.3
     # via black
-myst-parser==0.14.0
-    # via -r requirements/dev.in
 nodeenv==1.6.0
     # via pre-commit
 packaging==20.9
     # via
     #   pytest
-    #   sphinx
     #   tox
 pathspec==0.8.1
     # via black
-pep517==0.10.0
-    # via pip-tools
-pip-tools==6.1.0
-    # via -r requirements/dev.in
 pluggy==0.13.1
     # via
     #   pytest
@@ -141,8 +111,6 @@ pydantic==1.8.2
     # via -r requirements/prod.txt
 pyflakes==2.3.1
     # via flake8
-pygments==2.9.0
-    # via sphinx
 pyparsing==2.4.7
     # via packaging
 pytest-cov==2.12.1
@@ -158,12 +126,9 @@ python-dateutil==2.8.1
     # via
     #   -r requirements/prod.txt
     #   faker
-pytz==2021.1
-    # via babel
 pyyaml==5.4.1
     # via
     #   -r requirements/prod.txt
-    #   myst-parser
     #   pre-commit
     #   vcrpy
 regex==2021.4.4
@@ -172,7 +137,6 @@ requests==2.25.1
     # via
     #   coveralls
     #   responses
-    #   sphinx
 responses==0.13.3
     # via -r requirements/dev.in
 six==1.16.0
@@ -183,25 +147,7 @@ six==1.16.0
     #   tox
     #   vcrpy
     #   virtualenv
-snowballstemmer==2.1.0
-    # via sphinx
-sphinx==3.5.4
-    # via
-    #   -r requirements/dev.in
-    #   myst-parser
-sphinxcontrib-applehelp==1.0.2
-    # via sphinx
-sphinxcontrib-devhelp==1.0.2
-    # via sphinx
-sphinxcontrib-htmlhelp==2.0.0
-    # via sphinx
-sphinxcontrib-jsmath==1.0.1
-    # via sphinx
-sphinxcontrib-qthelp==1.0.3
-    # via sphinx
-sphinxcontrib-serializinghtml==1.1.5
-    # via sphinx
-sqlalchemy==1.4.17
+sqlalchemy==1.4.18
     # via -r requirements/prod.txt
 text-unidecode==1.3
     # via
@@ -210,7 +156,6 @@ text-unidecode==1.3
 toml==0.10.2
     # via
     #   black
-    #   pep517
     #   pre-commit
     #   pytest
     #   pytest-cov
@@ -230,7 +175,6 @@ typing-extensions==3.10.0.0
     #   -r requirements/prod.txt
     #   black
     #   importlib-metadata
-    #   markdown-it-py
     #   pydantic
     #   yarl
 urllib3==1.26.5
@@ -253,10 +197,3 @@ zipp==3.4.1
     # via
     #   -r requirements/prod.txt
     #   importlib-metadata
-    #   pep517
-
-# The following packages are considered to be unsafe in a requirements file:
-pip==21.1.2
-    # via pip-tools
-setuptools==57.0.0
-    # via sphinx
