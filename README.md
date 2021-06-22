@@ -20,7 +20,6 @@ Once you have youre virtual environment, you can install dependencies via pip:
 Or you can install dependencies via pip tools:
 
 ```python
-pip install pip-tools
 make dev-install
 ```
 
