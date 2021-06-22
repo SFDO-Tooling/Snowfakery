@@ -6,7 +6,8 @@ And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” an
 
 ## Snowfakery 2.0
 
-Recipes can now merge in data from Salesforce. (#395)
+Recipes can now merge in data from Salesforce Salesforce instances as
+records, IDs or datasets. (#395 and #401)
 
 Output streams can now be specified as 3rd party libraries. Any Python classname
 can be passed to --output-format as long as it adheres to the OutputStream
@@ -15,7 +16,20 @@ protocol as shown in examples/YamlOutputStream.py (#351)
 Snowfakery is thread-safe/multi-processor-ready and available for parallel usage
 in CumulusCI. (CumulusCI Repo)
 
-Snowfakery now supports a more intuitive and properly documented fake list. (TBD)
+Snowfakery now supports a --reps option as an easier way to repeat a recipe (#416)
+
+Snowfakery now accepts LeadingCaps syntax for all fakers, as well as
+underscore_separated and everythinglowercase. (#403)
+
+Snowfakery now supports a more intuitive and properly documented fake list. (#409 Not merged yet)
+
+Salesforce.ContentVersion and Salesforce.ProfileId convenience functions were added
+(#421 Not merged yet)
+
+Email and Username are based on FirstName and LastName if available (#420 Not merged yet)
+
+Snowfakery now has voluminous documentation about Fakes in many languages and
+locales (#409)
 
 ## Snowfakery 1.12
 
