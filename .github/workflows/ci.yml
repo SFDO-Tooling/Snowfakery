@@ -22,7 +22,7 @@ jobs:
       - name: "Install dependencies"
         run: |
           python -VV
-          python -m pip install --upgrade pip pip-tools
+          python -m pip install --upgrade pip
           make dev-install
 
       - name: "Run tox targets for ${{ matrix.python-version }}"
@@ -34,7 +34,27 @@ jobs:
       - name: Test snowbench
         run: |
           python setup.py install
-          snowbench examples/basic-salesforce.recipe.yml 10_000 Account --number-of-processes 4
+          snowbench snowfakery/tools/benchmark_1.yml --num-records 10_000  --num-records-tablename Account --number-of-processes 4
+          snowbench
+
+  with_cci:
+    name: With CumulusCI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v1"
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: |
+          python -VV
+          python -m pip install --upgrade pip
+          make dev-install
+          python -m pip install cumulusci
+
+      - name: Run Tests
+        run: python -m pytest
 
   windows:
     name: Windows ${{ matrix.python-version }}
@@ -51,7 +71,7 @@ jobs:
       - name: "Install dependencies"
         run: |
           python -VV
-          python -m pip install --upgrade pip pip-tools
+          python -m pip install --upgrade pip
           make dev-install
 
       - name: Run Tests

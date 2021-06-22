@@ -40,7 +40,7 @@ class ExecutionSummary:
         self.templates = parse_results.templates
         self.intertable_dependencies = runtime_results.intertable_dependencies
 
-    def summarize_for_debugging(self):
+    def summarize_for_debugging(self):  # pragma: no cover
         return self.intertable_dependencies, self.templates
 
 
@@ -193,7 +193,7 @@ def process_plugins_options(
     """Replace option short names with fully qualified names
        and convert types of options.
     e.g. the option name that the user specifies on the CLI or API is just "orgname"
-         but we use the long name internally to aavoid clashing with the
+         but we use the long name internally to avoid clashing with the
          user's variable names."""
 
     allowed_options = collect_allowed_plugin_options(tuple(plugins.values()))

@@ -1,0 +1,12 @@
+- plugin: counter.CountUpPlugin
+- object: CountUp1
+  count: 10
+  fields:
+    counter:
+      CountUpPlugin.counter:
+  friends:
+    - object: CountUp2
+      count: 5
+      fields:
+        counter:
+          CountUpPlugin.counter:

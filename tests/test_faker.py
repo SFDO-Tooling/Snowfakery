@@ -207,6 +207,18 @@ class TestFaker:
         assert "xyzzy" in str(e.value)
         assert "fake" in str(e.value)
 
+    @mock.patch(write_row_path)
+    def test_did_you_mean(self, write_row_mock):
+        yaml = """
+        - object: A
+          fields:
+            xyzzy:
+              fake: frst_name
+        """
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml), {}, None)
+        assert "first_name" in str(e.value)
+
     def test_faker_internals_are_invisible(self):
         yaml = """
         - object: A

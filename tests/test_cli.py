@@ -9,7 +9,7 @@ import sys
 from tests.utils import named_temporary_file_path
 
 import yaml
-from click.exceptions import ClickException
+from click.exceptions import ClickException, BadParameter
 
 from snowfakery.cli import generate_cli, eval_arg, main
 from snowfakery.data_gen_exceptions import DataGenError
@@ -179,6 +179,19 @@ class TestGenerateFromCLI:
 
         assert len(re.findall(r"Account\(", stdout)) == 5
 
+    def test_from_cli__reps(self, capsys):
+        generate_cli.main([str(sample_yaml), "--reps", "3"], standalone_mode=False)
+        stdout = capsys.readouterr().out
+
+        assert len(re.findall(r"Account\(", stdout)) == 3
+
+    def test_from_cli__bad_target_number(self):
+        with pytest.raises(BadParameter):
+            generate_cli.main(
+                [str(sample_yaml), "--target-number", "abc", "def"],
+                standalone_mode=False,
+            )
+
     def test_from_cli__explicit_format_txt(self, capsys):
         with named_temporary_file_path() as t:
             generate_cli.main(
@@ -198,7 +211,7 @@ class TestGenerateFromCLI:
                 output = f.read()
             assert len(re.findall(r"Account\(", output)) == 5
 
-    def test_from_cli__unknown_extension(self, capsys):
+    def test_from_cli__unknown_format(self, capsys):
         with pytest.raises(ClickException) as e:
             generate_cli.callback(
                 yaml_file=str(sample_yaml),
@@ -208,6 +221,20 @@ class TestGenerateFromCLI:
             )
         assert "xyzzy" in str(e.value)
         Path("foo.txt").unlink()
+
+    def test_from_cli__pluggable_output_stream(self):
+        with named_temporary_file_path(suffix=".yml") as t:
+            generate_cli.main(
+                [
+                    str(sample_yaml),
+                    "--output-format",
+                    "examples.YamlOutputStream",
+                    "--output-file",
+                    t,
+                ],
+                standalone_mode=False,
+            )
+            assert t.exists()
 
     def test_from_cli__continuation(self, capsys):
         with TemporaryDirectory() as t:
@@ -414,6 +441,14 @@ class TestCLIOptionChecking:
                 standalone_mode=False,
             )
         assert "apping-file" in str(e.value)
+
+    def test_mutually_exclusive_targets(self):
+        with pytest.raises(ClickException) as e:
+            generate_cli.main(
+                [str(sample_yaml), "--reps", "50", "--target-count", "Account", "100"],
+                standalone_mode=False,
+            )
+        assert "mutually exclusive" in str(e.value)
 
     def test_cli_errors__cannot_infer_output_format(self):
         with pytest.raises(ClickException, match="No format supplied"):
