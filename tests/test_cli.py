@@ -179,6 +179,12 @@ class TestGenerateFromCLI:
 
         assert len(re.findall(r"Account\(", stdout)) == 5
 
+    def test_from_cli__reps(self, capsys):
+        generate_cli.main([str(sample_yaml), "--reps", "3"], standalone_mode=False)
+        stdout = capsys.readouterr().out
+
+        assert len(re.findall(r"Account\(", stdout)) == 3
+
     def test_from_cli__bad_target_number(self):
         with pytest.raises(BadParameter):
             generate_cli.main(
@@ -435,6 +441,14 @@ class TestCLIOptionChecking:
                 standalone_mode=False,
             )
         assert "apping-file" in str(e.value)
+
+    def test_mutually_exclusive_targets(self):
+        with pytest.raises(ClickException) as e:
+            generate_cli.main(
+                [str(sample_yaml), "--reps", "50", "--target-count", "Account", "100"],
+                standalone_mode=False,
+            )
+        assert "mutually exclusive" in str(e.value)
 
     def test_cli_errors__cannot_infer_output_format(self):
         with pytest.raises(ClickException, match="No format supplied"):
