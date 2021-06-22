@@ -38,6 +38,7 @@ pip-wheel-metadata
 results_junit.xml
 test_results.json
 temp
+coverage.xml
 
 # Salesforce / SFDX / CCI
 .cci
