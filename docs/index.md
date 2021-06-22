@@ -1129,7 +1129,7 @@ because Snowfakery has randomization features, so that a recipe might generate
 a random number of accounts in each run. Even for simpler recipes, doing the
 math may be a headache, especially if you are changing the recipe every day.
 
-A better solution is to specify the "target count" and a "target tablename", like this:
+A better solution is to specify the "target number" and a "target tablename", like this:
 
 ```s
 snowfakery accounts.yml --target-number 1000 Account

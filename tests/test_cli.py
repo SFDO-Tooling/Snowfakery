@@ -421,6 +421,14 @@ class TestCLIOptionChecking:
             )
         assert "apping-file" in str(e.value)
 
+    def test_mutually_exclusive_targets(self):
+        with pytest.raises(ClickException) as e:
+            generate_cli.main(
+                [str(sample_yaml), "--reps", "50", "--target-count", "Account", "100"],
+                standalone_mode=False,
+            )
+        assert "mutually exclusive" in str(e.value)
+
     def test_cli_errors__cannot_infer_output_format(self):
         with pytest.raises(ClickException, match="No format supplied"):
             with TemporaryDirectory() as t:
