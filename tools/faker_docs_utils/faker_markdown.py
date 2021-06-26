@@ -1,6 +1,7 @@
 import re
 from functools import lru_cache
 from pathlib import Path
+import typing as T
 
 from yaml import dump as yaml_dump
 from faker import Faker
@@ -42,7 +43,7 @@ def country_for_locale(locale: str):
     return f.current_country()
 
 
-def locales_as_markdown(current_locale: str):
+def locales_as_markdown(current_locale: str, locale_list: T.List[str]):
     def format_link(locale: str):
         try:
             country_name = country_for_locale(locale)
@@ -52,7 +53,7 @@ def locales_as_markdown(current_locale: str):
         link_text = f"{language} as spoken in {country_name}: ({locale})"
         return f" - [{link_text}](fakedata/{locale}.md)\n"
 
-    other_locales = [locale for locale in AVAILABLE_LOCALES if locale != current_locale]
+    other_locales = [locale for locale in locale_list if locale != current_locale]
     links = [format_link(locale) for locale in other_locales]
     return " ".join(link for link in links if link)
 
@@ -129,7 +130,7 @@ def output_faker(name: str, data: str, output: callable, locale: str):
 
     output("Aliases: ", ", ".join(data.aliases))
     output()
-    link = f"[{data.source}]({data.url})"
+    link = f"[{data.source}]({data.url}) : {data.fullname}"
     output("Source:", link)
 
     if samples:
@@ -155,20 +156,24 @@ def indent(yaml):
     return "\n".join(lines)
 
 
-def generate_markdown_for_all_locales(path: Path, locales=AVAILABLE_LOCALES):
+def generate_markdown_for_all_locales(path: Path, locales=None):
+    "Generate markdown file for each listed locale. None means all locales"
+    locales = locales or AVAILABLE_LOCALES
     for locale in locales:
         with Path(path, f"{locale}.md").open("w") as f:
             print(f.name)
             generate_markdown_for_fakers(f, locale)
 
 
-def generate_locales_index(path: Path):
+def generate_locales_index(path: Path, locales_list: T.List[str]):
+    "Generate markdown index including listed locales. None means all locales"
+    locales_list = locales_list or AVAILABLE_LOCALES
     with Path(path).open("w") as outfile:
 
         def output(*args, **kwargs):
             print(*args, **kwargs, file=outfile)
 
-        locales = locales_as_markdown(None)
+        locales = locales_as_markdown(None, locales_list)
         if locales:
             output("## Fake Data Locales\n")
             output(
