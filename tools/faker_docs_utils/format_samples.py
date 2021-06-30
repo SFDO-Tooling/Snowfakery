@@ -9,10 +9,12 @@ from snowfakery import generate_data
 
 from . import docstring
 
-ALREADY_GENERATED_ERROR_FOR = set()
+# known code gen issues. ignore them.
+IGNORE_ERRORS = set(("uuid4", "randomchoices", "randomelement", "randomelements"))
 
 
 def samples_from_docstring(fullname, docstring_data):
+    """Convert a Faker-style docstring into a Snowfaery sample"""
     lines = docstring_data.split("\n")
     lines = [line.strip() for line in lines]
     docstrings = docstring.ProviderMethodDocstring(
@@ -27,19 +29,27 @@ def samples_from_docstring(fullname, docstring_data):
 
 
 def simplify(arg):
+    """Simplify Faker arg-types. e.g. tuples become lists. OrdereDicts become dicts"""
     fieldname = arg._fields[0]
     out = getattr(arg, fieldname)
+
+    # primitives are fine
     if isinstance(out, (str, int, float, bool)):
         return out
+
+    # simplify tuples to lists, and simplify the contents
     if isinstance(out, (list, tuple)):
         args = [simplify(a) for a in out]
         return type(out)(args)
+
+    # simplify OrderedDicts to dicts, and simplify the contents
     if isinstance(out, (OrderedDict, dict)):
         return {name: simplify(value) for name, value in dict(out).items()}
     raise TypeError(type(out), out)
 
 
 def extract_keywords(kwargstr):
+    """Reverse engineer the params from a Snowfakery faker by using the Python parser"""
     fake_python = f"Func({kwargstr})"
     tree = ast.parse(fake_python, mode="eval")
     kwds = {arg.arg: simplify(arg.value) for arg in tree.body.keywords}
@@ -47,25 +57,28 @@ def extract_keywords(kwargstr):
 
 
 def reformat_yaml(yaml_data):
+    """Normalize YAML to a common format"""
     data = yaml.safe_load(yaml_data)
     return yaml.dump(data, sort_keys=False)
 
 
 def yaml_samples_for_docstring_sample(name, sample, locale):
+    """Try to generate Snowfakery input and output for a faker."""
     try:
-        return yaml_samples_for_docstring_sample_inner(name, sample, locale)
+        return _yaml_samples_for_docstring_sample_inner(name, sample, locale)
     except Exception as e:
-        print("Cannot generate sample for", sample, str(e)[0:100])
+        print("Cannot generate sample from docstring", sample, str(e)[0:100])
         raise e
 
 
-def yaml_samples_for_docstring_sample_inner(name, sample, locale):
+def _yaml_samples_for_docstring_sample_inner(name, sample, locale):
+    """Try to generate Snowfakery input and output for a faker."""
     try:
         kwds = extract_keywords(sample.kwargs)
     except Exception as e:
-        if name not in ALREADY_GENERATED_ERROR_FOR:
-            ALREADY_GENERATED_ERROR_FOR.add(name)
-            print("Cannot extract keywords", sample, str(e)[0:100])
+        if name.lower() not in IGNORE_ERRORS:
+            IGNORE_ERRORS.add(name.lower())
+            print("Cannot extract keywords", name, sample, str(e)[0:100])
         return None
 
     name = name.split(".")[-1]
@@ -73,6 +86,7 @@ def yaml_samples_for_docstring_sample_inner(name, sample, locale):
 
 
 def yaml_sample(name, kwds, kw_example, locale):
+    """Generate Snowfakery yaml input and output"""
     if kwds:
         inline_example = f"fake.{name}({kw_example})"
         block_example = {f"fake.{name}": kwds}
@@ -85,41 +99,56 @@ def yaml_sample(name, kwds, kw_example, locale):
     if ":" in inline_example:
         inline_example = f'"{inline_example}"'
 
-    yaml_data = f"""
+    single_part_example = f"""
     - object: SomeObject
       fields:
-        formula_field_example: {inline_example}
-        block_field_example: {block_example}"""
+        formula_field_example: {inline_example}"""
 
     if locale:
         locale_decl = f"""
     - var: snowfakery_locale
       value: {locale}
     """
-        yaml_data = locale_decl + yaml_data
+        single_part_example = locale_decl + single_part_example
     try:
-        yaml_data = reformat_yaml(yaml_data)
+        two_part_example = (
+            single_part_example
+            + f"""
+        block_field_example: {block_example}"""
+        )
+
+        two_part_example = reformat_yaml(two_part_example)
+        single_part_example = reformat_yaml(single_part_example)
     except Exception as e:
         print("CANNOT PARSE")
-        print(yaml_data)
+        print(two_part_example, single_part_example)
         print(str(e)[0:100])
         raise
 
-    return snowfakery_output_for(name, yaml_data)
+    return snowfakery_output_for(name, two_part_example, single_part_example)
 
 
-def snowfakery_output_for(name, yaml_data):
-    with StringIO() as s:
-        try:
-            generate_data(StringIO(yaml_data), output_file=s, output_format="txt")
-        except Exception as e:
-            if name not in ALREADY_GENERATED_ERROR_FOR:
-                print(f"Cannot generate sample for {name}: {str(e)[0:50]}")
-                ALREADY_GENERATED_ERROR_FOR.add(name)
+def snowfakery_output_for(name, primary_example, secondary_example):
+    """Generate the Snowfakery output for some YAML
 
-            # print(yaml_data)
-            # print(str(e)[0:100])
-        output = s.getvalue()
+    Attempt to generate a two-part example, but fall back to single
+    or nothing if worse comes to worst."""
+    output = None
+    exception = None
+
+    for yaml_data in [primary_example, secondary_example]:
+        with StringIO() as s:
+            try:
+                generate_data(StringIO(yaml_data), output_file=s, output_format="txt")
+                output = s.getvalue()
+                exception = None
+            except Exception as e:
+                exception = e
+
+    if exception and name.lower() not in IGNORE_ERRORS:
+        print(f"Cannot generate sample for {name}: {str(exception)[0:80]}")
+        IGNORE_ERRORS.add(name.lower())
+
     if output:
         return yaml_data, output
 
@@ -129,6 +158,7 @@ def default_yaml_sample(name, locale):
 
 
 def yaml_samples_for_docstring(name, fullname, docstring_data, locale=None):
+    """Generate example for all samples associated wth a docstring"""
     sample_objs = samples_from_docstring(fullname, docstring_data)
 
     output = [
@@ -138,26 +168,3 @@ def yaml_samples_for_docstring(name, fullname, docstring_data, locale=None):
     if not output:
         output = [default_yaml_sample(name, locale)]
     return output
-
-
-if __name__ == "__main__":
-
-    out = samples_from_docstring(
-        "faker.providers.BaseProvider.upc_e",
-        """        together to produce the UPC-E barcode, and attempting to convert the
-            barcode to UPC-A and back again to UPC-E will exhibit the behavior
-            described above.
-
-            :sample:
-            :sample: base='123456'
-            :sample: base='123456', number_system_digit=0
-            :sample: base='123456', number_system_digit=1
-            :sample: base='120000', number_system_digit=0
-            :sample: base='120003', number_system_digit=0
-            :sample: base='120004', number_system_digit=0
-            :sample: base='120000', number_system_digit=0, safe_mode=False
-            :sample: base='120003', number_system_digit=0, safe_mode=False
-            :sample: base='120004', number_system_digit=0, safe_mode=False""",
-    )
-
-    print(out)

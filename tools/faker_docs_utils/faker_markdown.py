@@ -10,7 +10,7 @@ from tools.faker_docs_utils.format_samples import (
     yaml_samples_for_docstring,
     snowfakery_output_for,
 )
-from .summarize_fakers import get_all_fakers
+from .summarize_fakers import summarize_all_fakers
 from .language_codes import language_codes
 
 from snowfakery.fakedata.fake_data_generator import FakeData
@@ -27,7 +27,8 @@ AVAILABLE_LOCALES = [
 ]
 
 
-def strip(my_str):
+def cleanup_docstring(my_str):
+    "Clean up a docstring to remove Faker-doc weirdness and excesss whitespace"
     my_str = _RE_COMBINE_WHITESPACE.sub("", my_str)
     my_str = _RE_STRIP_SAMPLES.sub("", my_str).strip()
     my_str = _COMMENT_LINES_THAT_LOOK_LIKE_TITLES.sub(" #", my_str)
@@ -43,7 +44,9 @@ def country_for_locale(locale: str):
     return f.current_country()
 
 
-def locales_as_markdown(current_locale: str, locale_list: T.List[str]):
+def locales_as_markdown_links(current_locale: str, locale_list: T.List[str]):
+    "Generate a list of Markdown locale links"
+
     def format_link(locale: str):
         try:
             country_name = country_for_locale(locale)
@@ -62,11 +65,12 @@ standard_header = (Path(__file__).parent / "fakedata_header_short.md").read_text
 
 
 def generate_markdown_for_fakers(outfile, locale: str, header: str = standard_header):
+    "Generate the Markdown page for a locale"
     faker = Faker(locale)
     language = language_codes[locale.split("_")[0]]
     fd = FakeData(faker)
 
-    all_fakers = get_all_fakers(fd)
+    all_fakers = summarize_all_fakers(fd)
 
     def output(*args, **kwargs):
         print(*args, **kwargs, file=outfile)
@@ -81,12 +85,15 @@ def generate_markdown_for_fakers(outfile, locale: str, header: str = standard_he
     output("[TOC]\n")
 
     output("## Commonly Used\n")
-    summarize_categories(output, [f for f in all_fakers if f.common], "", locale)
+    output_fakers_in_categories(output, [f for f in all_fakers if f.common], "", locale)
     output("## Rarely Used\n")
-    summarize_categories(output, [f for f in all_fakers if not f.common], "", locale)
+    output_fakers_in_categories(
+        output, [f for f in all_fakers if not f.common], "", locale
+    )
 
 
-def summarize_categories(output, fakers, common: str, locale):
+def output_fakers_in_categories(output, fakers, common: str, locale):
+    """Sort fakers into named categores and then output them"""
     categorized = categorize(fakers)
     for category_name, fakers in categorized.items():
         output(f"### {category_name.title()} Fakers\n")
@@ -95,6 +102,7 @@ def summarize_categories(output, fakers, common: str, locale):
 
 
 def categorize(fakers):
+    "Sort fakers based on their categories (what module they came from)"
     categories = {}
     for fakerdata in fakers:
         category = fakerdata.category
@@ -104,28 +112,30 @@ def categorize(fakers):
 
 
 def gather_samples(name, data, locale):
-    if data.sample:
+    if data.sample:  # I already have a sample, no need to generate one
         if locale and locale != "en_US":
             locale_header = [{"var": "snowfakery_locale", "value": locale}]
             sample = locale_header + data.sample
         else:
             sample = data.sample
         example = yaml_dump(sample, sort_keys=False)
-        samples = [snowfakery_output_for(data.name, example)]
-    else:
+        samples = [snowfakery_output_for(data.name, example, example)]
+    else:  # need to generate a sample from scratch
         samples = yaml_samples_for_docstring(name, data.fullname, data.doc, locale)
     return list(filter(None, samples))
 
 
 def output_faker(name: str, data: str, output: callable, locale: str):
+    """Output the data relating to a particular faker"""
     samples = gather_samples(name, data, locale)
     # if there isn't at least one sample, don't publish
     if not samples:
         return
 
     output(f"#### fake: {name}\n")
-    if strip(data.doc):
-        output(strip(data.doc))
+    cleaned_docstring = cleanup_docstring(data.doc)
+    if cleaned_docstring:
+        output(cleaned_docstring)
         output()
 
     output("Aliases: ", ", ".join(data.aliases))
@@ -146,7 +156,8 @@ def output_faker(name: str, data: str, output: callable, locale: str):
         output()
 
 
-def indent(yaml):
+def indent(yaml: str):
+    """Add indents to yaml"""
     lines = yaml.split("\n")
 
     def prefix(line):
@@ -173,7 +184,7 @@ def generate_locales_index(path: Path, locales_list: T.List[str]):
         def output(*args, **kwargs):
             print(*args, **kwargs, file=outfile)
 
-        locales = locales_as_markdown(None, locales_list)
+        locales = locales_as_markdown_links(None, locales_list)
         if locales:
             output("## Fake Data Locales\n")
             output(

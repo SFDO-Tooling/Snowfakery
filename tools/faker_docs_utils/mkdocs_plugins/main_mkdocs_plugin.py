@@ -18,7 +18,7 @@ class Plugin(BasePlugin):
         faker_docs_dir = root_dir / "docs/fakedata"
         faker_docs_dir.mkdir(exist_ok=True)
         new_sys_path = [*sys.path, str(root_dir)]
-        print("Note: Hiding warnings during build", __file__)
+        print("Note: Hiding warnings during docs build")
 
         # make modules available
         sys_path_patch = patch.object(sys, "path", new_sys_path)
@@ -57,13 +57,15 @@ class Plugin(BasePlugin):
 
             build_locales_env = os.environ.get(
                 "SF_MKDOCS_BUILD_LOCALES"
-            ) or self.config.get("build_locales")
+            ) or self.config.get("build_locales", None)
             if build_locales_env == "False":
                 locales_list = ["en_US", "fr_FR"]
-            elif build_locales_env:
+            elif build_locales_env in (True, "True", None):
+                locales_list = None  # means "all"
+            elif isinstance(build_locales_env, str):
                 locales_list = build_locales_env.split(",")
             else:
-                locales_list = None  # means "all"
+                assert 0, f"Unexpected build_locales_env {build_locales_env}"
 
             generate_markdown_for_all_locales(faker_docs_dir, locales_list)
             generate_locales_index("docs/locales.md", locales_list)

@@ -5,9 +5,23 @@ import typing as T
 import yaml
 
 
-def get_all_fakers(faker):
+class FakerInfo(T.NamedTuple):
+    name: str
+    fullname: str
+    aliases: T.List[str]
+    url: str
+    source: str
+    category: str
+    doc: str
+    common: bool
+    sample: str
+
+
+def summarize_all_fakers(faker) -> T.Sequence[FakerInfo]:
+    """Summarize information about all fakers"""
     from snowfakery.utils.collections import CaseInsensitiveDict
 
+    # get config info that can override samples etc.
     with (Path(__file__).parent / "docs_config.yml").open() as f:
         yaml_data = yaml.safe_load(f)
         common_fakes = yaml_data["common_fakes"]
@@ -17,6 +31,7 @@ def get_all_fakers(faker):
     for name, meth in faker.fake_names.items():
         if not isinstance(meth, types.MethodType):
             continue
+        # python magic to introspect classnames, filenames, etc.
         friendly = _to_camel_case(name)
         func = meth.__func__
         doc = func.__doc__
@@ -25,6 +40,8 @@ def get_all_fakers(faker):
         fullname = cls.__module__ + "." + cls.__name__ + "." + meth.__name__
         overrides = common_fakes.get(meth.__name__) or uncommon_fakes.get(meth.__name__)
         is_common = meth.__name__ in common_fakes
+
+        # if it came from Faker
         if "/faker/" in filename:
             source = "faker"
             idx = filename.find("/faker/")
@@ -33,7 +50,7 @@ def get_all_fakers(faker):
             while parts[-1] in ("__init__.py", "en_US"):
                 del parts[-1]
             category = parts[-1]
-        else:
+        else:  # if it came from Snowfakery
             source = "snowfakery"
             idx = filename.find("/snowfakery/")
             url = (
@@ -58,18 +75,6 @@ def get_all_fakers(faker):
         faker_info.aliases.append(name)
 
     return faker_infos.values()
-
-
-class FakerInfo(T.NamedTuple):
-    name: str
-    fullname: str
-    aliases: T.List[str]
-    url: str
-    source: str
-    category: str
-    doc: str
-    common: bool
-    sample: str
 
 
 def _to_camel_case(snake_str):
