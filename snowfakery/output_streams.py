@@ -10,7 +10,16 @@ from collections import namedtuple, defaultdict
 from typing import Dict, Union, Optional, Mapping, Callable, Sequence
 from warnings import warn
 
-from sqlalchemy import create_engine, MetaData, Column, Integer, Table, Unicode, func
+from sqlalchemy import (
+    create_engine,
+    MetaData,
+    Column,
+    Integer,
+    Table,
+    Unicode,
+    func,
+    inspect,
+)
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import create_session
 from sqlalchemy.engine import Engine
@@ -396,6 +405,7 @@ class SqlTextOutputStream(FileOutputStream):
 def create_tables_from_inferred_fields(tables, engine, metadata):
     """Create tables based on dictionary of tables->field-list."""
     with engine.connect() as conn:
+        inspector = inspect(engine)
         for table_name, table in tables.items():
             columns = [Column(field_name, Unicode(255)) for field_name in table.fields]
             id_column_as_list = [
@@ -412,7 +422,8 @@ def create_tables_from_inferred_fields(tables, engine, metadata):
                 )
 
             t = Table(table_name, metadata, id_column, *columns)
-            if t.exists():
+
+            if inspector.has_table(table_name):
                 stmt = select([func.count(t.c.id)])
                 count = conn.execute(stmt).first()[0]
                 if count > 0:
