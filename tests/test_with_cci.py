@@ -13,6 +13,7 @@ from snowfakery.cli import generate_cli
 from snowfakery.data_generator import generate
 from snowfakery.data_gen_exceptions import DataGenError
 from snowfakery import generate_data
+from snowfakery.standard_plugins import Salesforce
 
 try:
     import cumulusci
@@ -27,11 +28,6 @@ sample_mapping_yaml = Path(__file__).parent / "mapping_vanilla_sf.yml"
 sample_accounts_yaml = Path(__file__).parent / "gen_sf_standard_objects.yml"
 
 sample_yaml = Path(__file__).parent / "include_parent.yml"
-
-
-skip_if_cumulusci_missing = pytest.mark.skipif(
-    not hasattr(cumulusci, "api"), reason="CumulusCI not installed"
-)
 
 
 class Test_CLI_CCI:
@@ -92,7 +88,7 @@ class TestSOQLNoCCI:
                 AccountId:
                     SalesforceQuery.random_record: Account
         """
-        generate(StringIO(yaml), plugin_options={"orgname": "blah"})
+        generate(StringIO(yaml), plugin_options={"org_name": "blah"})
         assert fake_sf_client.mock_calls
         assert generated_rows.row_values(0, "AccountId") == "FAKEID5"
 
@@ -113,7 +109,7 @@ class TestSOQLNoCCI:
                         where: Name='Foo'
         """
         with pytest.raises(DataGenError, match="Must supply 'from:'"):
-            generate(StringIO(yaml), plugin_options={"orgname": "blah"})
+            generate(StringIO(yaml), plugin_options={"org_name": "blah"})
 
     def test_soql_plugin_record(self, fake_sf_client, generated_rows):
         yaml = """
@@ -125,7 +121,7 @@ class TestSOQLNoCCI:
                 AccountId:
                     SalesforceQuery.find_record: Account
         """
-        generate(StringIO(yaml), plugin_options={"orgname": "blah"})
+        generate(StringIO(yaml), plugin_options={"org_name": "blah"})
         assert fake_sf_client.mock_calls
         assert generated_rows.row_values(0, "AccountId") == "FAKEID0"
 
@@ -140,18 +136,39 @@ class TestSOQLNoCCI:
                     SalesforceQuery.random_record: Account
         """
         plugin_option_name = (
-            "snowfakery.standard_plugins.Salesforce.SalesforceQuery.orgname"
+            "snowfakery.standard_plugins.Salesforce.SalesforceQuery.org_name"
         )
         generate(StringIO(yaml), plugin_options={plugin_option_name: "blah"})
         assert fake_sf_client.mock_calls
         assert generated_rows.row_values(0, "AccountId") == "FAKEID5"
 
 
+class TestCCIError:
+    def test_pretend_cci_not_available(self):
+        filename = (
+            Path(__file__).parent.parent / "examples/salesforce_soql_example.recipe.yml"
+        )
+        with unittest.mock.patch(
+            "snowfakery.standard_plugins.Salesforce.SalesforceConnectionMixin._get_CliRuntime"
+        ) as conn:
+            conn.side_effect = ImportError("CumulusCI Runtime cannot be loaded")
+            with pytest.raises(Exception, match="CumulusCI Runtime cannot be loaded"):
+                generate_data(filename, plugin_options={"org_name": "None"})
+
+    @pytest.mark.skipif(cumulusci, reason="CCI is installed")
+    def test_cci_really_not_available(self):
+        filename = (
+            Path(__file__).parent.parent / "examples/salesforce_soql_example.recipe.yml"
+        )
+        with pytest.raises(Exception, match="CumulusCI Runtime cannot be loaded"):
+            generate_data(filename, plugin_options={"org_name": "None"})
+
+
 @skip_if_cumulusci_missing
 class TestSOQLWithCCI:
     @patch("snowfakery.standard_plugins.Salesforce.randrange", lambda *arg, **kwargs: 0)
     @pytest.mark.vcr()
-    def test_soql(self, sf, org_config, generated_rows):
+    def test_soql(self, sf, org_config, project_config, generated_rows):
         yaml = """
             - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
             - object: Contact
@@ -169,7 +186,10 @@ class TestSOQLWithCCI:
         """
         assert org_config.name
         sf.Account.create({"Name": "Company"})
-        generate(StringIO(yaml), plugin_options={"orgname": org_config.name})
+        generate(
+            StringIO(yaml),
+            plugin_options={"org_config": org_config, "project_config": project_config},
+        )
         assert len(generated_rows.mock_calls) == 2
 
     @pytest.mark.vcr()
@@ -216,21 +236,8 @@ class TestSOQLWithCCI:
         filename = (
             Path(__file__).parent.parent / "examples/salesforce_soql_example.recipe.yml"
         )
-        generate_data(filename, plugin_options={"orgname": org_config.name})
+        generate_data(filename, plugin_options={"org_name": org_config.name})
         assert generated_rows.mock_calls
-
-    def test_cci_not_available(self):
-        filename = (
-            Path(__file__).parent.parent / "examples/salesforce_soql_example.recipe.yml"
-        )
-        with unittest.mock.patch(
-            "snowfakery.standard_plugins.Salesforce.SalesforceConnection._get_sf_clients"
-        ) as conn:
-            conn.side_effect = ImportError(
-                "cumulusci module cannot be loaded by snowfakery"
-            )
-            with pytest.raises(Exception, match="cumulusci module cannot be loaded"):
-                generate_data(filename, plugin_options={"orgname": "None"})
 
     @pytest.mark.vcr()
     def test_find_records_returns_nothing(self, org_config):
@@ -244,7 +251,7 @@ class TestSOQLWithCCI:
                     SalesforceQuery.find_record: Contract
         """
         with pytest.raises(DataGenError, match="No records returned"):
-            generate_data(StringIO(yaml), plugin_options={"orgname": org_config.name})
+            generate_data(StringIO(yaml), plugin_options={"org_name": org_config.name})
 
     @pytest.mark.vcr()
     def test_find_records_returns_multiple(self, org_config, sf, generated_rows):
@@ -257,7 +264,7 @@ class TestSOQLWithCCI:
                 AccountId:
                     SalesforceQuery.find_record: User
         """
-        generate_data(StringIO(yaml), plugin_options={"orgname": org_config.name})
+        generate_data(StringIO(yaml), plugin_options={"org_name": org_config.name})
         first_user_id = sf.query("select Id from User")["records"][0]["Id"]
         assert generated_rows.mock_calls[0][1][1]["AccountId"] == first_user_id
 
@@ -272,7 +279,7 @@ class TestSOQLDatasets:
             Path(__file__).parent.parent / "examples/soql_dataset_shuffled.recipe.yml"
         )
 
-        generate_data(filename, plugin_options={"orgname": org_config.name})
+        generate_data(filename, plugin_options={"org_name": org_config.name})
         assert len(generated_rows.mock_calls) == 10
 
         for mock_call in generated_rows.mock_calls:
@@ -293,7 +300,7 @@ class TestSOQLDatasets:
     def test_soql_dataset_in_order(self, sf, org_config, generated_rows):
         filename = Path(__file__).parent.parent / "examples/soql_dataset.recipe.yml"
 
-        generate_data(filename, plugin_options={"orgname": org_config.name})
+        generate_data(filename, plugin_options={"org_name": org_config.name})
         assert len(generated_rows.mock_calls) == 10
 
         for mock_call in generated_rows.mock_calls:
@@ -321,7 +328,7 @@ class TestSOQLDatasets:
             Path(__file__).parent.parent / "examples/soql_dataset_where.recipe.yml"
         )
 
-        generate_data(filename, plugin_options={"orgname": org_config.name})
+        generate_data(filename, plugin_options={"org_name": org_config.name})
         assert len(generated_rows.mock_calls) == 10
 
         for mock_call in generated_rows.mock_calls:
@@ -361,7 +368,7 @@ class TestSOQLDatasets:
             download_file,
         )
         with pretend_5000, do_not_really_download:
-            generate_data(filename, plugin_options={"orgname": org_config.name})
+            generate_data(filename, plugin_options={"org_name": org_config.name})
 
         assert len(generated_rows.mock_calls) == 10
 
@@ -392,7 +399,7 @@ class TestSOQLDatasets:
         from: Xyzzy
         """
         with pytest.raises(DataGenError, match="Xyzzy"):
-            generate_data(StringIO(yaml), plugin_options={"orgname": org_config.name})
+            generate_data(StringIO(yaml), plugin_options={"org_name": org_config.name})
 
     def test_dataset_no_fields(self, org_config, sf, generated_rows):
         yaml = """
@@ -405,7 +412,7 @@ class TestSOQLDatasets:
         junk: Junk2
         """
         with pytest.raises(DataGenError, match="SOQLDataset needs a 'fields' list"):
-            generate_data(StringIO(yaml), plugin_options={"orgname": org_config.name})
+            generate_data(StringIO(yaml), plugin_options={"org_name": org_config.name})
 
     def test_dataset_no_from(self, org_config, sf, generated_rows):
         yaml = """
@@ -418,4 +425,8 @@ class TestSOQLDatasets:
         fields: Junk3
         """
         with pytest.raises(DataGenError, match="SOQLDataset needs a 'from'"):
-            generate_data(StringIO(yaml), plugin_options={"orgname": org_config.name})
+            generate_data(StringIO(yaml), plugin_options={"org_name": org_config.name})
+
+    def test_config_type_error(self):
+        with pytest.raises(TypeError):
+            Salesforce.check_orgconfig(None)

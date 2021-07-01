@@ -217,11 +217,11 @@ In general, you can test Snowfakery files outside of CumulusCI to see if they wo
 $ snowfakery recipe.yml
 ```
 
-If you have a recipe which depends on data from an org, specify the CumulusCI orgname
-like this:
+If you have a recipe which depends on data from an org,
+specify the CumulusCI org name like this:
 
 ```s
-$ snowfakery recipe.yml --plugin-options orgname qa
+$ snowfakery recipe.yml --plugin-options org_name qa
 ```
 
 When you run the recipe in this way, it will connect to the org to pull data but
