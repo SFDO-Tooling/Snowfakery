@@ -3,6 +3,7 @@ black
 coverage
 coveralls
 flake8
+mkdocs
 pre-commit
 pytest
 pytest-cov

@@ -1,0 +1,6 @@
+- object: Example
+  fields:
+    gibberish_words:
+      fake.Sentence:
+        nb_words: 10
+        variable_nb_words: False

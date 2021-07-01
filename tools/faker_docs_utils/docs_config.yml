@@ -1,0 +1,199 @@
+common_fakes:
+  company:
+    example:
+      - object: Account
+        fields:
+          Name:
+            fake: Company
+      - object: Account
+        fields:
+          Name: ${{fake.Company}} Holdings
+  last_name:
+    example:
+      - object: Contact
+        fields:
+          FirstName:
+            fake: FirstName
+          LastName:
+            fake: LastName
+      - object: Contact
+        fields:
+          FirstName: ${{fake.FirstName}} Sam
+          LastName: ${{fake.FirstName}} Senior
+  first_name:
+    example:
+      - object: Contact
+        fields:
+          FirstName:
+            fake: FirstName
+          LastName:
+            fake: LastName
+      - object: Contact
+        fields:
+          FirstName: ${{fake.FirstName}} Sam
+          LastName: ${{fake.LastName}}-Jones
+  first_name_female:
+    example:
+      - object: Contact
+        fields:
+          FirstName:
+            fake: FirstNameFemale
+          LastName:
+            fake: LastName
+      - object: Contact
+        fields:
+          FirstName: ${{fake.FirstNameFemale}} Beth
+          LastName: ${{fake.LastName}}-Jones
+  first_name_male:
+    example:
+      - object: Contact
+        fields:
+          FirstName:
+            fake: FirstNameMale
+          LastName:
+            fake: LastName
+      - object: Contact
+        fields:
+          FirstName: ${{fake.FirstNameMale}} Beth
+          LastName: ${{fake.LastName}}-Jones
+  first_name_nonbinary:
+    example:
+      - object: Contact
+        fields:
+          FirstName:
+            fake: FirstNameNonBinary
+          LastName:
+            fake: LastName
+      - object: Contact
+        fields:
+          FirstName: ${{fake.FirstNameNonBinary}} Mary-John
+          LastName: ${{fake.LastName}}-Jones
+  catch_phrase:
+    example:
+      - object: Account
+        fields:
+          Name:
+            fake: Company
+          Description:
+            fake: CatchPhrase
+      - object: Account
+        fields:
+          Name: ${{fake.Company}} Holdings
+          Description: "Our Motto: ${{fake.CatchPhrase}}"
+  year:
+    example:
+      - object: Student
+        fields:
+          GraduationYear:
+            fake: year
+      - object: Student
+        fields:
+          GraduationYear: ${{year}}
+  email:
+    example:
+      - object: Contact
+        fields:
+          FirstName:
+            fake: FirstName
+          LastName:
+            fake: LastName
+          Email:
+            fake: Email
+      - object: Contact
+        fields:
+          FirstName: ${{fake.FirstName}} Sam
+          LastName: ${{fake.FirstName}} Senior
+          Email: ${{fake.Email}}
+  phone_number:
+    example:
+      - object: Account
+        fields:
+          Name:
+            fake: Company
+          Phone:
+            fake: PhoneNumber
+      - object: Account
+        fields:
+          Name: ${{fake.Company}} Holdings
+          Phone: ${{fake.PhoneNumber}} ext. 23
+  city:
+    example:
+      - object: Account
+        fields:
+          Name:
+            fake: Company
+          BillingCity:
+            fake: City
+      - object: Account
+        fields:
+          Name: ${{fake.Company}} Holdings
+          BillingCity: ${{fake.City}}
+  state:
+    example:
+      - object: Account
+        fields:
+          Name:
+            fake: Company
+          BillingState:
+            fake: State
+      - object: Account
+        fields:
+          Name: ${{fake.Company}} Holdings
+          BillingState: ${{fake.State}}
+  postalcode:
+    example:
+      - object: Account
+        fields:
+          Name:
+            fake: Company
+          BillingPostalCode:
+            fake: postalcode
+      - object: Account
+        fields:
+          Name: ${{fake.Company}} Holdings
+          BillingPostalCode: ${{fake.Postalcode}}
+  street_address:
+    example:
+      - object: Account
+        fields:
+          Name:
+            fake: Company
+          BillingStreet:
+            fake: StreetAddress
+      - object: Account
+        fields:
+          Name: ${{fake.Company}} Holdings
+          BillingStreet: ${{fake.StreetAddress}}
+  country:
+    example:
+      - object: Account
+        fields:
+          Name:
+            fake: Company
+          BillingCountry:
+            fake: Country
+      - object: Account
+        fields:
+          Name: ${{fake.Company}} Holdings
+          BillingCountry: ${{fake.Country}}
+  current_country:
+    example:
+      - object: Account
+        fields:
+          Name:
+            fake: Company
+          BillingCountry:
+            fake: CurrentCountry
+      - object: Account
+        fields:
+          Name: ${{fake.Company}} Holdings
+          BillingCountry: ${{fake.CurrentCountry}}
+  time:
+  paragraph:
+  word:
+  sentence:
+  text:
+uncommon_fakes:
+  building_number:
+  country_code:
+  current_country_code:
