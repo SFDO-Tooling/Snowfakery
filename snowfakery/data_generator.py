@@ -192,7 +192,7 @@ def process_plugins_options(
 ) -> Mapping[str, object]:
     """Replace option short names with fully qualified names
        and convert types of options.
-    e.g. the option name that the user specifies on the CLI or API is just "orgname"
+    e.g. the option name that the user specifies on the CLI or API is just "org_name"
          but we use the long name internally to avoid clashing with the
          user's variable names."""
 

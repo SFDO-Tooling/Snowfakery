@@ -119,7 +119,7 @@ pet_stories.yml
       - object: Animal
         fields:
           name:
-            fake: first_name
+            fake: FirstName
           species: canine
           food:
             - object: PetFood
@@ -131,7 +131,7 @@ pet_stories.yml
       - object: Animal
         fields:
           name:
-            fake: first_name
+            fake: FirstName
           species: feline
           food:
             - object: PetFood
@@ -224,6 +224,30 @@ persons_of_interest.yml
 
 In this case, there will be 6 Persons in the Person table (or file), 3 with age between 0 and 12 and 3 with age between 12 and 95.
 
+### Fake Data
+
+You can generate many kinds of fake data using the `fake` function:
+
+```yaml
+- object: Account
+  fields:
+    Name:
+      fake: Company
+    Description:
+      fake: CatchPhrase
+    BillingStreet:
+      fake: StreetAddress
+    BillingCity:
+      fake: City
+    BillingState:
+      fake: State
+```
+
+You can fake all sorts of stuff. Names, addresses, Latin text, English sentences, URLs, etc.
+
+The complete list, along with other related features, can be found in
+the [Fake Data Tutorial](fakedata.md)
+
 ### Friends
 
 Sometimes you want to obey a rule like “For every Person I create, I’d like to create 2 animals” (maybe you really like animals).
@@ -245,7 +269,7 @@ You would use the `friends` property to do that.
       count: 2
       fields:
         name:
-          fake: first_name
+          fake: FirstName
 ```
 
 This will output two animals per person:
@@ -282,7 +306,7 @@ Relationships are a big part of what makes Snowfakery different than the dozens(
       - object: Animal
         fields:
           name:
-            fake: first_name
+            fake: FirstName
           species: Petaurus Breviceps
 ```
 
@@ -313,7 +337,7 @@ In addition, we can relate pets and owners “bidirectionally”, like this:
       - object: Animal
         fields:
           name:
-            fake: first_name
+            fake: FirstName
           owner:
             reference: Person
 ```
@@ -366,7 +390,7 @@ pet_stories_2.yml
           owner: 
             reference: Person
           name:
-            fake: first_name
+            fake: FirstName
           species: canine
           food:
             reference: petschoice
@@ -376,7 +400,7 @@ pet_stories_2.yml
         fields:
           owner: Person
           name:
-            fake: first_name
+            fake: FirstName
           species: feline
           nemesis: dog
           food:
@@ -415,7 +439,7 @@ This function allows you to look up another row (object) and make a reference to
 - object: Animal
   fields:
     name:
-      fake: first_name
+      fake: FirstName
     owner:
       reference: Person
 ```
@@ -509,7 +533,8 @@ Create a reference to a random, already-created row from some table.
 - object: Owner
   count: 10
   fields:
-    name: fake.name
+    name:
+      fake: Name
 - object: Pet
   count: 10
   fields:
@@ -533,123 +558,9 @@ github issue.
 
 ### `fake`
 
-Generate fake data using functions from the [faker](https://github.com/joke2k/faker) library:
+Generate fake data. This function is defined in detail
+in the [Fake Data Tutorial](fakedata.md)
 
-```yaml
-- object: Account
-  fields:
-    Name:
-      fake: company
-    Description:
-      fake: catch_phrase
-    BillingStreet:
-      fake: street_address
-    BillingCity:
-      fake: city
-    BillingState:
-      fake: state
-```
-
-You can fake all sorts of stuff. Names, addresses, Latin text, English sentences, URLs, etc. There are two lists of fake names you can pull from, a Snowfakery-specific list,
-and the broader faker list.
-
-The Snowfakery names are:
-
-- Username: a globally unique username in the shape of an email address
-
-- Alias: a short string that looks like a first name.
-
-- FirstName, LastName: Localized first and last name
-
-- Email: An email address using one of the standard "example" domains (such as example.com, example.org, etc.)
-
-- RealisticMaybeRealEmail: An email address which looks
-more real (because it uses domains like google.com,
-yahoo.com, etc.) and may accidentally actually overlap
-with a real email address. Be careful using this if
-you might send actual emails to the addresses!
-
-For example, you can use these like this:
-
-```yaml
-# examples/salesforce/simple-user.yml
-- object: User
-  fields:
-    Username:
-      fake: Username
-    FirstName:
-      fake: FirstName
-    LastName:
-      fake: LastName
-    Email:
-      fake: Email
-    Alias:
-      fake: Alias
-```
-
-It doesn't matter if you use upper or lower case for fake names.
-
-The complete list is here:
-
-<https://faker.readthedocs.io/en/stable/providers.html>
-
-You can also include Faker extension libraries after you’ve added them to your Python install:
-
-```yaml
- - plugin: faker_microservice.Provider
- - object: OBJ
-    fields:
-    service_name:
-        fake:
-            microservice
-```
-
-You would install that provider like this:
-
-```s
-$ pip install faker_microservice
-```
-
-Here are some Python Faker providers:
-
-<https://faker.readthedocs.io/en/master/communityproviders.html>
-
-And you could make your own providers as well.
-
-Fake can be called as an inline function in an expression:
-
-```yaml
-FullName: ${{fake.first_name}} Johnson
-```
-
-You can also call these functions with arguments as described in Faker's [documentation](https://faker.readthedocs.io/en/master/providers.html)
-
-```yaml
-country: ${{fake.country_code(representation='alpha-2')}}
-```
-
-### International Fakes
-
-You can specify internationally appropriate fakes for many different kind of names (e.g. person, company) by setting the snowfakery_locale this:
-
-```yaml
-- var: snowfakery_locale
-  value: no_NO
-- object: person
-  fields:
-    name:
-      fake: name
-- var: snowfakery_locale
-  value: fr_FR
-- object: person
-  fields:
-    name:
-      fake: name
-```
-
-This will generate a “typical” Norwegian first name for the first person object and a French name for the second person object.
-
-You can infer which Faker providers are internationalizable by looking through the Faker [repository](https://github.com/joke2k/faker/tree/master/faker/providers) and seeing which directories have localizations. For example there are only three localizations of [credit card](https://github.com/joke2k/faker/tree/master/faker/providers) (who knew that credit cards were different in Iran and Russia) and dozens of localizations for [person name](https://github.com/joke2k/faker/tree/master/faker/providers/person).
 
 
 ### `date_between`
@@ -761,16 +672,16 @@ some_number: A number ${{random_number(min=5, max=10)}}
         - choice:
             when: ${{gender=='Male'}}
             pick:
-              fake: first_name_male
+              fake: FirstNameMale
 
         - choice:
             when: ${{gender=='Female'}}
             pick:
-              fake: first_name_female
+              fake: FirstNameFemale
 
         - choice:
             pick:
-              fake: first_name
+              fake: FirstNameNonBinary
 ```
 
 The `when` clause can be a Python formula and it will be interpreted as a boolean similar to how Python would do it. The first `when` clause that matches is selected. The last `choice` clause should have no `when` clause, and it is a fallback which is selected if the others do not match.
@@ -853,17 +764,17 @@ this:
 ```yaml
 - var: lastname_var
   value:
-    fake: last_name
+    fake: LastName
 - object: person
   fields:
-    first_name:
-      fake: first_name
-    last_name: ${{lastname_var}}
+    FirstName:
+      fake: FirstName
+    LastName: ${{lastname_var}}
 - object: spouse
   fields:
-    first_name:
-      fake: first_name
-    last_name: ${{lastname_var}}
+    FirstName:
+      fake: FirstName
+    LastName: ${{lastname_var}}
 ```
 
 This works both at the top level of your recipe and in friends
@@ -878,7 +789,7 @@ do that by creating a "hidden" object:
     - object: __shared_address
       fields:
         street:
-          fake: street_address
+          fake: StreetAddress
         city:
           fake: city
         state:
@@ -932,7 +843,7 @@ There is a lot to say about formulas and one day they will all be documented her
 - use `${{` to start a formula and `}}` to end it
 - use Python expression syntax in the middle
 - field values defined earlier on this object are available as names
-- Use faker values like this: Name: ${{fake.first_name}} Johnson
+- Use faker values like this: Name: ${{fake.FirstName}} Johnson
 - parent (or ancestor) values are available through the parent’s object name. Like Opportunity.amount
 
 Formulas are based on a similar language called Jinja2, but we use `${{` and `}}` where Jinja2 uses `{{` and `}}` because our version is more compatible with YAML.
@@ -961,7 +872,7 @@ The `id` variable returns a unique identifier for the current Object/Row to allo
 
 ```yaml
 fields:
-  name: ${{fake.last_name}} Household ${{id}}
+  name: ${{fake.LastName}} Household ${{id}}
 ```
 
 #### `today`
@@ -973,7 +884,8 @@ a single recipe.
 
 #### `fake:` and `fake.`
 
-The `fake:` function and `fake.` namespace both generate fake data as described elsewhere in this documentation.
+The `fake:` block function and `fake.` namespace both generate
+fake data as described in the [Fake Data Tutorial](fakedata.md).
 
 ```yaml
 # examples/two_fakers.yml
@@ -1415,7 +1327,67 @@ generate_data(
 
 Detailed information is available in [Embedding Snowfakery into Python Applications](./embedding.md)
 
-## Plugins and Providers
+### Using Snowfakery with Databases
+
+Snowfakery is built on top of a very flexible engine called
+SQLAlchemy. This allows it to connect to many different databases
+subject to the limitations described below.
+
+You should start by installing Snowfakery in a context which
+makes it easy to use the Python command 'pip' to manage your
+Python environment. For example you could install Python
+using the standard installers from `python.org` and then
+you would run the following commands to create and use a venv with the
+Postgres package:
+
+```bash
+
+# create a new directory for our experiment
+$ mkdir experiment_with_postgres
+# cd into it
+$ cd experiment_with_postgres
+# create a new database: 
+# https://www.postgresql.org/docs/9.1/app-createdb.html
+$ createdb snowfakerydb
+# create a virtual environment. A good habit to get into.
+# https://docs.python.org/3/library/venv.html
+$ python3 -m venv myvenv
+# activate the venv
+$ source myvenv/bin/activate
+# install Snowfakery in this venv
+$ pip install snowfakery
+# install the Postgres library for Python
+# https://pypi.org/project/psycopg2/
+$ pip install psycopg2
+# let's use it!
+$ snowfakery --dburl='postgresql://localhost:5432/snowfakerydb' ~/code/Snowfakery/examples/company.yml --target-number 1000 Employee
+# and check the results
+# https://www.postgresql.org/docs/9.3/app-psql.html
+$ echo 'select * from "Employee"' | psql snowfakerydb
+```
+
+That's a lot to take in, but hopefully it will be clear enough
+to follow the links and understand the details.
+
+A limitation of this process is that currently Snowfakery can
+only create new tables rather than import into existing ones.
+
+The table will have an id column in addition to columns for every field that
+was generated by the recipe. All columns will be of type text.
+
+The list of databases supported by our underlying infrastructure
+(SQLAlchemy) is listed [here](https://docs.sqlalchemy.org/en/14/core/engines.html#supported-databases) and [here](https://docs.sqlalchemy.org/en/13/dialects/index.html).
+
+Snowfakery is not proactively tested with all of the output
+databases. We will certainly accept bug reports and pull requests
+relating to problems that are discovered.
+
+Please keep in touch with the Snowfakery team about your use of
+other databases so we can have a sense of what works well and what
+does not.
+
+
+### Plugins and Providers
 
 Plugins and Providers allow Snowfakery to be extended with Python code. A plugin adds new functions to Snowfakery. A Provider adds new capabilities to the Faker library which is exposed to Snowfakery users through the fake: keyword.
 
@@ -1425,9 +1397,9 @@ You include either Plugins or Providers in a Snowfakery file like this:
 - plugin: package.module.classname
 ```
 
-## Built-in Plugins
+### Built-in Plugins
 
-### Advanced Math
+#### Advanced Math
 
 Snowfakery has a "Math" plugin which gives you access to all features from Python's
 [`math`](https://docs.python.org/3/library/math.html) module plus
@@ -1553,9 +1525,9 @@ CumulusCI can also be used to download CSV data for enrichment as follows.
       Dataset.shuffle:
         dataset: ../../accounts.csv
     FirstName:
-      fake: first_name
+      fake: FirstName
     LastName:
-      fake: last_name
+      fake: LastName
     AccountId: ${{__accounts.Id}}
 ```
 
@@ -1682,66 +1654,9 @@ There are several examples [in the Snowfakery repository](https://github.com/SFD
 Salesforce-specific patterns and tools are described in
 [Using Snowfakery with Salesforce](salesforce.md)
 
-## Using Snowfakery with Databases
+## Appendices
 
-Snowfakery is built on top of a very flexible engine called
-SQLAlchemy. This allows it to connect to many different databases
-subject to the limitations described below.
-
-You should start by installing Snowfakery in a context which
-makes it easy to use the Python command 'pip' to manage your
-Python environment. For example you could install Python
-using the standard installers from `python.org` and then
-you would run the following commands to create and use a venv with the
-Postgres package:
-
-```bash
-
-# create a new directory for our experiment
-$ mkdir experiment_with_postgres
-# cd into it
-$ cd experiment_with_postgres
-# create a new database: 
-# https://www.postgresql.org/docs/9.1/app-createdb.html
-$ createdb snowfakerydb
-# create a virtual environment. A good habit to get into.
-# https://docs.python.org/3/library/venv.html
-$ python3 -m venv myvenv
-# activate the venv
-$ source myvenv/bin/activate
-# install Snowfakery in this venv
-$ pip install snowfakery
-# install the Postgres library for Python
-# https://pypi.org/project/psycopg2/
-$ pip install psycopg2
-# let's use it!
-$ snowfakery --dburl='postgresql://localhost:5432/snowfakerydb' ~/code/Snowfakery/examples/company.yml --target-number 1000 Employee
-# and check the results
-# https://www.postgresql.org/docs/9.3/app-psql.html
-$ echo 'select * from "Employee"' | psql snowfakerydb
-```
-
-That's a lot to take in, but hopefully it will be clear enough
-to follow the links and understand the details.
-
-A limitation of this process is that currently Snowfakery can
-only create new tables rather than import into existing ones.
-
-The table will have an id column in addition to columns for every field that
-was generated by the recipe. All columns will be of type text.
-
-The list of databases supported by our underlying infrastructure
-(SQLAlchemy) is listed [here](https://docs.sqlalchemy.org/en/14/core/engines.html#supported-databases) and [here](https://docs.sqlalchemy.org/en/13/dialects/index.html).
-
-Snowfakery is not proactively tested with all of the output
-databases. We will certainly accept bug reports and pull requests
-relating to problems that are discovered.
-
-Please keep in touch with the Snowfakery team about your use of
-other databases so we can have a sense of what works well and what
-does not.
-
-## Snowfakery Glossary
+### Snowfakery Glossary
 
 - Object: When we think about our Rows in the context of each other, we often use the word “Object”. That’s because rows often *represent* real-world entities like houses (or at least their, addresses), organizations and people (in this case its acceptable to objectify people). See also: “Rows”
 - Object Template: These represent instructions on how to create a row, or multiple rows in a database. Each row represents a real-world Object.
@@ -1751,7 +1666,7 @@ does not.
 - Singleton: A singleton is an Object Template that generates a single row regardless of how many times the recipe is iterated over.
 - YAML: YAML is a relatively simple, human-readable format. You can learn more about it at [yaml.org](http://yaml.org/). But you can also just pick up the basics of it by reading along.
 
-## Security Profile of Snowfakery
+### Appendix: Security Profile of Snowfakery
 
 Snowfakery should be considered a domain-specific programming language with
 access to most of the power of Python. It can load Python plugins and
@@ -1759,26 +1674,8 @@ call Python methods. It would be unwise to run untrusted recipes in an
 environment that has access to secure resources such as passwords, network
 connections, etc.
 
-## Internal Software Architecture
 
-|Filename	                        |Purpose	|
-|---	                            |---	|
-|cli.py	                  |Click-based Command Line. Uses the Click library to supply a CLI.	|
-|data_generator.py	              |The API entry point the CLI and CCI use. <p>This may be the best place to start reading. It abstracts away all of the complexity and outlines the core flow.	|
-|parse_recipe_yaml.py	            |Phase 1: parse YAML into a Runtime DOM<p>Includes some hacks to the YAML parser for handling line numbers.	|
-|data_generator_runtime.py	      |Phase 2: Runtime.<p>Actually generate the data by walking the template list top-to-bottom, generating rows as appopriate. 	
-|data_generator_runtime_dom.py	  |An object model used in Phase 2. Roughly similar to the shape of the YAML file.|
-|output_streams.py	              |Where the data goes in the output. Used during Phase 2.	|
-|data_gen_exceptions.py	          |Exceptions that can be thrown	|
-|generate_mapping_from_recipe.py	|In the CCI context, this utility package allows the generation of mapping.yml files.	|
-|template_funcs.py	              |Functions that can be invoked using either block syntax or in Jinja templates	|
-|plugins.py                       |Infrastructure for plugins |
-|standard_plugins/                |Plugins that ship with Snowfakery |
-|tests/	                          |Unit tests	|
-
-<img src='images/img6.png' id='PJUACA3lKvf' alt='Architecture Diagram'>
-
-## Appendix: The Age Old Puzzle
+### Appendix: The Age Old Puzzle
 
 ```yaml
     # As I was going to St. Ives,

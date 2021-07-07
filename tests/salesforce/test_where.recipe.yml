@@ -1,6 +1,6 @@
 # execute this recipe like this:
 
-# snowfakery tests/salesforce/test_where.recipe.yml --plugin-option orgname qa
+# snowfakery tests/salesforce/test_where.recipe.yml --plugin-option org_name qa
 
 - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
 

@@ -1,33 +1,43 @@
 from difflib import get_close_matches
-from faker import Faker
 import typing as T
+
+from faker import Faker, Generator
 
 
 class FakeNames(T.NamedTuple):
     f: Faker
 
-    def Username(self):
+    def user_name(self):
+        "Salesforce-style username in the form of an email address"
         return f"{self.f.first_name()}_{self.f.last_name()}_{self.f.uuid4()}@{self.f.hostname()}"
 
-    def Alias(self):
+    def alias(self):
+        "Salesforce-style 8-character alias"
         return self.f.first_name()[0:8]
 
-    def FirstName(self):
-        return self.f.first_name()
-
-    def LastName(self):
-        return self.f.last_name()
-
-    def Email(self):
+    def email(self):
+        """Email address using one of the "example" domains"""
         return self.f.ascii_safe_email()
 
-    def RealisticMaybeRealEmail(self):
+    def realistic_maybe_real_email(self):
+        """Like fake: email except that the email domain may be real and therefore
+        the email address itself may be real. Use with caution, you might
+        accidentally email strangers!!!
+        """
         return self.f.email()
+
+    def state(self):
+        """Return a state, province or other appropriate administrative unit"""
+        return self.f.administrative_unit()
+
+    def postalcode(self):
+        """Return whatever counts as a postalcode for a particular locale"""
+        return self.f.postcode()
 
 
 # we will use this to exclude Faker's internal book-keeping methods
 # from our faker interface
-faker_class_attrs = set(dir(Faker))
+faker_class_attrs = set(dir(Faker)).union((dir(Generator)))
 
 
 class FakeData:
@@ -35,6 +45,10 @@ class FakeData:
 
     def __init__(self, faker: Faker):
         fake_names = FakeNames(faker)
+        self.faker = faker
+
+        def no_underscore_name(name):
+            return name.lower().replace("_", "")
 
         def obj_to_func_list(obj: object, canonicalizer: T.Callable, ignore_list: set):
             return {
@@ -49,11 +63,10 @@ class FakeData:
         # include snowfakery names defined above
         self.fake_names = {
             **obj_to_func_list(faker, str.lower, faker_class_attrs),
-            **obj_to_func_list(
-                faker, lambda x: x.lower().replace("_", ""), faker_class_attrs
-            ),
+            **obj_to_func_list(faker, no_underscore_name, faker_class_attrs),
             # in case of conflict, snowfakery names "win" over Faker names
             **obj_to_func_list(fake_names, str.lower, set()),
+            **obj_to_func_list(fake_names, no_underscore_name, set()),
         }
 
     def _get_fake_data(self, origname, *args, **kwargs):

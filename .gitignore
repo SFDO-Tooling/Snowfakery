@@ -13,6 +13,9 @@ build/
 dist/
 docs/api/
 docs/_build/
+docs/fakedata
+docs/fakedata.md
+docs/locales.md
 .eggs/
 .idea/
 .tox/
