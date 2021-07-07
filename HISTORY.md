@@ -9,7 +9,7 @@ And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” an
 Recipes can now merge in data from Salesforce orgs as
 records, IDs or datasets. (#395 and #401)
 
-Output streams can now be specified as 3rd party libraries. Any Python classname
+Output streams can now be specified as 3rd party libraries. Any Python class name
 can be passed to --output-format as long as it adheres to the OutputStream
 protocol as shown in examples/YamlOutputStream.py (#351)
 
