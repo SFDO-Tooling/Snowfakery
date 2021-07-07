@@ -38,7 +38,7 @@ docopt==0.6.2
     # via coveralls
 faker-microservice==2.0.0
     # via -r requirements/dev.in
-faker==8.8.1
+faker==8.10.0
     # via
     #   -r requirements/prod.txt
     #   faker-microservice
@@ -66,7 +66,7 @@ immutables==0.15
     # via
     #   -r requirements/prod.txt
     #   contextvars
-importlib-metadata==4.5.0
+importlib-metadata==4.6.1
     # via
     #   -r requirements/prod.txt
     #   flake8
@@ -102,7 +102,7 @@ mypy-extensions==0.4.3
     # via black
 nodeenv==1.6.0
     # via pre-commit
-packaging==20.9
+packaging==21.0
     # via
     #   mkdocs
     #   pytest
@@ -150,7 +150,7 @@ pyyaml==5.4.1
     #   pre-commit
     #   pyyaml-env-tag
     #   vcrpy
-regex==2021.4.4
+regex==2021.7.6
     # via black
 requests==2.25.1
     # via
@@ -166,7 +166,7 @@ six==1.16.0
     #   tox
     #   vcrpy
     #   virtualenv
-sqlalchemy==1.4.18
+sqlalchemy==1.4.20
     # via -r requirements/prod.txt
 text-unidecode==1.3
     # via
@@ -196,7 +196,7 @@ typing-extensions==3.10.0.0
     #   importlib-metadata
     #   pydantic
     #   yarl
-urllib3==1.26.5
+urllib3==1.26.6
     # via
     #   requests
     #   responses
@@ -208,13 +208,13 @@ virtualenv==20.4.7
     # via
     #   pre-commit
     #   tox
-watchdog==2.1.2
+watchdog==2.1.3
     # via mkdocs
 wrapt==1.12.1
     # via vcrpy
 yarl==1.6.3
     # via vcrpy
-zipp==3.4.1
+zipp==3.5.0
     # via
     #   -r requirements/prod.txt
     #   importlib-metadata
