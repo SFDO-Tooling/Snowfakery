@@ -6,7 +6,7 @@ And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” an
 
 ## Snowfakery 2.0
 
-Recipes can now merge in data from Salesforce Salesforce instances as
+Recipes can now merge in data from Salesforce orgs as
 records, IDs or datasets. (#395 and #401)
 
 Output streams can now be specified as 3rd party libraries. Any Python classname
