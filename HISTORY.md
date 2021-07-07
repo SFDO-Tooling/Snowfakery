@@ -21,12 +21,8 @@ Snowfakery now supports a --reps option as an easier way to repeat a recipe (#41
 Snowfakery now accepts LeadingCaps syntax for all fakers, as well as
 underscore_separated and everythinglowercase. (#403)
 
-Snowfakery now supports a more intuitive and properly documented fake list. (#409 Not merged yet)
-
 Salesforce.ContentVersion and Salesforce.ProfileId convenience functions were added
-(#421 Not merged yet)
-
-Email and Username are based on FirstName and LastName if available (#420 Not merged yet)
+(#421)
 
 Snowfakery now has voluminous documentation about Fakes in many languages and
 locales (#409)
