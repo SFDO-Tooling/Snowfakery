@@ -1,10 +1,10 @@
 from snowfakery import SnowfakeryPlugin
 from snowfakery.plugins import PluginResult, PluginOption
+from snowfakery import data_gen_exceptions as exc
 
 import os
 import time
 from itertools import count
-import typing as T
 import random
 
 # the option name that the user specifies on the CLI or API is just "pid"
@@ -107,13 +107,16 @@ def _oct(number):
 
 
 class Uniqifier(PluginResult):
-    def __init__(self, pid: T.Union[int, str] = None, parts: str = None):
-        if isinstance(pid, str):
-            self.pid = _oct(int(pid))
-        elif isinstance(pid, int):
+    def __init__(self, pid: int = None, parts: str = None):
+        if isinstance(pid, int):
             self.pid = _oct(pid)
         elif pid is None:
             self.pid = self._default_pid()
+        else:  # pragma: no cover
+            assert type(pid) in (
+                int,
+                type(None),
+            ), f"Unsupported datatype for pid: {pid}"
         parts = [self._convert(part.strip().lower()) for part in parts.split(",")]
         self.template = "9".join(parts)
         self.counter = count(1)
@@ -133,14 +136,12 @@ class Uniqifier(PluginResult):
         elif part.startswith("rand"):
             numbits = int(part[4:])
             return _oct(random.getrandbits(numbits))
-        elif isinstance(part, int):
-            return _oct(part)
-        elif part.isnumeric():
+        elif part.isnumeric() or isinstance(part, int):
             return _oct(int(part))
         elif part == "index":
             return "{index:o}"
         else:
-            assert False, f"Unknown input to eval: {part}"  # FIXME
+            raise exc.DataGenValueError(f"Unknown input to eval: {part}")
 
     @property
     def unique_id(self):
