@@ -866,14 +866,73 @@ executed again.
 child_index: Child number ${{child_index}}
 ```
 
-#### `id`
+#### `unique_id`
 
-The `id` variable returns a unique identifier for the current Object/Row to allow you to construct unique identifiers.
+The `unique_id` variable returns a unique number that can
+be used to distinguish any record from others. For example,
+we can incorporate a unique ID into an email address or
+an employee ID.
 
 ```yaml
-fields:
-  name: ${{fake.LastName}} Household ${{id}}
+# examples/test_unique_id.yml
+- object: Contact
+  fields:
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+    Employee: ${{unique_id}}
+    Email: ${{unique_id}}_${{fake.email}}
 ```
+
+By default, Snowfakery works in "small id" mode, which means
+that IDs start as 1 digit, and grow longer as you generate
+more records.
+
+```s
+$ python -m snowfakery examples/test_unique_id.yml
+Contact(id=1, FirstName=Spencer, LastName=Sims, Employee=1, Email=2_conradguy@example.net)
+```
+
+####  Advanced `unique_id` usages
+
+"Big id" mode allows you to make IDs that are very likely to
+be unique across time and space. Specifically: it incorporates
+a timestamp, information about the current process and about
+8 bits of randomness. The generated IDs are about 22 digits
+long. Unless you are running Snowfakery on
+thousands of computers at the exact same time, the chances of a clash are
+miniscule, and in any case, a clash only matters if the unique IDs are
+destined to end up in a common Salesforce Org or database.
+
+```s
+$ python -m snowfakery examples/test_unique_id.yml --plugin-option big_ids True
+Contact(id=1, FirstName=Stephen, LastName=Parrish, Employee=763534209134265915391, Email=763534209134265915392_brittany17@example.org)
+```
+
+If you do need even higher levels of uniqueness, you can
+inject "unique execution ids" from some external source through the
+plugin option `pid`. Those execution
+ids would replace the timestamp and process information in your Big ID's calculation.
+
+```s
+ $ python -m snowfakery examples/test_unique_id.yml --plugin-option big_ids True --plugin-option pid 111
+Contact(id=1, FirstName=Melody, LastName=Marquez, Employee=157937691, Email=157937692_emmahoover@example.org)
+```
+
+The `111` value is not literally included in the ID, but it is an input into
+the unique ID generation algorithm. As an example, you can inject
+about 15 digits of randomness and a timestamp like this on Unix-ish systems:
+
+```s
+python -m snowfakery examples/test_unique_id.yml --plugin-option big_ids True --plugin-option pid `date +"%s"`$RANDOM$RANDOM$RANDOM
+Contact(id=1, FirstName=Cheryl, LastName=Estes, Employee=11014765223046647500920591, Email=11014765223046647500920592_solisroy@example.org)
+```
+
+If you pause and resume Snowfakery recipe generation using the continuation
+file feature, indexes will restart, so you should inject an external unique
+context ID through `pid` as shown above or through the API. PIDs beyond your
+computer's word limit (generally 64 bits) may not work as expected.
 
 #### `today`
 
