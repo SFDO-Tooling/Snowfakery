@@ -76,15 +76,38 @@ Or based on a variable or recipe option:
 
 """
 
+### Implementation strategy
+#
+# Imagine that we want to treat a group of numbers like a hierarchical namespace
+# Analogous to subomain.domain.tld or 127.99.0.1 or /directory/directory/directory
+#
+# In each of the examples above, we use a separator character. But we want our
+# numbers to be integers with no obvious separators.
+#
+# Our trick: convert the numbers to octal and use "9" as the separator.
+#
+# So given these numbers: [127, 99, 0, 1] we can do this:
+#
+# >>> lst = [127, 99, 0, 1]
+# >>> octnums = [oct(x) for x in lst]
+# >>> octnums
+# ['0o177', '0o143', '0o0', '0o1']
+# >>> as_str = "9".join(octnum[2:] for octnum in octnums)
+# >>> as_str
+# '17791439091'
+#
+# This is a unique and reversable representation of that list of numbers.
+#
+# Note that the number "8" and the string "99" will never appear in these
+# numbers, so they are a subset of the normal integers.
+
 
 def _oct(number):
-    print(number)
     return oct(number)[2:]
 
 
 class Uniqifier(PluginResult):
     def __init__(self, pid: T.Union[int, str] = None, parts: str = None):
-        print("YYY", pid, type(pid))
         if isinstance(pid, str):
             self.pid = _oct(int(pid))
         elif isinstance(pid, int):

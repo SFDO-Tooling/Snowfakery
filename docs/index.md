@@ -931,8 +931,7 @@ Contact(id=1, FirstName=Cheryl, LastName=Estes, Employee=11014765223046647500920
 
 If you pause and resume Snowfakery recipe generation using the continuation
 file feature, indexes will restart, so you should inject an external unique
-context ID through `pid` as shown above or through the API. PIDs beyond your
-computer's word limit (generally 64 bits) may not work as expected.
+context ID through `pid` as shown above or through the API.
 
 #### `today`
 
