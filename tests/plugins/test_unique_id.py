@@ -2,12 +2,12 @@ from io import StringIO
 
 import pytest
 
-from snowfakery.data_generator import generate
+from snowfakery.api import generate_data
 from snowfakery.standard_plugins.UniqueId import as_bool
 from snowfakery import data_gen_exceptions as exc
 
 
-class TestUniqueId:
+class TestUniqueIdBuiltin:
     def test_simple(self, generated_rows):
         yaml = """
         - object: Example
@@ -15,11 +15,11 @@ class TestUniqueId:
           fields:
             unique: ${{unique_id}}
         """
-        generate(StringIO(yaml), plugin_options={"big_ids": "True"})
+        generate_data(StringIO(yaml), plugin_options={"big_ids": "True"})
         assert str(generated_rows.row_values(0, "unique")).endswith("91")
         assert str(generated_rows.row_values(1, "unique")).endswith("92")
 
-    def test_simple_plugin_syntaxs(self, generated_rows):
+    def test_simple_iterations(self, generated_rows):
         yaml = """
         - plugin: snowfakery.standard_plugins.UniqueId
         - object: Example
@@ -27,38 +27,50 @@ class TestUniqueId:
           fields:
             unique: ${{UniqueId.unique_id}}
         """
-        generate(StringIO(yaml), plugin_options={"big_ids": "True"})
-        assert str(generated_rows.row_values(0, "unique")).endswith("91")
-        assert str(generated_rows.row_values(1, "unique")).endswith("92")
+        generate_data(StringIO(yaml), target_number=("Example", 4))
+        assert generated_rows.row_values(0, "unique") == 1
+        assert generated_rows.row_values(1, "unique") == 2
+        assert generated_rows.row_values(2, "unique") == 3
+        assert generated_rows.row_values(3, "unique") == 4
 
-    def test_custom_simple(self, generated_rows):
+
+class TestAlphaCodeBuiltiin:
+    def test_alpha_code(self, generated_rows):
         yaml = """
-        - plugin: snowfakery.standard_plugins.UniqueId
-        - var: MyGenerator
-          value:
-            UniqueId.Generator: index
         - object: Example
-          count: 10
+          count: 2
           fields:
-            unique: ${{MyGenerator.unique_id}}
+            unique: ${{unique_alpha_code}}
         """
-        generate(StringIO(yaml))
-        assert str(generated_rows.row_values(0, "unique")) == "1"
-        assert str(generated_rows.row_values(1, "unique")) == "2"
-        assert str(generated_rows.row_values(9, "unique")) == "12"
+        generate_data(StringIO(yaml))
+        assert len(generated_rows.row_values(0, "unique")) >= 8
+        assert len(generated_rows.row_values(1, "unique")) >= 8
 
+    def test_alpha_code_small_ids(self, generated_rows):
+        yaml = """
+        - object: Example
+          count: 2
+          fields:
+            unique: ${{unique_alpha_code}}
+        """
+        generate_data(StringIO(yaml), plugin_options={"big_ids": "False"})
+        assert len(generated_rows.row_values(0, "unique")) >= 8
+        assert len(generated_rows.row_values(1, "unique")) >= 8
+
+
+class TestNumericIdGenerator:
     def test_custom_multipart(self, generated_rows):
         yaml = """
         - plugin: snowfakery.standard_plugins.UniqueId
         - var: MyGenerator
           value:
-            UniqueId.Generator: 5, index
+            UniqueId.NumericIdGenerator: 5, index
         - object: Example
           count: 2
           fields:
             unique: ${{MyGenerator.unique_id}}
         """
-        generate(StringIO(yaml), plugin_options={"big_ids": "False"})
+        generate_data(StringIO(yaml), plugin_options={"big_ids": "False"})
         assert str(generated_rows.row_values(0, "unique")) == "591"
         assert str(generated_rows.row_values(1, "unique")) == "592"
 
@@ -67,13 +79,13 @@ class TestUniqueId:
         - plugin: snowfakery.standard_plugins.UniqueId
         - var: MyGenerator
           value:
-            UniqueId.Generator: pid, 5, index
+            UniqueId.NumericIdGenerator: pid, 5, index
         - object: Example
           count: 2
           fields:
             unique: ${{MyGenerator.unique_id}}
         """
-        generate(StringIO(yaml))
+        generate_data(StringIO(yaml))
         assert str(generated_rows.row_values(0, "unique")).endswith("591")
 
     def test_with_pid_option(self, generated_rows):
@@ -81,13 +93,13 @@ class TestUniqueId:
         - plugin: snowfakery.standard_plugins.UniqueId
         - var: MyGenerator
           value:
-            UniqueId.Generator: pid, 9, index
+            UniqueId.NumericIdGenerator: pid, 9, index
         - object: Example
           count: 2
           fields:
             unique: ${{MyGenerator.unique_id}}
         """
-        generate(StringIO(yaml), plugin_options={"pid": "3"})
+        generate_data(StringIO(yaml), plugin_options={"pid": "3"})
         assert str(generated_rows.row_values(0, "unique")) == "391191"
 
     def test_bad_template(self):
@@ -95,14 +107,14 @@ class TestUniqueId:
         - plugin: snowfakery.standard_plugins.UniqueId
         - var: MyGenerator
           value:
-            UniqueId.Generator: pid, foo, 9, index
+            UniqueId.NumericIdGenerator: pid, foo, 9, index
         - object: Example
           count: 2
           fields:
             unique: ${{MyGenerator.unique_id}}
         """
         with pytest.raises(exc.DataGenError) as e:
-            generate(StringIO(yaml), plugin_options={"pid": "3"})
+            generate_data(StringIO(yaml), plugin_options={"pid": "3"})
         assert "foo" in str(e.value)
 
     def test_bad_template__2(self):
@@ -110,16 +122,182 @@ class TestUniqueId:
         - plugin: snowfakery.standard_plugins.UniqueId
         - var: MyGenerator
           value:
-            UniqueId.Generator: pid, 9.7, index
+            UniqueId.NumericIdGenerator: pid, 9.7, index
         - object: Example
           count: 2
           fields:
             unique: ${{MyGenerator.unique_id}}
         """
         with pytest.raises(exc.DataGenError) as e:
-            generate(StringIO(yaml), plugin_options={"pid": "3"})
+            generate_data(StringIO(yaml), plugin_options={"pid": "3"})
         assert "9.7" in str(e.value)
 
+
+class TestAlphaCodeGenerator:
+    def test_alpha(self, generated_rows):
+        yaml = """
+        - plugin: snowfakery.standard_plugins.UniqueId
+        - var: MyGenerator
+          value:
+            UniqueId.AlphaCodeGenerator: pid,index
+        - object: Example
+          count: 2
+          fields:
+            unique: ${{MyGenerator.unique_id}}
+        """
+        generate_data(
+            StringIO(yaml),
+            plugin_options={"big_ids": "True", "pid": "3333333333333333"},
+        )
+        assert len(generated_rows.row_values(0, "unique")) > 8
+        assert len(generated_rows.row_values(1, "unique")) > 8
+
+    def test_custom_alphabets(self, generated_rows):
+        with open("examples/unique_id/alphabet.recipe.yml") as f:
+            generate_data(f)
+        assert len(generated_rows.row_values(0, "big_alpha_example")) > 6
+        assert set(generated_rows.row_values(0, "dna_example")).issubset("ACGT")
+        assert set(str(generated_rows.row_values(0, "num_example"))).issubset(
+            "0123456789"
+        )
+
+    def test_alpha_small(self, generated_rows):
+        with open("examples/unique_id/min_length.recipe.yml") as f:
+            generate_data(
+                f,
+                plugin_options={"big_ids": "False"},
+            )
+        assert len(generated_rows.row_values(0, "unique")) == 6
+        assert len(generated_rows.row_values(1, "unique")) == 6
+
+    def test_alpha_small_sequential(self, generated_rows):
+        yaml = """
+        - plugin: snowfakery.standard_plugins.UniqueId
+        - var: MyGenerator
+          value:
+            UniqueId.AlphaCodeGenerator:
+              template: index
+              min_chars: 4
+              randomize_codes: False
+        - object: Example
+          count: 10
+          fields:
+            unique: ${{MyGenerator.unique_id}}
+        """
+        generate_data(
+            StringIO(yaml),
+            plugin_options={"big_ids": "True"},
+        )
+        assert len(generated_rows.row_values(0, "unique")) == 4
+        assert len(generated_rows.row_values(1, "unique")) == 4
+        assert len(generated_rows.row_values(9, "unique")) == 4
+
+    def test_alpha_small_sequential_with_template(self, generated_rows):
+        yaml = """
+        - plugin: snowfakery.standard_plugins.UniqueId
+        - var: MyGenerator
+          value:
+            UniqueId.AlphaCodeGenerator:
+              template: 3,index
+              min_chars: 4
+              randomize_codes: False
+        - object: Example
+          count: 10
+          fields:
+            unique: ${{MyGenerator.unique_id}}
+        """
+        generate_data(
+            StringIO(yaml),
+            plugin_options={"big_ids": "True"},
+        )
+        assert len(generated_rows.row_values(0, "unique")) == 4
+        assert len(generated_rows.row_values(1, "unique")) == 4
+        assert len(generated_rows.row_values(9, "unique")) == 4
+
+    def test_alpha_custom_alphabet_min_chars(self, generated_rows):
+        yaml = """
+        - plugin: snowfakery.standard_plugins.UniqueId
+        - var: MyGenerator
+          value:
+            UniqueId.AlphaCodeGenerator:
+              template: 3,index
+              min_chars: 1000
+              randomize_codes: False
+              alphabet: ABC123!
+        - object: Example
+          count: 1
+          fields:
+            unique: ${{MyGenerator.unique_id}}
+        """
+        generate_data(
+            StringIO(yaml),
+            plugin_options={"big_ids": "True"},
+        )
+        assert len(generated_rows.row_values(0, "unique")) >= 1000
+        assert set(generated_rows.row_values(0, "unique")).issubset(set("ABC123!"))
+
+    def test_alpha_custom_alphabet_random(self, generated_rows):
+        yaml = """
+        - plugin: snowfakery.standard_plugins.UniqueId
+        - var: MyGenerator
+          value:
+            UniqueId.AlphaCodeGenerator:
+              template: 9999,index
+              min_chars: 20
+              randomize_codes: True
+              alphabet: ABC123!
+        - object: Example
+          count: 1
+          fields:
+            unique: ${{MyGenerator.unique_id}}
+        """
+        generate_data(
+            StringIO(yaml),
+            plugin_options={"big_ids": "True"},
+        )
+        assert len(generated_rows.row_values(0, "unique")) >= 20
+        assert set(generated_rows.row_values(0, "unique")).issubset(set("ABC123!"))
+
+    def test_alpha_large_sequential_with_template(self, generated_rows):
+        yaml = """
+        - plugin: snowfakery.standard_plugins.UniqueId
+        - var: MyGenerator
+          value:
+            UniqueId.AlphaCodeGenerator:
+              template: 3,index
+              min_chars: 20
+              randomize_codes: False
+        - object: Example
+          count: 10
+          fields:
+            unique: ${{MyGenerator.unique_id}}
+        """
+        generate_data(StringIO(yaml), plugin_options={"big_ids": "True"})
+        assert len(generated_rows.row_values(0, "unique")) >= 20
+
+
+class TestCounter:
+    def test_counter(self, generated_rows):
+        with open("examples/test_counter.recipe.yml") as f:
+            generate_data(f)
+        assert generated_rows.row_values(0, "count") == 1
+        assert generated_rows.row_values(9, "count") == 10
+
+    def test_counter_start(self, generated_rows):
+        with open("examples/test_counter_start.recipe.yml") as f:
+            generate_data(f)
+        assert generated_rows.row_values(0, "count") == 11
+        assert generated_rows.row_values(9, "count") == 38
+
+    def test_counter_iterations(self, generated_rows):
+        with open("examples/test_counter.recipe.yml") as f:
+            generate_data(f, target_number=("Example", 20))
+        assert generated_rows.row_values(0, "count") == 1
+        assert generated_rows.row_values(9, "count") == 10
+        assert generated_rows.row_values(10, "count") == 11
+
+
+class TestAsBool:
     def test_bool_conversions(self):
         assert as_bool("False") is False
         assert as_bool("0") is False

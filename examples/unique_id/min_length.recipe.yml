@@ -1,0 +1,9 @@
+- plugin: snowfakery.standard_plugins.UniqueId
+- var: MySmallCodeGenerator
+  value:
+    UniqueId.AlphaCodeGenerator:
+      min_chars: 6
+- object: Example
+  count: 10
+  fields:
+    unique: ${{MySmallCodeGenerator.unique_id}}

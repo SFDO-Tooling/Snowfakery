@@ -72,11 +72,12 @@ class StandardFuncs(SnowfakeryPlugin):
         # anything else should use the Faker from the Interpreter
         # which is locale-scoped.
         _faker_for_dates = Faker(use_weighting=False)
-        _unique_id_generator = None
+        _uidgen = None
 
         def __init__(self, *args, **kwargs):
             self.snowfakery_filename = StringGenerator(self._snowfakery_filename)
             self.unique_id = StringGenerator(self._unique_id)
+            self.unique_alpha_code = StringGenerator(self._unique_alpha_code)
 
         def date(
             self,
@@ -319,14 +320,18 @@ class StandardFuncs(SnowfakeryPlugin):
             template = self.context.field_vars()["template"]
             return template.filename
 
+        @property
+        def _unique_id_generator(self):
+            if not self._uidgen:
+                self._uidgen = UniqueId(self.context.interpreter).custom_functions()
+
+            return self._uidgen
+
         def _unique_id(self):
-            if not self._unique_id_generator:
-                self._unique_id_generator = (
-                    UniqueId(self.context.interpreter)
-                    .custom_functions()
-                    .default_uniqifier
-                )
-            return self._unique_id_generator.unique_id
+            return self._unique_id_generator.default_uniqifier.unique_id
+
+        def _unique_alpha_code(self):
+            return self._unique_id_generator.default_alpha_code_generator.unique_id
 
     setattr(Functions, "if", Functions.if_)
     setattr(Functions, "relativedelta", relativedelta)
