@@ -4,10 +4,13 @@ from itertools import count
 import random
 from math import log
 import string
+from datetime import timedelta, date
+import typing as T
 
 from baseconv import BaseConverter
-from yaml.representer import Representer
 import yaml
+from yaml.representer import Representer
+from faker.providers.date_time import Provider as DateProvider
 
 
 from snowfakery import SnowfakeryPlugin
@@ -212,11 +215,40 @@ class Counter(PluginResult):
         self.result = {
             "start": start,
             "step": step,
-        }  # implementation detail of PluginResults
+        }  # for serialization during continuation
 
     @property
     def next(self):
         return next(self.counter)
+
+
+# TODO: merge this with template_funcs equivalent
+def try_parse_date(d):
+    from snowfakery.template_funcs import parse_date
+
+    if not isinstance(d, str) or not DateProvider.regex.fullmatch(d):
+        try:
+            return parse_date(d)
+        except Exception:  # let's hope its something faker can parse
+            return DateProvider._parse_date(d)
+
+
+class DateCounter(PluginResult):
+    def __init__(self, start_date: T.Union[str, date] = "today", step: str = "+1d"):
+        self.start_date = try_parse_date(start_date)
+        if not self.start_date:
+            raise exc.DataGenError(f"Cannot parse start date {start_date}")
+        step = DateProvider._parse_timedelta(step)
+        self.counter = count(0, step)
+        self.result = {
+            "start": self.start_date,
+            "step": step,
+        }  # for serialization during continuation
+
+    @property
+    def next(self):
+        offset = next(self.counter)
+        return self.start_date + timedelta(seconds=offset)
 
 
 def as_bool(opt):
@@ -275,6 +307,9 @@ class UniqueId(SnowfakeryPlugin):
         def NumericIdGenerator(self, template: str = None):
             template = template or ("pid,rand8,index" if self._bigids else "index")
             return UniqueNumericIdGenerator(pid=self._pid, parts=template)
+
+        def DateCounter(self, start_date, step):
+            return DateCounter(start_date=start_date, step=step)
 
         def AlphaCodeGenerator(
             self,

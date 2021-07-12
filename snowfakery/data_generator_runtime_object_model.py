@@ -326,7 +326,7 @@ class StructuredValue(FieldDefinition):
             except AttributeError:
                 # clean up the error message a bit
                 raise AttributeError(
-                    f"'{objname}' plugin exposes no attribute '{method}"
+                    f"'{objname}' plugin exposes no attribute '{method}'"
                 )
             if not func:
                 raise DataGenNameError(

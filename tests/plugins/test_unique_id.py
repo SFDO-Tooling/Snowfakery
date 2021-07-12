@@ -1,4 +1,5 @@
 from io import StringIO
+from datetime import date
 
 import pytest
 
@@ -313,3 +314,31 @@ class TestAsBool:
             as_bool("BLAH")
         with pytest.raises(TypeError):
             as_bool(3.145)
+
+
+class TestDateCounter:
+    def test_date_counter(self, generated_rows):
+        with open("examples/unique_id/date_counter.recipe.yml") as f:
+            generate_data(f, target_number=("TV_Episode", 20))
+        assert generated_rows.row_values(0, "date") == "2021-12-12"
+        assert generated_rows.row_values(24, "date") == "2023-01-02"
+
+    def test_date_counter_relative(self, generated_rows):
+        yaml = """
+          - plugin: snowfakery.standard_plugins.UniqueId
+          - var: SeriesStarts
+            just_once: True
+            value:
+              UniqueId.DateCounter:
+                start_date: today
+                step: +3M
+          - object: TV_Series
+            count: 2
+            fields:
+              date: ${{SeriesStarts.next}}
+        """
+        generate_data(StringIO(yaml))
+        start_date = date.fromisoformat(generated_rows.row_values(0, "date"))
+        end_date = date.fromisoformat(generated_rows.row_values(1, "date"))
+        delta = end_date - start_date
+        assert 89 <= delta.days <= 91
