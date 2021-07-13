@@ -65,7 +65,8 @@ class TestNumericIdGenerator:
         - plugin: snowfakery.standard_plugins.UniqueId
         - var: MyGenerator
           value:
-            UniqueId.NumericIdGenerator: 5, index
+            UniqueId.NumericIdGenerator:
+              template: 5, index
         - object: Example
           count: 2
           fields:
@@ -80,7 +81,8 @@ class TestNumericIdGenerator:
         - plugin: snowfakery.standard_plugins.UniqueId
         - var: MyGenerator
           value:
-            UniqueId.NumericIdGenerator: pid, 5, index
+            UniqueId.NumericIdGenerator:
+              template: pid, 5, index
         - object: Example
           count: 2
           fields:
@@ -94,7 +96,8 @@ class TestNumericIdGenerator:
         - plugin: snowfakery.standard_plugins.UniqueId
         - var: MyGenerator
           value:
-            UniqueId.NumericIdGenerator: pid, 9, index
+            UniqueId.NumericIdGenerator:
+              template: pid, 9, index
         - object: Example
           count: 2
           fields:
@@ -108,7 +111,8 @@ class TestNumericIdGenerator:
         - plugin: snowfakery.standard_plugins.UniqueId
         - var: MyGenerator
           value:
-            UniqueId.NumericIdGenerator: pid, foo, 9, index
+            UniqueId.NumericIdGenerator:
+              template: pid, foo, 9, index
         - object: Example
           count: 2
           fields:
@@ -123,7 +127,8 @@ class TestNumericIdGenerator:
         - plugin: snowfakery.standard_plugins.UniqueId
         - var: MyGenerator
           value:
-            UniqueId.NumericIdGenerator: pid, 9.7, index
+            UniqueId.NumericIdGenerator:
+              template: pid, 9.7, index
         - object: Example
           count: 2
           fields:
@@ -342,3 +347,16 @@ class TestDateCounter:
         end_date = date.fromisoformat(generated_rows.row_values(1, "date"))
         delta = end_date - start_date
         assert 89 <= delta.days <= 91
+
+    def test_date_start_date_error(self, generated_rows):
+        yaml = """
+          - plugin: snowfakery.standard_plugins.UniqueId
+          - var: SeriesStarts
+            just_once: True
+            value:
+              UniqueId.DateCounter:
+                start_date: xyzzy
+                step: +3M
+        """
+        with pytest.raises(exc.DataGenError, match="xyzzy"):
+            generate_data(StringIO(yaml))

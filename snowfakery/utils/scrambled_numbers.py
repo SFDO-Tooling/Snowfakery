@@ -71,5 +71,5 @@ def _test_scrambling_is_safe(iterations):
                 assert unscrambled == num, (num, minbits, scrambled)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     _test_scrambling_is_safe(50)

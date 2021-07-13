@@ -10,7 +10,7 @@ import typing as T
 from baseconv import BaseConverter
 import yaml
 from yaml.representer import Representer
-from faker.providers.date_time import Provider as DateProvider
+from faker.providers.date_time import ParseError, Provider as DateProvider
 
 
 from snowfakery import SnowfakeryPlugin
@@ -167,8 +167,6 @@ class UniqueNumericIdGenerator(PluginResult):
     def unique_id(self) -> int:
         index = next(self.counter)
         val = self.number_template.format(index=index)
-        if self.min_chars:
-            val = val.rjust(self.min_chars, "0")
         return val
 
 
@@ -230,13 +228,16 @@ def try_parse_date(d):
         try:
             return parse_date(d)
         except Exception:  # let's hope its something faker can parse
-            return DateProvider._parse_date(d)
+            try:
+                return DateProvider._parse_date(d)
+            except ParseError as e:
+                raise exc.DataGenValueError(d) from e
 
 
 class DateCounter(PluginResult):
     def __init__(self, start_date: T.Union[str, date] = "today", step: str = "+1d"):
         self.start_date = try_parse_date(start_date)
-        if not self.start_date:
+        if not self.start_date:  # pragma: no cover
             raise exc.DataGenError(f"Cannot parse start date {start_date}")
         step = DateProvider._parse_timedelta(step)
         self.counter = count(0, step)
@@ -295,16 +296,10 @@ class UniqueId(SnowfakeryPlugin):
             return self._default_unique_alpha_code_generator
 
         @property
-        def default_counter(self):
-            if not self._default_counter:
-                self._default_counter = self.Counter()
-            return self._default_counter
-
-        @property
         def unique_id(self):
             return self.default_uniqifier.unique_id
 
-        def NumericIdGenerator(self, template: str = None):
+        def NumericIdGenerator(self, *, template: str = None):
             template = template or ("pid,rand8,index" if self._bigids else "index")
             return UniqueNumericIdGenerator(pid=self._pid, parts=template)
 
