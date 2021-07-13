@@ -1,5 +1,5 @@
 - object: Contact
-  count: 20
+  count: 3
   fields:
     FirstName:
       fake: FirstName
@@ -7,4 +7,3 @@
       fake: LastName
     EmployeeNum: ${{unique_id}}
     Email: ${{unique_id}}_${{fake.email}}
-    DepartmentCode: ${{unique_alpha_code}}

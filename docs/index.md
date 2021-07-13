@@ -874,9 +874,9 @@ we can incorporate a unique ID into an email address or
 an employee ID.
 
 ```yaml
-# examples/test_unique_id.yml
+# examples/unique_id/test_unique_id.yml
 - object: Contact
-  count: 20
+  count: 3
   fields:
     FirstName:
       fake: FirstName
@@ -884,7 +884,6 @@ an employee ID.
       fake: LastName
     EmployeeNum: ${{unique_id}}
     Email: ${{unique_id}}_${{fake.email}}
-    DepartmentCode: ${{unique_alpha_code}}
 ```
 
 By default, Snowfakery works in "small id" mode, which means
@@ -892,8 +891,11 @@ that IDs start as 1 digit, and grow longer as you generate
 more records.
 
 ```s
-$ python -m snowfakery examples/test_unique_id.yml
-Contact(id=1, FirstName=Spencer, LastName=Sims, Employee=1, Email=2_conradguy@example.net)
+$ python -m snowfakery examples/unique_id/test_unique_id.ymlx
+Contact(id=1, FirstName=Brendan, LastName=Fleming, EmployeeNum=1, Email=2_egreer@example.net)
+Contact(id=2, FirstName=Kevin, LastName=Jacobson, EmployeeNum=3, Email=4_pittscharlene@example.net)
+Contact(id=3, FirstName=Thomas, LastName=Donovan, EmployeeNum=5, Email=6_jefffrank@example.com)
+...
 ```
 
 "Big ID" mode allows you to make 22+ digit IDs that are very likely to
@@ -915,6 +917,24 @@ The `unique_alpha_code` functions generates unique alphanumeric codes similar to
 used in some bureaucracies were space is an issue. Snowfakery alphanumeric codes are
 about 11 characters long in small ID mode and about 17 in Big ID mode. The more you use,
 the bigger they will grow.
+
+```yaml
+# examples/unique_id/test_unique_alpha_code.yml
+- object: Contact
+  count: 3
+  fields:
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+    DepartmentCode: ${{unique_alpha_code}}
+```
+
+```s
+Contact(id=1, FirstName=Jeremy, LastName=Higgins, DepartmentCode=2AUHHSZN)
+Contact(id=2, FirstName=Vicki, LastName=Vazquez, DepartmentCode=GDH9OYLN)
+Contact(id=3, FirstName=Gene, LastName=Wall, DepartmentCode=42Q3XX3N)
+```
 
 #### `today`
 
