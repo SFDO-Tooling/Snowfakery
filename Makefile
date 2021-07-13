@@ -9,6 +9,7 @@ dev-install:
 
 # set SF_MKDOCS_BUILD_LOCALES=False to skip building all locales
 docs:		.FORCE
+	python tools/docs_samples.py
 	python -m mkdocs build --clean --site-dir build/html --config-file mkdocs.yml
 
 .FORCE:
