@@ -3,6 +3,8 @@ from pathlib import Path
 from .plugins import SnowfakeryPlugin, lazy
 from .api import generate_data, SnowfakeryApplication
 
+from snowfakery.utils.backports import py36  # noQA
+
 # TODO: when Python 3.6 is irrelevant, make this lazy:
 
 # https://www.python.org/dev/peps/pep-0562/

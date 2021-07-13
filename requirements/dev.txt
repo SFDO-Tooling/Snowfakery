@@ -10,6 +10,8 @@ appdirs==1.4.4
     #   virtualenv
 attrs==21.2.0
     # via pytest
+backports-datetime-fromisoformat==1.0.0
+    # via -r requirements/prod.txt
 black==21.6b0
     # via -r requirements/dev.in
 certifi==2021.5.30
@@ -38,7 +40,7 @@ docopt==0.6.2
     # via coveralls
 faker-microservice==2.0.0
     # via -r requirements/dev.in
-faker==8.10.0
+faker==8.10.1
     # via
     #   -r requirements/prod.txt
     #   faker-microservice
