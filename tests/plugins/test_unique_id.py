@@ -234,7 +234,7 @@ class TestAlphaCodeGenerator:
             StringIO(yaml),
             plugin_options={"big_ids": "True"},
         )
-        assert len(generated_rows.row_values(0, "unique")) >= 1000
+        assert len(generated_rows.row_values(0, "unique")) == 1000
         assert set(generated_rows.row_values(0, "unique")).issubset(set("ABC123!"))
 
     def test_alpha_custom_alphabet_random(self, generated_rows):

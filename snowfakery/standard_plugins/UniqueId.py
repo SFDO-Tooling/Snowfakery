@@ -18,7 +18,7 @@ from snowfakery.plugins import PluginResult, PluginOption
 from snowfakery import data_gen_exceptions as exc
 from snowfakery.utils.yaml_utils import SnowfakeryDumper
 
-from snowfakery.utils.math import scramble_number
+from snowfakery.utils.scrambled_numbers import scramble_number
 
 # the option name that the user specifies on the CLI or API is just "pid"
 # but using this long name internally prevents us from clashing with the
