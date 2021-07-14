@@ -54,10 +54,14 @@ $ cci flow run test_everything
 ## Incorporating Information from Salesforce
 
 There are various cases where it might be helpful to relate newly created synthetic
-data to existing data in a Salesforce org. For example, that data might have
-been added in a previous CumulusCI task or some other process.
+data to existing data in a Salesforce org. Perhaps that data was added
+in a previous CumulusCI task or some other process. If your use cases are
+intensive, please remember to read the section
+[A Note On Performance](#a-note-on-performance)
 
-For example, if you have a Campaign object and would like to associate
+### SalesforceQuery.find_record and SalesforceQuery.random_record
+
+Let's use an example where you have a Campaign object and would like to associate
 Contacts to it through CampaignMembers.
 
 Here is an example where we query a particular Campaign object:
@@ -113,6 +117,11 @@ NOTE: The features we are discussing in this section are for linking to records
 that are in the Salesforce org _before_ the recipe iteration started. These features
 are not for linking to records created by the recipe itself.
 
+In extremely large loads, CumulusCI can be configured to upload "portions" or "batches" of
+records from the recipe. Previous portions _are_ in the org and therefore can be queried.
+
+### Querying Field Data
+
 Sometimes we want to do more than just link to the other record. For example,
 perhaps we want to create Users for Contacts and have the Users have the same
 name as the Contacts.
@@ -151,6 +160,8 @@ the User is commented out because `Identity User` users cannot
 have Contacts, but you can see how you would connect a
 synthetic object to a pre-existing object, while also getting
 access to other fields.
+
+### SOQL Datasets
 
 If you would like to use Salesforce query as a Dataset, that's
 another way that you can ensure that every synthetic record you
@@ -319,24 +330,30 @@ There is also an alternate syntax which allows nicknaming:
 Files can be used as Salesforce ContentVersions like this:
 
 ```yaml
-- plugin: snowfakery.standard_plugins.base64.Base64
-- plugin: snowfakery.standard_plugins.file.File
+# examples/salesforce/ContentVersion.recipe.yml
+- plugin: snowfakery.standard_plugins.Salesforce
 - object: Account
   nickname: FileOwner
   fields:
     Name:
       fake: company
 - object: ContentVersion
-  nickname: FileAttachment
   fields:
     Title: Attachment for ${{Account.Name}}
     PathOnClient: example.pdf
-    Description: example.pdf
+    Description: The example.pdf file
     VersionData:
-      Base64.encode:
-        - File.file_data:
-            encoding: binary
-            file: ${{PathOnClient}}
+      Salesforce.ContentFile:
+        file: example.pdf
     FirstPublishLocationId:
       reference: Account
 ```
+
+### A Note On Performance
+
+Calling into Salesforce is much slower than most things you do in
+Snowfakery. The network traffic alone is comparatively slow.
+
+Consider using [variables](index.md#defining-variables) to "remember"
+data you've queried, and if you need to pull down a lot of data, use
+a SOQL Dataset which will intrinsically cache the data for you.

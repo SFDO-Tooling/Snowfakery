@@ -8,9 +8,7 @@ class File(SnowfakeryPlugin):
             if encoding == "binary":
                 encoding = "latin-1"
 
-            context_filename = Path(
-                self.context.interpreter.current_context.current_template.filename
-            ).parent
+            template_path = Path(self.context.current_filename).parent
 
-            with open(context_filename / file, "rb") as data:
+            with open(template_path / file, "rb") as data:
                 return data.read().decode(encoding)
