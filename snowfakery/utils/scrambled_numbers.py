@@ -30,13 +30,12 @@ def scramble_number(number: int, minbits: int = 10) -> int:
     # remove the key from the number
     number = number // SHIFT1
     # how many bits I need to fiddle with
-    numbits = max(minbits, int(log(number, 2)) + 1)
+    numbits = max(minbits, (int(log(number, 2)) + 1) if number else minbits)
     assert numbits < SHIFT2
     # make a randomized mask based on the key
     mask = mask_for_key(key, numbits)
     # make the number look random by applying the mask
     scrambled = number ^ mask
-    # print("In: Scrambled", scrambled, "Key", key, "Numbits", numbits)
     # return the number, the key and the number of bits that can reverse the scrambling
     return scrambled * SHIFT3 + key * SHIFT2 + numbits
 

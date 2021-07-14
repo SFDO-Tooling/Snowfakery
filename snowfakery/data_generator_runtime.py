@@ -265,6 +265,7 @@ class Interpreter:
     """Snowfakery runtime interpreter state."""
 
     current_context: "RuntimeContext" = None
+    iteration_count = 0
 
     def __init__(
         self,
@@ -328,6 +329,7 @@ class Interpreter:
         while not finished:
             self.loop_over_templates_once(self.statements, continuing)
             finished = self.current_context.check_if_finished()
+            self.iteration_count += 1
 
             continuing = True
             self.globals.reset_slots()

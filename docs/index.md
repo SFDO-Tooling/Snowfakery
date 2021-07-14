@@ -887,20 +887,23 @@ an employee ID.
 ```
 
 By default, Snowfakery works in "small id" mode, which means
-that IDs start as 1 digit, and grow longer as you generate
+that IDs start as 6-7 digits, and grow longer as you generate
 more records.
 
 ```s
-$ python -m snowfakery examples/unique_id/test_unique_id.ymlx
-Contact(id=1, FirstName=Brendan, LastName=Fleming, EmployeeNum=1, Email=2_egreer@example.net)
-Contact(id=2, FirstName=Kevin, LastName=Jacobson, EmployeeNum=3, Email=4_pittscharlene@example.net)
-Contact(id=3, FirstName=Thomas, LastName=Donovan, EmployeeNum=5, Email=6_jefffrank@example.com)
+$ snowfakery examples/unique_id/test_unique_id.yml
+Contact(id=1, FirstName=Melody, LastName=Sherman, EmployeeNum=1371010, Email=9782010_cowens@example.org)
+Contact(id=2, FirstName=Christian, LastName=Owens, EmployeeNum=2433010, Email=2414010_jimmy21@example.com)
+Contact(id=3, FirstName=Tami, LastName=Stevenson, EmployeeNum=6375010, Email=8126010_leah50@example.net)
 ...
 ```
 
 "Big ID" mode allows you to make 22+ digit IDs that are very likely to
 be unique across time and space. It is
 described more in [`unique_id` and Big IDs](#unique_id-and-big-ids).
+
+Snowfakery may change its default mode to Big IDs at some point in the future.
+Do not assume that your IDs will always be small.
 
 If you do not care about uniqueness, use `random_number` instead.
 
@@ -1383,19 +1386,24 @@ context ID through `pid` as shown above or through the API.
 
 ### Counters
 
+Snowfakery has a plugin called `Counters` which can generate
+numeric counters (1,2,3,4 or 3,6,9,12) and date counters
+(2021-01-01, 2021-01-02, 2021-01-03).
+
+#### Numeric Counters
+
 Snowfakery can generate incrementing numbers like this:
 
 ```yaml
-# examples/test_counter.recipe.yml
-- plugin: snowfakery.standard_plugins.UniqueId
-- var: MyCounter
-  just_once: True
-  value:
-    UniqueId.Counter:
+# examples/counters/number_counter.recipe.yml
+- plugin: snowfakery.standard_plugins.Counters
 - object: Example
   count: 10
   fields:
-    count: ${{MyCounter.next}}
+    count:
+      Counters.NumberCounter:
+        start: 1
+        name: foo
 ```
 
 This would output:
@@ -1416,24 +1424,21 @@ Example(id=10, count=10)
 
 You can also control the start position and "step" like this:
 
-```
-# examples/test_counter_start.recipe.yml
-- plugin: snowfakery.standard_plugins.UniqueId
-- var: MyCounter
-  just_once: True
-  value:
-    UniqueId.Counter:
-      start: 11
-      step: 3
+```yaml
+# examples/counters/counter_start.recipe.yml
+- plugin: snowfakery.standard_plugins.Counters
 - object: Example
   count: 10
   fields:
-    count: ${{MyCounter.next}}
+    count:
+      Counters.NumberCounter:
+        start: 11
+        step: 3
 ```
 
 This generates:
 
-```
+```s
 Example(id=1, count=11)
 Example(id=2, count=14)
 Example(id=3, count=17)
@@ -1449,6 +1454,43 @@ Example(id=10, count=38)
 For very large data loads, CumulusCI breaks jobs into "portions" that are
 loaded in parallel. Counters are reset at the beginning of every "portion".
 
+#### Date Counters for Schedules
+
+Snowfakery can generate incrementing numbers like this:
+
+```yaml
+# examples/counters/simple_date_counter.recipe.yml
+- plugin: snowfakery.standard_plugins.Counters
+- var: EveryTwoWeeks
+  value:
+    Counters.DateCounter:
+      start_date: 2021-01-01
+      step: +2w
+- object: Meetings
+  count: 4
+  fields:
+    Date: ${{EveryTwoWeeks.next}}
+    Topic:
+      fake: catchphrase
+```
+
+This generates:
+
+```json
+Meetings(id=1, Date=2021-01-01, Topic=Innovative dedicated solution)
+Meetings(id=2, Date=2021-01-15, Topic=Open-architected tangible artificial intelligence)
+Meetings(id=3, Date=2021-01-29, Topic=Compatible global definition)
+Meetings(id=4, Date=2021-02-12, Topic=Optimized real-time archive)
+```
+
+The `start_date` can be a particular date in `YYYY-MM-DD` or the word `today`.
+
+The `step` is based on a syntax from the Python Faker library. It can be:
+
+- `+<number>d` : `number` days between steps, e.g. `+10d` (10 days)
+- `+<number>w`: `number` weeks between steps, e.g. `+10w` (70 days)
+- `+<number>M`: `number` months between steps, e.g. `+10M` (304 days)
+- `+<number>y`: `number` years between steps, e.g. `+10y` (3625 days)
 
 ### Template File Options
 

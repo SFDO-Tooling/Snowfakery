@@ -1,6 +1,7 @@
 import sys
 
 from typing import Any, Callable, Mapping, Union, NamedTuple, List, Tuple
+import typing as T
 from importlib import import_module
 from datetime import date, datetime
 from pathlib import Path
@@ -64,6 +65,7 @@ class SnowfakeryPlugin:
     def __init__(self, interpreter):
         self.interpreter = interpreter
         self.context = PluginContext(self)
+        self.instance_states = {}
 
     def custom_functions(self, *args, **kwargs):
         """Instantiate, contextualize and return a function library
@@ -75,6 +77,27 @@ class SnowfakeryPlugin:
 
     def close(self, *args, **kwargs):
         pass
+
+    def get_contextual_state(
+        self,
+        *,
+        func: T.Callable,
+        name: T.Optional[str] = None,
+        parent: T.Optional[str] = None,
+        reset_every_iteration: bool = True,
+    ):
+        uniq_name = name or self.context.unique_context_identifier()
+        if parent:
+            parent_obj = self.context.field_vars().get(parent)
+        elif reset_every_iteration:
+            parent_obj = self.context.interpreter.iteration_count
+        else:
+            parent_obj = None
+        current_parent, value = self.instance_states.get(uniq_name, (None, None))
+        if current_parent != parent_obj or value is None:
+            value = func()
+            self.instance_states[uniq_name] = [parent_obj, value]
+        return value
 
 
 class ParserMacroPlugin:
@@ -235,6 +258,22 @@ class PluginResult:
     def __str__(self):
         return str(self.result)
 
+    @classmethod
+    def _from_continuation(cls, args):
+        return cls(**args)
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        _register_for_continuation(cls)
+
+
+def _register_for_continuation(cls):
+    SnowfakeryDumper.add_representer(cls, Representer.represent_object)
+    yaml.SafeLoader.add_constructor(
+        f"tag:yaml.org,2002:python/object/apply:{cls.__module__}.{cls.__name__}",
+        lambda loader, node: cls._from_continuation(loader.construct_sequence(node)[0]),
+    )
+
 
 class PluginOption:
     def __init__(self, name, typ):
@@ -252,8 +291,4 @@ class PluginOption:
 
 
 # round-trip PluginResult objects through continuation YAML if needed.
-SnowfakeryDumper.add_representer(PluginResult, Representer.represent_object)
-yaml.SafeLoader.add_constructor(
-    "tag:yaml.org,2002:python/object/apply:snowfakery.plugins.PluginResult",
-    lambda loader, node: PluginResult(loader.construct_sequence(node)[0]),
-)
+_register_for_continuation(PluginResult)

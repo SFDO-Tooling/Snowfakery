@@ -1,0 +1,12 @@
+- plugin: snowfakery.standard_plugins.Counters
+- var: EveryTwoWeeks
+  value:
+    Counters.DateCounter:
+      start_date: 2021-01-01
+      step: +2w
+- object: Meetings
+  count: 4
+  fields:
+    Date: ${{EveryTwoWeeks.next}}
+    Topic:
+      fake: catchphrase

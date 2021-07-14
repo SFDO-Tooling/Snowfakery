@@ -1,0 +1,8 @@
+- plugin: snowfakery.standard_plugins.Counters
+- object: Example
+  count: 10
+  fields:
+    count:
+      Counters.NumberCounter:
+        start: 11
+        step: 3

@@ -1,9 +1,9 @@
-- plugin: snowfakery.standard_plugins.UniqueId
+- plugin: snowfakery.standard_plugins.Counters
 - object: __MySmallCodeGenerator
   just_once: True
   fields:
     generator:
-      UniqueId.Counter:
+      Counters.NumberCounter:
 - object: Example
   count: 100
   fields:

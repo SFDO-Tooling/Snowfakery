@@ -4,19 +4,13 @@ from itertools import count
 import random
 from math import log
 import string
-from datetime import timedelta, date
-import typing as T
 
 from baseconv import BaseConverter
-import yaml
-from yaml.representer import Representer
-from faker.providers.date_time import ParseError, Provider as DateProvider
 
 
 from snowfakery import SnowfakeryPlugin
 from snowfakery.plugins import PluginResult, PluginOption
 from snowfakery import data_gen_exceptions as exc
-from snowfakery.utils.yaml_utils import SnowfakeryDumper
 
 from snowfakery.utils.scrambled_numbers import scramble_number
 
@@ -123,14 +117,23 @@ def _oct(number):
 
 class UniqueNumericIdGenerator(PluginResult):
     def __init__(
-        self, *, parts: str, pid: int = None, min_chars: int = None, start: int = 1
+        self,
+        *,
+        parts: str,
+        pid: int = None,
+        min_chars: int = None,
+        randomize: bool = True,
+        start: int = 1,
     ):
         self.counter = count(start)
+        self.start = start
+        self.parts = parts
         self.pid = self._get_pid(pid)
         parts = [self._convert(part.strip().lower()) for part in parts.split(",")]
         self.number_template = "9".join(parts)
         self.min_chars = min_chars
         self.result = {}  # implementation detail of PluginResults
+        self.randomize = randomize
 
     def _get_pid(self, pid) -> str:
         if isinstance(pid, int):
@@ -167,7 +170,23 @@ class UniqueNumericIdGenerator(PluginResult):
     def unique_id(self) -> int:
         index = next(self.counter)
         val = self.number_template.format(index=index)
-        return val
+        if self.randomize:
+            return scramble_number(int(val))
+        else:
+            return val
+
+    def __reduce__(self):
+        state = {
+            "parts": self.parts,
+            "pid": self.pid,
+            "min_chars": self.min_chars,
+            "randomize": self.randomize,
+            "start": self.start,
+        }
+        return (
+            self.__class__,
+            (state,),
+        )
 
 
 class AlphaUniquifier(PluginResult):
@@ -186,7 +205,7 @@ class AlphaUniquifier(PluginResult):
         if randomize_codes:
             min_chars = max(min_chars, 4)
         self.number_generator = UniqueNumericIdGenerator(
-            pid=pid, parts=parts, start=1001
+            pid=pid, parts=parts, start=1001, randomize=False
         )
         self.alphabet = alphabet or string.digits + string.ascii_uppercase
         self.alpha_encoder = BaseConverter(self.alphabet).encode
@@ -204,52 +223,6 @@ class AlphaUniquifier(PluginResult):
         if self.randomize_codes:
             next_number = self._randomize_number(next_number)
         return self.alpha_encoder(next_number).rjust(self.min_chars, self.alphabet[0])
-
-
-class Counter(PluginResult):
-    def __init__(self, start=1, step=1):
-        start = 1 if start is None else start
-        self.counter = count(start, step)
-        self.result = {
-            "start": start,
-            "step": step,
-        }  # for serialization during continuation
-
-    @property
-    def next(self):
-        return next(self.counter)
-
-
-# TODO: merge this with template_funcs equivalent
-def try_parse_date(d):
-    from snowfakery.template_funcs import parse_date
-
-    if not isinstance(d, str) or not DateProvider.regex.fullmatch(d):
-        try:
-            return parse_date(d)
-        except Exception:  # let's hope its something faker can parse
-            try:
-                return DateProvider._parse_date(d)
-            except ParseError as e:
-                raise exc.DataGenValueError(d) from e
-
-
-class DateCounter(PluginResult):
-    def __init__(self, start_date: T.Union[str, date] = "today", step: str = "+1d"):
-        self.start_date = try_parse_date(start_date)
-        if not self.start_date:  # pragma: no cover
-            raise exc.DataGenError(f"Cannot parse start date {start_date}")
-        step = DateProvider._parse_timedelta(step)
-        self.counter = count(0, step)
-        self.result = {
-            "start": self.start_date,
-            "step": step,
-        }  # for serialization during continuation
-
-    @property
-    def next(self):
-        offset = next(self.counter)
-        return self.start_date + timedelta(seconds=offset)
 
 
 def as_bool(opt):
@@ -299,12 +272,9 @@ class UniqueId(SnowfakeryPlugin):
         def unique_id(self):
             return self.default_uniqifier.unique_id
 
-        def NumericIdGenerator(self, *, template: str = None):
+        def NumericIdGenerator(self, _=None, *, template: str = None):
             template = template or ("pid,rand8,index" if self._bigids else "index")
             return UniqueNumericIdGenerator(pid=self._pid, parts=template)
-
-        def DateCounter(self, start_date, step):
-            return DateCounter(start_date=start_date, step=step)
 
         def AlphaCodeGenerator(
             self,
@@ -323,13 +293,3 @@ class UniqueId(SnowfakeryPlugin):
                 min_chars=min_chars,
                 randomize_codes=randomize_codes,
             )
-
-        def Counter(self, _=None, *, start=1, step=1):
-            return Counter(start, step)
-
-
-SnowfakeryDumper.add_representer(Counter, Representer.represent_object)
-yaml.SafeLoader.add_constructor(
-    "tag:yaml.org,2002:python/object/apply:snowfakery.standard_plugins.UniqueId.Counter",
-    lambda loader, node: Counter(**loader.construct_sequence(node)[0]),
-)

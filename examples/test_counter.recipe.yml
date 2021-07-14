@@ -1,9 +1,0 @@
-- plugin: snowfakery.standard_plugins.UniqueId
-- var: MyCounter
-  just_once: True
-  value:
-    UniqueId.Counter:
-- object: Example
-  count: 10
-  fields:
-    count: ${{MyCounter.next}}
