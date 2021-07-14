@@ -41,3 +41,24 @@ class TestParseGenerator:
         """
         with pytest.warns(UserWarning, match="Foo.bar.*nickname.*"):
             parse_recipe(StringIO(yamlstr))
+
+    def test_parse_alterate_indentations(self):
+        yamlstr = """
+        - object: Foo
+          fields:
+            npe01__PreferredPhone__c:
+              if:
+                - choice:
+                    when: ${{HomePhone!=NULL}}
+                    pick: Home
+                - choice:
+                    when: ${{MobilePhone!=NULL}}
+                    pick: Mobile
+                - choice:
+                  when: ${{nnpe01__WorkPhone__c!=NULL}}
+                  pick: Work
+                - choice:
+                    pick: NULL
+        """
+        out = parse_recipe(StringIO(yamlstr))
+        assert len(out.templates[0].fields[0].definition.args) == 4

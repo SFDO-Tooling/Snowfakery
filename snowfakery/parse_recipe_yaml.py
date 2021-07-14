@@ -180,11 +180,13 @@ def parse_structured_value(name: str, field: Dict, context: ParseContext) -> Def
         raise exc.DataGenSyntaxError(
             f"Strange datastructure ({field})", **context.line_num(field)
         )
+    if len(top_level) == 1:
+        [[function_name, args]] = top_level
     elif len(top_level) > 1:
-        raise exc.DataGenSyntaxError(
-            f"Extra keys for field {name} : {top_level}", **context.line_num(field)
-        )
-    [[function_name, args]] = top_level
+        top_level = list(top_level)
+        function_name, blank = top_level.pop(0)
+        args = dict(top_level)
+        args["__line__"] = field.get("__line__")
     plugin = None
     if "." in function_name:
         namespace, name = function_name.split(".")
