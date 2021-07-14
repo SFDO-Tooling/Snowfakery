@@ -49,7 +49,8 @@ setuptools.setup(
         "console_scripts": [
             "snowfakery=snowfakery.cli:main",
             "snowbench=snowfakery.tools.snowbench:main",
-        ]
+        ],
+        "mkdocs.plugins": ["snowfakery_fakes=snowfakery.tools.mkdocs:Plugin"],
     },
     long_description=long_description,
     long_description_content_type="text/markdown",

@@ -39,5 +39,5 @@ class TestSalesforcePlugin:
             ProfileId:
               Salesforce.ProfileId: Identity User
         """
-        generate_data(StringIO(yaml), plugin_options={"orgname": org_config.name})
+        generate_data(StringIO(yaml), plugin_options={"org_name": org_config.name})
         assert generated_rows.table_values("foo", 0, "ProfileId").startswith("00e")

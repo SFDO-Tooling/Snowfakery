@@ -2,6 +2,8 @@ from typing import NamedTuple
 
 
 def add_after_statements(mappings):
+    """Automatically add CCI after: statements to the lookups
+    in a mapping file"""
     indexed_by_sobject = _index_by_sobject(mappings)
 
     for idx, (mapping_name, mapping) in enumerate(mappings.items()):
@@ -16,9 +18,9 @@ def add_after_statements(mappings):
                     lookup["after"] = target_mapping_index.last_step_name
 
 
-class MappingIndex(NamedTuple):
-    first_instance: int
-    last_step_name: str
+class MappingIndex(NamedTuple):  # info needed by the algorithm above
+    first_instance: int  # where was the first time this sobj was referenced?
+    last_step_name: str  # where was the last (so far)?
 
 
 def _index_by_sobject(mappings):

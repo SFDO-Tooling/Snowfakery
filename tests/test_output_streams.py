@@ -10,6 +10,8 @@ from contextlib import redirect_stdout
 
 import pytest
 
+from click.exceptions import ClickException
+
 from sqlalchemy import create_engine
 
 from snowfakery.output_streams import (
@@ -367,3 +369,9 @@ B - {'id': 1, 'A': 'A(1)'}
 """
         print(x.getvalue())
         assert x.getvalue() == expected
+
+    def test_external_output_stream__failure(self):
+        with pytest.raises(ClickException, match="no.such.output.Stream"):
+            generate_cli.callback(
+                yaml_file=sample_yaml, output_format="no.such.output.Stream"
+            )
