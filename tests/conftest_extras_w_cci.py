@@ -66,7 +66,6 @@ def fallback_org_config():
 # TODO: Port this back to CCI
 def sf_before_record_response(response):
     # salesforce_bulk needs the Content-Type header.
-    print(response["headers"])
     content_type = response["headers"].get("Content-Type")
     response["headers"] = {
         "Response-Headers": "SF-Elided",

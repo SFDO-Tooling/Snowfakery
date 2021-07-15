@@ -1,0 +1,132 @@
+interactions:
+- request:
+    body: <jobInfo xmlns="http://www.force.com/2009/06/asyncapi/dataload"><operation>query</operation><object>Account</object><contentType>CSV</contentType></jobInfo>
+    headers:
+      Request-Headers:
+      - Elided
+    method: POST
+    uri: https://orgname.my.salesforce.com/services/async/50.0/job
+  response:
+    body:
+      string: "<?xml version=\"1.0\" encoding=\"UTF-8\"?><jobInfo\n   xmlns=\"http://www.force.com/2009/06/asyncapi/dataload\">\n
+        <id>7500R000004aJJGQA2</id>\n <operation>query</operation>\n <object>Account</object>\n
+        <createdById>0050R000008NsbLQAS</createdById>\n <createdDate>2021-06-21T05:38:02.000Z</createdDate>\n
+        <systemModstamp>2021-06-21T05:38:02.000Z</systemModstamp>\n <state>Open</state>\n
+        <concurrencyMode>Parallel</concurrencyMode>\n <contentType>CSV</contentType>\n
+        <numberBatchesQueued>0</numberBatchesQueued>\n <numberBatchesInProgress>0</numberBatchesInProgress>\n
+        <numberBatchesCompleted>0</numberBatchesCompleted>\n <numberBatchesFailed>0</numberBatchesFailed>\n
+        <numberBatchesTotal>0</numberBatchesTotal>\n <numberRecordsProcessed>0</numberRecordsProcessed>\n
+        <numberRetries>0</numberRetries>\n <apiVersion>50.0</apiVersion>\n <numberRecordsFailed>0</numberRecordsFailed>\n
+        <totalProcessingTime>0</totalProcessingTime>\n <apiActiveProcessingTime>0</apiActiveProcessingTime>\n
+        <apexProcessingTime>0</apexProcessingTime>\n</jobInfo>"
+    headers:
+      Content-Type:
+      - application/xml
+      Response-Headers: SF-Elided
+    status:
+      code: 201
+      message: Created
+- request:
+    body: 'SELECT Xyzzy FROM Account '
+    headers:
+      Request-Headers:
+      - Elided
+    method: POST
+    uri: https://orgname.my.salesforce.com/services/async/50.0/job/7500R000004aJJGQA2/batch
+  response:
+    body:
+      string: "<?xml version=\"1.0\" encoding=\"UTF-8\"?><batchInfo\n   xmlns=\"http://www.force.com/2009/06/asyncapi/dataload\">\n
+        <id>7510R000004aCMsQAM</id>\n <jobId>7500R000004aJJGQA2</jobId>\n <state>Queued</state>\n
+        <createdDate>2021-06-21T05:38:02.000Z</createdDate>\n <systemModstamp>2021-06-21T05:38:02.000Z</systemModstamp>\n
+        <numberRecordsProcessed>0</numberRecordsProcessed>\n <numberRecordsFailed>0</numberRecordsFailed>\n
+        <totalProcessingTime>0</totalProcessingTime>\n <apiActiveProcessingTime>0</apiActiveProcessingTime>\n
+        <apexProcessingTime>0</apexProcessingTime>\n</batchInfo>"
+    headers:
+      Content-Type:
+      - application/xml
+      Response-Headers: SF-Elided
+    status:
+      code: 201
+      message: Created
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.my.salesforce.com/services/async/50.0/job/7500R000004aJJGQA2
+  response:
+    body:
+      string: "<?xml version=\"1.0\" encoding=\"UTF-8\"?><jobInfo\n   xmlns=\"http://www.force.com/2009/06/asyncapi/dataload\">\n
+        <id>7500R000004aJJGQA2</id>\n <operation>query</operation>\n <object>Account</object>\n
+        <createdById>0050R000008NsbLQAS</createdById>\n <createdDate>2021-06-21T05:38:02.000Z</createdDate>\n
+        <systemModstamp>2021-06-21T05:38:02.000Z</systemModstamp>\n <state>Open</state>\n
+        <concurrencyMode>Parallel</concurrencyMode>\n <contentType>CSV</contentType>\n
+        <numberBatchesQueued>0</numberBatchesQueued>\n <numberBatchesInProgress>0</numberBatchesInProgress>\n
+        <numberBatchesCompleted>0</numberBatchesCompleted>\n <numberBatchesFailed>1</numberBatchesFailed>\n
+        <numberBatchesTotal>1</numberBatchesTotal>\n <numberRecordsProcessed>0</numberRecordsProcessed>\n
+        <numberRetries>0</numberRetries>\n <apiVersion>50.0</apiVersion>\n <numberRecordsFailed>0</numberRecordsFailed>\n
+        <totalProcessingTime>0</totalProcessingTime>\n <apiActiveProcessingTime>0</apiActiveProcessingTime>\n
+        <apexProcessingTime>0</apexProcessingTime>\n</jobInfo>"
+    headers:
+      Content-Type:
+      - application/xml
+      Response-Headers: SF-Elided
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.my.salesforce.com/services/async/50.0/job/7500R000004aJJGQA2/batch
+  response:
+    body:
+      string: "<?xml version=\"1.0\" encoding=\"UTF-8\"?><batchInfoList\n   xmlns=\"http://www.force.com/2009/06/asyncapi/dataload\">\n
+        <batchInfo>\n  <id>7510R000004aCMsQAM</id>\n  <jobId>7500R000004aJJGQA2</jobId>\n
+        \ <state>Failed</state>\n  <stateMessage>InvalidBatch : Failed to process
+        query: INVALID_FIELD:  SELECT Xyzzy FROM Account        ^ ERROR at Row:1:Column:8
+        No such column 'Xyzzy' on entity 'Account'. If you are attempting to use a
+        custom field, be sure to append the '__c' after the custom field name. Please
+        reference your WSDL or the describe call for the appropriate names.</stateMessage>\n
+        \ <createdDate>2021-06-21T05:38:02.000Z</createdDate>\n  <systemModstamp>2021-06-21T05:38:03.000Z</systemModstamp>\n
+        \ <numberRecordsProcessed>0</numberRecordsProcessed>\n  <numberRecordsFailed>0</numberRecordsFailed>\n
+        \ <totalProcessingTime>0</totalProcessingTime>\n  <apiActiveProcessingTime>0</apiActiveProcessingTime>\n
+        \ <apexProcessingTime>0</apexProcessingTime>\n </batchInfo>\n</batchInfoList>"
+    headers:
+      Content-Type:
+      - application/xml
+      Response-Headers: SF-Elided
+    status:
+      code: 200
+      message: OK
+- request:
+    body: <jobInfo xmlns="http://www.force.com/2009/06/asyncapi/dataload"><state>Closed</state></jobInfo>
+    headers:
+      Request-Headers:
+      - Elided
+    method: POST
+    uri: https://orgname.my.salesforce.com/services/async/50.0/job/7500R000004aJJGQA2
+  response:
+    body:
+      string: "<?xml version=\"1.0\" encoding=\"UTF-8\"?><jobInfo\n   xmlns=\"http://www.force.com/2009/06/asyncapi/dataload\">\n
+        <id>7500R000004aJJGQA2</id>\n <operation>query</operation>\n <object>Account</object>\n
+        <createdById>0050R000008NsbLQAS</createdById>\n <createdDate>2021-06-21T05:38:02.000Z</createdDate>\n
+        <systemModstamp>2021-06-21T05:38:02.000Z</systemModstamp>\n <state>Closed</state>\n
+        <concurrencyMode>Parallel</concurrencyMode>\n <contentType>CSV</contentType>\n
+        <numberBatchesQueued>0</numberBatchesQueued>\n <numberBatchesInProgress>0</numberBatchesInProgress>\n
+        <numberBatchesCompleted>0</numberBatchesCompleted>\n <numberBatchesFailed>1</numberBatchesFailed>\n
+        <numberBatchesTotal>1</numberBatchesTotal>\n <numberRecordsProcessed>0</numberRecordsProcessed>\n
+        <numberRetries>0</numberRetries>\n <apiVersion>50.0</apiVersion>\n <numberRecordsFailed>0</numberRecordsFailed>\n
+        <totalProcessingTime>0</totalProcessingTime>\n <apiActiveProcessingTime>0</apiActiveProcessingTime>\n
+        <apexProcessingTime>0</apexProcessingTime>\n</jobInfo>"
+    headers:
+      Content-Type:
+      - application/xml
+      Response-Headers: SF-Elided
+    status:
+      code: 200
+      message: OK
+version: 1
