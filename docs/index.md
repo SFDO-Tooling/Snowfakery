@@ -1390,6 +1390,12 @@ Snowfakery has a plugin called `Counters` which can generate
 numeric counters (1,2,3,4 or 3,6,9,12) and date counters
 (2021-01-01, 2021-01-02, 2021-01-03).
 
+Counters are reset
+every iteration of the recipe.
+Counters are reset at the beginning of every "iteration". This makes them
+inappropriate for generating unique identifiers. Use [`unique_id`](#unique_id)
+instead.
+
 #### Numeric Counters
 
 Snowfakery can generate incrementing numbers like this:
@@ -1409,7 +1415,7 @@ Snowfakery can generate incrementing numbers like this:
 This would output:
 
 ```s
-$ python -m snowfakery examples/test_counter.recipe.yml
+$ python -m snowfakery examples/counters/number_counter.recipe.yml
 Example(id=1, count=1)
 Example(id=2, count=2)
 Example(id=3, count=3)
@@ -1451,8 +1457,31 @@ Example(id=9, count=35)
 Example(id=10, count=38)
 ```
 
-For very large data loads, CumulusCI breaks jobs into "portions" that are
-loaded in parallel. Counters are reset at the beginning of every "portion".
+As described above, counters are reset each iteration, as described above:
+
+```s
+python -m snowfakery examples/counters/number_counter.recipe.yml --reps 2
+Example(id=1, count=1)
+Example(id=2, count=2)
+Example(id=3, count=3)
+Example(id=4, count=4)
+Example(id=5, count=5)
+Example(id=6, count=6)
+Example(id=7, count=7)
+Example(id=8, count=8)
+Example(id=9, count=9)
+Example(id=10, count=10)
+Example(id=11, count=1)
+Example(id=12, count=2)
+Example(id=13, count=3)
+Example(id=14, count=4)
+Example(id=15, count=5)
+Example(id=16, count=6)
+Example(id=17, count=7)
+Example(id=18, count=8)
+Example(id=19, count=9)
+Example(id=20, count=10)
+```
 
 #### Date Counters for Schedules
 
