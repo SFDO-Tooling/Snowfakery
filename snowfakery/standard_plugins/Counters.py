@@ -71,7 +71,7 @@ class Counters(SnowfakeryPlugin):
                 name=name,
                 parent=parent,
                 reset_every_iteration=True,
-                func=lambda: NumberCounter(start, step),
+                make_state_func=lambda: NumberCounter(start, step),
             )
             return counter.next
 
@@ -89,6 +89,6 @@ class Counters(SnowfakeryPlugin):
                 name=name,
                 parent=parent,
                 reset_every_iteration=True,
-                func=lambda: DateCounter(start_date=start_date, step=step),
+                make_state_func=lambda: DateCounter(start_date=start_date, step=step),
             )
             return counter.next

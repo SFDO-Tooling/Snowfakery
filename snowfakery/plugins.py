@@ -83,11 +83,31 @@ class SnowfakeryPlugin:
     def get_contextual_state(
         self,
         *,
-        func: T.Callable,
+        make_state_func: T.Callable,
         name: T.Optional[str] = None,
         parent: T.Optional[str] = None,
         reset_every_iteration: bool = True,
     ):
+        """Get state that is specific to a particular template&plugin
+
+        The first time the template is invoked in a particular context,
+        make_state_func is invoked to generate the state container.
+
+        The next time it is invoked, the state will be returned for reuse
+        and potential modification.
+
+        `name` allows you to reuse the same state among multiple templates.
+        The plugin author should generally expose this to the end-user
+        through an argument called `name`.
+
+        `parent` allows the user to use some specific SObject parent as
+        a parent object. The state will be only reused for the lifetime
+        of the parent and then discarded. This should also be
+        user-controlled.
+
+        `reset_every_iteration` is an experimental feature that should
+        not generally be used.
+        """
         uniq_name = name or self.context.unique_context_identifier()
         if parent:
             parent_obj = self.context.field_vars().get(parent)
@@ -97,7 +117,7 @@ class SnowfakeryPlugin:
             parent_obj = None
         current_parent, value = self.instance_states.get(uniq_name, (None, None))
         if current_parent != parent_obj or value is None:
-            value = func()
+            value = make_state_func()
             self.instance_states[uniq_name] = [parent_obj, value]
         return value
 
