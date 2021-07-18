@@ -67,7 +67,7 @@ class Counters(SnowfakeryPlugin):
             parent=None,
             reset_every_iteration: bool = True,
         ):
-            counter = self.context.plugin.get_contextual_state(
+            counter = self.context.get_contextual_state(
                 name=name,
                 parent=parent,
                 reset_every_iteration=True,
@@ -85,7 +85,7 @@ class Counters(SnowfakeryPlugin):
             parent=None,
             reset_every_iteration: bool = True,
         ):
-            counter = self.context.plugin.get_contextual_state(
+            counter = self.context.get_contextual_state(
                 name=name,
                 parent=parent,
                 reset_every_iteration=True,
