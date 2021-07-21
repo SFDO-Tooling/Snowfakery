@@ -1,0 +1,5 @@
+- plugin: examples.plugins.RecipeStateDemo
+- object: Example
+  fields:
+    demo:
+      RecipeStateDemo.show_recipe_state:

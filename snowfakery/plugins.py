@@ -5,6 +5,7 @@ from importlib import import_module
 from datetime import date, datetime
 from pathlib import Path
 from unittest.mock import patch
+from functools import wraps
 
 import yaml
 from yaml.representer import Representer
@@ -19,6 +20,7 @@ from numbers import Number
 
 Scalar = Union[str, Number, date, datetime, None]
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
+ObjectRow = "snowfakery.object_rows.ObjectRow"
 
 
 class LineTracker(NamedTuple):
@@ -96,14 +98,17 @@ class PluginContext:
     def field_vars(self):
         return self.interpreter.current_context.field_vars()
 
+    ## TODO: Deprecate this in favour of get_contextual_state
+    ##       which has more smarts about name=, parent= etc.
     def context_vars(self):
         return self.interpreter.current_context.context_vars(
             self.plugin.__class__.__name__
         )
 
+    @property
     def unique_context_identifier(self) -> str:
         "An identifier that will be unique across iterations (but not portion invocations)"
-        return self.interpreter.current_context.unique_context_identifier
+        return str(self.interpreter.current_context.unique_context_identifier)
 
     def evaluate_raw(self, field_definition):
         """Evaluate the contents of a field definition"""
@@ -119,11 +124,44 @@ class PluginContext:
         else:
             raise f"Cannot simplify {field_definition}. Perhaps should have used evaluate_raw?"
 
+    def get_contextual_state(self, **kwargs):
+        return self.interpreter.get_contextual_state(**kwargs)
+
 
 def lazy(func: Any) -> Callable:
     """A lazy function is one that expects its arguments to be unparsed"""
     func.lazy = True
     return func
+
+
+def memorable(func: Any) -> Callable:
+    """A memorable function is one that is evaluated once per iteration and its result saved"""
+    func.memorable = True
+
+    @wraps(func)
+    def newfunc(self, *args, **kwargs):
+        return evaluate_memorable_function(self.context, func, self, args, kwargs)
+
+    return newfunc
+
+
+def evaluate_memorable_function(context, func, self, args, kwargs):
+    user_key = kwargs.get("name") or (
+        context.unique_context_identifier,
+        tuple(args),
+        tuple(kwargs.items()),
+    )
+    key = (
+        func.__module__,
+        func.__name__,
+        user_key,
+    )
+    return context.interpreter.get_contextual_state(
+        name=key,
+        parent=kwargs.get("parent", None),
+        reset_every_iteration=True,
+        make_state_func=lambda: func(self, *args, **kwargs),
+    )
 
 
 def resolve_plugins(
@@ -234,6 +272,10 @@ class PluginResult:
 
     def __str__(self):
         return str(self.result)
+
+
+class PluginResultIterator(PluginResult):
+    pass
 
 
 class PluginOption:

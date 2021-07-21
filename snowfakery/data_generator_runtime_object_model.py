@@ -14,7 +14,7 @@ from .data_gen_exceptions import (
     DataGenValueError,
     fix_exception,
 )
-from .plugins import Scalar, PluginResult
+from .plugins import Scalar, PluginResult, PluginResultIterator
 
 # objects that represent the hierarchy of a data generator.
 # roughly similar to the YAML structure but with domain-specific objects
@@ -187,7 +187,11 @@ class ObjectTemplate:
         """Generate all of the fields of a row"""
         for field in self.fields:
             with self.exception_handling("Problem rendering value"):
-                row[field.name] = field.generate_value(context)
+                value = field.generate_value(context)
+                if isinstance(value, PluginResultIterator):
+                    value = value.next()
+                row[field.name] = value
+
                 self._check_type(field, row[field.name], context)
 
     def _check_type(self, field, generated_value, context: RuntimeContext):
@@ -295,7 +299,7 @@ class StructuredValue(FieldDefinition):
             self.kwargs = {}
 
     def render(self, context: RuntimeContext) -> FieldValue:
-        context.unique_context_identifier = id(self)
+        context.unique_context_identifier = str(id(self))
         if "." in self.function_name:
             objname, method, *rest = self.function_name.split(".")
             if rest:
