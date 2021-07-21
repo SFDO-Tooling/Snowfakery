@@ -94,7 +94,6 @@ class PluginContext:
     def __init__(self, plugin):
         self.plugin = plugin
         self.interpreter = plugin.interpreter
-        self.instance_states = {}
 
     def field_vars(self):
         return self.interpreter.current_context.field_vars()

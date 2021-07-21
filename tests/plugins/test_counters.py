@@ -40,6 +40,20 @@ class TestCounter:
         assert generated_rows.row_values(10, "count") == 1
         assert generated_rows.row_values(29, "count") == 10
 
+    def test_counter_in_variable(self, generated_rows):
+        yaml = """
+            - plugin: snowfakery.standard_plugins.Counters
+            - var: my_counter
+              value:
+                Counters.NumberCounter:
+            - object: Foo
+              count: 10
+              fields:
+                counter: ${{my_counter.next()}}
+        """
+        generate_data(StringIO(yaml))
+        assert generated_rows.table_values("Foo", 10, "counter") == 10
+
 
 class TestDateCounter:
     # date counters reset on recipe iteration

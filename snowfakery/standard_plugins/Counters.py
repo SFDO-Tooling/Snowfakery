@@ -5,7 +5,7 @@ import typing as T
 from faker.providers.date_time import ParseError, Provider as DateProvider
 
 from snowfakery import SnowfakeryPlugin
-from snowfakery.plugins import PluginResult
+from snowfakery.plugins import PluginResultIterator, memorable
 from snowfakery import data_gen_exceptions as exc
 
 
@@ -23,7 +23,7 @@ def try_parse_date(d):
                 raise exc.DataGenValueError(d) from e
 
 
-class NumberCounter(PluginResult):
+class NumberCounter(PluginResultIterator):
     def __init__(self, start=1, step=1):
         start = 1 if start is None else start
         self.counter = count(start, step)
@@ -32,12 +32,11 @@ class NumberCounter(PluginResult):
             "step": step,
         }  # for serialization during continuation
 
-    @property
     def next(self):
         return next(self.counter)
 
 
-class DateCounter(PluginResult):
+class DateCounter(PluginResultIterator):
     def __init__(self, start_date: T.Union[str, date] = "today", step: str = "+1d"):
         self.start_date = try_parse_date(start_date)
         if not self.start_date:  # pragma: no cover
@@ -49,7 +48,6 @@ class DateCounter(PluginResult):
             "step": step,
         }  # for serialization during continuation
 
-    @property
     def next(self):
         offset = next(self.counter)
         return self.start_date + timedelta(seconds=offset)
@@ -57,6 +55,7 @@ class DateCounter(PluginResult):
 
 class Counters(SnowfakeryPlugin):
     class Functions:
+        @memorable
         def NumberCounter(
             self,
             _=None,
@@ -67,14 +66,9 @@ class Counters(SnowfakeryPlugin):
             parent=None,
             reset_every_iteration: bool = True,
         ):
-            counter = self.context.get_contextual_state(
-                name=name,
-                parent=parent,
-                reset_every_iteration=True,
-                make_state_func=lambda: NumberCounter(start, step),
-            )
-            return counter.next
+            return NumberCounter(start, step)
 
+        @memorable
         def DateCounter(
             self,
             _=None,
@@ -85,10 +79,4 @@ class Counters(SnowfakeryPlugin):
             parent=None,
             reset_every_iteration: bool = True,
         ):
-            counter = self.context.get_contextual_state(
-                name=name,
-                parent=parent,
-                reset_every_iteration=True,
-                make_state_func=lambda: DateCounter(start_date=start_date, step=step),
-            )
-            return counter.next
+            return DateCounter(start_date=start_date, step=step)
