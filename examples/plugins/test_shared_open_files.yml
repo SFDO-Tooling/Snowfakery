@@ -1,0 +1,19 @@
+- plugin: examples.plugins.OpenFiles
+- object: parent
+  friends:
+    - object: WithOpenFile
+      fields:
+        poetry_line:
+          OpenFiles.read_line:
+            filename: poem.txt
+            name: JohnGreenPoem
+    - object: WithOpenFile2
+      fields:
+        poetry_line:
+          OpenFiles.read_line:
+            name: JohnGreenPoem
+    - object: WithOpenFile3
+      fields:
+        poetry_line:
+          OpenFiles.read_line:
+            name: JohnGreenPoem
