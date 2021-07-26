@@ -114,7 +114,9 @@ class PluginThatCounts(SnowfakeryPlugin):
 ```
 
 Plugins also have access to a dictionary called `self.context.field_vars()` which
-represents the values that would be available to a formula running in the same context.
+represents the values that would be available to a formula running in the same context
+and `self.context.current_filename` which is the filename of the YAML file being
+processed.
 
 Plugins can return normal Python primitive types, `datetime.date`, `ObjectRow` or `PluginResult` objects. `ObjectRow` objects represent new output records/objects. `PluginResult` objects
 expose a namespace that other code can access through dot-notation. `PluginResult` instances can be
