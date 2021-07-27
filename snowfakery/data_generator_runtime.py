@@ -319,6 +319,7 @@ class Interpreter:
         return self.globals
 
     def faker_template_library(self, locale):
+        """Create a faker template library for locale, or retrieve it from a cache"""
         rc = self.faker_template_libraries.get(locale)
         if not rc:
             rc = FakerTemplateLibrary(
@@ -386,6 +387,7 @@ class RuntimeContext:
             self._plugin_context_vars = ChainMap()
         locale = self.variable_definitions().get("snowfakery_locale")
         self.faker_template_library = self.interpreter.faker_template_library(locale)
+        self.local_vars = {}
 
     # TODO: move this into the interpreter object
     def check_if_finished(self):
