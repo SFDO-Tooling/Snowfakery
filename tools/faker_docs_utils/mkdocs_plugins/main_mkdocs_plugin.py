@@ -58,7 +58,7 @@ class Plugin(BasePlugin):
             build_locales_env = os.environ.get(
                 "SF_MKDOCS_BUILD_LOCALES"
             ) or self.config.get("build_locales", None)
-            if build_locales_env == "False":
+            if build_locales_env.lower() == "false":
                 locales_list = ["en_US", "fr_FR"]
             elif build_locales_env in (True, "True", None):
                 locales_list = None  # means "all"

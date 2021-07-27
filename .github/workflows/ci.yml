@@ -5,7 +5,7 @@ on: [push]
 env:
   COVERALLS_PARALLEL: true
   COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-  SF_MKDOCS_BUILD_LOCALES: False
+  SF_MKDOCS_BUILD_LOCALES: "False"
 
 jobs:
   test:
