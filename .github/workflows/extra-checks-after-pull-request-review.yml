@@ -1,4 +1,4 @@
-name: daily-tests
+name: post-review-checks
 
 on:
   pull_request_review:
