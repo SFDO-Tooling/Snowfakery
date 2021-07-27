@@ -22,7 +22,7 @@ jobs:
       - name: "Install dependencies"
         run: |
           python -VV
-          python -m pip install --upgrade pip pip-tools
+          python -m pip install --upgrade pip
           make dev-install
 
       - name: "Run tox targets for ${{ matrix.python-version }}"
@@ -49,12 +49,31 @@ jobs:
       - name: Install dependencies
         run: |
           python -VV
-          python -m pip install --upgrade pip pip-tools
+          python -m pip install --upgrade pip
           make dev-install
           python -m pip install cumulusci
 
       - name: Run Tests
         run: python -m pytest
+
+  faker_docs:
+    name: Faker Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v1"
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: |
+          python -VV
+          python -m pip install --upgrade pip pip-tools
+          make dev-install
+          python setup.py install
+
+      - name: Make Docs
+        run: make docs
 
   windows:
     name: Windows ${{ matrix.python-version }}
@@ -71,7 +90,7 @@ jobs:
       - name: "Install dependencies"
         run: |
           python -VV
-          python -m pip install --upgrade pip pip-tools
+          python -m pip install --upgrade pip
           make dev-install
 
       - name: Run Tests

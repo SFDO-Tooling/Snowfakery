@@ -1,5 +1,4 @@
 from difflib import get_close_matches
-from faker import Faker
 import typing as T
 import random
 from snowfakery.plugins import PluginContext
@@ -12,22 +11,26 @@ email_templates = [  # .format language doesn't allow slicing. :(
     for year in ("{year}", "{year[2]}{year[3]}", "{year[3]}", "")
 ]
 
+from faker import Faker, Generator
+
 
 class FakeNames(T.NamedTuple):
     f: Faker
     faker_context: PluginContext = None
 
-    def Username(self, matching: bool = True):
+    def user_name(self, matching: bool = True):
+        "Salesforce-style username in the form of an email address"
         already_created = self._already_have(("firstname", "lastname"), matching)
         if all(already_created):
             return f"{already_created[0]}.{already_created[1]}_{self.f.uuid4()}@{self.f.safe_domain_name()}"
-
         return f"{self.f.first_name()}_{self.f.last_name()}_{self.f.uuid4()}@{self.f.hostname()}"
 
-    def Alias(self):
+    def alias(self):
+        "Salesforce-style 8-character alias"
         return self.f.first_name()[0:8]
 
-    def Email(self, matching: bool = True):
+    def email(self, matching: bool = True):
+        """Email address using one of the "example" domains"""
         already_created = self._already_have(("firstname", "lastname"), matching)
         if all(already_created):
             template = random.choice(email_templates)
@@ -40,7 +43,11 @@ class FakeNames(T.NamedTuple):
             )
         return self.f.ascii_safe_email()
 
-    def RealisticMaybeRealEmail(self):
+    def realistic_maybe_real_email(self):
+        """Like fake: email except that the email domain may be real and therefore
+        the email address itself may be real. Use with caution, you might
+        accidentally email strangers!!!
+        """
         return self.f.email()
 
     def _already_have(self, names: T.Sequence[str], matching: bool):
@@ -50,10 +57,18 @@ class FakeNames(T.NamedTuple):
         vals = [already_created.get(name) for name in names]
         return vals
 
+    def state(self):
+        """Return a state, province or other appropriate administrative unit"""
+        return self.f.administrative_unit()
+
+    def postalcode(self):
+        """Return whatever counts as a postalcode for a particular locale"""
+        return self.f.postcode()
+
 
 # we will use this to exclude Faker's internal book-keeping methods
 # from our faker interface
-faker_class_attrs = set(dir(Faker))
+faker_class_attrs = set(dir(Faker)).union((dir(Generator)))
 
 
 class FakeData:
@@ -74,6 +89,9 @@ class FakeData:
 
         fake_names = FakeNames(faker, faker_context)
 
+        def no_underscore_name(name):
+            return name.lower().replace("_", "")
+
         def obj_to_func_list(obj: object, canonicalizer: T.Callable, ignore_list: set):
             return {
                 canonicalizer(name): getattr(obj, name)
@@ -87,11 +105,10 @@ class FakeData:
         # include snowfakery names defined above
         self.fake_names = {
             **obj_to_func_list(faker, str.lower, faker_class_attrs),
-            **obj_to_func_list(
-                faker, lambda x: x.lower().replace("_", ""), faker_class_attrs
-            ),
+            **obj_to_func_list(faker, no_underscore_name, faker_class_attrs),
             # in case of conflict, snowfakery names "win" over Faker names
             **obj_to_func_list(fake_names, str.lower, set()),
+            **obj_to_func_list(fake_names, no_underscore_name, set()),
         }
 
     def _get_fake_data(self, origname, *args, **kwargs):
