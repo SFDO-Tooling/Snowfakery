@@ -462,7 +462,7 @@ class RuntimeContext:
         return self.evaluation_namespace.field_vars()
 
     def context_vars(self, plugin_namespace):
-        """ "Variables which are inherited by child scopes"""
+        """Variables which are inherited by child scopes"""
         # This looks like a candidate for optimization.
         # An unconditional object copy?
         local_plugin_vars = self._plugin_context_vars.get(plugin_namespace, {}).copy()
