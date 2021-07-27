@@ -5,6 +5,7 @@ on: [push]
 env:
   COVERALLS_PARALLEL: true
   COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+  SF_MKDOCS_BUILD_LOCALES: False
 
 jobs:
   test:
@@ -55,6 +56,24 @@ jobs:
 
       - name: Run Tests
         run: python -m pytest
+
+  faker_docs:
+    name: Faker Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v1"
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: |
+          python -VV
+          make dev-install
+          python setup.py install
+
+      - name: Make Docs
+        run: make docs
 
   windows:
     name: Windows ${{ matrix.python-version }}
