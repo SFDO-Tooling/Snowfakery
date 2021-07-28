@@ -1,7 +1,7 @@
 name: CI
 
 on: [push]
-s
+
 env:
   COVERALLS_PARALLEL: true
   COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
