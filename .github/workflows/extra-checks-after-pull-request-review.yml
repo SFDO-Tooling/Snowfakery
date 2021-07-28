@@ -6,6 +6,9 @@ on:
 
   workflow_dispatch:
 
+env:
+  CUMULUSCI_KEY: ${{ secrets.CUMULUSCI_KEY }}
+
 jobs:
   faker_docs:
     name: Faker Docs I18N
