@@ -3,11 +3,6 @@ from logging import getLogger
 from tempfile import TemporaryDirectory
 from pathlib import Path
 
-from salesforce_bulk import SalesforceBulk
-
-from cumulusci.cli.runtime import CliRuntime
-from cumulusci.salesforce_api.utils import get_simple_salesforce_connection
-
 from snowfakery.plugins import ParserMacroPlugin
 from snowfakery.data_generator_runtime_object_model import (
     ObjectTemplate,
@@ -34,10 +29,18 @@ from snowfakery.parse_recipe_yaml import TableInfo
 
 MAX_SALESFORCE_OFFSET = 2000  # Any way around this?
 
-# the option name that the user specifies on the CLI or API is just "orgname"
+# the option name that the user specifies on the CLI or API is just "org_name"
 # but using this long name internally prevents us from clashing with the
 # user's variable names.
-plugin_option_name = "snowfakery.standard_plugins.Salesforce.SalesforceQuery.orgname"
+plugin_option_org_name = (
+    "snowfakery.standard_plugins.Salesforce.SalesforceQuery.org_name"
+)
+plugin_option_org_config = (
+    "snowfakery.standard_plugins.Salesforce.SalesforceQuery.org_config"
+)
+plugin_option_project_config = (
+    "snowfakery.standard_plugins.Salesforce.SalesforceQuery.project_config"
+)
 
 
 class SalesforceConnection:
@@ -45,27 +48,23 @@ class SalesforceConnection:
 
     _sf = None
 
-    def __init__(self, get_orgname):
-        self.get_orgname = get_orgname
+    def __init__(self, get_project_config_and_org_config):
+        self.get_project_config_and_org_config = get_project_config_and_org_config
         self.logger = getLogger(__name__)
 
     @property
     def sf(self):
-        """simple_salesfore client"""
+        """simple_salesforce client"""
         if not self._sf:
-            self._sf, self._bulk = self._get_sf_clients(self.orgname)
+            project_config, org_config = self.get_project_config_and_org_config()
+            self._sf, self._bulk = self._get_sf_clients(project_config, org_config)
         return self._sf
 
+    @property
     def bulk(self):
         """salesforce_bulk client"""
-        if not self._bulk:
-            self._sf, self._bulk = self._get_sf_clients(self.orgname)
+        self.sf  # initializes self._bulk as a side-effect
         return self._bulk
-
-    @property
-    def orgname(self):
-        """Look up the orgname in the scope"""
-        return self.get_orgname()
 
     def query(self, *args, **kwargs):
         """Query Salesforce through simple_salesforce"""
@@ -78,7 +77,7 @@ class SalesforceConnection:
         records = qr.get("records")
         if not records:
             raise DataGenValueError(f"No records returned by query {query}", None, None)
-        elif len(records) > 1:
+        elif len(records) > 1:  # pragma: no cover
             raise DataGenValueError(
                 f"Multiple records returned by query {query}", None, None
             )
@@ -113,44 +112,85 @@ class SalesforceConnection:
         return query
 
     @staticmethod
-    def _get_sf_clients(orgname):
-        try:
-            runtime = CliRuntime(load_keychain=True)
-        except Exception as e:
-            raise DataGenError("CLI Runtime cannot be loaded", *e.args)
+    def _get_sf_clients(project_config, org_config):
+        from cumulusci.salesforce_api.utils import get_simple_salesforce_connection
 
-        name, org_config = runtime.get_org(orgname)
-        sf = get_simple_salesforce_connection(runtime.project_config, org_config)
-        return sf, SalesforceConnection._init_bulk(sf, org_config)
+        sf = get_simple_salesforce_connection(project_config, org_config)
+        return sf, _init_bulk(sf, org_config)
 
-    @staticmethod
-    def _init_bulk(sf, org_config):
-        return SalesforceBulk(
-            host=org_config.instance_url.replace("https://", "").rstrip("/"),
-            sessionId=org_config.access_token,
-            API_version=sf.sf_version,
-        )
+
+def _init_bulk(sf, org_config):
+    from salesforce_bulk import SalesforceBulk
+
+    return SalesforceBulk(
+        host=org_config.instance_url.replace("https://", "").rstrip("/"),
+        sessionId=org_config.access_token,
+        API_version=sf.sf_version,
+    )
+
+
+def check_orgconfig(config):
+    from cumulusci.core.config import BaseConfig
+
+    if isinstance(config, BaseConfig):
+        return config
+    raise TypeError(f"Should be a CCI Config, not {type(config)}")
 
 
 class SalesforceConnectionMixin:
     _sf_connection = None
-    allowed_options = [PluginOption(plugin_option_name, str)]
+    _runtime = None
+    allowed_options = [
+        PluginOption(plugin_option_org_name, str),
+        PluginOption(plugin_option_org_config, check_orgconfig),
+        PluginOption(plugin_option_project_config, check_orgconfig),
+    ]
 
     @property
     def sf_connection(self):
         assert self.context
         if not self._sf_connection:
-            self._sf_connection = SalesforceConnection(self.get_orgname)
+            self._sf_connection = SalesforceConnection(
+                self.get_project_config_and_org_config
+            )
         return self._sf_connection
 
-    def get_orgname(self):
-        """Look up the orgname in the scope"""
+    def get_project_config_and_org_config(self):
+        fieldvars = self.context.field_vars()
+        project_config = fieldvars.get(plugin_option_project_config)
+        org_config = fieldvars.get(plugin_option_org_config)
+
+        if not project_config or not org_config:
+            project_config, org_config = self._get_org_info_from_cli_keychain()
+
+        return project_config, org_config
+
+    def _get_org_info_from_cli_keychain(self):
+        org_name = self.get_org_name()  # from command line argument
+        runtime = self._get_CliRuntime()  # from CCI CliRuntime
+        name, org_config = runtime.get_org(org_name)
+        return runtime.project_config, org_config
+
+    def _get_CliRuntime(self):
+        if self._runtime:
+            return self._runtime  # pragma: no cover
+
+        try:
+            from cumulusci.cli.runtime import CliRuntime
+
+            self._runtime = CliRuntime(load_keychain=True)
+            return self._runtime
+        except Exception as e:  # pragma: no cover
+            raise DataGenError("CumulusCI Runtime cannot be loaded", *e.args)
+
+    def get_org_name(self):
+        """Look up the org_name in the scope"""
         fieldvars = self.context.field_vars()
         try:
-            return fieldvars[plugin_option_name]
+            return fieldvars[plugin_option_org_name]
         except KeyError:
             raise DataGenNameError(
-                "Orgname is not specified. Use --plugin-option orgname <yourorgname>",
+                "Orgname is not specified. Use --plugin-option org_name <yourorgname>",
                 None,
                 None,
             )
@@ -212,13 +252,17 @@ class Salesforce(ParserMacroPlugin, SnowfakeryPlugin, SalesforceConnectionMixin)
             sobj = args["name"]
             if not isinstance(sobj, str):
                 raise exc.DataGenError(
-                    f"`name` argument should be a string {sobj}: {type(sobj)}"
+                    f"`name` argument should be a string, not `{sobj}`: ({type(sobj)})"
                 )
             nickname = args.get("nickname")
             if nickname and not isinstance(nickname, str):
                 raise exc.DataGenError(
-                    f"`nickname` argument should be a string {nickname}: {type(sobj)}"
+                    f"`nickname` argument should be a string, not `{nickname}``: ({type(sobj)})"
                 )
+        else:
+            raise exc.DataGenError(
+                f"`name` argument should be a string, not `{args}``: ({type(args)})"
+            )
 
         return sobj, nickname
 
@@ -302,23 +346,31 @@ class SOQLDatasetImpl(DatasetBase):
         return self.plugin.sf_connection
 
     def _load_dataset(self, iteration_mode, rootpath, kwargs):
+        from cumulusci.tasks.bulkdata.step import DataApi
+
         query = self.sf_connection.compose_query("SOQLDataset", **kwargs)
         fields = kwargs.get("fields")
+        sobject = kwargs.get("from")
         fieldnames = [f.strip() for f in fields.split(",")]
         qs = self.get_query_operation(
-            sobject=None,
+            sobject=sobject,
             fields=fieldnames,
             api_options={},
             context=self.sf_connection,
             query=query,
-            api=None,
+            api=DataApi.SMART,
         )
 
-        qs.query()
+        try:
+            qs.query()
+        except Exception as e:
+            raise DataGenError(f"Unable to query records for {query}: {e}") from e
+
         if qs.job_result.status is not self.DataOperationStatus.SUCCESS:
             raise DataGenError(
                 f"Unable to query records for {query}: {','.join(qs.job_result.job_errors)}"
             )
+
         self.tempdir, self.iterator = create_tempfile_sql_db_iterator(
             iteration_mode, fieldnames, qs.get_results()
         )
@@ -372,9 +424,6 @@ class SalesforceQuery(SalesforceConnectionMixin, SnowfakeryPlugin):
             # "from" has to be handled separately because its a Python keyword
             query_from = self._parse_from_from_args(args, kwargs)
 
-            if not query_from:
-                raise ValueError("Need to specify a table as 'from' argument")
-
             # TODO: Test WHERE
             where_clause = f" WHERE {where}" if where else ""
             count_query = f"SELECT count() FROM {query_from}{where_clause}"
@@ -396,6 +445,7 @@ class SalesforceQuery(SalesforceConnectionMixin, SnowfakeryPlugin):
             return self._sf_connection.query_single_record(query)
 
         def _parse_from_from_args(self, args, kwargs):
+            query_from = None
             if kwargs:
                 query_from = kwargs.pop("from", None)
 
@@ -405,5 +455,8 @@ class SalesforceQuery(SalesforceConnectionMixin, SnowfakeryPlugin):
                 if len(args) != 1 or not isinstance(args[0], str):
                     raise ValueError(f"Only one string argument allowed, not: {args}")
                 query_from = args[0]
+
+            if not query_from:
+                raise ValueError("Must supply 'from:'")
 
             return query_from

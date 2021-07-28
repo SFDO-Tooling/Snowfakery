@@ -1,0 +1,26 @@
+- var: snowfakery_locale
+  value:
+    random_choice:
+      - ja_JP # Japanese
+      - en_CA # Canadian English
+      - fr_FR # French from France
+      - fr_CA # Canadian Frencch
+      - de_DE # German from Germany
+- object: Account
+  fields:
+    Name:
+      fake: Company
+    Description:
+      fake: CatchPhrase
+    BillingStreet:
+      fake: StreetAddress
+    BillingCity:
+      fake: City
+    BillingState:
+      fake: State
+    BillingPostalCode:
+      fake: PostalCode
+    BillingCountry:
+      fake: CurrentCountry
+    Phone:
+      fake: PhoneNumber

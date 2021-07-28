@@ -7,7 +7,7 @@ from snowfakery.data_gen_exceptions import DataGenError
 
 import click
 from snowfakery import version
-from snowfakery.api import file_extensions, generate_data
+from snowfakery.api import file_extensions, generate_data, COUNT_REPS
 
 if __name__ == "__main__":  # pragma: no cover
     sys.path.append(str(Path(__file__).parent.parent))
@@ -77,9 +77,16 @@ def int_string_tuple(ctx, param, value=None):
 )
 @click.option(
     "--target-number",
+    "--target-count",
     nargs=2,
-    help="Target options for the recipe YAML in the form of 'number tablename'. For example: '50 Account'.",
+    help="Target record count for the recipe YAML in the form of 'number tablename'. "
+    "For example: '50 Account' to generate roughly 50 accounts.",
     callback=int_string_tuple,  # noqa  https://github.com/pallets/click/issues/789#issuecomment-535121714
+)
+@click.option(
+    "--reps",
+    help="Target repetition count for the recipe YAML. Use as an alternative to --target-number",
+    type=int,
 )
 @click.option(
     "--debug-internals/--no-debug-internals", "debug_internals", default=False
@@ -125,6 +132,7 @@ def generate_cli(
     option=(),
     dburls=(),
     target_number=None,
+    reps=None,
     debug_internals=None,
     generate_cci_mapping_file=None,
     output_format=None,
@@ -163,10 +171,15 @@ def generate_cli(
         output_format,
         output_files,
         output_folder,
+        target_number,
+        reps,
     )
     try:
         user_options = dict(option)
         plugin_options = dict(plugin_option)
+        if reps:
+            target_number = (COUNT_REPS, reps)
+
         generate_data(
             yaml_file=yaml_file,
             user_options=user_options,
@@ -201,6 +214,8 @@ def validate_options(
     output_format,
     output_files,
     output_folder,
+    target_number,
+    reps,
 ):
     if dburl and output_format:
         raise click.ClickException(
@@ -219,6 +234,12 @@ def validate_options(
     ):
         raise click.ClickException(
             "--output-folder can only be used with --output-file=<something> or --output-format=csv"
+        )
+
+    if target_number and reps:
+        raise click.ClickException(
+            "Sorry, you need to pick --target_number or --reps "
+            "because they are mutually exclusive."
         )
 
 

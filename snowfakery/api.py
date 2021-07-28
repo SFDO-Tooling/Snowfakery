@@ -43,6 +43,8 @@ OUTPUT_FORMATS = {
 
 file_extensions = tuple(OUTPUT_FORMATS.keys())
 
+COUNT_REPS = "__REPS__"
+
 
 class SnowfakeryApplication:
     """Base class for all applications which embed Snowfakery as a library,
@@ -50,9 +52,10 @@ class SnowfakeryApplication:
 
     stopping_criteria = None
     starting_id = 0
+    rep_count = 0
 
     def __init__(self, stopping_criteria: StoppingCriteria = None):
-        self.stopping_criteria = stopping_criteria
+        self.stopping_criteria = stopping_criteria or StoppingCriteria(COUNT_REPS, 1)
 
     def echo(self, message=None, file=None, nl=True, err=False, color=None):
         """Write something to a virtual stdout or stderr.
@@ -72,7 +75,7 @@ class SnowfakeryApplication:
         This is used by Snowfakery to validate that
         the provided recipe will not generate forever
         due to a misspelling the stopping tablename."""
-        if self.stopping_criteria:
+        if self.stopping_criteria.tablename != COUNT_REPS:
             return self.stopping_criteria.tablename
 
     def ensure_progress_was_made(self, id_manager):
@@ -94,10 +97,12 @@ class SnowfakeryApplication:
     def check_if_finished(self, id_manager):
         "Check whether we've finished making as many objects as we promised"
         # if nobody told us how much to make, finish after first run
-        if not self.stopping_criteria:
-            return True
+        self.rep_count += 1
 
         target_table, count = self.stopping_criteria
+
+        if target_table == COUNT_REPS:
+            return self.rep_count >= count
 
         # Snowfakery processes can be restarted. We would need
         # to keep track of where we restarted to know whether

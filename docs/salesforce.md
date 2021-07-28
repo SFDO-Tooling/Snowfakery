@@ -7,7 +7,11 @@ There are several examples [in the Snowfakery repository](https://github.com/SFD
 ## Using Snowfakery within CumulusCI
 
 The process of actually generating the data into a Salesforce
-org happens through CumulusCI.
+org happens through CumulusCI. The majority of the documentation
+on using Snowfakery with CumulusCI is in
+[the Generate Data section of the CumulusCI documentation](https://cumulusci.readthedocs.io/en/latest/data.html?highlight=snowfakery#generate-fake-data).
+
+A summarized overview follows.
 
 [CumulusCI](http://www.github.com/SFDO-Tooling/CumulusCI) is a
 tool and framework for building portable automation for
@@ -17,8 +21,6 @@ creates Snowfakery.
 The easiest way to learn about CumulusCI (and to learn how to
 install it) is with its [Trailhead Trail](https://trailhead.salesforce.com/en/content/learn/trails/build-applications-with-cumulusci).
 
-CumulusCI's documentation [describes](https://cumulusci.readthedocs.io/en/latest/data.html?highlight=snowfakery#generate-fake-data)
-how to use it with Snowfakery. Here is a short example:
 
 ```s
 $ cci task run generate_and_load_from_yaml -o generator_yaml examples/salesforce/Contact.recipe.yml -o num_records 300 -o num_records_tablename Contact --org qa
@@ -58,7 +60,7 @@ been added in a previous CumulusCI task or some other process.
 For example, if you have a Campaign object and would like to associate
 Contacts to it through CampaignMembers.
 
-Here is an example were we query a particular Campaign object:
+Here is an example where we query a particular Campaign object:
 
 ```yaml
 # examples/salesforce/CampaignMembers-first.recipe.yml
@@ -155,7 +157,7 @@ another way that you can ensure that every synthetic record you
 create is associated with a distinct record from Salesforce.
 
 ```yaml
-# examples/soql_dataset.yml
+# examples/soql_dataset.recipe.yml
 - plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
 - object: Contact
   count: 10
@@ -167,13 +169,14 @@ create is associated with a distinct record from Salesforce.
     OwnerId: ${{__users_from_salesforce.Id}}
     FirstName: ${{__users_from_salesforce.FirstName}}
     LastName: ${{__users_from_salesforce.LastName}}
+    Username: TestUser${{fake.Username}}
 ```
 
 Or if you'd like them in a random order, you can
 use `SOQLDataset.shuffle`:
 
 ```yaml
-# examples/soql_dataset_shuffled.yml
+# examples/soql_dataset_shuffled.recipe.yml
 - plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
 - object: Contact
   count: 10
@@ -187,12 +190,13 @@ use `SOQLDataset.shuffle`:
     OwnerId: ${{__users_from_salesforce.Id}}
     FirstName: ${{__users_from_salesforce.FirstName}}
     LastName: ${{__users_from_salesforce.LastName}}
+    Username: TestUser${{fake.Username}}
 ```
 
 You may also specify a "where" clause to filter out irrelevant records:
 
 ```yaml
-# examples/soql_dataset_where.yml
+# examples/soql_dataset_where.recipe.yml
 - plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
 - object: Contact
   count: 10
@@ -201,7 +205,7 @@ You may also specify a "where" clause to filter out irrelevant records:
       SOQLDataset.shuffle:
         fields: Id, FirstName, LastName
         from: User
-        where: FirstName Like "A%"
+        where: FirstName Like 'A%'
     OwnerId: ${{__users_from_salesforce.Id}}
     FirstName: ${{__users_from_salesforce.FirstName}}
     LastName: ${{__users_from_salesforce.LastName}}
@@ -215,12 +219,15 @@ In general, you can test Snowfakery files outside of CumulusCI to see if they wo
 $ snowfakery recipe.yml
 ```
 
-If you have a recipe which depends on data from an org, specify the CumulusCI orgname
-like this:
+If you have a recipe which depends on data from an org,
+specify the CumulusCI org name like this:
 
 ```s
-$ snowfakery recipe.yml --plugin-options orgname qa
+$ snowfakery recipe.yml --plugin-options org_name qa
 ```
+
+When you run the recipe in this way, it will connect to the org to pull data but
+not change data in the org at all.
 
 ## Record Types
 
@@ -246,6 +253,28 @@ To specify a Record Type for a record, just put the Record Type’s API Name in 
     RecordType: Organization
 ```
 
+## Profiles
+
+The `Salesforce.ProfileId` function looks up a Profile in
+Salesforce by name and substitutes the ID.
+
+```yaml
+- plugin: snowfakery.standard_plugins.Salesforce
+- object: User
+  fields:
+    Alias: Grace
+    Username:
+      fake: Username
+    LastName: Wong
+    Email: ${{Username}}
+    TimeZoneSidKey: America/Bogota
+    LocaleSidKey: en_US
+    EmailEncodingKey: UTF-8
+    LanguageLocaleKey: en_US
+    ProfileId:
+      Salesforce.ProfileId: Identity User
+```
+
 ## Creating and Referencing Person Accounts
 
 There are several features planned for the Salesforce Plugin, but
@@ -258,13 +287,13 @@ You can use Person Accounts like this:
 - object: Account
   fields:
     FirstName:
-      fake: first_name
+      fake: FirstName
     LastName:
-      fake: last_name
+      fake: LastName
     PersonMailingStreet:
-      fake: street_address
+      fake: StreetAddress
     PersonMailingCity:
-      fake: city
+      fake: City
     PersonContactId:
       Salesforce.SpecialObject: PersonContact
 ```

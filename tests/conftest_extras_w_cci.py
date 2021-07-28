@@ -6,6 +6,7 @@ from pytest import fixture
 from cumulusci.tests.pytest_plugins.pytest_sf_vcr import (
     vcr_config as cci_vcr_config,
     salesforce_vcr,
+    simplify_body,
 )
 
 from cumulusci.tests.util import DummyOrgConfig, DummyKeychain
@@ -62,7 +63,29 @@ def fallback_org_config():
         yield fallback_org_config
 
 
-vcr_config = fixture(cci_vcr_config, scope="module")
+# TODO: Port this back to CCI
+def sf_before_record_response(response):
+    # salesforce_bulk needs the Content-Type header.
+    print(response["headers"])
+    content_type = response["headers"].get("Content-Type")
+    response["headers"] = {
+        "Response-Headers": "SF-Elided",
+    }
+    if content_type:
+        response["headers"]["Content-Type"] = content_type
+    if response.get("body"):
+        response["body"]["string"] = simplify_body(response["body"]["string"])
+    return response
+
+
+# TODO: Port this back to CCI
+def sf_vcr_config(request, vcr_config):
+    dct = cci_vcr_config(request)
+    dct["before_record_response"] = sf_before_record_response
+    return dct
+
+
+vcr_config = fixture(sf_vcr_config, scope="module")
 vcr = fixture(salesforce_vcr, scope="module")
 
 

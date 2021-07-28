@@ -1,11 +1,12 @@
 name: CI
 
 on: [push]
-
+s
 env:
   COVERALLS_PARALLEL: true
   COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
   CUMULUSCI_KEY: ${{ secrets.CUMULUSCI_KEY }}
+  SF_MKDOCS_BUILD_LOCALES: "False"
 
 jobs:
   test:
@@ -23,7 +24,7 @@ jobs:
       - name: "Install dependencies"
         run: |
           python -VV
-          python -m pip install --upgrade pip pip-tools
+          python -m pip install --upgrade pip
           make dev-install
 
       - name: "Run tox targets for ${{ matrix.python-version }}"
@@ -35,21 +36,62 @@ jobs:
       - name: Test snowbench
         run: |
           python setup.py install
-          snowbench examples/basic-salesforce.recipe.yml 10_000 Account --number-of-processes 4
+          snowbench snowfakery/tools/benchmark_1.yml --num-records 10_000  --num-records-tablename Account --number-of-processes 4
+          snowbench
 
-  windows:
-    name: "Windows"
-    runs-on: windows-latest
+  with_cci:
+    name: With CumulusCI
+    runs-on: ubuntu-latest
     steps:
       - uses: "actions/checkout@v2"
       - uses: "actions/setup-python@v1"
         with:
           python-version: "3.9"
 
+      - name: Install dependencies
+        run: |
+          python -VV
+          python -m pip install --upgrade pip
+          make dev-install
+          python -m pip install cumulusci
+
+      - name: Run Tests
+        run: python -m pytest
+
+  faker_docs:
+    name: Faker Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v1"
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: |
+          python -VV
+          make dev-install
+          python setup.py install
+
+      - name: Make Docs
+        run: make docs
+
+  windows:
+    name: Windows ${{ matrix.python-version }}
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ["3.6", "3.9"]
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v1"
+        with:
+          python-version: "${{ matrix.python-version }}"
+
       - name: "Install dependencies"
         run: |
           python -VV
-          python -m pip install --upgrade pip pip-tools
+          python -m pip install --upgrade pip
           make dev-install
 
       - name: Run Tests
