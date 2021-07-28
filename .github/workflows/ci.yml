@@ -5,6 +5,7 @@ on: [push]
 env:
   COVERALLS_PARALLEL: true
   COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+  SF_MKDOCS_BUILD_LOCALES: "False"
 
 jobs:
   test:
@@ -68,7 +69,6 @@ jobs:
       - name: Install dependencies
         run: |
           python -VV
-          python -m pip install --upgrade pip pip-tools
           make dev-install
           python setup.py install
 
