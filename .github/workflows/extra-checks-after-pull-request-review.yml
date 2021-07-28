@@ -89,9 +89,16 @@ jobs:
           SFDX_HUB_KEY_BASE64: ${{ secrets.SFDX_HUB_KEY_BASE64 }}
           SFDX_CLIENT_ID: ${{ secrets.SFDX_CLIENT_ID }}
           SFDX_HUB_USERNAME: ${{ secrets.SFDX_HUB_USERNAME }}
-      - name: Run Snowfakery Tests
+      - name: Run Snowfakery/CCI Flow Tests
         run: |
           cci flow run test_everything --org dev
+      - name: Delete scratch org
+        if: always()
+        run: |
+          cci org scratch_delete dev
+      - name: Run Snowfakery VCR Tests
+        run: |
+          pytest --org dev
       - name: Delete scratch org
         if: always()
         run: |
