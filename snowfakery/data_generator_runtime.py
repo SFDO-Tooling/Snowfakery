@@ -297,8 +297,9 @@ class Interpreter:
             raise DataGenNameError(
                 f"No template creating {stop_table_name}",
             )
-        faker_plugin = SnowfakeryPlugin(self)
-        self.faker_plugin_context = PluginContext(faker_plugin)
+
+        # make a plugin context for our Faker stuff to act like a plugin
+        self.faker_plugin_context = PluginContext(SnowfakeryPlugin(self))
 
         self.faker_template_libraries = {}
 
@@ -466,7 +467,7 @@ class RuntimeContext:
     def context_vars(self, plugin_namespace):
         """Variables which are inherited by child scopes"""
         # This looks like a candidate for optimization.
-        # An unconditional object copy?
+        # An unconditional object copyseems expensive.
         local_plugin_vars = self._plugin_context_vars.get(plugin_namespace, {}).copy()
         self._plugin_context_vars[plugin_namespace] = local_plugin_vars
         return local_plugin_vars

@@ -97,13 +97,11 @@ class PluginContext:
         return self.interpreter.current_context.field_vars()
 
     def context_vars(self):
-        return self.interpreter.current_context.context_vars(
-            self.plugin.__class__.__name__
-        )
+        return self.interpreter.current_context.context_vars(id(self.plugin))
 
     def local_vars(self):
         return self.interpreter.current_context.local_vars.setdefault(
-            self.plugin.__class__.__name__, {}
+            id(self.plugin), {}
         )
 
     def unique_context_identifier(self) -> str:

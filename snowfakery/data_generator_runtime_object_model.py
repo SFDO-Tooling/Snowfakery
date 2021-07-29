@@ -187,7 +187,6 @@ class ObjectTemplate:
 
     def _generate_fields(self, context: RuntimeContext, row: Dict) -> None:
         """Generate all of the fields of a row"""
-        context.local_vars = {}
         for field in self.fields:
             with self.exception_handling("Problem rendering value"):
                 row[field.name] = field.generate_value(context)
@@ -258,7 +257,6 @@ class SimpleValue(FieldDefinition):
             except jinja2.exceptions.UndefinedError as e:
                 raise DataGenNameError(e.message, self.filename, self.line_num) from e
             except Exception as e:
-                raise
                 raise DataGenValueError(str(e), self.filename, self.line_num) from e
         else:
             val = self.definition

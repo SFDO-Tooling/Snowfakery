@@ -51,6 +51,7 @@ class FakeNames(T.NamedTuple):
         return self.f.email()
 
     def _already_have(self, names: T.Sequence[str], matching: bool):
+        """Get a list of field values that we've already generated"""
         if not matching:
             return [None]
         already_created = self.faker_context.local_vars()
