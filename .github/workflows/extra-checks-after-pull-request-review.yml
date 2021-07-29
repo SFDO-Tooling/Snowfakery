@@ -4,6 +4,8 @@ on:
   pull_request_review:
     types: [submitted]
 
+  workflow_dispatch:
+
 jobs:
   faker_docs:
     name: Faker Docs I18N
