@@ -3,12 +3,19 @@ project:
     name: Snowfakery
     package:
         api_version: "50.0"
-    dependencies:
-        - github: https://github.com/SalesforceFoundation/NPSP
-
-sources:
-    npsp:
-        github: https://github.com/SalesforceFoundation/NPSP
+    # dependencies:
+    #     - namespace: npe01
+    #       version: 3.17
+    #     - namespace: npo02
+    #       version: 3.14
+    #     - namespace: npe03
+    #       version: 3.21
+    #     - namespace: npe4
+    #       version: 3.11
+    #     - namespace: npe5
+    #       version: 3.9
+    #     - namespace: npsp
+    #       version: 3.199
 
 tasks:
     generate_sf_accounts:
@@ -77,13 +84,13 @@ flows:
             3:
                 task: generate_sf_opportunities
             4:
-                flow: npsp:install_prod
-            5:
-                task: generate_npsp_accounts
-            6:
-                task: generate_npsp_contacts
-            7:
-                task: generate_npsp_opportunities
+                task: update_dependencies
+            # 5:
+            #     task: generate_npsp_accounts
+            # 6:
+            #     task: generate_npsp_contacts
+            # 7:
+            #     task: generate_npsp_opportunities
             8:
                 task: generate_opportunity_contact_roles
             9:
@@ -106,6 +113,23 @@ flows:
                     num_records: 100
                     num_records_tablename: Contact
 
+    campaign_members_for_campaigns:
+        steps:
+            1:
+                task: generate_and_load_from_yaml
+                options:
+                    generator_yaml: examples/salesforce/Campaign.recipe.yml
+
+            2:
+                task: generate_and_load_from_yaml
+                options:
+                    generator_yaml: examples/salesforce/CampaignMembers-random.recipe.yml
+
+            3:
+                task: generate_and_load_from_yaml
+                options:
+                    generator_yaml: examples/salesforce/CampaignMembers-first.recipe.yml
+
     person_accounts_and_community_users:
         # only for use with the persons_and_communities org shape
         steps:
@@ -123,6 +147,8 @@ flows:
                         insert ur;
                         update new User(Id = UserInfo.getUserId(), UserRoleId = ur.Id);
             3:
+                task: update_admin_profile
+            4:
                 task: generate_and_load_from_yaml
                 options:
                     generator_yaml: examples/salesforce/person-accounts-plugin.recipe.yml
@@ -131,5 +157,5 @@ flows:
 
 orgs:
     scratch:
-        person_and_communities:
+        persons_and_communities:
             config_file: orgs/persons_and_communities.json
