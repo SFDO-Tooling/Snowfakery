@@ -45,8 +45,7 @@ jobs:
       - name: Delete scratch org
         if: always()
         run: |
-          cci org scratch_delete dev  salesforce:
-
+          cci org scratch_delete dev
       - name: Run Snowfakery VCR Tests
         run: |
           pytest --org dev

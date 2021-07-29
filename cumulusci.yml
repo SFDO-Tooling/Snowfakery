@@ -3,19 +3,19 @@ project:
     name: Snowfakery
     package:
         api_version: "50.0"
-    dependencies:
-        - namespace: npe01
-          version: 3.17
-        - namespace: npo02
-          version: 3.14
-        - namespace: npe03
-          version: 3.21
-        - namespace: npe4
-          version: 3.11
-        - namespace: npe5
-          version: 3.9
-        - namespace: npsp
-          version: 3.199
+    # dependencies:
+    #     - namespace: npe01
+    #       version: 3.17
+    #     - namespace: npo02
+    #       version: 3.14
+    #     - namespace: npe03
+    #       version: 3.21
+    #     - namespace: npe4
+    #       version: 3.11
+    #     - namespace: npe5
+    #       version: 3.9
+    #     - namespace: npsp
+    #       version: 3.199
 
 tasks:
     generate_sf_accounts:
@@ -85,12 +85,12 @@ flows:
                 task: generate_sf_opportunities
             4:
                 task: update_dependencies
-            5:
-                task: generate_npsp_accounts
-            6:
-                task: generate_npsp_contacts
-            7:
-                task: generate_npsp_opportunities
+            # 5:
+            #     task: generate_npsp_accounts
+            # 6:
+            #     task: generate_npsp_contacts
+            # 7:
+            #     task: generate_npsp_opportunities
             8:
                 task: generate_opportunity_contact_roles
             9:
