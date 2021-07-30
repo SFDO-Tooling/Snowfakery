@@ -1,9 +1,12 @@
 from base64 import b64decode
+from io import StringIO
 
 import pytest
+
 from snowfakery import generate_data
 from snowfakery.standard_plugins.Salesforce import SalesforceConnection
 from snowfakery import data_gen_exceptions as exc
+from tests.test_with_cci import skip_if_cumulusci_missing
 
 
 class TestSalesforceGen:
@@ -25,3 +28,18 @@ class TestSalesforceConnection:
             sfc.compose_query(
                 "context_name", fields=["blah"], xyzzy="foo", **{"from": "blah"}
             )
+
+
+class TestSalesforcePlugin:
+    @skip_if_cumulusci_missing
+    @pytest.mark.vcr()
+    def test_profile_id(self, generated_rows, org_config):
+        yaml = """
+        - plugin: snowfakery.standard_plugins.Salesforce
+        - object: foo
+          fields:
+            ProfileId:
+              Salesforce.ProfileId: Identity User
+        """
+        generate_data(StringIO(yaml), plugin_options={"org_name": org_config.name})
+        assert generated_rows.table_values("foo", 0, "ProfileId").startswith("00e")

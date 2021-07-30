@@ -12,7 +12,9 @@ class FakeNames(T.NamedTuple):
         return f"{self.f.first_name()}_{self.f.last_name()}_{self.f.uuid4()}@{self.f.hostname()}"
 
     def alias(self):
-        "Salesforce-style 8-character alias"
+        """Salesforce-style 8-character alias: really an 8 char-truncated firstname.
+        Not necessarily unique, but likely to be unique if you create small
+        numbers of them."""
         return self.f.first_name()[0:8]
 
     def email(self):

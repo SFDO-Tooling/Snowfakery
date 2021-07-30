@@ -1,0 +1,50 @@
+- plugin: snowfakery.standard_plugins.Salesforce
+- plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+
+- object: User
+  fields:
+    Alias: Grace
+    Username:
+      fake: Username
+    LastName: Wong
+    Email: ${{Username}}
+    TimeZoneSidKey: America/Bogota
+    LocaleSidKey: en_US
+    EmailEncodingKey: UTF-8
+    LanguageLocaleKey: en_US
+    ProfileId:
+      Salesforce.ProfileId: Identity User
+
+  friends:
+    - object: PermissionSetAssignment
+      fields:
+        AssigneeId:
+          reference: User
+        PermissionSetId:
+          SalesforceQuery.find_record:
+            from: PermissionSet
+            where: Name='CommerceUser'
+    - object: PermissionSetAssignment
+      fields:
+        AssigneeId:
+          reference: User
+        PermissionSetId:
+          SalesforceQuery.find_record:
+            from: PermissionSet
+            where: Name='SalesConsoleUser'
+- object: User
+  nickname: RandomizedUser
+  fields:
+    Username:
+      fake: Username
+    LastName:
+      fake: last_name
+    Email:
+      fake: email
+    Alias: Grace
+    TimeZoneSidKey: America/Bogota
+    LocaleSidKey: en_US
+    EmailEncodingKey: UTF-8
+    LanguageLocaleKey: en_US
+    ProfileId:
+      Salesforce.ProfileId: Identity User
