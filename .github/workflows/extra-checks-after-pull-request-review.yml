@@ -1,0 +1,26 @@
+name: post-review-checks
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+  workflow_dispatch:
+
+jobs:
+  faker_docs:
+    name: Faker Docs I18N
+    runs-on: ubuntu-latest
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v1"
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: |
+          python -VV
+          make dev-install
+          python setup.py install
+
+      - name: Make Docs
+        run: make docs

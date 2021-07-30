@@ -101,6 +101,23 @@ Make sure to accept `*args` and `**kwargs` to allow for future extensibility of 
 
 Despite the name, plugins can also include data values rather than functions in either form of plugin. Plugins essentially use Python's `getattr` to find attributes, properties, methods or functions in the namespace of the object you return from `custom_functions()`.
 
+Plugin functions can store persistent information in a Python dictionary obtained by calling `self.context.context_vars()`. It will always be supplied to your plugin. For example, here is a simple plugin that counts:
+
+```python
+class PluginThatCounts(SnowfakeryPlugin):
+    class Functions:
+        def count(self):
+            context_vars = self.context.context_vars()
+            context_vars.setdefault("count", 0)
+            context_vars["count"] += 1
+            return context_vars["count"]
+```
+
+Plugins also have access to a dictionary called `self.context.field_vars()` which
+represents the values that would be available to a formula running in the same context
+and `self.context.current_filename` which is the filename of the YAML file being
+processed.
+
 ### Plugin Function Return Values
 
 Plugins can return normal Python primitive types, `datetime.date`, `ObjectRow` or `PluginResult` objects. `ObjectRow` objects represent new output records/objects. `PluginResult` objects

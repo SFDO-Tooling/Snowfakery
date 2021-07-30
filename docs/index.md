@@ -507,7 +507,7 @@ StageName:
 
 You can do more sophisticated randomness with features that will be discussed in the section [Random Weights That Are Not Percentages](#random-weights-that-are-not-percentages).
 
-A more elaborate form of `random_choice` can also be used to
+`random_choice` can also be used to
 select randomly among potential child objects.
 
 ```yaml
@@ -523,6 +523,49 @@ select randomly among potential child objects.
             fields:
                 FirstName: Marge
                 LastName: Simpson
+```
+
+A more sophisticated syntax allows you to combine probabilities with
+values that are more complex than simple strings:
+
+```yaml
+# examples/random-choice-complex.yml
+- object: Task
+  count:
+    random_choice:
+      - choice:
+          probability: 30%
+          pick: 1
+      - choice:
+          probability: 30%
+          pick: 3
+      - choice:
+          probability: 30%
+          pick: 10
+  fields:
+    person_doing_the_task:
+      random_choice:
+        - choice:
+            probability: 40%
+            pick:
+              - object: Contact
+                fields:
+                  FirstName: Bart
+                  LastName: Simpson
+        - choice:
+            probability: 40%
+            pick:
+              - object: Contact
+                fields:
+                  FirstName: Marge
+                  LastName: Simpson
+        - choice:
+            probability: 20%
+            pick:
+              - object: Contact
+                fields:
+                  FirstName: Lisa
+                  LastName: Simpson
 ```
 
 #### `random_reference`
@@ -654,19 +697,14 @@ some_number: A number ${{random_number(min=5, max=10)}}
 `If` allows you to make field values conditional on other field values.
 
 ```yaml
+# examples/conditional.yml
 - object: Person
   fields:
     gender:
       random_choice:
-        - choice:
-            probability: 40%
-            pick: Male
-        - choice:
-            probability: 40%
-            pick: Female
-        - choice:
-            probability: 20%
-            pick: Other
+        Male: 40%
+        Female: 40%
+        Other: 20%
     name:
       if:
         - choice:

@@ -1,6 +1,8 @@
 minimum_cumulusci_version: "3.16.0"
 project:
     name: Snowfakery
+    package:
+        api_version: "50.0"
     dependencies:
         - github: https://github.com/SalesforceFoundation/NPSP
 

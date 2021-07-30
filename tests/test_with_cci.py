@@ -378,7 +378,7 @@ class TestSOQLDatasets:
             assert row_data["OwnerId"].startswith("005")
             assert row_data["FirstName"].startswith("A")
 
-        # TODO: anon apex is better, so IDs don't end up in the VCR logs.
+        # anon apex is better, so IDs don't end up in the VCR logs.
         sf.restful(
             "tooling/executeAnonymous",
             {

@@ -127,6 +127,10 @@ class PluginContext:
     def get_contextual_state(self, **kwargs):
         return self.interpreter.get_contextual_state(**kwargs)
 
+    @property
+    def current_filename(self):
+        return self.interpreter.current_context.current_template.filename
+
 
 def lazy(func: Any) -> Callable:
     """A lazy function is one that expects its arguments to be unparsed"""
