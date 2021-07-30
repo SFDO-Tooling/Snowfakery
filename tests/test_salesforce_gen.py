@@ -19,7 +19,9 @@ class TestSalesforceGen:
 class TestSalesforceConnection:
     def test_bad_kwargs(self):
         sfc = SalesforceConnection(None)
-        with pytest.raises(exc.DataGenError, match="Unknown argument"):
+        with pytest.raises(
+            exc.DataGenError, match=r"Unknown argument in context_name: \('xyzzy',\)"
+        ):
             sfc.compose_query(
                 "context_name", fields=["blah"], xyzzy="foo", **{"from": "blah"}
             )
