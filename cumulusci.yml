@@ -3,6 +3,8 @@ project:
     name: Snowfakery
     package:
         api_version: "50.0"
+
+    # NPSP tests are disabled for now. Need time to debug.
     # dependencies:
     #     - namespace: npe01
     #       version: 3.17
@@ -85,6 +87,7 @@ flows:
                 task: generate_sf_opportunities
             4:
                 task: update_dependencies
+            # NPSP tests are disabled for now. Need time to debug.
             # 5:
             #     task: generate_npsp_accounts
             # 6:
