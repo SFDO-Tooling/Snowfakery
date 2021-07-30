@@ -1,0 +1,36 @@
+- object: Task
+  count:
+    random_choice:
+      - choice:
+          probability: 30%
+          pick: 1
+      - choice:
+          probability: 30%
+          pick: 3
+      - choice:
+          probability: 30%
+          pick: 10
+  fields:
+    person_doing_the_task:
+      random_choice:
+        - choice:
+            probability: 40%
+            pick:
+              - object: Contact
+                fields:
+                  FirstName: Bart
+                  LastName: Simpson
+        - choice:
+            probability: 40%
+            pick:
+              - object: Contact
+                fields:
+                  FirstName: Marge
+                  LastName: Simpson
+        - choice:
+            probability: 20%
+            pick:
+              - object: Contact
+                fields:
+                  FirstName: Lisa
+                  LastName: Simpson
