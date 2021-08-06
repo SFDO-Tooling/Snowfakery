@@ -246,7 +246,7 @@ class TestFaker:
             "X", 0, "LastName"
         ) in generated_rows.table_values("X", 0, "Email")
 
-    def test_context_username(self, generated_rows):
+    def test_context_username_incorporates_fakes(self, generated_rows):
         yaml = """
             - object: X
               fields:
@@ -324,8 +324,7 @@ class TestFaker:
     def test_context_aware_no_leakage_templates(
         self, email, first_name, generated_rows
     ):
-
-        # no leakage between templ
+        # no leakage between templates
         yaml = """
             - object: X
               fields:
@@ -342,13 +341,11 @@ class TestFaker:
             """
         generate(StringIO(yaml))
         assert first_name.mock_calls
-        assert email.mock_calls
+        email.assert_called_once()
 
     @mock.patch("faker.providers.person.en_US.Provider.first_name")
     @mock.patch("faker.providers.internet.en_US.Provider.ascii_safe_email")
     def test_context_aware_alernate_names(self, email, first_name, generated_rows):
-
-        # no leakage between templ
         yaml = """
             - object: X
               fields:
@@ -366,8 +363,6 @@ class TestFaker:
     @mock.patch("faker.providers.person.en_US.Provider.first_name")
     @mock.patch("faker.providers.internet.en_US.Provider.ascii_safe_email")
     def test_disable_matching(self, email, first_name, generated_rows):
-
-        # no leakage between templ
         yaml = """
             - object: X
               fields:

@@ -2,26 +2,37 @@ from difflib import get_close_matches
 import typing as T
 import random
 from snowfakery.plugins import PluginContext
-
-
-email_templates = [  # .format language doesn't allow slicing. :(
-    f"{first_name}{first_name_separator}{{lastname}}{year}@{{domain}}"
-    for first_name in ("{firstname}", "{firstname[0]}", "{firstname[0]}{firstname[1]}")
-    for first_name_separator in ("", ".", "-", "_", "+")
-    for year in ("{year}", "{year[2]}{year[3]}", "{year[3]}", "")
-]
+from itertools import product
+from datetime import datetime
 
 from faker import Faker, Generator
+
+# .format language doesn't allow slicing. :(
+first_name_patterns = ("{firstname}", "{firstname[0]}", "{firstname[0]}{firstname[1]}")
+first_name_separators = ("", ".", "-", "_", "+")
+year_patterns = ("{year}", "{year[2]}{year[3]}", "{year[3]}", "")
+
+email_templates = [
+    f"{first_name}{first_name_separator}{{lastname}}{year}@{{domain}}"
+    for first_name, first_name_separator, year in product(
+        first_name_patterns, first_name_separators, year_patterns
+    )
+]
+
+this_year = datetime.today().year
 
 
 class FakeNames(T.NamedTuple):
     f: Faker
     faker_context: PluginContext = None
 
+    # "matching" allows us to turn off the behaviour of
+    # trying to incorporate one field into another if we
+    # need to.
     def user_name(self, matching: bool = True):
         "Salesforce-style username in the form of an email address"
-        already_created = self._already_have(("firstname", "lastname"), matching)
-        if all(already_created):
+        already_created = self._already_have(("firstname", "lastname"))
+        if matching and all(already_created):
             return f"{already_created[0]}.{already_created[1]}_{self.f.uuid4()}@{self.f.safe_domain_name()}"
         return f"{self.f.first_name()}_{self.f.last_name()}_{self.f.uuid4()}@{self.f.hostname()}"
 
@@ -33,15 +44,15 @@ class FakeNames(T.NamedTuple):
 
     def email(self, matching: bool = True):
         """Email address using one of the "example" domains"""
-        already_created = self._already_have(("firstname", "lastname"), matching)
-        if all(already_created):
+        already_created = self._already_have(("firstname", "lastname"))
+        if matching and all(already_created):
             template = random.choice(email_templates)
 
             return template.format(
-                firstname=already_created[0],
+                firstname=already_created[0].ljust(2, "_"),
                 lastname=already_created[1],
                 domain=self.f.safe_domain_name(),
-                year=str(random.randint(1955, 2020)),
+                year=str(random.randint(this_year - 80, this_year - 10)),
             )
         return self.f.ascii_safe_email()
 
@@ -52,10 +63,8 @@ class FakeNames(T.NamedTuple):
         """
         return self.f.email()
 
-    def _already_have(self, names: T.Sequence[str], matching: bool):
+    def _already_have(self, names: T.Sequence[str]):
         """Get a list of field values that we've already generated"""
-        if not matching:
-            return [None]
         already_created = self.faker_context.local_vars()
         vals = [already_created.get(name) for name in names]
         return vals
