@@ -61,7 +61,7 @@ Ready to contribute? Here's how to set up Snowfakery for local development.
 Or you could make it outside of the project repo.
 4. Install development requirements::
 
-    $ pip install -r requirements_dev.txt
+    $ make dev-install
 
 5. Install ``pre-commit`` hooks for ``black`` and ``flake8``::
 
