@@ -39,7 +39,7 @@ class StringGenerator:
 
 
 class FakerTemplateLibrary:
-    """A Jinja template library to add the faker.xyz objects to templates"""
+    """A Jinja template library to add the fake.xyz objects to templates"""
 
     def __init__(
         self,
