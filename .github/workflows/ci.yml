@@ -97,6 +97,7 @@ jobs:
           pip install .
 
       - name: "Test installation"
+        run: |
           python -m snowfakery --version
 
   windows:
