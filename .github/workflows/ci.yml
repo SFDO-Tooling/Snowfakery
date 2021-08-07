@@ -94,7 +94,7 @@ jobs:
 
       - name: "Install using pip"
         run: |
-          pip install -e .
+          pip install .
 
       - name: "Test installation"
           python -m snowfakery --version
