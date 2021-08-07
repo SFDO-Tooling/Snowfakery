@@ -8,6 +8,8 @@ Snowfakery can write its output to stdout, or any database accessible to SQLAlch
 
 ## Installation
 
+### Installation for Salesforce Users
+
 If you intend to use Snowfakery with Salesforce, you should install CumulusCI.
 You will get Snowfakery "for free".
 
