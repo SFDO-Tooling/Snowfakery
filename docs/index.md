@@ -15,6 +15,13 @@ Either way, you start by installing Python. Whether or not you are installing Cu
 
 To learn how to use Snowfakery within CumulusCI, you can find instructions in [Using Snowfakery with Salesforce](salesforce.md).
 
+After completing the CumulusCI installation, you should be able to invoke Snowfakery like this:
+
+```s
+$ snowfakery somefile.yml
+...
+```
+
 ### Installation for Non-Salesforce Users
 
 *If you are not interested in using Snowfakery with Salesforce*, you can install
