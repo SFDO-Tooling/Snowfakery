@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 from snowfakery.data_gen_exceptions import DataGenError
-
+from snowfakery.utils.versions import check_latest_version
 
 import click
 from snowfakery import version
@@ -49,6 +49,33 @@ def int_string_tuple(ctx, param, value=None):
                 "This parameter must be of the form 'number Name'. For example '50 Account'"
             )
     return string, number
+
+
+class VersionMessage:
+    def quick_test(self) -> str:
+        from io import StringIO
+
+        yaml = """
+        - object: Status
+          fields:
+            quote: Shiny and new
+        """
+        out = StringIO()
+        generate_data(StringIO(yaml), output_files=[out], output_format="txt")
+        return "Properly installed" if out.getvalue() else "Unknown installation error"
+
+    def __mod__(self, vals) -> str:
+        return "\n".join(
+            (
+                f"snowfakery version {version}",
+                check_latest_version(version),
+                "",
+                __file__,
+                "Python " + sys.version,
+                sys.executable,
+                self.quick_test(),
+            )
+        )
 
 
 @click.command()
@@ -126,7 +153,7 @@ def int_string_tuple(ctx, param, value=None):
     help="Declarations to mix into the generated mapping file",
     multiple=True,
 )
-@click.version_option(version=version, prog_name="snowfakery")
+@click.version_option(version=version, prog_name="snowfakery", message=VersionMessage())
 def generate_cli(
     yaml_file,
     option=(),
