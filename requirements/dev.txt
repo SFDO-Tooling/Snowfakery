@@ -36,12 +36,12 @@ distlib==0.3.2
     # via virtualenv
 docopt==0.6.2
     # via coveralls
-faker-microservice==2.0.0
-    # via -r requirements/dev.in
 faker==8.10.3
     # via
     #   -r requirements/prod.txt
     #   faker-microservice
+faker-microservice==2.0.0
+    # via -r requirements/dev.in
 filelock==3.0.12
     # via
     #   tox
@@ -69,15 +69,7 @@ immutables==0.15
 importlib-metadata==4.6.1
     # via
     #   -r requirements/prod.txt
-    #   flake8
-    #   markdown
     #   mkdocs
-    #   pluggy
-    #   pre-commit
-    #   pytest
-    #   sqlalchemy
-    #   tox
-    #   virtualenv
 iniconfig==1.1.1
     # via pytest
 jinja2==2.11.3
@@ -115,7 +107,7 @@ pluggy==0.13.1
     # via
     #   pytest
     #   tox
-pre-commit==2.13.0
+pre-commit==2.14.0
     # via -r requirements/dev.in
 py==1.10.0
     # via
@@ -129,22 +121,20 @@ pyflakes==2.3.1
     # via flake8
 pyparsing==2.4.7
     # via packaging
-pytest-cov==2.12.1
-    # via -r requirements/dev.in
-pytest-vcr==1.0.2
-    # via -r requirements/dev.in
 pytest==6.2.4
     # via
     #   -r requirements/dev.in
     #   pytest-cov
     #   pytest-vcr
+pytest-cov==2.12.1
+    # via -r requirements/dev.in
+pytest-vcr==1.0.2
+    # via -r requirements/dev.in
 python-dateutil==2.8.2
     # via
     #   -r requirements/prod.txt
     #   faker
     #   ghp-import
-pyyaml-env-tag==0.1
-    # via mkdocs
 pyyaml==5.4.1
     # via
     #   -r requirements/prod.txt
@@ -152,6 +142,8 @@ pyyaml==5.4.1
     #   pre-commit
     #   pyyaml-env-tag
     #   vcrpy
+pyyaml-env-tag==0.1
+    # via mkdocs
 regex==2021.7.6
     # via black
 requests==2.26.0
@@ -182,23 +174,18 @@ toml==0.10.2
     #   tox
 tomli==1.1.0
     # via black
-tox-gh-actions==2.6.0
-    # via -r requirements/dev.in
 tox==3.24.0
     # via
     #   -r requirements/dev.in
     #   tox-gh-actions
-typed-ast==1.4.3
-    # via black
+tox-gh-actions==2.6.0
+    # via -r requirements/dev.in
 typeguard==2.10.0
     # via -r requirements/dev.in
 typing-extensions==3.10.0.0
     # via
     #   -r requirements/prod.txt
-    #   black
-    #   importlib-metadata
     #   pydantic
-    #   yarl
 urllib3==1.26.6
     # via
     #   requests
