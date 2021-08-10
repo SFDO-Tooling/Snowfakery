@@ -39,6 +39,9 @@ class StringGenerator:
     def __radd__(self, other):
         return str(other) + str(self)
 
+    def __getitem__(self, item):
+        return str(self)[item]
+
 
 class FakerTemplateLibrary:
     """A Jinja template library to add the faker.xyz objects to templates"""

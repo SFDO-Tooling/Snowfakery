@@ -1,4 +1,6 @@
 from snowfakery.utils.template_utils import look_for_number, StringGenerator
+from snowfakery.data_generator import generate
+from io import StringIO
 
 
 class TestParseNumbers:
@@ -24,3 +26,13 @@ class TestTemplateUtils:
 
     def test_self_add(self):
         assert str(StringGenerator(lambda: "a") + StringGenerator(lambda: "b")) == "ab"
+
+    def test_slice(self, generated_rows):
+        yaml = """
+            - object: Account
+              fields:
+                BillingCity: ${{fake.Sentence[0:5]}}
+        """
+
+        generate(StringIO(yaml), {})
+        assert len(generated_rows.table_values("Account", 0, "BillingCity")) <= 5
