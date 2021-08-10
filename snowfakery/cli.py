@@ -68,7 +68,7 @@ class VersionMessage:
         return "\n".join(
             (
                 f"snowfakery version {version}",
-                check_latest_version(version),
+                check_latest_version(version).message,
                 "",
                 __file__,
                 "Python " + sys.version,

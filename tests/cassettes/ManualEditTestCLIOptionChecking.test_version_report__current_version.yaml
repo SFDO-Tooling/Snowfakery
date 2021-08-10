@@ -1,0 +1,25 @@
+interactions:
+  - request:
+      body: null
+      headers:
+        Request-Headers:
+          - Elided
+      method: GET
+      uri: https://pypi.org/pypi/snowfakery/json
+    response:
+      body:
+        string: '{"info":{
+          "version":"2.0.3","yanked":false,"yanked_reason":null},
+          "last_serial":11119099,
+          "releases":{
+          "0.6":["elided"],
+          "2.0.3":["elided"],
+          "2.0.dev1":["elided"]}}'
+      headers:
+        Content-Type:
+          - application/json
+        Response-Headers: SF-Elided
+      status:
+        code: 200
+        message: OK
+version: 1

@@ -1,6 +1,7 @@
 import re
 import pkg_resources
 import requests
+import typing as T
 
 
 from json import JSONDecodeError
@@ -33,18 +34,32 @@ def get_latest_final_version():
     return versions[0]
 
 
-def check_latest_version(version) -> bool:
-    """checks for the latest version of snowfakery from pypi"""
+class IsLatestVersion(T.NamedTuple):
+    is_latest_version: T.Optional[bool]
+    message: str
+
+
+def check_latest_version(version: str) -> IsLatestVersion:
+    """checks for the latest version of snowfakery from pypi.
+
+    Returns bool, message.
+
+    The bool is True if we have the latest version, False if not.
+    None if error was detected."""
     try:
         latest_version = get_latest_final_version()
     except requests.exceptions.RequestException as e:
-        return f"Error checking snowfakery version: {type(e)}: {e}"
+        return IsLatestVersion(
+            None, f"Error checking snowfakery version: {type(e)}: {e}"
+        )
 
     obsolete = latest_version > get_installed_version(version)
     if obsolete:
-        return f"An update to Snowfakery is available: {latest_version}"
+        return IsLatestVersion(
+            False, f"An update to Snowfakery is available: {latest_version}"
+        )
     else:
-        return "You have the latest version of Snowfakery"
+        return IsLatestVersion(True, "You have the latest version of Snowfakery")
 
 
 def get_installed_version(version):

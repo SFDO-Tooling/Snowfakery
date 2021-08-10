@@ -9,6 +9,7 @@ import sys
 from tests.utils import named_temporary_file_path
 
 import yaml
+from requests.exceptions import RequestException
 from click.exceptions import ClickException, BadParameter
 
 from snowfakery.cli import generate_cli, eval_arg, main
@@ -461,3 +462,49 @@ class TestCLIOptionChecking:
                     ],
                     standalone_mode=False,
                 )
+
+    def test_version_report__current_version(self, capsys, vcr, snowfakery_rootdir):
+        # hand-minimized VCR cassette
+        cassette = (
+            snowfakery_rootdir
+            / "tests/cassettes/ManualEditTestCLIOptionChecking.test_version_report__current_version.yaml"
+        )
+        assert cassette.exists()
+
+        with pytest.raises(SystemExit), mock.patch(
+            "snowfakery.cli.version", "2.0.3"
+        ), vcr.use_cassette(str(cassette)):
+            generate_cli.main(["--version"])
+        captured = capsys.readouterr()
+        assert captured.out.startswith("snowfakery")
+        assert "Python 3." in captured.out
+        assert "Properly installed" in captured.out
+        assert "You have the latest version of Snowfakery" in captured.out
+
+    def test_version_report__old_version(self, capsys, vcr, snowfakery_rootdir):
+        # hand-minimized VCR cassette
+        cassette = (
+            snowfakery_rootdir
+            / "tests/cassettes/ManualEditTestCLIOptionChecking.test_version_report__current_version.yaml"
+        )
+        assert cassette.exists()
+
+        with pytest.raises(SystemExit), mock.patch(
+            "snowfakery.cli.version", "1.5"
+        ), vcr.use_cassette(str(cassette)):
+            generate_cli.main(["--version"])
+        captured = capsys.readouterr()
+        assert captured.out.startswith("snowfakery")
+        assert "Python 3." in captured.out
+        assert "Properly installed" in captured.out
+        assert (
+            "An update to Snowfakery is available: 2.0.3" in captured.out
+        ), captured.out
+
+    def test_version_report__error(self, capsys, vcr, snowfakery_rootdir):
+        with pytest.raises(SystemExit), mock.patch(
+            "requests.get", side_effect=RequestException
+        ):
+            generate_cli.main(["--version"])
+        captured = capsys.readouterr()
+        assert "Error checking snowfakery version:" in captured.out
