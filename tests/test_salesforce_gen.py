@@ -1,10 +1,12 @@
 from base64 import b64decode
 from io import StringIO
 
-from snowfakery import generate_data
-from tests.test_with_cci import skip_if_cumulusci_missing
-
 import pytest
+
+from snowfakery import generate_data
+from snowfakery.standard_plugins.Salesforce import SalesforceConnection
+from snowfakery import data_gen_exceptions as exc
+from tests.test_with_cci import skip_if_cumulusci_missing
 
 
 class TestSalesforceGen:
@@ -15,6 +17,17 @@ class TestSalesforceGen:
         rawdata = b64decode(b64data)
         assert rawdata.startswith(b"%PDF-1.3")
         assert b"Helvetica" in rawdata
+
+
+class TestSalesforceConnection:
+    def test_bad_kwargs(self):
+        sfc = SalesforceConnection(None)
+        with pytest.raises(
+            exc.DataGenError, match=r"Unknown argument in context_name: \('xyzzy',\)"
+        ):
+            sfc.compose_query(
+                "context_name", fields=["blah"], xyzzy="foo", **{"from": "blah"}
+            )
 
 
 class TestSalesforcePlugin:
