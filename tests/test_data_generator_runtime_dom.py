@@ -19,9 +19,6 @@ from snowfakery.api import SnowfakeryApplication
 
 from snowfakery.output_streams import DebugOutputStream
 
-from snowfakery.utils.template_utils import FakerTemplateLibrary
-
-ftl = FakerTemplateLibrary([])
 
 line = {"filename": "abc.yml", "line_num": 42}
 

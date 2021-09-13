@@ -21,7 +21,7 @@ class TestLocales:
             name:
               fake: name
         """
-        with mock.patch("snowfakery.utils.template_utils.Faker") as f:
+        with mock.patch("snowfakery.fakedata.fake_data_generator.Faker") as f:
 
             class FakeFaker(Faker):
                 def name(self):
