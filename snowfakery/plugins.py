@@ -298,6 +298,10 @@ class PluginResultIterator(PluginResult):
     pass
 
 
+class PluginResultIterator(PluginResult):
+    pass
+
+
 class PluginOption:
     def __init__(self, name, typ):
         self.name = name
