@@ -983,7 +983,42 @@ Contact(id=3, FirstName=Gene, LastName=Wall, DepartmentCode=42Q3XX3N)
 
 #### `today`
 
-The `today` variable returns a date representing the current date. This date does not change chanage during the execution of a single recipe.
+The `today` variable returns a date
+representing the current date. This date
+will not chanage during the execution of
+a single recipe. See the `date` function
+to learn more about this type of object.
+
+#### `now`
+
+The `now` variable returns a [datetime](#datetime)
+representing the current moment. It stores
+microsecond precision.
+
+Using this recipe, you can see three different
+ways of outputting the timestamp:
+
+```yaml
+# tests/test_now.yml
+- object: Times
+  fields:
+    current_datetime: ${{now}}
+    current_datetime_as_number: ${{now.timestamp()}}
+    current_datetime_without_microseconds: ${{int(now.timestamp())}}
+```
+
+This would generate field values similar to these:
+
+```yaml
+current_datetime="2021-09-08 15:12:47.444352"
+current_datetime_as_number=1631139167.444973
+current_datetime_without_microseconds=1631139167
+```
+
+Experimentally, this variable seems to return a unique value
+every time it is called, but it might depend on
+your operating system and hardware setup
+(e.g. a very fast CPU with a very slow system clock).
 
 #### `now`
 
@@ -1025,6 +1060,54 @@ The `date` function can coerce a string into a date object for calculations, or 
 the_date: ${{date("2018-10-30")}}
 another_date: ${{date(year=2018, month=11, day=30)}}
 ```
+
+These objects have the following attributes:
+
+- date.year: the year
+- date.month: between 1 and 12 inclusive.
+- date.day: between 1 and the number of days in the given month of the given year.
+
+And these methods:
+
+- date.weekday(): the day of the week as an integer, where Monday is 0 and Sunday is 6. For example, date(2002, 12, 4).weekday() == 2, a Wednesday.
+- date.isoformat() - string representing the date in ISO 8601 format, YYYY-MM-DD
+- strftime(format) - create a string representing the time under the control of an explicit [format string.](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes)
+
+#### `datetime`
+
+The `datetime` function can generate
+a new datetime object from year/month/day parts:
+
+```yaml
+# tests/test_datetime.yml
+- object: Datetimes
+  fields:
+    from_date: ${{datetime(year=2000, month=1, day=1)}}
+    from_datetime: ${{datetime(year=2000, month=1, day=1, hour=1, minute=1, second=1)}}
+    right_now: ${{now}}
+    hour: ${{now.hour}}
+    minute: ${{now.minute}}
+    second: ${{now.second}}
+    right_now_with_timezone: ${{now.astimezone()}}
+    to_date: ${{now.date()}}
+```
+
+These objects have the following attributes:
+
+- datetime.year: the year
+- datetime.month: between 1 and 12 inclusive.
+- datetime.day: between 1 and the number of days in the given month of the given year.
+- datetime.hour: the hour
+- datetime.minute: the minute
+- datetime.second: the second
+
+And these methods:
+
+- date.weekday(): the day of the week as an integer, where Monday is 0 and Sunday is 6. For example, date(2002, 12, 4).weekday() == 2, a Wednesday.
+- date.isoformat() - string representing the date in ISO 8601 format, YYYY-MM-DD
+- strftime(format) - create a string representing the time under the control of an explicit [format string.](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes)
+- astimezone() - create a timezone-aware datetime for your current timezone
+- date() - convert a datetime into a date.
 
 #### `relativedelta`
 
