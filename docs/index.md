@@ -213,7 +213,7 @@ These are the main properties of this Object Template.
 
 * ``object`` is a type declaration that determines what table or file the row goes in.
 * ``count`` determines how many rows are made. It can be randomized or computed using [Function Blocks](#function-blocks) or the [Formula Language](#formula-language).
-* `fields`` determine what data values to put in the row.
+* ``fields`` determine what data values to put in the row.
 
 You can also have more than one Object Template for any row type, such as a relational table, CSV file, Salesforce Object, and so on.
 
@@ -307,7 +307,9 @@ You can also use this feature for [Many to One](#many-to-one-relationships).
 
 ### Relationships
 
-Relationships are a big part of what separates Snowfakery from the dozens(!) of data generation tools out there. For example, we can relate pets to their owners.
+Relationships are a big part of what separates Snowfakery from the dozens(!) of data generation tools out there.
+
+Let's relate pets to their owners with ease in a recipe named ``person_pet.yml``.
 
 ```yaml
 - object: Person
@@ -930,7 +932,7 @@ The `date` function can coerce a string into a date object for calculations, or 
 
 #### ``relativedelta``
 
-The [``relativedelta`` function](https://dateutil.readthedocs.io/en/stable/relativedelta.html) from ``dateutil` is available for use in calculations. For example:
+The [``relativedelta`` function](https://dateutil.readthedocs.io/en/stable/relativedelta.html) from ``dateutil`` is available for use in calculations. For example:
 
 ```yaml
 ${{ date(Date_Established__c) + relativedelta(months=child_index) }}
@@ -1083,8 +1085,7 @@ csvw_metadata.json
 .. note::
     If you do not specify an ``output-folder``, the files are created in the current folder.
 
-The [CSVW](https://www.w3.org/TR/tabular-data-primer/) JSON file is a sort of manifest
-for all of the CSV files.
+The [CSVW](https://www.w3.org/TR/tabular-data-primer/) JSON file is a sort of manifest for all of the CSV files.
 
 ## Advanced Features
 
