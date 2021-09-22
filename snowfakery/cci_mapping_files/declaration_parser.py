@@ -1,13 +1,11 @@
-from pathlib import Path
 import typing as T
-
-from datetime import date
 from collections import defaultdict
+from datetime import date
+from pathlib import Path
 
 import yaml
-
+from pydantic import BaseModel, Extra, validator
 from typing_extensions import Literal
-from pydantic import BaseModel, validator, Extra
 
 
 class AtomicDecl(T.NamedTuple):
@@ -100,8 +98,27 @@ MERGE_RULES = {
 }
 
 
+class ShardDeclaration(BaseModel):
+    user: str
+    recipe_options: T.Dict[str, T.Any] = None
+    num_generators: int = None
+    num_loaders: int = None
+
+    class Config:
+        extra = Extra.forbid
+
+
+class ShardDeclarationList(BaseModel):
+    shards: T.List[ShardDeclaration]
+
+
+class LoadDeclarationsTuple(T.NamedTuple):
+    sobject_declarations: T.List[SObjectRuleDeclaration]
+    shard_declarations: T.List[ShardDeclaration]
+
+
 class SObjectRuleDeclarationFile(BaseModel):
-    __root__: T.List[SObjectRuleDeclaration]
+    __root__: T.List[T.Union[ShardDeclarationList, SObjectRuleDeclaration]]
 
     @classmethod
     def parse_from_yaml(cls, f: T.Union[Path, T.TextIO]):
@@ -112,7 +129,24 @@ class SObjectRuleDeclarationFile(BaseModel):
         else:
             data = yaml.safe_load(f)
 
-        return cls.parse_obj(data).__root__
+        sobject_decls = [
+            obj
+            for obj in cls.parse_obj(data).__root__
+            if isinstance(obj, SObjectRuleDeclaration)
+        ]
+        shard_decls = [
+            obj
+            for obj in cls.parse_obj(data).__root__
+            if isinstance(obj, ShardDeclarationList)
+        ]
+        if len(shard_decls) > 1:
+            raise AssertionError("Only one shard declaration list allowed per file.")
+        elif len(shard_decls) == 1:
+            shards = shard_decls[0].shards
+        else:
+            shards = []
+
+        return LoadDeclarationsTuple(sobject_decls, shards)
 
 
 def atomize_decls(decls: T.Sequence[SObjectRuleDeclaration]):
