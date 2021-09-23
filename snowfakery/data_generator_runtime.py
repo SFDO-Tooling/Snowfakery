@@ -3,6 +3,7 @@ from datetime import date
 from contextlib import contextmanager
 
 from typing import Optional, Dict, Sequence, Mapping, NamedTuple, Set
+from warnings import warn
 
 import jinja2
 import yaml
@@ -354,7 +355,10 @@ class Interpreter:
 
     def __exit__(self, *args):
         for plugin in self.plugin_instances.values():
-            plugin.close()
+            try:
+                plugin.close()
+            except Exception as e:
+                warn(f"Could not close {plugin} because {e}")
 
 
 class RuntimeContext:
