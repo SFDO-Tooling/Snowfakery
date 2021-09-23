@@ -169,7 +169,7 @@ def evaluate_memorable_function(context, func, self, args, kwargs):
     return context.interpreter.get_contextual_state(
         name=key,
         parent=kwargs.get("parent", None),
-        reset_every_iteration=True,
+        reset_every_iteration=False,
         make_state_func=lambda: func(self, *args, **kwargs),
     )
 

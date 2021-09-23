@@ -24,8 +24,8 @@ class TestCounter:
             generate_data(f, target_number=("Example", 20))
         assert generated_rows.row_values(0, "count") == 11
         assert generated_rows.row_values(9, "count") == 38
-        # resets on iteration boundaries
-        assert generated_rows.row_values(10, "count") == 11
+        # does not reset on iteration boundaries
+        assert generated_rows.row_values(10, "count") == 41
 
     # counters should restart cleanly at continuation boundaries
     def test_counter_with_continuation(
@@ -56,7 +56,7 @@ class TestCounter:
 
 
 class TestDateCounter:
-    # date counters reset on recipe iteration
+    # date counters do not reset on recipe iteration
     def test_date_counter(self, generated_rows):
         with open("examples/counters/date_counter.recipe.yml") as f:
             generate_data(f, target_number=("TV_Episode", 24))
@@ -64,10 +64,10 @@ class TestDateCounter:
         assert str(generated_rows.table_values("TV_Episode", 1)["date"]) == "2021-12-12"
         assert str(generated_rows.table_values("TV_Series", 3)["date"]) == "2022-06-12"
         assert str(generated_rows.table_values("TV_Episode", 9)["date"]) == "2022-06-12"
-        assert str(generated_rows.table_values("TV_Series", 4)["date"]) == "2021-12-12"
-        assert str(generated_rows.table_values("TV_Series", 6)["date"]) == "2022-06-12"
+        assert str(generated_rows.table_values("TV_Series", 4)["date"]) == "2022-09-11"
+        assert str(generated_rows.table_values("TV_Series", 6)["date"]) == "2023-03-13"
         assert (
-            str(generated_rows.table_values("TV_Episode", 21)["date"]) == "2022-06-12"
+            str(generated_rows.table_values("TV_Episode", 21)["date"]) == "2023-03-13"
         )
 
     def test_date_counter_relative(self, generated_rows):
@@ -119,6 +119,6 @@ class TestDateCounter:
             times=3,
         )
         assert str(generated_rows.row_values(0, "date")) == "2000-01-01"
-        # resets after continuation
-        assert str(generated_rows.row_values(5, "date")) == "2000-01-08"
-        assert str(generated_rows.row_values(11, "date")) == "2000-01-08"
+        # does not reset after continuation
+        assert str(generated_rows.row_values(5, "date")) == "2000-02-05"
+        assert str(generated_rows.row_values(11, "date")) == "2000-02-05"

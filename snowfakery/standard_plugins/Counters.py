@@ -64,7 +64,6 @@ class Counters(SnowfakeryPlugin):
             step=1,
             name=None,
             parent=None,
-            reset_every_iteration: bool = True,
         ):
             return NumberCounter(start, step)
 
@@ -77,6 +76,5 @@ class Counters(SnowfakeryPlugin):
             step,
             name=None,
             parent=None,
-            reset_every_iteration: bool = True,
         ):
             return DateCounter(start_date=start_date, step=step)
