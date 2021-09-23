@@ -7,6 +7,7 @@ from cumulusci.tests.pytest_plugins.pytest_sf_vcr import (
     vcr_config as cci_vcr_config,
     salesforce_vcr,
     simplify_body,
+    vcr_state,
 )
 
 from cumulusci.tests.util import DummyOrgConfig, DummyKeychain
@@ -63,30 +64,31 @@ def fallback_org_config():
         yield fallback_org_config
 
 
-# TODO: Port this back to CCI
+# This should be the same as CCI and can be deleted
+# when CCI is updated.
 def sf_before_record_response(response):
-    # salesforce_bulk needs the Content-Type header.
-    print(response["headers"])
-    content_type = response["headers"].get("Content-Type")
     response["headers"] = {
-        "Response-Headers": "SF-Elided",
+        "Content-Type": response["headers"].get("Content-Type", "None"),
+        "Others": "Elided",
     }
-    if content_type:
-        response["headers"]["Content-Type"] = content_type
     if response.get("body"):
         response["body"]["string"] = simplify_body(response["body"]["string"])
     return response
 
 
-# TODO: Port this back to CCI
-def sf_vcr_config(request, vcr_config):
-    dct = cci_vcr_config(request)
+# Snowfakery has a fix that CCI doesn't yet, so inject it.
+def sf_vcr_config(request, vcr_config, user_requested_network_access, vcr_state):
+    dct = cci_vcr_config(request, user_requested_network_access, vcr_state)
     dct["before_record_response"] = sf_before_record_response
     return dct
 
 
 vcr_config = fixture(sf_vcr_config, scope="module")
+
+# switch back to this after CCI has the appropriate
+# sf_before_record_response
+# vcr_config = fixture(cci_vcr_config, scope="module")
 vcr = fixture(salesforce_vcr, scope="module")
 
 
-__all__ = ["vcr_config", "vcr", "fallback_org_config"]
+__all__ = ["vcr_config", "vcr", "fallback_org_config", "vcr_state"]
