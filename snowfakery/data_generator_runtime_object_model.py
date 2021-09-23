@@ -145,7 +145,9 @@ class ObjectTemplate:
         except DataGenError:
             raise
         except Exception as e:
-            raise DataGenError(f"{message} : {str(e)}", self.filename, self.line_num)
+            raise DataGenError(
+                f"{message} : {str(e)}", self.filename, self.line_num
+            ) from e
 
     def _evaluate_count(self, context: RuntimeContext) -> int:
         """Evaluate the count expression to an integer"""

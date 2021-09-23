@@ -8,11 +8,26 @@ Snowfakery can write its output to stdout, or any database accessible to SQLAlch
 
 ## Installation
 
-Please start by installing Python. Whether or not you are installing CumulusCI, you can install Python by using the instructions from the [CumulusCI site](https://cumulusci.readthedocs.io/en/latest/install.html).
+### Installation for Salesforce Users
 
-But while you’re at it, why not install CumulusCI too?
+If you intend to use Snowfakery with Salesforce, you should install CumulusCI.
+You will get Snowfakery "for free".
 
-Next, you can go to a terminal and install Snowfakery:
+Either way, you start by installing Python. Whether or not you are installing CumulusCI, you can install Python by using the instructions from the [CumulusCI site](https://cumulusci.readthedocs.io/en/latest/install.html).
+
+To learn how to use Snowfakery within CumulusCI, you can find instructions in [Using Snowfakery with Salesforce](salesforce.md).
+
+After completing the CumulusCI installation, you should be able to invoke Snowfakery like this:
+
+```s
+$ snowfakery somefile.yml
+...
+```
+
+### Installation for Non-Salesforce Users
+
+*If you are not interested in using Snowfakery with Salesforce*, you can install
+just Snowfakery, without CumulusCI.
 
 ```s
 $ pip3 install pipx
@@ -20,8 +35,6 @@ $ pip3 install pipx
 $ pipx install snowfakery
 ...
 ```
-
-If you want to use Snowfakery within CumulusCI, you can find instructions for that in [Using Snowfakery within CumulusCI](#using-snowfakery-within-cumulusci).
 
 After installation, you should be able to invoke Snowfakery like this:
 

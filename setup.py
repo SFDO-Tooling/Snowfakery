@@ -8,9 +8,7 @@ def parse_requirements_file(requirements_file) -> List[str]:
     requirements = []
     for req in requirements_file.read().splitlines():
         # skip comments and hash lines
-        if re.match(r"\s*#", req) or re.match(r"\s*--hash", req):
-            return
-        else:
+        if not (re.match(r"\s*#", req) or re.match(r"\s*--hash", req)):
             req = req.split(" ")[0]
             requirements.append(req)
     return requirements

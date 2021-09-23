@@ -101,13 +101,19 @@ class PluginContext:
     ## TODO: Deprecate this in favour of get_contextual_state
     ##       which has more smarts about name=, parent= etc.
     def context_vars(self):
-        return self.interpreter.current_context.context_vars(
-            self.plugin.__class__.__name__
+        return self.interpreter.current_context.context_vars(id(self.plugin))
+
+    def local_vars(self):
+        return self.interpreter.current_context.local_vars.setdefault(
+            id(self.plugin), {}
         )
 
     @property
     def unique_context_identifier(self) -> str:
-        "An identifier that will be unique across iterations (but not portion invocations)"
+        """An identifier representing a template context that will be
+        unique across iterations (but not portion invocations). It
+        allows templates that do counting or iteration for a particular
+        template context."""
         return str(self.interpreter.current_context.unique_context_identifier)
 
     def evaluate_raw(self, field_definition):
@@ -298,10 +304,6 @@ class PluginResultIterator(PluginResult):
     pass
 
 
-class PluginResultIterator(PluginResult):
-    pass
-
-
 class PluginOption:
     def __init__(self, name, typ):
         self.name = name
@@ -310,8 +312,8 @@ class PluginOption:
     def convert(self, value):
         try:
             return self.type(value)
-        except TypeError as e:
-            raise TypeError(
+        except (TypeError, ValueError) as e:
+            raise exc.DataGenTypeError(
                 f"{self.name} option is wrong type {type(value)} rather than {self.type}",
                 *e.args,
             )
