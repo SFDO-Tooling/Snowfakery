@@ -149,7 +149,7 @@ class StandardFuncs(SnowfakeryPlugin):
                         target = getattr(target, part)
                     except AttributeError:
                         raise DataGenError(
-                            f"Expression cannot be evaluated `{x}``. Problem before `{part}`: {target}",
+                            f"Expression cannot be evaluated `{x}``. Problem before `{part}`:\n {target}",
                             None,
                             None,
                         )
