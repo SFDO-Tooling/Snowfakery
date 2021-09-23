@@ -5,7 +5,8 @@ import time
 from base64 import b64decode
 
 from snowfakery import SnowfakeryPlugin, lazy
-from snowfakery.plugins import PluginResult, memorable
+from snowfakery.plugins import PluginResult, PluginOption, memorable
+
 from snowfakery.data_gen_exceptions import (
     DataGenError,
     DataGenTypeError,
@@ -26,6 +27,15 @@ def row_values(write_row_mock, index, value):
 
 
 class SimpleTestPlugin(SnowfakeryPlugin):
+    allowed_options = [
+        PluginOption(
+            "tests.test_custom_plugins_and_providers.SimpleTestPlugin.option_str", str
+        ),
+        PluginOption(
+            "tests.test_custom_plugins_and_providers.SimpleTestPlugin.option_int", int
+        ),
+    ]
+
     class Functions:
         def double(self, value):
             return value * 2
@@ -206,6 +216,26 @@ class TestCustomPlugin:
         rawdata = b64decode(b64data)
         assert rawdata.startswith(b"%PDF-1.3")
         assert b"Helvetica" in rawdata
+
+    def test_option__simple(self, generated_rows):
+        yaml = """-  plugin: tests.test_custom_plugins_and_providers.SimpleTestPlugin"""
+
+        generate_data(StringIO(yaml), plugin_options={"option_str": "AAA"})
+
+    def test_option__unknown(self, generated_rows):
+        yaml = """-  plugin: tests.test_custom_plugins_and_providers.SimpleTestPlugin"""
+
+        generate_data(StringIO(yaml), plugin_options={"option_str": "zzz"})
+
+    def test_option__bad_type(self, generated_rows):
+        yaml = """-  plugin: tests.test_custom_plugins_and_providers.SimpleTestPlugin"""
+        with pytest.raises(DataGenTypeError):
+            generate_data(StringIO(yaml), plugin_options={"option_int": "abcd"})
+
+    def test_option_type_coercion_needed(self, generated_rows):
+        yaml = """-  plugin: tests.test_custom_plugins_and_providers.SimpleTestPlugin"""
+
+        generate_data(StringIO(yaml), plugin_options={"option_int": "5"})
 
 
 class PluginThatNeedsState(SnowfakeryPlugin):

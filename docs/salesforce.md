@@ -253,6 +253,28 @@ To specify a Record Type for a record, just put the Record Type’s API Name in 
     RecordType: Organization
 ```
 
+## Profiles
+
+The `Salesforce.ProfileId` function looks up a Profile in
+Salesforce by name and substitutes the ID.
+
+```yaml
+- plugin: snowfakery.standard_plugins.Salesforce
+- object: User
+  fields:
+    Alias: Grace
+    Username:
+      fake: Username
+    LastName: Wong
+    Email: ${{Username}}
+    TimeZoneSidKey: America/Bogota
+    LocaleSidKey: en_US
+    EmailEncodingKey: UTF-8
+    LanguageLocaleKey: en_US
+    ProfileId:
+      Salesforce.ProfileId: Identity User
+```
+
 ## Creating and Referencing Person Accounts
 
 There are several features planned for the Salesforce Plugin, but

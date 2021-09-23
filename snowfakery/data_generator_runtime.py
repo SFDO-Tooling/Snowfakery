@@ -15,6 +15,7 @@ from .template_funcs import StandardFuncs
 from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError
 import snowfakery  # noQA
 from snowfakery.object_rows import NicknameSlot, SlotState, ObjectRow
+from snowfakery.plugins import PluginContext, SnowfakeryPlugin
 
 OutputStream = "snowfakery.output_streams.OutputStream"
 VariableDefinition = "snowfakery.data_generator_runtime_object_model.VariableDefinition"
@@ -299,6 +300,9 @@ class Interpreter:
                 f"No template creating {stop_table_name}",
             )
 
+        # make a plugin context for our Faker stuff to act like a plugin
+        self.faker_plugin_context = PluginContext(SnowfakeryPlugin(self))
+
         self.faker_template_libraries = {}
 
         # inject context into the standard functions
@@ -319,9 +323,14 @@ class Interpreter:
         return self.globals
 
     def faker_template_library(self, locale):
+        """Create a faker template library for locale, or retrieve it from a cache"""
         rc = self.faker_template_libraries.get(locale)
         if not rc:
-            rc = FakerTemplateLibrary(self.faker_providers, locale)
+            rc = FakerTemplateLibrary(
+                self.faker_providers,
+                locale,
+                self.faker_plugin_context,
+            )
             self.faker_template_libraries[locale] = rc
         return rc
 
@@ -356,7 +365,7 @@ class Interpreter:
         make_state_func: T.Callable,
         name: T.Union[str, tuple, None] = None,
         parent: T.Optional[str] = None,
-        reset_every_iteration: bool = True,
+        reset_every_iteration: bool = False,
     ):
         """Get state that is specific to a particular template&plugin
 
@@ -370,7 +379,7 @@ class Interpreter:
         The function should generally expose this to the end-user
         through an argument called `name`.
 
-        `parent` allows the user to use some specific SObject parent as
+        `parent` allows the user to use some specific Object parent as
         a parent object. The state will be only reused for the lifetime
         of the parent and then discarded. This should also be
         user-controlled.
@@ -378,6 +387,7 @@ class Interpreter:
         `reset_every_iteration` is an experimental feature that should
         not generally be used.
         """
+        assert not reset_every_iteration
         current_context = self.current_context
         uniq_name = name or current_context.unique_context_identifier
         if parent:
@@ -404,6 +414,7 @@ class RuntimeContext:
     obj: Optional[ObjectRow] = None
     template_evaluator_recipe = JinjaTemplateEvaluatorFactory()
     current_template = None
+    local_vars = None
 
     def __init__(
         self,
@@ -423,6 +434,7 @@ class RuntimeContext:
             self._plugin_context_vars = ChainMap()
         locale = self.variable_definitions().get("snowfakery_locale")
         self.faker_template_library = self.interpreter.faker_template_library(locale)
+        self.local_vars = {}
 
     # TODO: move this into the interpreter object
     def check_if_finished(self):
@@ -499,6 +511,9 @@ class RuntimeContext:
         return self.evaluation_namespace.field_vars()
 
     def context_vars(self, plugin_namespace):
+        """Variables which are inherited by child scopes"""
+        # This looks like a candidate for optimization.
+        # An unconditional object copy seems expensive.
         local_plugin_vars = self._plugin_context_vars.get(plugin_namespace, {}).copy()
         self._plugin_context_vars[plugin_namespace] = local_plugin_vars
         return local_plugin_vars

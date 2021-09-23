@@ -1,0 +1,14 @@
+- plugin: snowfakery.standard_plugins.Counters
+- object: Example
+  count: 10
+  fields:
+    count:
+      Counters.NumberCounter:
+        name: Shared
+        start: 1
+- object: Example2
+  count: 10
+  fields:
+    count:
+      Counters.NumberCounter:
+        name: Shared

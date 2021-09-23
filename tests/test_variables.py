@@ -1,7 +1,10 @@
 from unittest import mock
 from io import StringIO
 
+import pytest
+
 from snowfakery.data_generator import generate
+from snowfakery import data_gen_exceptions as exc
 
 
 class TestVariables:
@@ -79,3 +82,16 @@ class TestVariables:
         assert generated_rows.mock_calls == [
             mock.call("first", {"id": 1, "foo": "FOO", "foo2": "FOOFOO"}),
         ]
+
+    def test_just_one_misuse(self, generated_rows):
+        yaml = """
+        - object: first
+          fields:
+            foo: ${{foo}}
+          friends:
+            - var: foo
+              just_once: True
+              value: BAR
+        """
+        with pytest.raises(exc.DataGenError, match="just_once"):
+            generate(StringIO(yaml))

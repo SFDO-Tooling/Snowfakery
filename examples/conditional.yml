@@ -1,0 +1,22 @@
+- object: Person
+  fields:
+    gender:
+      random_choice:
+        Male: 40%
+        Female: 40%
+        Other: 20%
+    name:
+      if:
+        - choice:
+            when: ${{gender=='Male'}}
+            pick:
+              fake: FirstNameMale
+
+        - choice:
+            when: ${{gender=='Female'}}
+            pick:
+              fake: FirstNameFemale
+
+        - choice:
+            pick:
+              fake: FirstNameNonBinary

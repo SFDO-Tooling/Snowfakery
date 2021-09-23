@@ -17,6 +17,7 @@ import snowfakery.data_generator_runtime  # noqa
 from snowfakery.plugins import SnowfakeryPlugin, PluginContext, lazy
 from snowfakery.object_rows import ObjectReference
 from snowfakery.utils.template_utils import StringGenerator
+from snowfakery.standard_plugins.UniqueId import UniqueId
 
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
 
@@ -71,10 +72,12 @@ class StandardFuncs(SnowfakeryPlugin):
         # anything else should use the Faker from the Interpreter
         # which is locale-scoped.
         _faker_for_dates = Faker(use_weighting=False)
+        _uidgen = None
 
         def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
             self.snowfakery_filename = StringGenerator(self._snowfakery_filename)
+            self.unique_id = StringGenerator(self._unique_id)
+            self.unique_alpha_code = StringGenerator(self._unique_alpha_code)
 
         def date(
             self,
@@ -316,6 +319,19 @@ class StandardFuncs(SnowfakeryPlugin):
         def _snowfakery_filename(self):
             template = self.context.field_vars()["template"]
             return template.filename
+
+        @property
+        def _unique_id_generator(self):
+            if not self._uidgen:
+                self._uidgen = UniqueId(self.context.interpreter).custom_functions()
+
+            return self._uidgen
+
+        def _unique_id(self):
+            return self._unique_id_generator.default_uniqifier.unique_id
+
+        def _unique_alpha_code(self):
+            return self._unique_id_generator.default_alpha_code_generator.unique_id
 
     setattr(Functions, "if", Functions.if_)
     setattr(Functions, "relativedelta", relativedelta)

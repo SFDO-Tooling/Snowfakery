@@ -5,6 +5,7 @@ on: [push]
 env:
   COVERALLS_PARALLEL: true
   COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+  SF_MKDOCS_BUILD_LOCALES: "False"
 
 jobs:
   test:
@@ -68,12 +69,36 @@ jobs:
       - name: Install dependencies
         run: |
           python -VV
-          python -m pip install --upgrade pip pip-tools
           make dev-install
           python setup.py install
 
       - name: Make Docs
         run: make docs
+
+  pip:
+    name: "Install from Pip ${{ matrix.python-version }}"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.6", "3.9"]
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v1"
+        with:
+          python-version: "${{ matrix.python-version }}"
+
+      - name: "Install dependencies"
+        run: |
+          python -VV
+          python -m pip install --upgrade pip
+
+      - name: "Install using pip"
+        run: |
+          pip install .
+
+      - name: "Test installation"
+        run: |
+          python -m snowfakery --version
 
   windows:
     name: Windows ${{ matrix.python-version }}

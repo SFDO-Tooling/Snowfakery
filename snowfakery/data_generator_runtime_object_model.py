@@ -59,14 +59,21 @@ class VariableDefinition:
     # TODO: Add an example
 
     tablename = None
+    just_once = False
 
     def __init__(
-        self, filename: str, line_num: int, varname: str, expression: Definition
+        self,
+        filename: str,
+        line_num: int,
+        varname: str,
+        expression: Definition,
+        just_once: bool = False,
     ):
         self.varname = varname
         self.expression = expression
         self.filename = filename
         self.line_num = line_num
+        self.just_once = just_once
 
     def evaluate(self, context: RuntimeContext) -> FieldValue:
         """Evaluate the expression"""
@@ -75,6 +82,8 @@ class VariableDefinition:
     def execute(
         self, interp: Interpreter, parent_context: RuntimeContext, continuing: bool
     ) -> Optional[dict]:
+        if self.just_once and continuing:
+            return
         with parent_context.child_context(self) as context:
             name = self.varname
             value = self.evaluate(context)
@@ -136,7 +145,9 @@ class ObjectTemplate:
         except DataGenError:
             raise
         except Exception as e:
-            raise DataGenError(f"{message} : {str(e)}", self.filename, self.line_num)
+            raise DataGenError(
+                f"{message} : {str(e)}", self.filename, self.line_num
+            ) from e
 
     def _evaluate_count(self, context: RuntimeContext) -> int:
         """Evaluate the count expression to an integer"""
@@ -259,6 +270,7 @@ class SimpleValue(FieldDefinition):
             except jinja2.exceptions.UndefinedError as e:
                 raise DataGenNameError(e.message, self.filename, self.line_num) from e
             except Exception as e:
+                raise
                 raise DataGenValueError(str(e), self.filename, self.line_num) from e
         else:
             val = self.definition
@@ -320,7 +332,7 @@ class StructuredValue(FieldDefinition):
             except AttributeError:
                 # clean up the error message a bit
                 raise AttributeError(
-                    f"'{objname}' plugin exposes no attribute '{method}"
+                    f"'{objname}' plugin exposes no attribute '{method}'"
                 )
             if not func:
                 raise DataGenNameError(
