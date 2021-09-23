@@ -377,8 +377,19 @@ class SOQLDatasetImpl(DatasetBase):
         return self.iterator
 
     def close(self):
-        self.iterator.close()
-        self.tempdir.close()
+        if self.iterator:
+            self.iterator.close()
+            self.iterator = None
+
+        if self.tempdir:
+            self.tempdir.cleanup()
+            self.tempdir = None
+
+    def __del__(self):
+        # in case close was not called
+        # properly, try to do an orderly
+        # cleanup
+        self.close()
 
 
 def create_tempfile_sql_db_iterator(mode, fieldnames, results):
