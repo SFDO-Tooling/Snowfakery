@@ -1,3 +1,6 @@
+from copy import copy
+
+
 class DataGenError(Exception):
     prefix = (
         "An error occurred. If you would like to see a Python traceback, "
@@ -58,6 +61,7 @@ def fix_exception(message, parentobj, e):
     """Add filename and linenumber to an exception if needed"""
     filename, line_num = parentobj.filename, parentobj.line_num
     if isinstance(e, DataGenError):
+        e = copy(e)
         if not e.filename:
             e.filename = filename
         if not e.line_num:
