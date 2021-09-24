@@ -6,4 +6,3 @@ click<8         # until CCI is compatible
 python-dateutil
 gvgen
 pydantic
-typing_extensions

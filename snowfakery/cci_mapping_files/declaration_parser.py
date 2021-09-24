@@ -6,7 +6,6 @@ from collections import defaultdict
 
 import yaml
 
-from typing_extensions import Literal
 from pydantic import BaseModel, validator, Extra
 
 
@@ -62,14 +61,14 @@ class MergeRules:
 
 class SObjectRuleDeclaration(BaseModel):
     sf_object: str
-    priority: Literal["low", "medium", "high"] = None
+    priority: T.Optional[T.Literal["low", "medium", "high"]] = None
 
-    api: Literal["smart", "rest", "bulk"] = None
-    batch_size: int = None
-    bulk_mode: Literal["serial", "parallel"] = None
-    anchor_date: T.Union[str, date] = None
+    api: T.Optional[T.Literal["smart", "rest", "bulk"]] = None
+    batch_size: T.Optional[int] = None
+    bulk_mode: T.Optional[T.Literal["serial", "parallel"]] = None
+    anchor_date: T.Optional[T.Union[str, date]] = None
 
-    load_after: str = None
+    load_after: T.Optional[str] = None
 
     class Config:
         extra = Extra.forbid
