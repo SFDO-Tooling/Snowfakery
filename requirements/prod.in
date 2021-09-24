@@ -1,4 +1,3 @@
-contextvars
 SQLAlchemy
 Faker
 jinja2<3        # until CCI is compatible
