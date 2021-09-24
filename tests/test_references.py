@@ -490,3 +490,31 @@ class TestReferences:
         with pytest.raises(DataGenError) as e:
             generate(StringIO(yaml))
         assert "can't get reference to object" in str(e).lower()
+
+    def test_random_reference_to_just_once_obj(self):
+        yaml = """
+              - object: Parent
+                just_once: true
+
+              - object: Child
+                fields:
+                  parent:
+                    random_reference: Parent
+
+                """
+        generate(StringIO(yaml))
+
+    def test_random_reference_to_nickname_fails(self):
+        yaml = """
+              - object: Parent
+                nickname: ParentNickname
+                just_once: true
+
+              - object: Child
+                fields:
+                  parent:
+                    random_reference: Parent
+                """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert "there is no table named parent" in str(e).lower()
