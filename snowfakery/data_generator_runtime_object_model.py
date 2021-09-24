@@ -333,7 +333,7 @@ class StructuredValue(FieldDefinition):
                 )
 
             with self.exception_handling(
-                "Cannot evaluate function `{}`:\n {e}", self.function_name
+                "Cannot evaluate function `{}`:\n {e}", [self.function_name]
             ):
                 value = evaluate_function(func, self.args, self.kwargs, context)
 
