@@ -2,6 +2,7 @@ from io import StringIO
 import math
 import operator
 from base64 import b64decode
+from pathlib import Path
 
 from snowfakery import SnowfakeryPlugin, lazy
 from snowfakery.plugins import PluginResult, PluginOption
@@ -336,3 +337,9 @@ class TestContextVars:
         with pytest.raises(DataGenError) as e:
             generate_data(StringIO(yaml))
         assert 6 > e.value.line_num >= 3
+
+    def test_experimental_multiselect(self, generated_rows):
+        example = Path(__file__).parent.parent / "examples/multiselect.yml"
+        with open(example) as f:
+            generate_data(f)
+        assert all(ch in "ACGT;" for ch in generated_rows.row_values(0, "defaults"))

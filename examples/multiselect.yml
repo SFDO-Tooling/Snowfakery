@@ -1,0 +1,18 @@
+- plugin: snowfakery.standard_plugins.experimental.multiselect.Multiselect
+- object: DNA
+  fields:
+    with_replacement:
+      Multiselect.random_choices:
+        min: 0
+        max: 10
+        with_replacement: True
+        choices: A,C,G,T
+    no_replacement:
+      Multiselect.random_choices:
+        min: 0
+        max: 10
+        with_replacement: False
+        choices: A,C,G,T
+    defaults: # no replacement, min=1, max=len(choices)
+      Multiselect.random_choices:
+        choices: A,C,G,T
