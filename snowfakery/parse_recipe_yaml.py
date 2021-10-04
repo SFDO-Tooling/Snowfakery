@@ -147,7 +147,6 @@ def removeline_numbers(dct: Dict) -> Dict:
 
 
 def _coerce_to_string(val, context):
-    print(val, type(val))
     if isinstance(val, str):
         return val
     elif isinstance(val, (int, bool, date)):
