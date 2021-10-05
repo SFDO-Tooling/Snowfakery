@@ -84,7 +84,7 @@ Set SF_MKDOCS_BUILD_LOCALES=False to skip building all locales
 
    or
 
-   $ pytest --cov --cov-report=html
+   $ make coverage
 
 8. Push your changes to GitHub and submit a pull request. The base branch should 
 be a new feature branch that we create to receive the changes (contact us to create 
