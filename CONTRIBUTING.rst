@@ -153,3 +153,7 @@ tests/	                             Unit tests
 
 
 <img src='docs/images/img6.png' id='PJUACA3lKvf' alt='Architecture Diagram'>
+
+Snowfakery is based upon YAML, but unlike in the canonical YAML model,
+the order of keys does matter in Snowfakery. In particular, the first
+key defines the type of objects in the Snowfakery dialect.
