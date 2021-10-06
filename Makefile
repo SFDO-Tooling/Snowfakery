@@ -11,4 +11,8 @@ dev-install:
 docs:		.FORCE
 	python -m mkdocs build --clean --site-dir build/html --config-file mkdocs.yml
 
+coverage:
+	pytest --cov --cov-report=html
+	open htmlcov/index.html
+
 .FORCE:
