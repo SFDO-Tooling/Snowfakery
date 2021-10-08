@@ -52,6 +52,8 @@ def int_string_tuple(ctx, param, value=None):
 
 
 class VersionMessage:
+    "Class that formats itself as a version message when % interpolated"
+
     def quick_test(self) -> str:
         from io import StringIO
 
@@ -70,10 +72,10 @@ class VersionMessage:
                 f"snowfakery version {version}",
                 check_latest_version(version).message,
                 "",
-                __file__,
-                "Python " + sys.version,
-                sys.executable,
-                self.quick_test(),
+                f"Program: {__file__}",
+                f"Python: {sys.version}",
+                f"Executable: {sys.executable}",
+                f"Installation: {self.quick_test()}",
             )
         )
 
