@@ -224,6 +224,10 @@ class DatasetPluginBase(SnowfakeryPlugin):
         def shuffle(self, **kwargs):
             return self.context.plugin.dataset_impl._iterate(self, "shuffle", kwargs)
 
+    def close(self):
+        if self.dataset_impl:
+            self.dataset_impl.close()
+
 
 class Dataset(DatasetPluginBase):
     def __init__(self, *args, **kwargs):

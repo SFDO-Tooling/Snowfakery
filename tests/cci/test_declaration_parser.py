@@ -21,6 +21,8 @@ declarations = [
     SObjectRuleDeclaration(sf_object="bar", priority="medium", api="smart"),
     SObjectRuleDeclaration(sf_object="bar", priority="medium", bulk_mode="serial"),
     SObjectRuleDeclaration(sf_object="bar", priority="high", bulk_mode="Parallel"),
+    SObjectRuleDeclaration(sf_object="foo", priority="low", batch_size=2000),
+    SObjectRuleDeclaration(sf_object="foo", priority="low", anchor_date="2000-01-01"),
 ]
 
 
@@ -42,9 +44,9 @@ class TestDeclarationParser:
                 load_after=None,
                 priority=None,
                 api="bulk",
-                batch_size=None,
+                batch_size=2000,
                 bulk_mode="serial",
-                anchor_date=None,
+                anchor_date="2000-01-01",
             ),
         }
 
@@ -74,7 +76,7 @@ class TestDeclarationParser:
             "Insert Contact",
             "Insert Opportunity",
         ]
-        assert map_data["Insert Account"]["api"] == "smart"
+        assert map_data["Insert Account"]["api"] == "rest"
 
     def test_cli__explicit_file(self, tmpdir):
         sample_yaml = Path(__file__).parent / "mapping_mixins.recipe.yml"

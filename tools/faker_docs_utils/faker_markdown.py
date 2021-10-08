@@ -68,7 +68,7 @@ def generate_markdown_for_fakers(outfile, locale: str, header: str = standard_he
     "Generate the Markdown page for a locale"
     faker = Faker(locale)
     language = language_codes[locale.split("_")[0]]
-    fd = FakeData(faker)
+    fd = FakeData([], locale)
 
     all_fakers = summarize_all_fakers(fd)
 

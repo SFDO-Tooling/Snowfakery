@@ -4,6 +4,25 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 2.1
+
+Fix an issue with datasets not being closed in an orderly fashion (PR #492)
+
+Emails and usernames will now be generated to match firstnames and lastnames (PR #420)
+
+The `unique_id` and `unique_alpha_code` variables return a unique number that can be used to distinguish any record from others. For example, we can incorporate a unique ID into an email address or an employee ID. (#438)
+
+Numeric and date counters are now available with the `snowfakery.standard_plugins.Counters` plugin. (#438)
+
+Documented Salesforce.ProfileId function which looks up a Profile
+in Salesforce by name and substitutes the ID automatically. (#438)
+
+
+
+## Snowfakery 2.0.1
+
+Fix problems installing through pipx.
+
 ## Snowfakery 2.0
 
 Recipes can now merge in data from Salesforce orgs as

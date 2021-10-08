@@ -149,7 +149,7 @@ class StandardFuncs(SnowfakeryPlugin):
                         target = getattr(target, part)
                     except AttributeError:
                         raise DataGenError(
-                            f"Expression cannot be evaluated `{x}``. Problem before `{part}`: {target}",
+                            f"Expression cannot be evaluated `{x}``. Problem before `{part}`:\n {target}",
                             None,
                             None,
                         )
@@ -254,14 +254,14 @@ class StandardFuncs(SnowfakeryPlugin):
             """
 
             globls = self.context.interpreter.globals
-            last_object = globls.transients.last_seen_obj_by_table.get(tablename)
-            if last_object:
-                last_id = last_object.id
+            last_id = globls.transients.last_id_for_table(tablename)
+            if last_id:
                 if scope == "prior-and-current-iterations":
                     first_id = 1
                     warnings.warn("Global scope is an experimental feature.")
                 elif scope == "current-iteration":
                     first_id = globls.first_new_id(tablename)
+                    last_id = max(first_id, last_id)
                 else:
                     raise DataGenError(
                         f"Scope must be 'prior-and-current-iterations' or 'current-iteration' not {scope}",

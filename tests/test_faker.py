@@ -229,3 +229,149 @@ class TestFaker:
         with pytest.raises(exc.DataGenError) as e:
             generate(StringIO(yaml), {}, None)
         assert "seed" in str(e.value)
+
+    def test_context_aware(self, generated_rows):
+        yaml = """
+            - object: X
+              fields:
+                FirstName:
+                    fake: FirstName
+                LastName:
+                    fake: LastName
+                Email:
+                    fake: Email
+            """
+        generate(StringIO(yaml))
+        assert generated_rows.table_values(
+            "X", 0, "LastName"
+        ) in generated_rows.table_values("X", 0, "Email")
+
+    def test_context_username_incorporates_fakes(self, generated_rows):
+        yaml = """
+            - object: X
+              fields:
+                FirstName:
+                    fake: FirstName
+                LastName:
+                    fake: LastName
+                Username:
+                    fake: Username
+            """
+        generate(StringIO(yaml))
+        assert generated_rows.table_values(
+            "X", 0, "FirstName"
+        ) in generated_rows.table_values("X", 0, "Username")
+        assert generated_rows.table_values(
+            "X", 0, "LastName"
+        ) in generated_rows.table_values("X", 0, "Username")
+
+    def test_context_aware_multiple_values(self, generated_rows):
+        yaml = """
+            - object: X
+              count: 3
+              fields:
+                FirstName:
+                    fake: FirstName
+                LastName:
+                    fake: LastName
+                Email:
+                    fake: Email
+            """
+        generate(StringIO(yaml))
+        assert (
+            generated_rows.table_values("X", 2)["LastName"]
+            in generated_rows.table_values("X", 2)["Email"]
+        )
+
+    @mock.patch("faker.providers.person.en_US.Provider.first_name")
+    @mock.patch("faker.providers.internet.en_US.Provider.ascii_safe_email")
+    def test_context_aware_order_matters(self, email, first_name, generated_rows):
+        yaml = """
+            - object: X
+              count: 3
+              fields:
+                Email:
+                    fake: Email
+                FirstName:
+                    fake: FirstName
+                LastName:
+                    fake: LastName
+            """
+        generate(StringIO(yaml))
+        assert first_name.mock_calls
+        assert email.mock_calls
+
+    @mock.patch("faker.providers.person.en_US.Provider.first_name")
+    @mock.patch("faker.providers.internet.en_US.Provider.ascii_safe_email")
+    def test_context_aware_no_leakage_count(self, email, first_name, generated_rows):
+        yaml = """
+            - object: X
+              count: 3
+              fields:
+                FirstName:
+                    fake: FirstName
+                LastName:
+                    fake: LastName
+                Email:
+                    fake: Email
+            """
+        generate(StringIO(yaml))
+        assert first_name.mock_calls
+        assert not email.mock_calls
+
+    @mock.patch("faker.providers.person.en_US.Provider.first_name")
+    @mock.patch("faker.providers.internet.en_US.Provider.ascii_safe_email")
+    def test_context_aware_no_leakage_templates(
+        self, email, first_name, generated_rows
+    ):
+        # no leakage between templates
+        yaml = """
+            - object: X
+              fields:
+                FirstName:
+                    fake: FirstName
+                LastName:
+                    fake: LastName
+                Email:
+                    fake: Email
+            - object: Y
+              fields:
+                Email:
+                    fake: Email
+            """
+        generate(StringIO(yaml))
+        assert first_name.mock_calls
+        email.assert_called_once()
+
+    @mock.patch("faker.providers.person.en_US.Provider.first_name")
+    @mock.patch("faker.providers.internet.en_US.Provider.ascii_safe_email")
+    def test_context_aware_alernate_names(self, email, first_name, generated_rows):
+        yaml = """
+            - object: X
+              fields:
+                FirstName:
+                    fake: first_name
+                LastName:
+                    fake: last_name
+                Email:
+                    fake: Email
+            """
+        generate(StringIO(yaml))
+        assert first_name.mock_calls
+        assert not email.mock_calls
+
+    @mock.patch("faker.providers.person.en_US.Provider.first_name")
+    @mock.patch("faker.providers.internet.en_US.Provider.ascii_safe_email")
+    def test_disable_matching(self, email, first_name, generated_rows):
+        yaml = """
+            - object: X
+              fields:
+                FirstName:
+                    fake: FirstName
+                LastName:
+                    fake: last_name
+                Email: ${{fake.email(matching=False)}}
+            """
+        generate(StringIO(yaml))
+        assert first_name.mock_calls
+        assert email.mock_calls
