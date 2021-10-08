@@ -12,7 +12,7 @@ import yaml
 from requests.exceptions import RequestException
 from click.exceptions import ClickException, BadParameter
 
-from snowfakery.cli import generate_cli, eval_arg, main
+from snowfakery.cli import generate_cli, eval_arg, main, VersionMessage
 from snowfakery.data_gen_exceptions import DataGenError
 
 sample_yaml = Path(__file__).parent / "include_parent.yml"
@@ -508,3 +508,10 @@ class TestCLIOptionChecking:
             generate_cli.main(["--version"])
         captured = capsys.readouterr()
         assert "Error checking snowfakery version:" in captured.out
+
+    def test_version_mod__called(self):
+        with pytest.raises(SystemExit), mock.patch.object(
+            VersionMessage, "__mod__", wraps=lambda vars: ""
+        ) as mod:
+            generate_cli.main(["--version"])
+        assert len(mod.mock_calls) == 1
