@@ -8,6 +8,7 @@ import re
 import sys
 from tests.utils import named_temporary_file_path
 
+import responses
 import yaml
 from requests.exceptions import RequestException
 from click.exceptions import ClickException, BadParameter
@@ -515,3 +516,11 @@ class TestCLIOptionChecking:
         ) as mod:
             generate_cli.main(["--version"])
         assert len(mod.mock_calls) == 1
+
+    @responses.activate
+    def test_version__json_corrupt(self, capsys):
+        responses.add("GET", "https://pypi.org/pypi/snowfakery/json", body="}}")
+        with pytest.raises(SystemExit):
+            generate_cli.main(["--version"])
+        captured = capsys.readouterr()
+        assert "Error checking snowfakery version" in captured.out
