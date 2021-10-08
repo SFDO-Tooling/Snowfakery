@@ -477,7 +477,7 @@ class TestCLIOptionChecking:
             generate_cli.main(["--version"])
         captured = capsys.readouterr()
         assert captured.out.startswith("snowfakery")
-        assert "Python 3." in captured.out
+        assert "Python: 3." in captured.out
         assert "Properly installed" in captured.out
         assert "You have the latest version of Snowfakery" in captured.out
 
@@ -495,7 +495,7 @@ class TestCLIOptionChecking:
             generate_cli.main(["--version"])
         captured = capsys.readouterr()
         assert captured.out.startswith("snowfakery")
-        assert "Python 3." in captured.out
+        assert "Python: 3." in captured.out
         assert "Properly installed" in captured.out
         assert (
             "An update to Snowfakery is available: 2.0.3" in captured.out
