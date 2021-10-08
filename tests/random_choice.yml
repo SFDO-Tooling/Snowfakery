@@ -1,0 +1,10 @@
+- object: foo
+  fields:
+    bool:
+      random_choice:
+        true: 15%
+        false: 85%
+    date:
+      random_choice:
+        1999-12-31: 99% # party time!
+        2012-01-01: 1% # end of the world!
