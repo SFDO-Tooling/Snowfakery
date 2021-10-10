@@ -3,7 +3,7 @@ SQLAlchemy
 Faker
 jinja2<3        # until CCI is compatible
 PyYAML
-click<8         # until CCI is compatible
+click<9         # until CCI is compatible
 python-dateutil
 gvgen
 pydantic
