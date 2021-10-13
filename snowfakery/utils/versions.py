@@ -48,7 +48,8 @@ def check_latest_version(version: str) -> IsLatestVersion:
     None if error was detected."""
     try:
         latest_version = get_latest_final_version()
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
+
         return IsLatestVersion(
             None, f"Error checking snowfakery version: {type(e)}: {e}"
         )
