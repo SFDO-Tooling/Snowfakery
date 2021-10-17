@@ -11,11 +11,15 @@ backports.entry-points-selectable==1.1.0
 black==21.9b0
     # via -r requirements/dev.in
 certifi==2021.5.30
-    # via requests
+    # via
+    #   -r requirements/prod.txt
+    #   requests
 cfgv==3.3.1
     # via pre-commit
 charset-normalizer==2.0.6
-    # via requests
+    # via
+    #   -r requirements/prod.txt
+    #   requests
 click==7.1.2
     # via
     #   -r requirements/prod.txt
@@ -34,17 +38,17 @@ distlib==0.3.3
     # via virtualenv
 docopt==0.6.2
     # via coveralls
-faker-microservice==2.0.0
-    # via -r requirements/dev.in
 faker==8.14.0
     # via
     #   -r requirements/prod.txt
     #   faker-microservice
+faker-microservice==2.0.0
+    # via -r requirements/dev.in
 filelock==3.1.0
     # via
     #   tox
     #   virtualenv
-flake8==3.9.2
+flake8==4.0.1
     # via -r requirements/dev.in
 ghp-import==2.0.2
     # via mkdocs
@@ -58,6 +62,7 @@ identify==2.2.15
     # via pre-commit
 idna==3.2
     # via
+    #   -r requirements/prod.txt
     #   requests
     #   yarl
 immutables==0.16
@@ -67,15 +72,7 @@ immutables==0.16
 importlib-metadata==4.8.1
     # via
     #   -r requirements/prod.txt
-    #   flake8
-    #   markdown
     #   mkdocs
-    #   pluggy
-    #   pre-commit
-    #   pytest
-    #   sqlalchemy
-    #   tox
-    #   virtualenv
 iniconfig==1.1.1
     # via pytest
 jinja2==2.11.3
@@ -121,30 +118,28 @@ py==1.10.0
     # via
     #   pytest
     #   tox
-pycodestyle==2.7.0
+pycodestyle==2.8.0
     # via flake8
 pydantic==1.8.2
     # via -r requirements/prod.txt
-pyflakes==2.3.1
+pyflakes==2.4.0
     # via flake8
 pyparsing==2.4.7
     # via packaging
-pytest-cov==2.12.1
-    # via -r requirements/dev.in
-pytest-vcr==1.0.2
-    # via -r requirements/dev.in
 pytest==6.2.5
     # via
     #   -r requirements/dev.in
     #   pytest-cov
     #   pytest-vcr
+pytest-cov==2.12.1
+    # via -r requirements/dev.in
+pytest-vcr==1.0.2
+    # via -r requirements/dev.in
 python-dateutil==2.8.2
     # via
     #   -r requirements/prod.txt
     #   faker
     #   ghp-import
-pyyaml-env-tag==0.1
-    # via mkdocs
 pyyaml==5.4.1
     # via
     #   -r requirements/prod.txt
@@ -152,10 +147,13 @@ pyyaml==5.4.1
     #   pre-commit
     #   pyyaml-env-tag
     #   vcrpy
+pyyaml-env-tag==0.1
+    # via mkdocs
 regex==2021.9.24
     # via black
 requests==2.26.0
     # via
+    #   -r requirements/prod.txt
     #   coveralls
     #   responses
 responses==0.14.0
@@ -182,26 +180,22 @@ toml==0.10.2
     #   tox
 tomli==1.2.1
     # via black
-tox-gh-actions==2.8.1
-    # via -r requirements/dev.in
 tox==3.24.4
     # via
     #   -r requirements/dev.in
     #   tox-gh-actions
-typed-ast==1.4.3
-    # via black
+tox-gh-actions==2.8.1
+    # via -r requirements/dev.in
 typeguard==2.10.0
     # via -r requirements/dev.in
 typing-extensions==3.10.0.2
     # via
     #   -r requirements/prod.txt
     #   black
-    #   immutables
-    #   importlib-metadata
     #   pydantic
-    #   yarl
 urllib3==1.26.7
     # via
+    #   -r requirements/prod.txt
     #   requests
     #   responses
 vcrpy==4.1.1
@@ -219,6 +213,4 @@ wrapt==1.12.1
 yarl==1.6.3
     # via vcrpy
 zipp==3.5.0
-    # via
-    #   -r requirements/prod.txt
-    #   importlib-metadata
+    # via importlib-metadata
