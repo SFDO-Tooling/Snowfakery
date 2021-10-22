@@ -9,7 +9,7 @@ from sqlalchemy.sql.expression import func, select
 from sqlalchemy.sql.elements import quoted_name
 
 from yaml.representer import Representer
-from build.lib.snowfakery.data_gen_exceptions import DataGenNameError
+from snowfakery.data_gen_exceptions import DataGenNameError
 
 from snowfakery.plugins import SnowfakeryPlugin, PluginResult
 from snowfakery.utils.yaml_utils import SnowfakeryDumper
