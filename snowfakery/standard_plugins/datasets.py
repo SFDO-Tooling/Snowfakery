@@ -114,7 +114,7 @@ class SQLDatasetRandomPermutationIterator(SQLDatasetIterator):
 class CSVDatasetLinearIterator(DatasetIteratorBase):
     def __init__(self, datasource: Path):
         self.datasource = datasource
-        self.file = open(self.datasource, newline="", encoding="utf-8")
+        self.file = open(self.datasource, newline="", encoding="utf-8-sig")
         self.start()
 
     def start(self):
