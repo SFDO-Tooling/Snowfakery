@@ -9,6 +9,7 @@ from sqlalchemy.sql.expression import func, select
 from sqlalchemy.sql.elements import quoted_name
 
 from yaml.representer import Representer
+from build.lib.snowfakery.data_gen_exceptions import DataGenNameError
 
 from snowfakery.plugins import SnowfakeryPlugin, PluginResult
 from snowfakery.utils.yaml_utils import SnowfakeryDumper
@@ -84,7 +85,8 @@ class SQLDatasetIterator(DatasetIteratorBase):
 
     def start(self):
         self.results = (
-            PluginResult(dict(row)) for row in self.connection.execute(self.query())
+            DatasetPluginResult(dict(row))
+            for row in self.connection.execute(self.query())
         )
 
     def close(self):
@@ -118,10 +120,20 @@ class CSVDatasetLinearIterator(DatasetIteratorBase):
     def start(self):
         self.file.seek(0)
         d = DictReader(self.file)
-        self.results = (PluginResult(row) for row in d)
+        self.results = (DatasetPluginResult(row) for row in d)
 
     def close(self):
         self.file.close()
+
+
+class DatasetPluginResult(PluginResult):
+    def __getattr__(self, name):
+        try:
+            return super().__getattr__(name)
+        except KeyError:
+            raise DataGenNameError(
+                f"`{name}` attribute not found. Should be one of {tuple(self.result.keys())}"
+            )
 
 
 class CSVDatasetRandomPermutationIterator(CSVDatasetLinearIterator):
@@ -144,7 +156,7 @@ class CSVDatasetRandomPermutationIterator(CSVDatasetLinearIterator):
     def start(self):
         self.file.seek(0)
         d = DictReader(self.file)
-        rows = [PluginResult(row) for row in d]
+        rows = [DatasetPluginResult(row) for row in d]
         shuffle(rows)
 
         self.results = iter(rows)

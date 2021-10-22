@@ -169,6 +169,24 @@ class TestExternalDatasets:
             generate(StringIO(yaml), {})
         assert "Filename extension must be .csv" in str(e.value)
 
+    def test_csv_bad_column_name(self, generated_rows):
+        abs_path = str(Path(__file__).parent)
+        yaml = (
+            """
+        - plugin: snowfakery.standard_plugins.datasets.Dataset
+        - object: XXX
+          fields:
+            __address_from_csv:
+              Dataset.iterate:
+                dataset: %s/badcsv.csv
+            foo: ${{__address_from_csv.name}}
+        """
+            % abs_path
+        )
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml), {})
+        assert "'\\ufeffxname ', 'fake'" in str(e.value)
+
     def test_SQL_dataset_bad_tablename(self, generated_rows):
         abs_path = str(Path(__file__).parent)
         yaml = (
