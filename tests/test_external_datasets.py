@@ -201,8 +201,8 @@ class TestExternalDatasets:
         """
             % abs_path
         )
-        with (abs_path / "utf_8_bom_csv.csv").open() as f:
-            assert f.read(10).startswith("\ufeff")
+        with (abs_path / "utf_8_bom_csv.csv").open("rb") as f:
+            assert f.read(10).startswith(b"\xef\xbb\xbf")
         generate(StringIO(yaml), {})
         assert generated_rows.table_values("XXX", 1, "foo") == "Afghanistan"
 
