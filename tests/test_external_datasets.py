@@ -239,3 +239,11 @@ class TestExternalDatasets:
             generate(StringIO(yaml), {})
 
         assert "multiple tables in it" in str(e.value)
+
+    def test_datasets_example(self, capsys, caplog):
+        with open(
+            Path(__file__).parent.parent / "examples/datasets/datasets.recipe.yml"
+        ) as f:
+            generate(f, {})
+            assert capsys.readouterr().err == ""
+            assert caplog.text == ""
