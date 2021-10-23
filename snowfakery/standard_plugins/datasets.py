@@ -90,6 +90,7 @@ class SQLDatasetIterator(DatasetIteratorBase):
         )
 
     def close(self):
+        self.results = None
         self.connection.close()
 
     def query(self):
@@ -123,6 +124,7 @@ class CSVDatasetLinearIterator(DatasetIteratorBase):
         self.results = (DatasetPluginResult(row) for row in d)
 
     def close(self):
+        self.results = None
         self.file.close()
 
 
@@ -160,6 +162,9 @@ class CSVDatasetRandomPermutationIterator(CSVDatasetLinearIterator):
         shuffle(rows)
 
         self.results = iter(rows)
+
+    def close(self):
+        self.results = None
 
 
 class DatasetBase:
@@ -239,6 +244,7 @@ class DatasetPluginBase(SnowfakeryPlugin):
     def close(self):
         if self.dataset_impl:
             self.dataset_impl.close()
+            self.dataset_impl = None
 
 
 class Dataset(DatasetPluginBase):
