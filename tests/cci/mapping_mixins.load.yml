@@ -6,4 +6,6 @@
   api: rest
 
 - sf_object: Account
-  api: smart
+  api: rest
+  batch_size: 100
+  anchor_date: 2000-01-01

@@ -8,3 +8,4 @@ python-dateutil
 gvgen
 pydantic
 typing_extensions
+requests

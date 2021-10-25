@@ -83,3 +83,8 @@ def generate_in_tmpdir(tmpdir):
             yield mapping, connection
 
     return doit
+
+
+@pytest.fixture(scope="session")
+def snowfakery_rootdir():
+    return Path(__file__).parent.parent

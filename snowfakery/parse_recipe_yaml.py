@@ -146,14 +146,33 @@ def removeline_numbers(dct: Dict) -> Dict:
     return {i: dct[i] for i in dct if i != "__line__"}
 
 
+def _coerce_to_string(val, context):
+    if isinstance(val, str):
+        return val
+    elif isinstance(val, (int, bool, date)):
+        # a few functions accept keyword arguments that YAML interprets
+        # as types other than string
+        return str(val)
+    else:
+        if val is None:
+            val = "null (None)"
+        raise exc.DataGenSyntaxError(
+            f"Cannot interpret key `{val}`` as string", **context.line_num()
+        )
+
+
 def parse_structured_value_args(
     args, context: ParseContext
 ) -> Union[List, Dict, SimpleValue, StructuredValue, ObjectTemplate]:
     """Structured values can be dicts or lists containing simple values or further structure."""
     if isinstance(args, dict):
+
+        def as_str(name):
+            return _coerce_to_string(name, context)
+
         with context.change_current_parent_object(args):
             return {
-                name: parse_field_value(name, arg, context, False)
+                as_str(name): parse_field_value(as_str(name), arg, context, False)
                 for name, arg in args.items()
                 if name != "__line__"
             }

@@ -90,6 +90,14 @@ class EvalPlugin(SnowfakeryPlugin):
             )
 
 
+class DoesNotClosePlugin(SnowfakeryPlugin):
+    close = NotImplemented
+
+    class Functions:
+        def foo(self, a=None):
+            return None
+
+
 class TestCustomFakerProvider:
     @mock.patch(write_row_path)
     def test_custom_faker_provider(self, write_row_mock):
@@ -336,3 +344,14 @@ class TestContextVars:
         with pytest.raises(DataGenError) as e:
             generate_data(StringIO(yaml))
         assert 6 > e.value.line_num >= 3
+
+    def test_plugin_does_not_close(self):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.DoesNotClosePlugin
+        - object: B
+          fields:
+            foo:
+                DoesNotClosePlugin.foo:
+        """
+        with pytest.warns(UserWarning, match="close"):
+            generate_data(StringIO(yaml))

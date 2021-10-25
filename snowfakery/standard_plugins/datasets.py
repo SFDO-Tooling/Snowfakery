@@ -9,6 +9,7 @@ from sqlalchemy.sql.expression import func, select
 from sqlalchemy.sql.elements import quoted_name
 
 from yaml.representer import Representer
+from snowfakery.data_gen_exceptions import DataGenNameError
 
 from snowfakery.plugins import SnowfakeryPlugin, PluginResult
 from snowfakery.utils.yaml_utils import SnowfakeryDumper
@@ -84,10 +85,12 @@ class SQLDatasetIterator(DatasetIteratorBase):
 
     def start(self):
         self.results = (
-            PluginResult(dict(row)) for row in self.connection.execute(self.query())
+            DatasetPluginResult(dict(row))
+            for row in self.connection.execute(self.query())
         )
 
     def close(self):
+        self.results = None
         self.connection.close()
 
     def query(self):
@@ -112,16 +115,27 @@ class SQLDatasetRandomPermutationIterator(SQLDatasetIterator):
 class CSVDatasetLinearIterator(DatasetIteratorBase):
     def __init__(self, datasource: Path):
         self.datasource = datasource
-        self.file = open(self.datasource, newline="", encoding="utf-8")
+        self.file = open(self.datasource, newline="", encoding="utf-8-sig")
         self.start()
 
     def start(self):
         self.file.seek(0)
         d = DictReader(self.file)
-        self.results = (PluginResult(row) for row in d)
+        self.results = (DatasetPluginResult(row) for row in d)
 
     def close(self):
+        self.results = None
         self.file.close()
+
+
+class DatasetPluginResult(PluginResult):
+    def __getattr__(self, name):
+        try:
+            return super().__getattr__(name)
+        except KeyError:
+            raise DataGenNameError(
+                f"`{name}` attribute not found. Should be one of {tuple(self.result.keys())}"
+            )
 
 
 class CSVDatasetRandomPermutationIterator(CSVDatasetLinearIterator):
@@ -144,10 +158,13 @@ class CSVDatasetRandomPermutationIterator(CSVDatasetLinearIterator):
     def start(self):
         self.file.seek(0)
         d = DictReader(self.file)
-        rows = [PluginResult(row) for row in d]
+        rows = [DatasetPluginResult(row) for row in d]
         shuffle(rows)
 
         self.results = iter(rows)
+
+    def close(self):
+        self.results = None
 
 
 class DatasetBase:
@@ -223,6 +240,11 @@ class DatasetPluginBase(SnowfakeryPlugin):
 
         def shuffle(self, **kwargs):
             return self.context.plugin.dataset_impl._iterate(self, "shuffle", kwargs)
+
+    def close(self):
+        if self.dataset_impl:
+            self.dataset_impl.close()
+            self.dataset_impl = None
 
 
 class Dataset(DatasetPluginBase):

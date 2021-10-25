@@ -3,6 +3,7 @@ from datetime import date
 from contextlib import contextmanager
 
 from typing import Optional, Dict, Sequence, Mapping, NamedTuple, Set
+from warnings import warn
 
 import jinja2
 import yaml
@@ -82,6 +83,13 @@ class Transients:
     def first_new_id(self, tablename):
         return self.orig_used_ids.get(tablename, 0) + 1
 
+    def last_id_for_table(self, tablename):
+        last_obj = self.last_seen_obj_by_table.get(tablename)
+        if last_obj:
+            return last_obj.id
+        else:
+            return self.orig_used_ids.get(tablename)
+
 
 class Globals:
     """Globally named objects and other aspects of global scope
@@ -128,8 +136,7 @@ class Globals:
                 self.transients.nicknamed_objects[nickname] = obj
         if persistent_object:
             self.persistent_objects_by_table[obj._tablename] = obj
-        else:
-            self.transients.last_seen_obj_by_table[obj._tablename] = obj
+        self.transients.last_seen_obj_by_table[obj._tablename] = obj
 
     @property
     def object_names(self):
@@ -354,7 +361,10 @@ class Interpreter:
 
     def __exit__(self, *args):
         for plugin in self.plugin_instances.values():
-            plugin.close()
+            try:
+                plugin.close()
+            except Exception as e:
+                warn(f"Could not close {plugin} because {e}")
 
 
 class RuntimeContext:
