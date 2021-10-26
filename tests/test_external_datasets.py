@@ -241,6 +241,8 @@ class TestExternalDatasets:
         assert "multiple tables in it" in str(e.value)
 
     def test_datasets_example(self, capsys, caplog):
+        """Datasets can output warnings if they don't close properly.
+        This test checks that they DO close properly and DO NOT output warnings."""
         with open(
             Path(__file__).parent.parent / "examples/datasets/datasets.recipe.yml"
         ) as f:
