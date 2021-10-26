@@ -103,7 +103,8 @@ MERGE_RULES = {
 }
 
 
-class ShardDeclaration(BaseModel):
+class ChannelDeclaration(BaseModel):
+    "Channel declarations are only of relevance to Salesforce employees"
     user: str
     recipe_options: T.Dict[str, T.Any] = None
     num_generators: int = None
@@ -113,17 +114,20 @@ class ShardDeclaration(BaseModel):
         extra = Extra.forbid
 
 
-class ShardDeclarationList(BaseModel):
-    shards: T.List[ShardDeclaration]
+class ChannelDeclarationList(BaseModel):
+    "Channel declarations are only of relevance to Salesforce employees"
+    user_channels: T.List[ChannelDeclaration]
 
 
 class LoadDeclarationsTuple(T.NamedTuple):
     sobject_declarations: T.List[SObjectRuleDeclaration]
-    shard_declarations: T.List[ShardDeclaration]
+    channel_declarations: T.List[
+        ChannelDeclaration
+    ]  # Channel declarations are only of relevance to Salesforce employees
 
 
 class SObjectRuleDeclarationFile(BaseModel):
-    __root__: T.List[T.Union[ShardDeclarationList, SObjectRuleDeclaration]]
+    __root__: T.List[T.Union[ChannelDeclarationList, SObjectRuleDeclaration]]
 
     @classmethod
     def parse_from_yaml(cls, f: T.Union[Path, T.TextIO]):
@@ -139,19 +143,19 @@ class SObjectRuleDeclarationFile(BaseModel):
             for obj in cls.parse_obj(data).__root__
             if isinstance(obj, SObjectRuleDeclaration)
         ]
-        shard_decls = [
+        channel_decls = [
             obj
             for obj in cls.parse_obj(data).__root__
-            if isinstance(obj, ShardDeclarationList)
+            if isinstance(obj, ChannelDeclarationList)
         ]
-        if len(shard_decls) > 1:
-            raise AssertionError("Only one shard declaration list allowed per file.")
-        elif len(shard_decls) == 1:
-            shards = shard_decls[0].shards
+        if len(channel_decls) > 1:
+            raise AssertionError("Only one channel declaration list allowed per file.")
+        elif len(channel_decls) == 1:
+            channels = channel_decls[0].user_channels
         else:
-            shards = []
+            channels = []
 
-        return LoadDeclarationsTuple(sobject_decls, shards)
+        return LoadDeclarationsTuple(sobject_decls, channels)
 
 
 def atomize_decls(decls: T.Sequence[SObjectRuleDeclaration]):

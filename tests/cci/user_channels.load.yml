@@ -1,0 +1,17 @@
+# Channel declarations are only of relevance to Salesforce employees
+- sf_object: Account
+  api: REST
+  priority: high
+
+- sf_object: Opportunity
+  api: bulk
+
+- user_channels:
+    - user: sam@malone.com
+    - user: diane@chambers.com
+      recipe_options:
+        a: b
+    - user: carla@tortelli.com
+      num_generators: 5
+    - user: ernie@pantusso.com
+      num_loaders: 11
