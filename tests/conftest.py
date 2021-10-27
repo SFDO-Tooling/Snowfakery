@@ -110,3 +110,8 @@ def generate_data_with_continuation():
             old_continuation_file = StringIO(next_continuation_file.getvalue())
 
     return doit
+
+
+@pytest.fixture(scope="session")
+def snowfakery_rootdir():
+    return Path(__file__).parent.parent

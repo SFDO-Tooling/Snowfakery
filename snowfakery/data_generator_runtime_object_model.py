@@ -40,13 +40,8 @@ class FieldDefinition(ABC):
     def exception_handling(self, message: str, *args, **kwargs):
         try:
             yield
-        except DataGenError as e:
-            raise fix_exception(message, self, e) from e
         except Exception as e:
-            message = message.format(*args, **kwargs)
-            raise DataGenError(
-                f"{message} : {str(e)}", self.filename, self.line_num
-            ) from e
+            raise fix_exception(message, self, e, *args, **kwargs) from e
 
 
 class VariableDefinition:
@@ -352,7 +347,7 @@ class StructuredValue(FieldDefinition):
                 )
 
             with self.exception_handling(
-                "Cannot evaluate function {}", self.function_name
+                "Cannot evaluate function `{}`:\n {e}", [self.function_name]
             ):
                 value = evaluate_function(func, self.args, self.kwargs, context)
 
@@ -383,7 +378,7 @@ class FieldFactory:
             return self.definition.render(context)
         except Exception as e:
             raise fix_exception(
-                f"Problem rendering field {self.name}:\n {str(e)}", self, e
+                "Problem rendering field {}:\n {e}", self, e, [self.name]
             ) from e
 
     def __repr__(self):

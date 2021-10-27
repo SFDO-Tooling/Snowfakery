@@ -135,7 +135,7 @@ class TestExternalDatasets:
             generate(StringIO(yaml), {})
         assert called
 
-    def test_csv_missing(self, generated_rows):
+    def test_csv_missing(self):
         abs_path = str(Path(__file__).parent)
         yaml = (
             """
@@ -152,7 +152,7 @@ class TestExternalDatasets:
             generate(StringIO(yaml), {})
         assert "File not found" in str(e.value)
 
-    def test_csv_wrong_name(self, generated_rows):
+    def test_csv_wrong_name(self):
         abs_path = str(Path(__file__).parent)
         yaml = (
             """
@@ -168,6 +168,43 @@ class TestExternalDatasets:
         with pytest.raises(exc.DataGenError) as e:
             generate(StringIO(yaml), {})
         assert "Filename extension must be .csv" in str(e.value)
+
+    def test_csv_bad_column_name(self):
+        abs_path = str(Path(__file__).parent)
+        yaml = (
+            """
+        - plugin: snowfakery.standard_plugins.datasets.Dataset
+        - object: XXX
+          fields:
+            __address_from_csv:
+              Dataset.iterate:
+                dataset: %s/badcsv.csv
+            foo: ${{__address_from_csv.name}}
+        """
+            % abs_path
+        )
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml), {})
+        assert "'xname ', 'fake'" in str(e.value)
+
+    def test_csv_utf_8_bom(self, generated_rows):
+        abs_path = Path(__file__).parent
+        yaml = (
+            """
+        - plugin: snowfakery.standard_plugins.datasets.Dataset
+        - object: XXX
+          fields:
+            __address_from_csv:
+              Dataset.iterate:
+                dataset: %s/utf_8_bom_csv.csv
+            foo: ${{__address_from_csv.name}}
+        """
+            % abs_path
+        )
+        with (abs_path / "utf_8_bom_csv.csv").open("rb") as f:
+            assert f.read(10).startswith(b"\xef\xbb\xbf")
+        generate(StringIO(yaml), {})
+        assert generated_rows.table_values("XXX", 1, "foo") == "Afghanistan"
 
     def test_SQL_dataset_bad_tablename(self, generated_rows):
         abs_path = str(Path(__file__).parent)
@@ -239,3 +276,13 @@ class TestExternalDatasets:
             generate(StringIO(yaml), {})
 
         assert "multiple tables in it" in str(e.value)
+
+    def test_datasets_example(self, capsys, caplog):
+        """Datasets can output warnings if they don't close properly.
+        This test checks that they DO close properly and DO NOT output warnings."""
+        with open(
+            Path(__file__).parent.parent / "examples/datasets/datasets.recipe.yml"
+        ) as f:
+            generate(f, {})
+            assert capsys.readouterr().err == ""
+            assert caplog.text == ""

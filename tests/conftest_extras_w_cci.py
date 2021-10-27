@@ -67,6 +67,7 @@ def fallback_org_config():
 # This should be the same as CCI and can be deleted
 # when CCI is updated.
 def sf_before_record_response(response):
+    # salesforce_bulk needs the Content-Type header.
     response["headers"] = {
         "Content-Type": response["headers"].get("Content-Type", "None"),
         "Others": "Elided",
