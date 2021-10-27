@@ -7,11 +7,11 @@
   api: bulk
 
 - user_channels:
-    - user: sam@malone.com
-    - user: diane@chambers.com
+    - user: admin_1_org_alias
+    - user: user_1_org_alias
       recipe_options:
         a: b
-    - user: carla@tortelli.com
+    - user: user_2_org_alias
       num_generators: 5
-    - user: ernie@pantusso.com
+    - user: user_3_org_alias
       num_loaders: 11

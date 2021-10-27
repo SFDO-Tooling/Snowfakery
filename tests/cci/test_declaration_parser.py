@@ -175,8 +175,8 @@ class TestUserChannels:
             sample_yaml
         ).channel_declarations
         assert len(channels) == 4
-        assert channels[0].user == "sam@malone.com"
+        assert channels[0].user == "admin_1_org_alias"
         assert channels[1].recipe_options == {"a": "b"}
         assert channels[2].num_generators == 5
-        assert channels[3].user == "ernie@pantusso.com"
+        assert channels[3].user == "user_3_org_alias"
         assert channels[3].num_loaders == 11
