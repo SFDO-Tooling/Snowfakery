@@ -177,8 +177,8 @@ class UniqueNumericIdGenerator(PluginResult):
 
     def __reduce__(self):
         state = {
+            # don't include pid: continuation processes shoud have their own.
             "parts": self.parts,
-            "pid": self.pid,
             "min_chars": self.min_chars,
             "randomize": self.randomize,
             "start": self.start,
@@ -273,7 +273,9 @@ class UniqueId(SnowfakeryPlugin):
             return self.default_uniqifier.unique_id
 
         def NumericIdGenerator(self, _=None, *, template: str = None):
-            template = template or ("pid,rand8,index" if self._bigids else "index")
+            template = template or (
+                "pid,rand8,index" if self._bigids else "rand8,index"
+            )
             return UniqueNumericIdGenerator(pid=self._pid, parts=template)
 
         def AlphaCodeGenerator(

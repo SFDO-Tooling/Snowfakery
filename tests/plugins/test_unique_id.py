@@ -37,32 +37,34 @@ class TestUniqueIdBuiltin:
         assert generated_rows.row_values(2, "unique")
         assert generated_rows.row_values(3, "unique")
 
-    # def test_continuations(self, generate_data_with_continuation, generated_rows):
-    #     yaml = """
-    #     - plugin: snowfakery.standard_plugins.UniqueId
-    #     - object: Example
-    #       just_once: True
-    #       fields:
-    #         __uniquifier:
-    #           UniqueId.NumericIdGenerator:
-    #         unique: ${{__uniquifier.unique_id}}
-    #     - object: Example
-    #       count: 2
-    #       fields:
-    #         __uniquifier:
-    #           UniqueId.NumericIdGenerator:
-    #         unique: ${{__uniquifier.unique_id}}
-    #     """
-    #     generate_data_with_continuation(
-    #         yaml=yaml,
-    #         target_number=("Example", 1),
-    #         times=3,
-    #         plugin_options={"big_ids": "False"},
-    #     )
-    #     assert generated_rows.row_values(0, "unique")
-    #     assert generated_rows.row_values(1, "unique")
-    #     assert generated_rows.row_values(2, "unique")
-    #     assert generated_rows.row_values(3, "unique")
+    def test_continuations(self, generate_data_with_continuation, generated_rows):
+        yaml = """
+        - plugin: snowfakery.standard_plugins.UniqueId
+        - object: Example
+          just_once: True
+          fields:
+            __uniquifier:
+              UniqueId.NumericIdGenerator:
+            unique: ${{__uniquifier.unique_id}}
+        - object: Example
+          count: 2
+          fields:
+            __uniquifier:
+              UniqueId.NumericIdGenerator:
+            unique: ${{__uniquifier.unique_id}}
+        """
+        generate_data_with_continuation(
+            yaml=yaml,
+            target_number=("Example", 1),
+            times=3,
+            plugin_options={"big_ids": "False"},
+        )
+        a = generated_rows.row_values(0, "unique")
+        b = generated_rows.row_values(1, "unique")
+        c = generated_rows.row_values(2, "unique")
+        d = generated_rows.row_values(3, "unique")
+        assert all([a, b, c, d])
+        assert len(set([a, b, c, d])) == 4
 
 
 class TestAlphaCodeBuiltiin:
