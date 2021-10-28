@@ -389,21 +389,15 @@ def parse_variable_definition(
         mandatory_keys={
             "value": (str, int, dict, list),
         },
-        optional_keys={
-            "just_once": bool,
-        },
+        optional_keys={},
         context=context,
     )
 
     assert yaml_sobj
-    if not context.top_level and parsed_template.just_once:
-        raise exc.DataGenSyntaxError("just_once can only be used at the top level")
     with context.change_current_parent_object(yaml_sobj):
         sobj_def = {}
         sobj_def["varname"] = parsed_template.var
         var_def_expr = yaml_sobj.get("value")
-
-        sobj_def["just_once"] = parsed_template.just_once or False
         sobj_def["expression"] = parse_field_value("value", var_def_expr, context)
         sobj_def["line_num"] = parsed_template.line_num.line_num
         sobj_def["filename"] = parsed_template.line_num.filename
