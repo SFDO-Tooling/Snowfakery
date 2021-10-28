@@ -402,8 +402,8 @@ class Interpreter:
         uniq_name = name or current_context.unique_context_identifier
         if parent:
             parent_obj = current_context.field_vars().get(parent)
-        elif reset_every_iteration:
-            parent_obj = self.iteration_count
+        # elif reset_every_iteration:           # in case we bring back this feature
+        #     parent_obj = self.iteration_count
         else:
             parent_obj = None
         current_parent, value = self.instance_states.get(uniq_name, (None, None))

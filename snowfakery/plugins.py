@@ -130,9 +130,6 @@ class PluginContext:
         else:
             raise f"Cannot simplify {field_definition}. Perhaps should have used evaluate_raw?"
 
-    def get_contextual_state(self, **kwargs):
-        return self.interpreter.get_contextual_state(**kwargs)
-
     @property
     def current_filename(self):
         return self.interpreter.current_context.current_template.filename
@@ -296,7 +293,9 @@ def _register_for_continuation(cls):
     SnowfakeryDumper.add_representer(cls, Representer.represent_object)
     yaml.SafeLoader.add_constructor(
         f"tag:yaml.org,2002:python/object/apply:{cls.__module__}.{cls.__name__}",
-        lambda loader, node: cls._from_continuation(loader.construct_sequence(node)[0]),
+        lambda loader, node: cls._from_continuation(
+            loader.construct_mapping(node.value[0])
+        ),
     )
 
 

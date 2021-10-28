@@ -40,7 +40,7 @@ distlib==0.3.3
     # via virtualenv
 docopt==0.6.2
     # via coveralls
-faker==9.6.0
+faker==9.7.1
     # via
     #   -r requirements/prod.txt
     #   faker-microservice
@@ -141,12 +141,12 @@ pytest==6.2.5
     #   -r requirements/dev.in
     #   pytest-cov
     #   pytest-vcr
-python-baseconv==1.2.2
-    # via -r requirements/prod.txt
 pytest-cov==3.0.0
     # via -r requirements/dev.in
 pytest-vcr==1.0.2
     # via -r requirements/dev.in
+python-baseconv==1.2.2
+    # via -r requirements/prod.txt
 python-dateutil==2.8.2
     # via
     #   -r requirements/prod.txt
