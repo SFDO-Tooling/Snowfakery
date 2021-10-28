@@ -130,9 +130,6 @@ class PluginContext:
         else:
             raise f"Cannot simplify {field_definition}. Perhaps should have used evaluate_raw?"
 
-    def get_contextual_state(self, **kwargs):
-        return self.interpreter.get_contextual_state(**kwargs)
-
     @property
     def current_filename(self):
         return self.interpreter.current_context.current_template.filename
