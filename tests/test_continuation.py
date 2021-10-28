@@ -4,7 +4,7 @@ from io import StringIO
 from snowfakery.data_generator import generate
 
 
-class TestRestart:
+class TestContinuation:
     def test_nicknames_persist(self, generated_rows):
         yaml = """
             - object: foo
@@ -103,3 +103,27 @@ class TestRestart:
             StringIO(yaml_data),
             continuation_file=StringIO(continuation_yaml),
         )
+
+    def test_reference_just_once(self, generated_rows):
+        yaml_data = """
+                        - object: Parent
+                          just_once: true
+
+                        - object: Child
+                          fields:
+                            parent:
+                                random_reference: Parent
+                            """
+        generate_twice(yaml_data)
+        assert generated_rows()
+
+
+def generate_twice(yaml):
+    continuation_file = StringIO()
+    generate(StringIO(yaml), generate_continuation_file=continuation_file)
+    next_contination_file = StringIO()
+    generate(
+        StringIO(yaml),
+        continuation_file=StringIO(continuation_file.getvalue()),
+        generate_continuation_file=next_contination_file,
+    )

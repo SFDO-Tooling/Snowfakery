@@ -28,7 +28,7 @@ class AtomicDecl(T.NamedTuple):
 
     sf_object: str
     key: str
-    value: T.Union[T.List, str]
+    value: T.Union[T.List, str, date, int]
     priority: int
     merge_rule: T.Callable  # what to do if two declarations for same val
 
@@ -87,7 +87,12 @@ class SObjectRuleDeclaration(BaseModel):
             return val
 
     def as_mapping(self):
-        rc = {"api": self.api, "bulk_mode": self.bulk_mode}
+        rc = {
+            "api": self.api,
+            "bulk_mode": self.bulk_mode,
+            "batch_size": self.batch_size,
+            "anchor_date": self.anchor_date,
+        }
         return {k: v for k, v in rc.items() if v is not None}
 
 
