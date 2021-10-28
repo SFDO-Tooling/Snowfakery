@@ -164,4 +164,19 @@ class TestDeclarationParser:
 
     def test_parse_from_path(self):
         sample_yaml = Path(__file__).parent / "mapping_mixins-override.load.yml"
-        SObjectRuleDeclarationFile.parse_from_yaml(sample_yaml)
+        assert SObjectRuleDeclarationFile.parse_from_yaml(sample_yaml)
+
+
+#  Channel declarations are only of relevance to Salesforce employees
+class TestUserChannels:
+    def test_user_channel_declarations(self):
+        sample_yaml = Path(__file__).parent / "user_channels.load.yml"
+        channels = SObjectRuleDeclarationFile.parse_from_yaml(
+            sample_yaml
+        ).channel_declarations
+        assert len(channels) == 4
+        assert channels[0].user == "admin_1_org_alias"
+        assert channels[1].recipe_options == {"a": "b"}
+        assert channels[2].num_generators == 5
+        assert channels[3].user == "user_3_org_alias"
+        assert channels[3].num_loaders == 11
