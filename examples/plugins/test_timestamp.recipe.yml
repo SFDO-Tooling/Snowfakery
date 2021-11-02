@@ -1,0 +1,20 @@
+- plugin: tests.test_custom_plugins_and_providers.TimeStampPlugin
+- object: parent
+  count: 2
+  friends:
+    - object: A
+      count: 2
+      fields:
+        foo: ${{TimeStampPlugin.constant_time()}}
+    - object: B
+      count: 2
+      fields:
+        foo: ${{TimeStampPlugin.constant_time()}}
+    - object: A
+      count: 2
+      fields:
+        foo: ${{TimeStampPlugin.constant_time()}}
+    - object: B
+      count: 2
+      fields:
+        foo: ${{TimeStampPlugin.constant_time()}}

@@ -23,7 +23,7 @@ class FormatChoice(click.Choice):
 
 def eval_arg(arg):
     if arg.isnumeric():
-        return int(float(arg))
+        return int(arg)
     else:
         return arg
 

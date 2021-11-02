@@ -1,0 +1,7 @@
+- plugin: examples.plugins.OpenFiles
+- object: WithOpenFile
+  count: 3
+  fields:
+    poetry_line:
+      OpenFiles.read_line:
+        filename: poem.txt

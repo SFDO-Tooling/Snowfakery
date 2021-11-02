@@ -917,13 +917,77 @@ executed again.
 child_index: Child number ${{child_index}}
 ```
 
-#### `id`
+#### `unique_id`
 
-The `id` variable returns a unique identifier for the current Object/Row to allow you to construct unique identifiers.
+The `unique_id` variable returns a unique number that can
+be used to distinguish any record from others. For example,
+we can incorporate a unique ID into an email address or
+an employee ID.
 
 ```yaml
-fields:
-  name: ${{fake.LastName}} Household ${{id}}
+# examples/unique_id/test_unique_id.yml
+- object: Contact
+  count: 3
+  fields:
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+    EmployeeNum: ${{unique_id}}
+    Email: ${{unique_id}}_${{fake.email}}
+```
+
+By default, Snowfakery works in "small id" mode, which means
+that IDs start as 6-7 digits, and grow longer as you generate
+more records.
+
+```s
+$ snowfakery examples/unique_id/test_unique_id.yml
+Contact(id=1, FirstName=Melody, LastName=Sherman, EmployeeNum=1371010, Email=9782010_cowens@example.org)
+Contact(id=2, FirstName=Christian, LastName=Owens, EmployeeNum=2433010, Email=2414010_jimmy21@example.com)
+Contact(id=3, FirstName=Tami, LastName=Stevenson, EmployeeNum=6375010, Email=8126010_leah50@example.net)
+...
+```
+
+"Big ID" mode allows you to make 22+ digit IDs that are very likely to
+be unique across time and space. It is
+described more in [`unique_id` and Big IDs](#unique_id-and-big-ids).
+
+Snowfakery may change its default mode to Big IDs at some point in the future.
+Do not assume that your IDs will always be small.
+
+If you do not care about uniqueness, use `random_number` instead.
+
+If you want the numbers to be generated in
+a predictable fashion with no gaps, use
+[`counter`](#counter) instead.
+
+If you want the numbers to have a certain
+number of digits, use the `UniqueId` plugin.
+
+#### `unique_alpha_code`
+
+The `unique_alpha_code` functions generates unique alphanumeric codes similar to those
+used in some bureaucracies were space is an issue. Snowfakery alphanumeric codes are
+about 11 characters long in small ID mode and about 17 in Big ID mode. The more you use,
+the bigger they will grow.
+
+```yaml
+# examples/unique_id/test_unique_alpha_code.yml
+- object: Contact
+  count: 3
+  fields:
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+    DepartmentCode: ${{unique_alpha_code}}
+```
+
+```s
+Contact(id=1, FirstName=Jeremy, LastName=Higgins, DepartmentCode=2AUHHSZN)
+Contact(id=2, FirstName=Vicki, LastName=Vazquez, DepartmentCode=GDH9OYLN)
+Contact(id=3, FirstName=Gene, LastName=Wall, DepartmentCode=42Q3XX3N)
 ```
 
 #### `today`
@@ -1233,7 +1297,7 @@ StageName:
 
 Observant readers will note that the values do not add up to 100. That’s fine. Closed Won will be selected 5/12 of the time, In Progress will be picked 3/12 and New will be picked 4/12 of the time. They are just weights, not necessarily percentage weights.
 
-#### Many to One relationships
+### Many to One relationships
 
 In relational databases, child records typically have a reference to
 their parent record but the opposite is not true. For example, if
@@ -1317,6 +1381,196 @@ And here's how to use the "hidden fields"([#hidden-fields-and-objects]) feature:
           EmployedBy:
             reference: Company
 ```
+
+### Advanced Unique ID Generators
+
+Snowfakery has two built-in functions for generating UniqueIDs plus the more advanced
+objects described below. The simple functions are [`unique_id`](#unique_id) and
+[`unique_alpha_code`](#unique_alpha_code). More advanced generators ID generators
+can also be created.
+
+#### `unique_id` and Big IDs
+
+Snowfakery's default mode for ID generation is "Small ID" mode, wherein IDs start out as single-digit numbers and grow over time.
+
+"Big ID" mode allows you to make IDs that are very likely to
+be unique across time and space. Specifically: it incorporates
+a timestamp, information about the current process and about
+8 bits of randomness. The generated IDs are about 22 digits
+long. Unless you are running Snowfakery on
+thousands of computers at the exact same time, the chances of a clash are
+miniscule, and in any case, a clash only matters if the unique IDs are
+destined to end up in a common Salesforce Org or database.
+
+CumulusCI manages Big ID mode for you automatically.
+
+If you are using Snowfakery outside of CumulusCI, you can turn on Big ID
+mode from the command line:
+
+```s
+$ python -m snowfakery examples/test_unique_id.yml --plugin-option big_ids True
+Contact(id=1, FirstName=Stephen, LastName=Parrish, Employee=763534209134265915391, Email=763534209134265915392_brittany17@example.org)
+```
+
+If you do need even higher levels of uniqueness, you can
+inject "unique execution ids" from some external source through the
+plugin option `pid`. Those execution
+ids would replace the timestamp and process information in your Big ID's calculation.
+
+```s
+ $ python -m snowfakery examples/test_unique_id.yml --plugin-option big_ids True --plugin-option pid 111
+Contact(id=1, FirstName=Melody, LastName=Marquez, Employee=157937691, Email=157937692_emmahoover@example.org)
+```
+
+The `111` value is not literally included in the ID, but it is an input into
+the unique ID generation algorithm. As an example, you can inject
+about 15 digits of randomness and a timestamp like this on Unix-ish systems:
+
+```s
+python -m snowfakery examples/test_unique_id.yml --plugin-option big_ids True --plugin-option pid `date +"%s"`$RANDOM$RANDOM$RANDOM
+Contact(id=1, FirstName=Cheryl, LastName=Estes, Employee=11014765223046647500920591, Email=11014765223046647500920592_solisroy@example.org)
+```
+
+If you pause and resume Snowfakery recipe generation using the continuation
+file feature, indexes will restart, so you should inject an external unique
+context ID through `pid` as shown above or through the API.
+
+### Counters
+
+Snowfakery has a plugin called `Counters` which can generate
+numeric counters (1,2,3,4 or 3,6,9,12) and date counters
+(2021-01-01, 2021-01-02, 2021-01-03).
+
+Counters are reset
+every iteration of the recipe.
+Counters are reset at the beginning of every "iteration". This makes them
+inappropriate for generating unique identifiers. Use [`unique_id`](#unique_id)
+instead.
+
+#### Numeric Counters
+
+Snowfakery can generate incrementing numbers like this:
+
+```yaml
+# examples/counters/number_counter.recipe.yml
+- plugin: snowfakery.standard_plugins.Counters
+- object: Example
+  count: 10
+  fields:
+    count:
+      Counters.NumberCounter:
+        start: 1
+        name: foo
+```
+
+This would output:
+
+```s
+$ python -m snowfakery examples/counters/number_counter.recipe.yml
+Example(id=1, count=1)
+Example(id=2, count=2)
+Example(id=3, count=3)
+Example(id=4, count=4)
+Example(id=5, count=5)
+Example(id=6, count=6)
+Example(id=7, count=7)
+Example(id=8, count=8)
+Example(id=9, count=9)
+Example(id=10, count=10)
+```
+
+You can also control the start position and "step" like this:
+
+```yaml
+# examples/counters/counter_start.recipe.yml
+- plugin: snowfakery.standard_plugins.Counters
+- object: Example
+  count: 10
+  fields:
+    count:
+      Counters.NumberCounter:
+        start: 11
+        step: 3
+```
+
+This generates:
+
+```s
+Example(id=1, count=11)
+Example(id=2, count=14)
+Example(id=3, count=17)
+Example(id=4, count=20)
+Example(id=5, count=23)
+Example(id=6, count=26)
+Example(id=7, count=29)
+Example(id=8, count=32)
+Example(id=9, count=35)
+Example(id=10, count=38)
+```
+
+As described above, counters are reset each iteration, as described above:
+
+```s
+python -m snowfakery examples/counters/number_counter.recipe.yml --reps 2
+Example(id=1, count=1)
+Example(id=2, count=2)
+Example(id=3, count=3)
+Example(id=4, count=4)
+Example(id=5, count=5)
+Example(id=6, count=6)
+Example(id=7, count=7)
+Example(id=8, count=8)
+Example(id=9, count=9)
+Example(id=10, count=10)
+Example(id=11, count=1)
+Example(id=12, count=2)
+Example(id=13, count=3)
+Example(id=14, count=4)
+Example(id=15, count=5)
+Example(id=16, count=6)
+Example(id=17, count=7)
+Example(id=18, count=8)
+Example(id=19, count=9)
+Example(id=20, count=10)
+```
+
+#### Date Counters for Schedules
+
+Snowfakery can generate incrementing numbers like this:
+
+```yaml
+# examples/counters/simple_date_counter.recipe.yml
+- plugin: snowfakery.standard_plugins.Counters
+- var: EveryTwoWeeks
+  value:
+    Counters.DateCounter:
+      start_date: 2021-01-01
+      step: +2w
+- object: Meetings
+  count: 4
+  fields:
+    Date: ${{EveryTwoWeeks.next}}
+    Topic:
+      fake: catchphrase
+```
+
+This generates:
+
+```json
+Meetings(id=1, Date=2021-01-01, Topic=Innovative dedicated solution)
+Meetings(id=2, Date=2021-01-15, Topic=Open-architected tangible artificial intelligence)
+Meetings(id=3, Date=2021-01-29, Topic=Compatible global definition)
+Meetings(id=4, Date=2021-02-12, Topic=Optimized real-time archive)
+```
+
+The `start_date` can be a particular date in `YYYY-MM-DD` or the word `today`.
+
+The `step` is based on a syntax from the Python Faker library. It can be:
+
+- `+<number>d` : `number` days between steps, e.g. `+10d` (10 days)
+- `+<number>w`: `number` weeks between steps, e.g. `+10w` (70 days)
+- `+<number>M`: `number` months between steps, e.g. `+10M` (304 days)
+- `+<number>y`: `number` years between steps, e.g. `+10y` (3625 days)
 
 ### Template File Options
 
@@ -1476,6 +1730,70 @@ Or:
     fields:
       twelve: ${Math.sqrt}
 ```
+
+### Advanced Unique IDs with the UniqueId plugin
+
+There is a plugin which gives you more control over the generation of
+Unique IDs and Alphanumeric Codes.
+
+#### Unique ID Alphabets
+
+One of the features of the UniqueId plugin is controlling the alphabet
+used for generating alphanumeric codes. One could make the alphabet
+bigger or smaller as below:
+
+```yaml
+# examples/unique_id/alphabet.recipe.yml
+- plugin: snowfakery.standard_plugins.UniqueId
+- var: LargeAlphabetGenerator
+  value:
+    UniqueId.AlphaCodeGenerator:
+      alphabet: 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
+- var: DNAGenerator
+  value:
+    UniqueId.AlphaCodeGenerator:
+      alphabet: ACGT
+- var: NumberGenerator
+  value:
+    UniqueId.AlphaCodeGenerator:
+      alphabet: 0123456789
+
+- object: DemonstrateAlphabets
+  count: 5
+  fields:
+    big_alpha_example: ${{LargeAlphabetGenerator.unique_id}}
+    dna_example: ${{DNAGenerator.unique_id}}
+    num_example: ${{NumberGenerator.unique_id}}
+```
+
+This would generate:
+
+```s
+DemonstrateAlphabets(id=1, big_alpha_example=2r0NXGiBY, dna_example=GACGCCCTACCA, num_example=6843813157)
+DemonstrateAlphabets(id=2, big_alpha_example=4LTepQ9TE, dna_example=TGTGTTTTTATGA, num_example=56465396322)
+DemonstrateAlphabets(id=3, big_alpha_example=2yRu7l5Rk, dna_example=TGTCTGGTCTTA, num_example=22377438298)
+DemonstrateAlphabets(id=4, big_alpha_example=1WCE6hDIO, dna_example=TGGTTTGTTAGA, num_example=22299878992)
+DemonstrateAlphabets(id=5, big_alpha_example=1I25wfsXE, dna_example=GCGTGTCGTATTA, num_example=39979614438)
+```
+
+#### Code length
+
+You can control the minimum (but not the maximum) length of a unique code:
+
+```yaml
+# examples/unique_id/min_length.recipe.yml
+- plugin: snowfakery.standard_plugins.UniqueId
+- var: MySmallCodeGenerator
+  value:
+    UniqueId.AlphaCodeGenerator:
+      min_chars: 6
+- object: Example
+  count: 10
+  fields:
+    unique: ${{MySmallCodeGenerator.unique_id}}
+```
+
+The code will grow over time as a consequence of keeping every value unique.
 
 ### External datasets
 

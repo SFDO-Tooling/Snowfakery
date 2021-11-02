@@ -11,7 +11,12 @@ from sqlalchemy.sql.elements import quoted_name
 from yaml.representer import Representer
 from snowfakery.data_gen_exceptions import DataGenNameError
 
-from snowfakery.plugins import SnowfakeryPlugin, PluginResult
+from snowfakery.plugins import (
+    SnowfakeryPlugin,
+    PluginResult,
+    PluginResultIterator,
+    memorable,
+)
 from snowfakery.utils.yaml_utils import SnowfakeryDumper
 
 
@@ -52,17 +57,18 @@ def sql_dataset(db_url: str, tablename: str = None, mode="linear"):
         raise NotImplementedError(f"Unknown mode: {mode}")
 
 
-class DatasetIteratorBase:
+class DatasetIteratorBase(PluginResultIterator):
     """Base class for Dataset Iterators
 
     Subclasses should implement 'self.restart' which puts an iterator into 'self.results'
     """
 
-    def __next__(self):
+    def next(self):
         try:
             return next(self.results)
         except StopIteration:
             self.restart()
+            return next(self.results)
 
     def start(self):
         "Initialize the iterator in self.results."
@@ -171,33 +177,11 @@ class DatasetBase:
     def __init__(self, *args, **kwargs):
         self.datasets = {}
 
-    def _iterate(self, plugin, iteration_mode, kwargs):
-        self.context = plugin.context
-        key = self._get_key(kwargs)
-        dataset_instance = self._get_dataset_instance(key, iteration_mode, kwargs)
-        rc = next(dataset_instance, None)
-        if not rc:
-            dataset_instance.start()
-            rc = next(dataset_instance, None)
-
-        assert rc is not None
-        return rc
-
-    def _get_key(self, kwargs):
-        dataset = kwargs.get("dataset")
-        tablename = kwargs.get("table")
-        uniq_name = kwargs.get("name") or self.context.unique_context_identifier()
-        return (dataset, tablename, uniq_name)
-
-    def _get_dataset_instance(self, key, iteration_mode, kwargs):
-        dataset_instance = self.datasets.get(key)
-        if not dataset_instance:
-            filename = self.context.field_vars()["template"].filename
-            assert filename
-            rootpath = Path(filename).parent
-            dataset_instance = self.datasets[key] = self._load_dataset(
-                iteration_mode, rootpath, kwargs
-            )
+    def _get_dataset_instance(self, plugin_context, iteration_mode, kwargs):
+        filename = plugin_context.field_vars()["template"].filename
+        assert filename
+        rootpath = Path(filename).parent
+        dataset_instance = self._load_dataset(iteration_mode, rootpath, kwargs)
         return dataset_instance
 
     def _load_dataset(self, iteration_mode, rootpath, kwargs):
@@ -235,11 +219,17 @@ class FileDataset(DatasetBase):
 
 class DatasetPluginBase(SnowfakeryPlugin):
     class Functions:
+        @memorable
         def iterate(self, **kwargs):
-            return self.context.plugin.dataset_impl._iterate(self, "linear", kwargs)
+            return self.context.plugin.dataset_impl._get_dataset_instance(
+                self.context, "linear", kwargs
+            )
 
+        @memorable
         def shuffle(self, **kwargs):
-            return self.context.plugin.dataset_impl._iterate(self, "shuffle", kwargs)
+            return self.context.plugin.dataset_impl._get_dataset_instance(
+                self.context, "shuffle", kwargs
+            )
 
     def close(self):
         if self.dataset_impl:

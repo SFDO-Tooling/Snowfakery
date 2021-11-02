@@ -1,7 +1,15 @@
 from pathlib import Path
 
-from .plugins import SnowfakeryPlugin, lazy
+from .plugins import (
+    SnowfakeryPlugin,
+    lazy,
+    memorable,
+    PluginResult,
+    PluginResultIterator,
+)
 from .api import generate_data, SnowfakeryApplication
+
+from snowfakery.utils.backports import py36  # noQA
 
 # TODO: when Python 3.6 is irrelevant, make this lazy:
 
@@ -11,4 +19,12 @@ version_file = Path(__file__).parent / "version.txt"
 with version_file.open() as f:
     version = f.read().strip()
 
-__all__ = ("generate_data", "SnowfakeryApplication", "SnowfakeryPlugin", "lazy")
+__all__ = (
+    "generate_data",
+    "SnowfakeryApplication",
+    "SnowfakeryPlugin",
+    "lazy",
+    "memorable",
+    "PluginResult",
+    "PluginResultIterator",
+)

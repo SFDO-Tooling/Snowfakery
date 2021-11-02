@@ -386,11 +386,11 @@ def parse_variable_definition(
     parsed_template: Any = parse_element(
         yaml_sobj,
         "var",
-        {},
-        {
+        mandatory_keys={
             "value": (str, int, dict, list),
         },
-        context,
+        optional_keys={},
+        context=context,
     )
 
     assert yaml_sobj
@@ -398,7 +398,6 @@ def parse_variable_definition(
         sobj_def = {}
         sobj_def["varname"] = parsed_template.var
         var_def_expr = yaml_sobj.get("value")
-
         sobj_def["expression"] = parse_field_value("value", var_def_expr, context)
         sobj_def["line_num"] = parsed_template.line_num.line_num
         sobj_def["filename"] = parsed_template.line_num.filename

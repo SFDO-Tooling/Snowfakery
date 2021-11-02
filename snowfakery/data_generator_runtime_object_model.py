@@ -14,7 +14,7 @@ from .data_gen_exceptions import (
     DataGenValueError,
     fix_exception,
 )
-from .plugins import Scalar, PluginResult
+from .plugins import Scalar, PluginResult, PluginResultIterator
 
 # objects that represent the hierarchy of a data generator.
 # roughly similar to the YAML structure but with domain-specific objects
@@ -56,7 +56,11 @@ class VariableDefinition:
     tablename = None
 
     def __init__(
-        self, filename: str, line_num: int, varname: str, expression: Definition
+        self,
+        filename: str,
+        line_num: int,
+        varname: str,
+        expression: Definition,
     ):
         self.varname = varname
         self.expression = expression
@@ -184,7 +188,11 @@ class ObjectTemplate:
         """Generate all of the fields of a row"""
         for field in self.fields:
             with self.exception_handling("Problem rendering value"):
-                row[field.name] = field.generate_value(context)
+                value = field.generate_value(context)
+                if isinstance(value, PluginResultIterator):
+                    value = value.next()
+                row[field.name] = value
+
                 self._check_type(field, row[field.name], context)
 
     def _check_type(self, field, generated_value, context: RuntimeContext):
@@ -252,6 +260,7 @@ class SimpleValue(FieldDefinition):
             except jinja2.exceptions.UndefinedError as e:
                 raise DataGenNameError(e.message, self.filename, self.line_num) from e
             except Exception as e:
+                raise
                 raise DataGenValueError(str(e), self.filename, self.line_num) from e
         else:
             val = self.definition
@@ -292,7 +301,7 @@ class StructuredValue(FieldDefinition):
             self.kwargs = {}
 
     def render(self, context: RuntimeContext) -> FieldValue:
-        context.unique_context_identifier = id(self)
+        context.unique_context_identifier = str(id(self))
         if "." in self.function_name:
             objname, method, *rest = self.function_name.split(".")
             if rest:
@@ -313,7 +322,7 @@ class StructuredValue(FieldDefinition):
             except AttributeError:
                 # clean up the error message a bit
                 raise AttributeError(
-                    f"'{objname}' plugin exposes no attribute '{method}"
+                    f"'{objname}' plugin exposes no attribute '{method}'"
                 )
             if not func:
                 raise DataGenNameError(

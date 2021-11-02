@@ -9,4 +9,6 @@ python-dateutil
 gvgen
 pydantic
 typing_extensions
+python-baseconv
+backports-datetime-fromisoformat        # for Python 3.6
 requests

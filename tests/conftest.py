@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 from contextlib import contextmanager
+from io import StringIO
 
 import pytest
 import yaml
@@ -81,6 +82,32 @@ def generate_in_tmpdir(tmpdir):
         e = create_engine(dburl)
         with e.connect() as connection:
             yield mapping, connection
+
+    return doit
+
+
+@pytest.fixture(scope="function")
+def generate_data_with_continuation():
+    from snowfakery import generate_data
+
+    def doit(*args, times=3, yaml=None, **kwargs):
+        """Helper function for testing features work with continuation."""
+        old_continuation_file = None
+
+        if yaml:
+            assert not kwargs.get("yaml_file")
+
+        for i in range(times):
+            if yaml:
+                kwargs["yaml_file"] = StringIO(yaml)
+            next_continuation_file = StringIO("w")
+            generate_data(
+                *args,
+                **kwargs,
+                continuation_file=old_continuation_file,
+                generate_continuation_file=next_continuation_file,
+            )
+            old_continuation_file = StringIO(next_continuation_file.getvalue())
 
     return doit
 

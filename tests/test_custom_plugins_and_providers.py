@@ -1,10 +1,12 @@
 from io import StringIO
 import math
 import operator
+import time
 from base64 import b64decode
 
 from snowfakery import SnowfakeryPlugin, lazy
-from snowfakery.plugins import PluginResult, PluginOption
+from snowfakery.plugins import PluginResult, PluginOption, memorable
+
 from snowfakery.data_gen_exceptions import (
     DataGenError,
     DataGenTypeError,
@@ -55,7 +57,13 @@ class WrongTypePlugin(SnowfakeryPlugin):
             "Evaluates its argument twice into a string"
             return int  # function
 
-        junk = None
+
+class TimeStampPlugin(SnowfakeryPlugin):
+    class Functions:
+        @memorable
+        def constant_time(self, value=None, name=None):
+            "Return the current time and then remember it."
+            return time.time()
 
 
 class MyEvaluator(PluginResult):
@@ -344,6 +352,56 @@ class TestContextVars:
         with pytest.raises(DataGenError) as e:
             generate_data(StringIO(yaml))
         assert 6 > e.value.line_num >= 3
+
+    def test_memorable_plugin(self, generated_rows):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.TimeStampPlugin
+        - object: B
+          count: 5
+          fields:
+            foo:
+                TimeStampPlugin.constant_time:
+        """
+        generate_data(StringIO(yaml))
+        assert generated_rows.table_values(
+            "B", 1, "foo"
+        ) == generated_rows.table_values("B", 5, "foo")
+
+    def test_memorable_plugin__scopes(self, generated_rows):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.TimeStampPlugin
+        - object: A
+          fields:
+            foo:
+                TimeStampPlugin.constant_time:
+                    value: BLAH
+                    name: A
+        - object: B
+          fields:
+            foo:
+                TimeStampPlugin.constant_time:
+        - object: C
+          fields:
+            foo:
+                TimeStampPlugin.constant_time:
+        - object: D
+          count: 3
+          fields:
+            foo:
+                TimeStampPlugin.constant_time:
+                    name: A
+
+        """
+        generate_data(StringIO(yaml))
+        assert generated_rows.table_values(
+            "A", 1, "foo"
+        ) == generated_rows.table_values("D", 3, "foo")
+        assert generated_rows.table_values(
+            "A", 1, "foo"
+        ) != generated_rows.table_values("B", 1, "foo")
+        assert generated_rows.table_values(
+            "B", 1, "foo"
+        ) != generated_rows.table_values("C", 1, "foo")
 
     def test_plugin_does_not_close(self):
         yaml = """
