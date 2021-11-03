@@ -6,8 +6,6 @@
 #
 attrs==21.2.0
     # via pytest
-backports-datetime-fromisoformat==1.0.0
-    # via -r requirements/prod.txt
 backports.entry-points-selectable==1.1.0
     # via virtualenv
 black==21.9b0
