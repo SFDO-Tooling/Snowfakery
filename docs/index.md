@@ -1408,7 +1408,7 @@ If you are using Snowfakery outside of CumulusCI, you can turn on Big ID
 mode from the command line:
 
 ```s
-$ python -m snowfakery examples/test_unique_id.yml --plugin-option big_ids True
+$ snowfakery examples/test_unique_id.yml --plugin-option big_ids True
 Contact(id=1, FirstName=Stephen, LastName=Parrish, Employee=763534209134265915391, Email=763534209134265915392_brittany17@example.org)
 ```
 
@@ -1418,7 +1418,7 @@ plugin option `pid`. Those execution
 ids would replace the timestamp and process information in your Big ID's calculation.
 
 ```s
- $ python -m snowfakery examples/test_unique_id.yml --plugin-option big_ids True --plugin-option pid 111
+ $ snowfakery examples/test_unique_id.yml --plugin-option big_ids True --plugin-option pid 111
 Contact(id=1, FirstName=Melody, LastName=Marquez, Employee=157937691, Email=157937692_emmahoover@example.org)
 ```
 
@@ -1427,7 +1427,7 @@ the unique ID generation algorithm. As an example, you can inject
 about 15 digits of randomness and a timestamp like this on Unix-ish systems:
 
 ```s
-python -m snowfakery examples/test_unique_id.yml --plugin-option big_ids True --plugin-option pid `date +"%s"`$RANDOM$RANDOM$RANDOM
+snowfakery examples/test_unique_id.yml --plugin-option big_ids True --plugin-option pid `date +"%s"`$RANDOM$RANDOM$RANDOM
 Contact(id=1, FirstName=Cheryl, LastName=Estes, Employee=11014765223046647500920591, Email=11014765223046647500920592_solisroy@example.org)
 ```
 
@@ -1466,7 +1466,7 @@ Snowfakery can generate incrementing numbers like this:
 This would output:
 
 ```s
-$ python -m snowfakery examples/counters/number_counter.recipe.yml
+$ snowfakery examples/counters/number_counter.recipe.yml
 Example(id=1, count=1)
 Example(id=2, count=2)
 Example(id=3, count=3)
@@ -1511,7 +1511,7 @@ Example(id=10, count=38)
 As described above, counters are reset each iteration, as described above:
 
 ```s
-python -m snowfakery examples/counters/number_counter.recipe.yml --reps 2
+snowfakery examples/counters/number_counter.recipe.yml --reps 2
 Example(id=1, count=1)
 Example(id=2, count=2)
 Example(id=3, count=3)
