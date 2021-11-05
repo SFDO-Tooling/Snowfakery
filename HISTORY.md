@@ -4,20 +4,26 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 2.2
+
+The `unique_id` and `unique_alpha_code` variables return a unique number that can be used to distinguish any record from others. For example, we can incorporate a unique ID into an email address or an employee ID. (#525)
+
+Numeric and date counters are now available with the `snowfakery.standard_plugins.Counters` plugin. (#525)
+
+Snowfakery will now accept UTF-8 CSV files generated from Excel with a Byte Order Mark (#516)
+
+Snowfakery gives more detailed information in the `snowfakery --version` message (#469)
+
+Booleans and dates can be the keys for `random_choice` lists. (#500)
+
 ## Snowfakery 2.1
 
 Fix an issue with datasets not being closed in an orderly fashion (PR #492)
 
 Emails and usernames will now be generated to match firstnames and lastnames (PR #420)
 
-The `unique_id` and `unique_alpha_code` variables return a unique number that can be used to distinguish any record from others. For example, we can incorporate a unique ID into an email address or an employee ID. (#438)
-
-Numeric and date counters are now available with the `snowfakery.standard_plugins.Counters` plugin. (#438)
-
 Documented Salesforce.ProfileId function which looks up a Profile
 in Salesforce by name and substitutes the ID automatically. (#438)
-
-
 
 ## Snowfakery 2.0.1
 
@@ -96,10 +102,10 @@ Fixed packaging issue.
 ## Snowfakery 1.8
 
 Fix regression when an SObject declares a RecordType on some records
-but not others.  #301
+but not others. #301
 
 Add a new feature for integrating with CumulusCI's Load architecture.
-This feature will obsolete most (hopefully all) uses of mapping.yml with Snowfakery.  Documentation for it will be in CumulusCI. #290
+This feature will obsolete most (hopefully all) uses of mapping.yml with Snowfakery. Documentation for it will be in CumulusCI. #290
 
 ## Snowfakery 1.7
 
@@ -109,7 +115,7 @@ See the documentation for details. (#283)
 ## Snowfakery 1.6.1
 
 Fix regression: Can set RecordType on objects with names that
-are SQL keywords (like Case).  (#277)
+are SQL keywords (like Case). (#277)
 
 ## Snowfakery 1.6
 
@@ -246,14 +252,14 @@ Snowfakery includes support for Salesforce RecordTypes.
 
 Snowfakery can output SQL/JSON NULL using YAML blank fields or the YAML literal 'null'
 
-Fields starting with __ are now properly suppressed as per the documentation.
+Fields starting with \_\_ are now properly suppressed as per the documentation.
 
 Various performance and reliability improvements:
 
-* parsed dates are now cached
-* Jinja values are always coerced to a string where appropriate
-* internal attributes were renamed for clarity
-* lookups are only generated in CCI mappings if they are actually needed
+- parsed dates are now cached
+- Jinja values are always coerced to a string where appropriate
+- internal attributes were renamed for clarity
+- lookups are only generated in CCI mappings if they are actually needed
 
 ## Snowfakery 0.8.0
 
