@@ -1,7 +1,6 @@
 import os
 import time
 from itertools import count
-import random
 from math import log
 import string
 
@@ -116,6 +115,8 @@ def _oct(number):
 
 
 class UniqueNumericIdGenerator(PluginResult):
+    context_uniqifier = count(1)
+
     def __init__(
         self,
         *,
@@ -125,6 +126,7 @@ class UniqueNumericIdGenerator(PluginResult):
         randomize: bool = True,
         start: int = 1,
     ):
+        self.unique_identifer = next(self.context_uniqifier)
         self.counter = count(start)
         self.start = start
         self.parts = parts
@@ -155,14 +157,17 @@ class UniqueNumericIdGenerator(PluginResult):
             part = part.lower()
         if part == "pid":
             return self.pid
-        elif part.startswith("rand"):
-            # note that rand is only evaluated once per generator! Not for every generation
-            numbits = int(part[4:])
-            return _oct(random.getrandbits(numbits))
+        # possible future feature: rand8, rand16, etc.
+        # elif part.startswith("rand"):
+        #     # note that rand is only evaluated once per generator! Not for every generation
+        #     numbits = int(part[4:])
+        #     return _oct(random.getrandbits(numbits))
         elif part.isnumeric() or isinstance(part, int):
             return _oct(int(part))
         elif part == "index":
             return "{index:o}"
+        elif part == "context":
+            return _oct(self.unique_identifer)
         else:
             raise exc.DataGenValueError(f"Unknown input to eval: {part}")
 
@@ -274,7 +279,7 @@ class UniqueId(SnowfakeryPlugin):
 
         def NumericIdGenerator(self, _=None, *, template: str = None):
             template = template or (
-                "pid,rand8,index" if self._bigids else "rand8,index"
+                "pid,context,index" if self._bigids else "context,index"
             )
             return UniqueNumericIdGenerator(pid=self._pid, parts=template)
 
@@ -286,7 +291,7 @@ class UniqueId(SnowfakeryPlugin):
             randomize_codes: bool = True,
         ):
             alphabet = str(alphabet) if isinstance(alphabet, int) else alphabet
-            template = template or ("pid,rand8,index" if self._bigids else "index")
+            template = template or ("pid,context,index" if self._bigids else "index")
 
             return AlphaUniquifier(
                 pid=self._pid,
