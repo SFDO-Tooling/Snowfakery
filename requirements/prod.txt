@@ -4,7 +4,7 @@
 #
 #    pip-compile --allow-unsafe requirements/prod.in
 #
-backports-datetime-fromisoformat==1.0.0
+backports-datetime-fromisoformat==1.0.0   ; python_version < '3.7'
     # via -r requirements/prod.in
 certifi==2021.10.8
     # via requests
