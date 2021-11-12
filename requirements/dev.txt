@@ -72,15 +72,7 @@ immutables==0.16
 importlib-metadata==4.2.0
     # via
     #   -r requirements/prod.txt
-    #   flake8
-    #   markdown
     #   mkdocs
-    #   pluggy
-    #   pre-commit
-    #   pytest
-    #   sqlalchemy
-    #   tox
-    #   virtualenv
 iniconfig==1.1.1
     # via pytest
 jinja2==2.11.3
@@ -197,19 +189,13 @@ tox==3.24.4
     #   tox-gh-actions
 tox-gh-actions==2.8.1
     # via -r requirements/dev.in
-typed-ast==1.4.3
-    # via black
-typeguard==2.10.0
+typeguard==2.13.0
     # via -r requirements/dev.in
 typing-extensions==3.10.0.2
     # via
     #   -r requirements/prod.txt
     #   black
-    #   faker
-    #   immutables
-    #   importlib-metadata
     #   pydantic
-    #   yarl
 urllib3==1.26.7
     # via
     #   -r requirements/prod.txt
