@@ -4,8 +4,6 @@
 #
 #    pip-compile --allow-unsafe requirements/prod.in
 #
-backports-datetime-fromisoformat==1.0.0
-    # via -r requirements/prod.in
 certifi==2021.10.8
     # via requests
 charset-normalizer==2.0.7
