@@ -1865,6 +1865,8 @@ Snowfakery to "enrich" your real or pre-generated data with fake data.
 
 CumulusCI can also be used to download CSV data for enrichment as follows.
 
+Snowfakery also has [built-in features](salesforce.md#incorporating-information-from-salesforce) for querying SOQL so you may also want to evaluate those as an alternative to this technique.
+
 `CumulusCI.yml`:
 
 ```yaml
@@ -1902,7 +1904,6 @@ CumulusCI can also be used to download CSV data for enrichment as follows.
 
 Of course you will need to adjust the paths based on your directory structure.
 
-Snowfakery will soon have built-in features for querying SOQL so you may also want to evaluate those as an alternative to this technique.
 
 #### Iterating over SQL database datasets
 
