@@ -302,7 +302,8 @@ def gather_declarations(yaml_file, load_declarations):
         declarations = []
         for declfile in load_declarations:
             with open_file_like(declfile, "r") as (path, f):
-                declarations.extend(SObjectRuleDeclarationFile.parse_from_yaml(f))
+                decls = SObjectRuleDeclarationFile.parse_from_yaml(f)
+                declarations.extend(decls.sobject_declarations)
 
         unified_declarations = unify(declarations)
     else:

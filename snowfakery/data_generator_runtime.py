@@ -3,6 +3,8 @@ from datetime import date
 from contextlib import contextmanager
 
 from typing import Optional, Dict, Sequence, Mapping, NamedTuple, Set
+import typing as T
+from warnings import warn
 
 import jinja2
 import yaml
@@ -82,6 +84,13 @@ class Transients:
     def first_new_id(self, tablename):
         return self.orig_used_ids.get(tablename, 0) + 1
 
+    def last_id_for_table(self, tablename):
+        last_obj = self.last_seen_obj_by_table.get(tablename)
+        if last_obj:
+            return last_obj.id
+        else:
+            return self.orig_used_ids.get(tablename)
+
 
 class Globals:
     """Globally named objects and other aspects of global scope
@@ -128,8 +137,7 @@ class Globals:
                 self.transients.nicknamed_objects[nickname] = obj
         if persistent_object:
             self.persistent_objects_by_table[obj._tablename] = obj
-        else:
-            self.transients.last_seen_obj_by_table[obj._tablename] = obj
+        self.transients.last_seen_obj_by_table[obj._tablename] = obj
 
     @property
     def object_names(self):
@@ -266,6 +274,7 @@ class Interpreter:
     """Snowfakery runtime interpreter state."""
 
     current_context: "RuntimeContext" = None
+    iteration_count = 0
 
     def __init__(
         self,
@@ -313,6 +322,7 @@ class Interpreter:
 
         self.statements = parse_result.statements
         self.parent_application = parent_application
+        self.instance_states = {}
 
     def execute(self):
         self.current_context = RuntimeContext(interpreter=self)
@@ -337,7 +347,7 @@ class Interpreter:
         while not finished:
             self.loop_over_templates_once(self.statements, continuing)
             finished = self.current_context.check_if_finished()
-
+            self.iteration_count += 1
             continuing = True
             self.globals.reset_slots()
 
@@ -354,7 +364,53 @@ class Interpreter:
 
     def __exit__(self, *args):
         for plugin in self.plugin_instances.values():
-            plugin.close()
+            try:
+                plugin.close()
+            except Exception as e:
+                warn(f"Could not close {plugin} because {e}")
+
+    def get_contextual_state(
+        self,
+        *,
+        make_state_func: T.Callable,
+        name: T.Union[str, tuple, None] = None,
+        parent: T.Optional[str] = None,
+        reset_every_iteration: bool = False,
+    ):
+        """Get state that is specific to a particular template&plugin
+
+        The first time the template is invoked in a particular context,
+        make_state_func is invoked to generate the state container.
+
+        The next time it is invoked, the state will be returned for reuse
+        and potential modification.
+
+        `name` allows you to reuse the same state among multiple templates.
+        The function should generally expose this to the end-user
+        through an argument called `name`.
+
+        `parent` allows the user to use some specific Object parent as
+        a parent object. The state will be only reused for the lifetime
+        of the parent and then discarded. This should also be
+        user-controlled.
+
+        `reset_every_iteration` is an experimental feature that should
+        not generally be used.
+        """
+        assert not reset_every_iteration
+        current_context = self.current_context
+        uniq_name = name or current_context.unique_context_identifier
+        if parent:
+            parent_obj = current_context.field_vars().get(parent)
+        # elif reset_every_iteration:           # in case we bring back this feature
+        #     parent_obj = self.iteration_count
+        else:
+            parent_obj = None
+        current_parent, value = self.instance_states.get(uniq_name, (None, None))
+        if current_parent != parent_obj or value is None:
+            value = make_state_func()
+            self.instance_states[uniq_name] = [parent_obj, value]
+        return value
 
 
 class RuntimeContext:
@@ -525,5 +581,4 @@ def evaluate_function(func, args: Sequence, kwargs: Mapping, context):
             name: arg.render(context) if hasattr(arg, "render") else arg
             for name, arg in kwargs.items()
         }
-    value = func(*args, **kwargs)
-    return value
+    return func(*args, **kwargs)

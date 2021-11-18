@@ -1,0 +1,7 @@
+- plugin: tests.test_custom_plugins_and_providers.TimeStampPlugin
+- object: A
+  count: 5
+  fields:
+    blah:
+      fake: Name
+    foo: ${{TimeStampPlugin.constant_time(blah)}}

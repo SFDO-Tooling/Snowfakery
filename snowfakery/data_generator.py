@@ -14,6 +14,7 @@ from .data_gen_exceptions import DataGenError
 from .plugins import SnowfakeryPlugin, PluginOption
 
 from .utils.yaml_utils import SnowfakeryDumper, hydrate
+from snowfakery.standard_plugins.UniqueId import UniqueId
 
 # This tool is essentially a three stage interpreter.
 #
@@ -135,6 +136,8 @@ def generate(
     parse_result = parse_recipe(open_yaml_file)
 
     faker_providers, snowfakery_plugins = process_plugins(parse_result.plugins)
+
+    snowfakery_plugins.setdefault("UniqueId", UniqueId)
 
     plugin_options = process_plugins_options(snowfakery_plugins, plugin_options or {})
 

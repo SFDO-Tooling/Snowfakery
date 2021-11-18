@@ -1,0 +1,11 @@
+- object: Parent
+  just_once: true
+  nickname: ParentNickname
+
+- object: Child
+  fields:
+    parent:
+      random_reference: Parent
+  # should fail:
+  # parent2:
+  #   random_reference: ParentNickname

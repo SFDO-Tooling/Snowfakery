@@ -1,0 +1,13 @@
+- plugin: tests.test_custom_plugins_and_providers.TimeStampPlugin
+- object: A
+  fields:
+    foo: ${{TimeStampPlugin.constant_time(name="first")}}
+- object: A
+  fields:
+    foo: ${{TimeStampPlugin.constant_time(name="second")}}
+- object: B
+  fields:
+    foo: ${{TimeStampPlugin.constant_time(name="second")}}
+- object: A
+  fields:
+    foo: ${{TimeStampPlugin.constant_time(name="first")}}

@@ -1,0 +1,9 @@
+- object: Contact
+  count: 3
+  fields:
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+    EmployeeNum: ${{unique_id}}
+    Email: ${{unique_id}}_${{fake.email}}
