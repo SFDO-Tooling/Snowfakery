@@ -492,7 +492,7 @@ If the `reference` value contains periods, Snowfakery follows field names to get
 
 Snowfakery (and CumulusCI) lets you loop over a recipe many times to generate multiple rows. In this case, a `reference` is always to an object created within the current iteration of a recipe. The exception to this rule are objects marked with the `just_once` property. These objects are created _only_ in the first iteration, and any references to them are solely to the objects created in that first iteration.
 
-#### `random_choice`
+### `random_choice`
 
 The `random_choice` function randomly chooses an option from a list.
 
@@ -577,7 +577,7 @@ Let's explore this syntax with a recipe named `random-choice-complex.yml`.
                   LastName: Simpson
 ```
 
-#### `random_reference`
+### `random_reference`
 
 The `random_reference` property creates a reference to a random, existing row from a table.
 
@@ -1513,7 +1513,7 @@ The `step` is based on a syntax from the Python Faker library. It can be:
 - `+<number>M`: `number` months between steps, e.g. `+10M` (304 days)
 - `+<number>y`: `number` years between steps, e.g. `+10y` (3625 days)
 
-### Template File Options
+### Recipe Options
 
 Instead of manually entering the exact number of records to create into a template file, pass an `option` (such as numbers, strings, booleans, and so on) to your generator recipe from the command line.
 
