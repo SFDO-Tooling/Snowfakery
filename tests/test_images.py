@@ -109,6 +109,30 @@ def graphviz_available():
 
 
 class TestImageOuputStreams:
+    @mock.patch("subprocess.Popen")
+    def test_image_outputs_mocked(self, popen):
+        png = "out.png"
+        svg = "out.svg"
+        txt = "out.txt"
+        dot = "out.dot"
+        popen.return_value.communicate = lambda: (mock.Mock(), mock.Mock())
+        generate_cli.main(
+            [
+                str(sample_yaml),
+                "--output-file",
+                png,
+                "--output-file",
+                svg,
+                "--output-file",
+                txt,
+                "--output-file",
+                dot,
+            ],
+            standalone_mode=False,
+        )
+        for call in popen.mock_calls:
+            assert call[1][0][0] == "dot"
+
     def test_image_outputs(self):
         if not graphviz_available():
             pytest.skip("Graphviz is not installed")
