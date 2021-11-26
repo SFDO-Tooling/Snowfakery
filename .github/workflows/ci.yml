@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.6", "3.7", "3.8", "3.9"]
+        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
     steps:
       - uses: "actions/checkout@v2"
       - uses: "actions/setup-python@v1"
@@ -105,7 +105,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: ["3.6", "3.9"]
+        python-version: ["3.6", "3.10"]
     steps:
       - uses: "actions/checkout@v2"
       - uses: "actions/setup-python@v1"
@@ -117,6 +117,10 @@ jobs:
           python -VV
           python -m pip install --upgrade pip
           make dev-install
+          # Snowfakery should work both with and without graphviz.
+          # On Linux we test without it and on Windows we test with it.
+          # The Unit tests adapt to both situations
+          choco install graphviz
 
       - name: Run Tests
         run: python -m pytest
