@@ -156,7 +156,7 @@ class TestImageOuputStreams:
                 ],
                 standalone_mode=False,
             )
-            assert png.read_bytes().startswith(b"\x89PNG\r\n")
+            assert png.read_bytes().startswith(b"\x89PNG"), png.read_bytes()[0:10]
             assert svg.read_bytes().startswith(b"<?xml"), svg.read_bytes()[0:5]
             assert svg.read_bytes().startswith(b"<?xml"), svg.read_bytes()[0:5]
             assert dot.read_bytes().startswith(b"/* Ge"), dot.read_bytes()[0:5]
