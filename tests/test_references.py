@@ -3,9 +3,10 @@ from unittest import mock
 
 import pytest
 
-from snowfakery.data_generator import generate, StoppingCriteria
+from snowfakery.data_generator import generate
 from test_parse_samples import find_row
 from snowfakery.data_gen_exceptions import DataGenError
+from snowfakery.api import StoppingCriteria
 
 simple_parent = """                     #1
 - object: A                             #2
@@ -505,3 +506,31 @@ class TestReferences:
         """
         generate(StringIO(yaml))
         assert generated_rows.table_values("Contact", 1, "AccountId") == "Account(1)"
+
+    def test_random_reference_to_just_once_obj(self, generated_rows):
+        yaml = """
+              - object: Parent
+                just_once: true
+
+              - object: Child
+                fields:
+                  parent:
+                    random_reference: Parent
+                """
+        generate(StringIO(yaml), stopping_criteria=StoppingCriteria("Child", 2))
+        assert len(generated_rows.mock_calls) == 3
+
+    def test_random_reference_to_nickname_fails(self):
+        yaml = """
+              - object: Parent
+                nickname: ParentNickname
+                just_once: true
+
+              - object: Child
+                fields:
+                  parent:
+                    random_reference: ParentNickname
+                """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert "there is no table named parent" in str(e).lower()

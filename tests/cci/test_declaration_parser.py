@@ -1,7 +1,9 @@
 from pathlib import Path
+from io import StringIO
 
 from snowfakery.cci_mapping_files.declaration_parser import (
     SObjectRuleDeclaration,
+    SObjectRuleDeclarationFile,
     unify,
 )
 from snowfakery.cli import generate_cli
@@ -19,6 +21,8 @@ declarations = [
     SObjectRuleDeclaration(sf_object="bar", priority="medium", api="smart"),
     SObjectRuleDeclaration(sf_object="bar", priority="medium", bulk_mode="serial"),
     SObjectRuleDeclaration(sf_object="bar", priority="high", bulk_mode="Parallel"),
+    SObjectRuleDeclaration(sf_object="foo", priority="low", batch_size=2000),
+    SObjectRuleDeclaration(sf_object="foo", priority="low", anchor_date="2000-01-01"),
 ]
 
 
@@ -40,9 +44,9 @@ class TestDeclarationParser:
                 load_after=None,
                 priority=None,
                 api="bulk",
-                batch_size=None,
+                batch_size=2000,
                 bulk_mode="serial",
-                anchor_date=None,
+                anchor_date="2000-01-01",
             ),
         }
 
@@ -72,7 +76,7 @@ class TestDeclarationParser:
             "Insert Contact",
             "Insert Opportunity",
         ]
-        assert map_data["Insert Account"]["api"] == "smart"
+        assert map_data["Insert Account"]["api"] == "rest"
 
     def test_cli__explicit_file(self, tmpdir):
         sample_yaml = Path(__file__).parent / "mapping_mixins.recipe.yml"
@@ -138,3 +142,41 @@ class TestDeclarationParser:
         assert map_data["Insert Account"]["api"] == "rest"
         assert map_data["Insert Contact"]["api"] == "rest"
         assert map_data["Insert Opportunity"]["api"] == "bulk"
+
+    def test_circular_references__force_order(self, generate_in_tmpdir):
+        circular_test = (Path(__file__).parent / "circular_references.yml").read_text()
+        print(generate_in_tmpdir)
+        with generate_in_tmpdir(
+            circular_test, load_declarations=["tests/cci/mapping_mixins.load.yml"]
+        ) as (mapping, connection):
+            assert tuple(mapping.keys()) == tuple(
+                ["Insert Account", "Insert Contact", "Insert Opportunity"]
+            )
+
+    def test_parse_from_open_file(self):
+        s = StringIO(
+            """
+         - sf_object: Foo
+           api: bulk
+        """
+        )
+        SObjectRuleDeclarationFile.parse_from_yaml(s)
+
+    def test_parse_from_path(self):
+        sample_yaml = Path(__file__).parent / "mapping_mixins-override.load.yml"
+        assert SObjectRuleDeclarationFile.parse_from_yaml(sample_yaml)
+
+
+#  Channel declarations are only of relevance to Salesforce employees
+class TestUserChannels:
+    def test_user_channel_declarations(self):
+        sample_yaml = Path(__file__).parent / "user_channels.load.yml"
+        channels = SObjectRuleDeclarationFile.parse_from_yaml(
+            sample_yaml
+        ).channel_declarations
+        assert len(channels) == 4
+        assert channels[0].user == "admin_1_org_alias"
+        assert channels[1].recipe_options == {"a": "b"}
+        assert channels[2].num_generators == 5
+        assert channels[3].user == "user_3_org_alias"
+        assert channels[3].num_loaders == 11

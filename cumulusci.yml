@@ -1,6 +1,8 @@
 minimum_cumulusci_version: "3.16.0"
 project:
     name: Snowfakery
+    package:
+        api_version: "50.0"
     dependencies:
         - github: https://github.com/SalesforceFoundation/NPSP
 
@@ -58,6 +60,13 @@ tasks:
             num_records: 100
             num_records_tablename: Opportunity
 
+    generate_content_documents:
+        class_path: cumulusci.tasks.bulkdata.generate_and_load_data_from_yaml.GenerateAndLoadDataFromYaml
+        options:
+            generator_yaml: examples/salesforce/ContentVersion.recipe.yml
+            num_records: 10
+            num_records_tablename: Account
+
 flows:
     test_everything:
         steps:
@@ -79,6 +88,8 @@ flows:
                 task: generate_opportunity_contact_roles
             9:
                 task: generate_opportunities_and_contacts
+            10:
+                task: generate_content_documents
 
     contacts_for_accounts:
         steps:

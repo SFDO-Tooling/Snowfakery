@@ -1,8 +1,1 @@
-SQLAlchemy==1.3.23
-Faker==6.6.0
-jinja2==2.11.3
-PyYAML==5.4.1
-click==7.1.2
-python-dateutil==2.8.1
-gvgen==1.0
-pydantic==1.7.3
+-r requirements/prod.txt

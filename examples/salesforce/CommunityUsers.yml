@@ -1,0 +1,88 @@
+- plugin: snowfakery.standard_plugins.Salesforce
+- plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+
+- object: User
+  fields:
+    Alias: Grace
+    Username:
+      fake: Username
+    LastName: Wong
+    Email: ${{Username}}
+    TimeZoneSidKey: America/Bogota
+    LocaleSidKey: en_US
+    EmailEncodingKey: UTF-8
+    LanguageLocaleKey: en_US
+    ProfileId:
+      Salesforce.ProfileId: Identity User
+  joins_from:
+    - object: PermissionSetAssignment
+      join_field: AssigneeId
+      to:
+        - PermissionSetId:
+            Salesforce.PermissionSet: ActionPlans
+        - PermissionSetId:
+            Salesforce.PermissionSet: VoiceInbound
+        - PermissionSetId:
+            Salesforce.PermissionSet: DocumentChecklist
+
+  friends:
+    - object: PermissionSetAssignment
+      fields:
+        AssigneeId:
+          reference: User
+        PermissionSetId:
+          SalesforceQuery.find_record:
+            from: PermissionSet
+            where: Name='ActionPlans'
+    - object: PermissionSetAssignment
+      fields:
+        AssigneeId:
+          reference: User
+        PermissionSetId:
+          SalesforceQuery.find_record:
+            from: PermissionSet
+            where: Name='ActionPlans'
+
+    # __permissionSets:
+    # Salesforce.PermissionSetAssignments:
+    #   names: ActionPlans,CallCoachingUser
+    # - object: __junk_wrapper
+    #   friends:
+    #     - object: PermissionSetAssignment
+    #       fields:
+    #         AssigneeId:
+    #           reference: User
+    #         PermissionSetId:
+    #           SalesforceQuery.find_record:
+    #             query_from: PermissionSet where Name='ActionPlans'
+    #     - object: PermissionSetAssignment
+    #       fields:
+    #         AssigneeId:
+    #           reference: User
+    #         PermissionSetId:
+    #           SalesforceQuery.find_record:
+    #             query_from: PermissionSet where Name='ActionPlans'
+  # - object: PermissionSetAssignment
+
+  #     fields:
+  #       AssigneeId:
+  #         reference: User
+  #       PermissionSetId:
+  #         SalesforceQuery.find_record:
+  #           query_from: PermissionSet where Name='CallCoachingUser'
+- object: User
+  nickname: RandomizedUser
+  fields:
+    Username:
+      fake: Username
+    LastName:
+      fake: last_name
+    Email:
+      fake: email
+    Alias: Grace
+    TimeZoneSidKey: America/Bogota
+    LocaleSidKey: en_US
+    EmailEncodingKey: UTF-8
+    LanguageLocaleKey: en_US
+    ProfileId:
+      Salesforce.ProfileId: Identity User

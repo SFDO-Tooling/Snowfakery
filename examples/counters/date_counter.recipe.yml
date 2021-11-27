@@ -1,0 +1,21 @@
+- plugin: snowfakery.standard_plugins.Counters
+- object: TV_Series
+  count: 3
+  fields:
+    date:
+      Counters.DateCounter:
+        start_date: 2021-12-12
+        step: +3M
+    name:
+      fake: catchphrase
+  friends:
+    - object: TV_Episode
+      count: 4
+      fields:
+        date:
+          Counters.DateCounter:
+            start_date: ${{TV_Series.date}}
+            parent: TV_Series
+            step: +7d
+
+        name: Episode ${{child_index + 1}}

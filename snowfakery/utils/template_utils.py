@@ -1,10 +1,8 @@
-from functools import lru_cache
 from typing import Sequence
 import string
+from snowfakery.fakedata.fake_data_generator import FakeData
 
-from faker import Faker
-from jinja2 import Template
-from snowfakery.plugins import ScalarLike
+from snowfakery.plugins import ScalarLike, PluginContext
 
 
 class StringGenerator(ScalarLike):
@@ -44,21 +42,26 @@ class StringGenerator(ScalarLike):
 
 
 class FakerTemplateLibrary:
-    """A Jinja template library to add the faker.xyz objects to templates"""
+    """A Jinja template library to add the fake.xyz objects to templates"""
 
-    def __init__(self, faker_providers: Sequence[object], locale=None):
+    def __init__(
+        self,
+        faker_providers: Sequence[object],
+        locale: str = None,
+        context: PluginContext = None,
+    ):
         self.locale = locale
-        self.faker = Faker(self.locale, use_weighting=False)
-        for provider in faker_providers:
-            self.faker.add_provider(provider)
+        self.context = context
+
+        self.fake_data = FakeData(faker_providers, locale, self.context)
+
+    def _get_fake_data(self, name):
+        return self.fake_data._get_fake_data(name)
 
     def __getattr__(self, name):
         return StringGenerator(
-            lambda *args, **kwargs: self.faker.format(name, *args, **kwargs)
+            lambda *args, **kwargs: self.fake_data._get_fake_data(name, *args, **kwargs)
         )
-
-
-Template = lru_cache(512)(Template)
 
 
 number_chars = set(string.digits + ".")

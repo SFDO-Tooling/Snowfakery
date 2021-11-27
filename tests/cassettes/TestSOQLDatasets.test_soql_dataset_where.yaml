@@ -1,0 +1,59 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.my.salesforce.com/services/data/v50.0/limits/recordCount?sObjects=User
+  response:
+    body:
+      string: "{\n  \"sObjects\" : [ {\n    \"count\" : 9,\n    \"name\" : \"User\"\n
+        \ } ]\n}"
+    headers:
+      Content-Type:
+      - application/json;charset=UTF-8
+      Response-Headers: Elided
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.my.salesforce.com/services/data/v50.0/query/?q=SELECT+Id%2C+FirstName%2C+LastName+FROM+User++WHERE+FirstName+Like+%27A%25%27
+  response:
+    body:
+      string: "{\n  \"totalSize\" : 1,\n  \"done\" : true,\n  \"records\" : [ {\n
+        \   \"attributes\" : {\n      \"type\" : \"User\",\n      \"url\" : \"/services/data/v50.0/sobjects/User/0051F00000nc59NQAQ\"\n
+        \   },\n    \"Id\" : \"0051F00000nc59NQAQ\",\n    \"FirstName\" : \"Automated\",\n
+        \   \"LastName\" : \"Process\"\n  } ]\n}"
+    headers:
+      Content-Type:
+      - application/json;charset=UTF-8
+      Response-Headers: Elided
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.my.salesforce.com/services/data/v50.0/tooling/executeAnonymous?anonymousBody=delete+%5BSELECT+Id+FROM+Contact+WHERE+Name+LIKE+%27TestUser%25%27%5D%3B
+  response:
+    body:
+      string: "{\n  \"line\" : -1,\n  \"column\" : -1,\n  \"compiled\" : true,\n  \"success\"
+        : true,\n  \"compileProblem\" : null,\n  \"exceptionStackTrace\" : null,\n
+        \ \"exceptionMessage\" : null\n}"
+    headers:
+      Content-Type:
+      - application/json;charset=UTF-8
+      Response-Headers: Elided
+    status:
+      code: 200
+      message: OK
+version: 1

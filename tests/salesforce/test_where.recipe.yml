@@ -1,0 +1,25 @@
+# execute this recipe like this:
+
+# snowfakery tests/salesforce/test_where.recipe.yml --plugin-option org_name qa
+
+- plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+
+- object: Output
+  fields:
+    __obj:
+      SalesforceQuery.random_record:
+        from: Contact
+        where: FirstName LIKE 'A%'
+        fields: Id, Name
+    Id: ${{__obj.Id}}
+    Name: ${{__obj.Name}}
+
+- object: Output2
+  fields:
+    __obj:
+      SalesforceQuery.find_record:
+        from: Contact
+        where: FirstName LIKE 'A%'
+        fields: Id, Name
+    Id: ${{__obj.Id}}
+    Name: ${{__obj.Name}}

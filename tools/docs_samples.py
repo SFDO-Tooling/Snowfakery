@@ -1,8 +1,15 @@
+#!/usr/bin/env python3
 from pathlib import Path
+from glob import glob
+from difflib import context_diff
 
 # This tool merges example files into the docs and thus ensures
 # that the tested version of the example is also the one in the
 # doc.
+
+being_replaced = []
+being_replaced_filename = None
+replacement = None
 
 
 class TOP:
@@ -27,13 +34,23 @@ class OPEN:
 
 
 class REPLACING:
-    """Code example is open being replaced because it corresponds to a file on disk"""
+    """Code example is being replaced because it corresponds to a file on disk"""
 
     def next_state(line, location):
         if line.startswith(TRIPLE_QUOTE):
             check_triple_quote_alone(line, location)
+            if replacement != being_replaced:
+                for diff in context_diff(
+                    replacement,
+                    being_replaced,
+                    fromfile=being_replaced_filename,
+                    tofile=location,
+                ):
+                    print(diff, end="")
+            being_replaced.clear()
             return TOP, [line]
         else:
+            being_replaced.append(line)
             return REPLACING, []  # IGNORE lines to be replaced
 
 
@@ -41,15 +58,21 @@ class START_EXAMPLE:
     """First line of a code example"""
 
     def next_state(line, location):
-        if line.startswith("#"):
-            filename = line.split("#")[1].strip()
-            assert Path(filename).exists(), location
-            with Path(filename).open() as f:
-                example_lines = f.readlines()
-            print("Replacing", filename)
-            return REPLACING, [line] + example_lines
-        else:
-            return OPEN, [line]
+        try:
+            global replacement, being_replaced_filename
+            if line.startswith("#"):
+                filename = line.split("#")[1].strip()
+                assert Path(filename).exists(), location
+                with Path(filename).open() as f:
+                    example_lines = f.readlines()
+                replacement = example_lines
+                being_replaced_filename = filename
+                return REPLACING, [line] + example_lines
+            else:
+                return OPEN, [line]
+        except Exception:
+            print("Error: ", line, location)
+            raise
 
 
 def check_triple_quote_alone(line, location):
@@ -62,7 +85,7 @@ def check_triple_quote_alone(line, location):
 TRIPLE_QUOTE = "```"
 
 
-def replace_samples(input_file) -> str:
+def replace_samples(input_file, filename: str) -> str:
     """Read an input file line by line and generate a string
     to write out."""
     lines = list(input_file)
@@ -78,12 +101,18 @@ def replace_samples(input_file) -> str:
     return "".join(output)
 
 
-def main(filename):
+def replace_examples(filename):
     with open(filename) as f:
-        output = replace_samples(f)
+        output = replace_samples(f, filename)
     with open(filename, "w") as f:
         f.write(output)
 
 
-filename = "docs/index.md"
-main(filename)
+def main():
+    filenames = glob("docs/*.md")
+    for filename in filenames:
+        replace_examples(filename)
+
+
+if __name__ == "__main__":
+    main()

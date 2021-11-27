@@ -4,6 +4,8 @@ from datetime import date
 from contextlib import contextmanager
 from pathlib import Path
 from typing import IO, List, Dict, Union, Tuple, Any, Iterable, Sequence, Mapping
+import typing as T
+from warnings import warn
 
 import yaml
 from yaml.composer import Composer
@@ -16,7 +18,6 @@ from .data_generator_runtime_object_model import (
     FieldFactory,
     SimpleValue,
     StructuredValue,
-    ReferenceValue,
     Statement,
     Definition,
 )
@@ -78,6 +79,7 @@ class TableInfo:
 
 class ParseContext:
     current_parent_object = None
+    top_level = True
 
     def __init__(self):
         self.macros = {}
@@ -135,9 +137,28 @@ class ParseContext:
         self.table_infos[template.tablename] = table_info
         table_info.register(template)
 
+    @property
+    def top_level(self):
+        return self.current_parent_object is None
+
 
 def removeline_numbers(dct: Dict) -> Dict:
     return {i: dct[i] for i in dct if i != "__line__"}
+
+
+def _coerce_to_string(val, context):
+    if isinstance(val, str):
+        return val
+    elif isinstance(val, (int, bool, date)):
+        # a few functions accept keyword arguments that YAML interprets
+        # as types other than string
+        return str(val)
+    else:
+        if val is None:
+            val = "null (None)"
+        raise exc.DataGenSyntaxError(
+            f"Cannot interpret key `{val}`` as string", **context.line_num()
+        )
 
 
 def parse_structured_value_args(
@@ -145,9 +166,13 @@ def parse_structured_value_args(
 ) -> Union[List, Dict, SimpleValue, StructuredValue, ObjectTemplate]:
     """Structured values can be dicts or lists containing simple values or further structure."""
     if isinstance(args, dict):
+
+        def as_str(name):
+            return _coerce_to_string(name, context)
+
         with context.change_current_parent_object(args):
             return {
-                name: parse_field_value(name, arg, context, False)
+                as_str(name): parse_field_value(as_str(name), arg, context, False)
                 for name, arg in args.items()
                 if name != "__line__"
             }
@@ -184,15 +209,19 @@ def parse_structured_value(name: str, field: Dict, context: ParseContext) -> Def
         namespace, name = function_name.split(".")
         plugin = context.parser_macros_plugins.get(namespace)
     if plugin:
-        func = getattr(plugin, name)
-        rc = func(context, args)
-        return rc
-    else:
-        args = parse_structured_value_args(args, context)
-        if function_name == "reference":
-            return ReferenceValue(function_name, args, **context.line_num(field))
-        else:
-            return StructuredValue(function_name, args, **context.line_num(field))
+        try:
+            func = getattr(plugin, name)
+            rc = func(context, args)
+            return rc
+        except AttributeError as e:
+            # check if this is a regular runtime function. If so,
+            # fall-through and handle it as if we had never
+            # tried to parse it as a macro plugin
+            if not hasattr(plugin, "Functions") and not hasattr(plugin.Functions, name):
+                raise e
+
+    args = parse_structured_value_args(args, context)
+    return StructuredValue(function_name, args, **context.line_num(field))
 
 
 def parse_field_value(
@@ -290,6 +319,22 @@ def parse_inclusions(
         friends.extend(include_friends)
 
 
+# TODO: Use application object to write this instead
+def check_identifier(name: T.Optional[str], source: dict, context: str):
+    if not name:
+        return
+    badchars = set('."')
+    if set(name).intersection(badchars):
+        line_info = source["__line__"]
+        warn(
+            f"{name} is not a valid nickname.\n"
+            f"{context} cannot contain '.' or '\"'."
+            "Future versions of Snowfakery may disallow it.\n"
+            f"{line_info.filename}:{line_info.line_num}",
+            stacklevel=100,
+        )
+
+
 def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTemplate:
     parsed_template: Any = parse_element(
         dct=yaml_sobj,
@@ -305,11 +350,14 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
         },
         context=context,
     )
+    if not context.top_level and parsed_template.just_once:
+        raise exc.DataGenSyntaxError("just_once can only be used at the top level")
 
     assert yaml_sobj
     with context.change_current_parent_object(yaml_sobj):
         sobj_def = {}
         sobj_def["tablename"] = parsed_template.object
+        check_identifier(parsed_template.object, yaml_sobj, "Object names")
         fields: List
         friends: List
         sobj_def["fields"] = fields = []
@@ -317,7 +365,8 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
         parse_inclusions(yaml_sobj, fields, friends, context)
         fields.extend(parse_fields(parsed_template.fields or {}, context))
         friends.extend(parse_friends(parsed_template.friends or [], context))
-        sobj_def["nickname"] = parsed_template.nickname
+        sobj_def["nickname"] = nickname = parsed_template.nickname
+        check_identifier(nickname, yaml_sobj, "Nicknames")
         sobj_def["just_once"] = parsed_template.just_once or False
         sobj_def["line_num"] = parsed_template.line_num.line_num
         sobj_def["filename"] = parsed_template.line_num.filename
@@ -337,11 +386,11 @@ def parse_variable_definition(
     parsed_template: Any = parse_element(
         yaml_sobj,
         "var",
-        {},
-        {
+        mandatory_keys={
             "value": (str, int, dict, list),
         },
-        context,
+        optional_keys={},
+        context=context,
     )
 
     assert yaml_sobj
@@ -349,7 +398,6 @@ def parse_variable_definition(
         sobj_def = {}
         sobj_def["varname"] = parsed_template.var
         var_def_expr = yaml_sobj.get("value")
-
         sobj_def["expression"] = parse_field_value("value", var_def_expr, context)
         sobj_def["line_num"] = parsed_template.line_num.line_num
         sobj_def["filename"] = parsed_template.line_num.filename
@@ -575,7 +623,7 @@ def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
 
     if not isinstance(data, list):
         raise exc.DataGenSyntaxError(
-            "Generator file should be a list (use '-' on top-level lines)",
+            "Recipe file should be a list (use '-' on top-level lines)",
             stream_name,
             1,
         )

@@ -1,0 +1,15 @@
+- plugin: snowfakery.standard_plugins.UniqueId
+- var: MyGenerator1
+  value:
+    UniqueId.NumericIdGenerator:
+- var: MyGenerator2
+  value:
+    UniqueId.AlphaCodeGenerator:
+- object: Example
+  count: 5
+  fields:
+    unique: ${{UniqueId.unique_id}}
+    unique2: ${{MyGenerator1.unique_id}}
+    unique3: ${{MyGenerator2.unique_id}}
+    unique4: ${{unique_id}}
+    unique5: ${{MyGenerator2.unique_id}}

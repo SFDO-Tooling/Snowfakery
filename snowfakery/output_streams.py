@@ -8,25 +8,24 @@ import sys
 from pathlib import Path
 from collections import namedtuple, defaultdict
 from typing import Dict, Union, Optional, Mapping, Callable, Sequence
+from warnings import warn
 
-from sqlalchemy import create_engine, MetaData, Column, Integer, Table, Unicode, func
+from sqlalchemy import (
+    create_engine,
+    MetaData,
+    Column,
+    Integer,
+    Table,
+    Unicode,
+    func,
+    inspect,
+)
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import create_session
 from sqlalchemy.engine import Engine
 from sqlalchemy.sql import select
 
 from .data_gen_exceptions import DataGenError
-
-try:
-    from cumulusci.tasks.bulkdata.base_generate_data_task import (
-        create_table as create_table_from_mapping,
-    )
-except (ImportError, ModuleNotFoundError) as e:
-    exception = e
-
-    def create_table_from_mapping(mapping, metadata):
-        raise exception
-
 
 from .object_rows import ObjectRow, ObjectReference
 from .parse_recipe_yaml import TableInfo
@@ -51,6 +50,12 @@ class OutputStream(ABC):
         type(None): noop,
         bool: int,
     }
+    uses_folder = False
+    uses_path = False
+    is_text = False
+
+    def __init__(self, filename, **kwargs):
+        pass
 
     def create_or_validate_tables(self, tables: Dict[str, TableInfo]) -> None:
         pass
@@ -122,6 +127,12 @@ class OutputStream(ABC):
         """
         return super().close()
 
+    def __enter__(self, *args):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
 
 class SmartStream:
     """Common code for managing stream/file opening/closing
@@ -154,12 +165,22 @@ class SmartStream:
             return [f"Generated {self.stream.name}"]
 
 
-class FileOutputStream(OutputStream, SmartStream):
+class FileOutputStream(OutputStream):
     """Base class for all file/stream-based OutputStreams"""
+
+    def __init__(self, stream_or_path=None, **kwargs):
+        self.smart_stream = SmartStream(stream_or_path)
+        self.write = self.smart_stream.write
+        self.stream = self.smart_stream.stream
+
+    def close(self):
+        return self.smart_stream.close()
 
 
 class DebugOutputStream(FileOutputStream):
     """Simplified output for debugging Snowfakery files."""
+
+    is_text = True
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
         values = ", ".join([f"{key}={value}" for key, value in row.items()])
@@ -181,8 +202,10 @@ CSVContext = namedtuple("CSVContext", ["dictwriter", "file"])
 class CSVOutputStream(OutputStream):
     """Output stream that generates a directory of CSV files."""
 
-    def __init__(self, output_folder):
-        super().__init__()
+    uses_folder = True
+
+    def __init__(self, output_folder, **kwargs):
+        super().__init__(None, **kwargs)
         self.target_path = Path(output_folder)
         if not Path.exists(self.target_path):
             Path.mkdir(self.target_path, exist_ok=True)
@@ -228,10 +251,11 @@ class JSONOutputStream(FileOutputStream):
         datetime.date: str,
         datetime.datetime: str,
     }
+    is_text = True
 
-    def __init__(self, file):
+    def __init__(self, file, **kwargs):
         assert file
-        super().__init__(file)
+        super().__init__(file, **kwargs)
         self.first_row = True
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
@@ -252,22 +276,24 @@ class JSONOutputStream(FileOutputStream):
 class SqlDbOutputStream(OutputStream):
     """Output stream for talking to SQL Databases"""
 
-    mappings = None
     should_close_session = False
 
-    def __init__(self, engine: Engine, mappings: Optional[Dict]):
+    def __init__(self, engine: Engine, mappings: None = None, **kwargs):
+        if mappings:
+            warn("Please do not pass mappings argument to __init__", DeprecationWarning)
         self.buffered_rows = defaultdict(list)
         self.table_info = {}
-        self.mappings = mappings
         self.engine = engine
         self.session = create_session(bind=self.engine, autocommit=False)
         self.metadata = MetaData(bind=self.engine)
         self.base = automap_base(bind=engine, metadata=self.metadata)
 
     @classmethod
-    def from_url(cls, db_url: str, mappings: Optional[Dict] = None):
+    def from_url(cls, db_url: str, mappings: None = None):
+        if mappings:
+            warn("Please do not pass mappings argument to from_url", DeprecationWarning)
         engine = create_engine(db_url)
-        self = cls(engine, mappings)
+        self = cls(engine)
         return self
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
@@ -305,8 +331,6 @@ class SqlDbOutputStream(OutputStream):
         self.session.close()
 
     def create_or_validate_tables(self, inferred_tables: Dict[str, TableInfo]) -> None:
-        if self.mappings:
-            _validate_fields(self.mappings, inferred_tables)
         create_tables_from_inferred_fields(inferred_tables, self.engine, self.metadata)
         self.metadata.create_all()
         self.base.prepare(self.engine, reflect=True)
@@ -322,7 +346,8 @@ class SqlDbOutputStream(OutputStream):
                         key: None for key in inferred_tables[tablename].fields.keys()
                     },
                 )
-                self.table_info[tablename].fallback_dict["id"] = None  # id is special
+                # id is special
+                self.table_info[tablename].fallback_dict.setdefault("id", None)
 
 
 # backwards-compatible name for CCI
@@ -333,17 +358,19 @@ class SqlTextOutputStream(FileOutputStream):
     """Output stream to generate a SQL text file"""
 
     mode = "wt"
+    is_text = True
 
-    def __init__(self, stream_or_path=None):
+    def __init__(self, stream_or_path=None, **kwargs):
         self.text_output = SmartStream(stream_or_path)
         self.tempdir = TemporaryDirectory()
         self.sql_db = self._init_db()
+        super().__init__(**kwargs)
 
     def _init_db(self):
         "Initialize a db through an owned output stream"
         db_url = f"sqlite:///{self.tempdir.name}/tempdb.db"
         engine = create_engine(db_url)
-        return SqlDbOutputStream(engine, None)
+        return SqlDbOutputStream(engine)
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
         self.sql_db.write_single_row(tablename, row)
@@ -375,24 +402,28 @@ class SqlTextOutputStream(FileOutputStream):
         self.tempdir.cleanup()
 
 
-def _validate_fields(mappings, tables):
-    """Validate that the field names detected match the mapping"""
-    pass  # TODO
-
-
 def create_tables_from_inferred_fields(tables, engine, metadata):
     """Create tables based on dictionary of tables->field-list."""
     with engine.connect() as conn:
+        inspector = inspect(engine)
         for table_name, table in tables.items():
-            columns = [
-                Column(field_name, Unicode(255))
-                for field_name in table.fields
-                if field_name != "id"
+            columns = [Column(field_name, Unicode(255)) for field_name in table.fields]
+            id_column_as_list = [
+                column for column in columns if column.name.lower() == "id"
             ]
-            id_column = Column("id", Integer(), primary_key=True, autoincrement=True)
+
+            # this code primarily supports using this function for
+            # the SOQLDataSet and other datasets where ID may already exists
+            if id_column_as_list:
+                id_column = id_column_as_list[0]
+            else:
+                id_column = Column(
+                    "id", Integer(), primary_key=True, autoincrement=True
+                )
 
             t = Table(table_name, metadata, id_column, *columns)
-            if t.exists():
+
+            if inspector.has_table(table_name):
                 stmt = select([func.count(t.c.id)])
                 count = conn.execute(stmt).first()[0]
                 if count > 0:
@@ -420,17 +451,19 @@ def find_name_in_dict(d):
 class GraphvizOutputStream(FileOutputStream):
     """Generates a Graphviz .dot file"""
 
-    def __init__(self, path):
+    is_text = True
+
+    def __init__(self, path, **kwargs):
         import gvgen
 
-        super().__init__(path)
+        super().__init__(path, **kwargs)
 
         self.nodes = {}
         self.links = []
         self.G = gvgen.GvGen()
         self.G.styleDefaultAppend("fontsize", "10")
         self.G.styleDefaultAppend("style", "filled")
-        self.G.styleDefaultAppend("fillcolor", "#1798c1")
+        self.G.styleDefaultAppend("fillcolor", "#009EDB")
         self.G.styleDefaultAppend("fontcolor", "#FFFFFF")
         self.G.styleDefaultAppend("height", "0.75")
         self.G.styleDefaultAppend("width", "0.75")
@@ -451,9 +484,8 @@ class GraphvizOutputStream(FileOutputStream):
     def generate_node_name(
         self, tablename: str, rowname, id: Optional[int] = None
     ) -> str:
-        rowname = rowname or ""
-        separator = ", " if rowname else ""
-        return f"{tablename}({id}{separator}{rowname})"
+        rowname = (", " + rowname) if rowname and rowname != id else ""
+        return f"{tablename}({id}{rowname})"
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
         node_name = self.generate_node_name(
@@ -492,8 +524,9 @@ class ImageOutputStream(OutputStream):
     """Output an Image file in a graphviz supported format."""
 
     mode = "wb"
+    uses_path = True
 
-    def __init__(self, path, format):
+    def __init__(self, path, format, **kwargs):
         self.path = path
         self.format = format
         self.tempdir = TemporaryDirectory()
@@ -532,8 +565,9 @@ class ImageOutputStream(OutputStream):
 class MultiplexOutputStream(OutputStream):
     """Generate multiple output streams at once."""
 
-    def __init__(self, outputstreams):
+    def __init__(self, outputstreams, **kwargs):
         self.outputstreams = outputstreams
+        super().__init__(None, **kwargs)
 
     def create_or_validate_tables(self, tables: Dict[str, TableInfo]) -> None:
         for stream in self.outputstreams:

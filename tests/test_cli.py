@@ -6,12 +6,14 @@ from io import StringIO
 import json
 import re
 import sys
-from tests.utils import named_temporary_file_path
+from utils import named_temporary_file_path
 
+import responses
 import yaml
-from click.exceptions import ClickException
+from requests.exceptions import RequestException
+from click.exceptions import ClickException, BadParameter
 
-from snowfakery.cli import generate_cli, eval_arg, main
+from snowfakery.cli import generate_cli, eval_arg, main, VersionMessage
 from snowfakery.data_gen_exceptions import DataGenError
 
 sample_yaml = Path(__file__).parent / "include_parent.yml"
@@ -104,9 +106,7 @@ class TestGenerateFromCLI:
 
     @mock.patch(write_row_path)
     def test_with_debug_flags_on(self, write_row):
-        generate_cli.callback(
-            yaml_file=sample_yaml, option={}, debug_internals=True, mapping_file=None
-        )
+        generate_cli.callback(yaml_file=sample_yaml, option={}, debug_internals=True)
 
     @mock.patch(write_row_path)
     def test_exception_with_debug_flags_on(self, write_row):
@@ -166,6 +166,13 @@ class TestGenerateFromCLI:
                 standalone_mode=False,
             )
 
+    def test_sql_output_file(self):
+        with TemporaryDirectory() as t:
+            generate_cli.main(
+                [str(sample_yaml), "--output-file", Path(t) / "foo.sql"],
+                standalone_mode=False,
+            )
+
     def test_from_cli__target_number(self, capsys):
         generate_cli.main(
             [str(sample_yaml), "--target-number", "Account", "5"], standalone_mode=False
@@ -173,6 +180,19 @@ class TestGenerateFromCLI:
         stdout = capsys.readouterr().out
 
         assert len(re.findall(r"Account\(", stdout)) == 5
+
+    def test_from_cli__reps(self, capsys):
+        generate_cli.main([str(sample_yaml), "--reps", "3"], standalone_mode=False)
+        stdout = capsys.readouterr().out
+
+        assert len(re.findall(r"Account\(", stdout)) == 3
+
+    def test_from_cli__bad_target_number(self):
+        with pytest.raises(BadParameter):
+            generate_cli.main(
+                [str(sample_yaml), "--target-number", "abc", "def"],
+                standalone_mode=False,
+            )
 
     def test_from_cli__explicit_format_txt(self, capsys):
         with named_temporary_file_path() as t:
@@ -193,7 +213,7 @@ class TestGenerateFromCLI:
                 output = f.read()
             assert len(re.findall(r"Account\(", output)) == 5
 
-    def test_from_cli__unknown_extension(self, capsys):
+    def test_from_cli__unknown_format(self, capsys):
         with pytest.raises(ClickException) as e:
             generate_cli.callback(
                 yaml_file=str(sample_yaml),
@@ -202,6 +222,21 @@ class TestGenerateFromCLI:
                 output_files=["foo.txt"],
             )
         assert "xyzzy" in str(e.value)
+        Path("foo.txt").unlink()
+
+    def test_from_cli__pluggable_output_stream(self):
+        with named_temporary_file_path(suffix=".yml") as t:
+            generate_cli.main(
+                [
+                    str(sample_yaml),
+                    "--output-format",
+                    "examples.YamlOutputStream",
+                    "--output-file",
+                    t,
+                ],
+                standalone_mode=False,
+            )
+            assert t.exists()
 
     def test_from_cli__continuation(self, capsys):
         with TemporaryDirectory() as t:
@@ -227,8 +262,6 @@ class TestGenerateFromCLI:
             generate_cli.main(
                 [
                     str(sample_yaml),
-                    "--cci-mapping-file",
-                    mapping_file_path,
                     "--dburl",
                     database_url,
                     "--continuation-file",
@@ -361,7 +394,7 @@ class TestGenerateFromCLI:
             )
             assert Path(tempdir, "foo", "Account.csv").exists()
 
-    def test_output_folder__eror(self):
+    def test_output_folder__error(self):
         with TemporaryDirectory() as tempdir, pytest.raises(ClickException):
             generate_cli.main(
                 [
@@ -392,7 +425,7 @@ class TestCLIOptionChecking:
                         "--dburl",
                         f"sqlite:///{t}/foo.db",
                         "--output-format",
-                        "JSON",
+                        "json",
                     ],
                     standalone_mode=False,
                 )
@@ -410,3 +443,84 @@ class TestCLIOptionChecking:
                 standalone_mode=False,
             )
         assert "apping-file" in str(e.value)
+
+    def test_mutually_exclusive_targets(self):
+        with pytest.raises(ClickException) as e:
+            generate_cli.main(
+                [str(sample_yaml), "--reps", "50", "--target-count", "Account", "100"],
+                standalone_mode=False,
+            )
+        assert "mutually exclusive" in str(e.value)
+
+    def test_cli_errors__cannot_infer_output_format(self):
+        with pytest.raises(ClickException, match="No format supplied"):
+            with TemporaryDirectory() as t:
+                generate_cli.main(
+                    [
+                        str(sample_yaml),
+                        "--output-file",
+                        Path(t) / "bob",
+                    ],
+                    standalone_mode=False,
+                )
+
+    def test_version_report__current_version(self, capsys, vcr, snowfakery_rootdir):
+        # hand-minimized VCR cassette
+        cassette = (
+            snowfakery_rootdir
+            / "tests/cassettes/ManualEditTestCLIOptionChecking.test_version_report__current_version.yaml"
+        )
+        assert cassette.exists()
+
+        with pytest.raises(SystemExit), mock.patch(
+            "snowfakery.cli.version", "2.0.3"
+        ), vcr.use_cassette(str(cassette)):
+            generate_cli.main(["--version"])
+        captured = capsys.readouterr()
+        assert captured.out.startswith("snowfakery")
+        assert "Python: 3." in captured.out
+        assert "Properly installed" in captured.out
+        assert "You have the latest version of Snowfakery" in captured.out
+
+    def test_version_report__old_version(self, capsys, vcr, snowfakery_rootdir):
+        # hand-minimized VCR cassette
+        cassette = (
+            snowfakery_rootdir
+            / "tests/cassettes/ManualEditTestCLIOptionChecking.test_version_report__current_version.yaml"
+        )
+        assert cassette.exists()
+
+        with pytest.raises(SystemExit), mock.patch(
+            "snowfakery.cli.version", "1.5"
+        ), vcr.use_cassette(str(cassette)):
+            generate_cli.main(["--version"])
+        captured = capsys.readouterr()
+        assert captured.out.startswith("snowfakery")
+        assert "Python: 3." in captured.out
+        assert "Properly installed" in captured.out
+        assert (
+            "An update to Snowfakery is available: 2.0.3" in captured.out
+        ), captured.out
+
+    def test_version_report__error(self, capsys, vcr, snowfakery_rootdir):
+        with pytest.raises(SystemExit), mock.patch(
+            "requests.get", side_effect=RequestException
+        ):
+            generate_cli.main(["--version"])
+        captured = capsys.readouterr()
+        assert "Error checking snowfakery version:" in captured.out
+
+    def test_version_mod__called(self):
+        with pytest.raises(SystemExit), mock.patch.object(
+            VersionMessage, "__mod__", wraps=lambda vars: ""
+        ) as mod:
+            generate_cli.main(["--version"])
+        assert len(mod.mock_calls) == 1
+
+    @responses.activate
+    def test_version__json_corrupt(self, capsys):
+        responses.add("GET", "https://pypi.org/pypi/snowfakery/json", body="}}")
+        with pytest.raises(SystemExit):
+            generate_cli.main(["--version"])
+        captured = capsys.readouterr()
+        assert "Error checking snowfakery version" in captured.out

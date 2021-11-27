@@ -2,7 +2,9 @@ from collections import defaultdict, ChainMap
 from datetime import date
 from contextlib import contextmanager
 
-from typing import Optional, Dict, List, Sequence, Mapping, NamedTuple, Set
+from typing import Optional, Dict, Sequence, Mapping, NamedTuple, Set
+import typing as T
+from warnings import warn
 
 import jinja2
 from jinja2 import nativetypes
@@ -13,13 +15,15 @@ from .utils.yaml_utils import SnowfakeryDumper, hydrate
 
 from .template_funcs import StandardFuncs
 from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError
-import snowfakery
+import snowfakery  # noQA
 from snowfakery.object_rows import NicknameSlot, SlotState, ObjectRow
+from snowfakery.plugins import PluginContext, SnowfakeryPlugin
 
 OutputStream = "snowfakery.output_streams.OutputStream"
 VariableDefinition = "snowfakery.data_generator_runtime_object_model.VariableDefinition"
 ObjectTemplate = "snowfakery.data_generator_runtime_object_model.ObjectTemplate"
 Statement = "snowfakery.data_generator_runtime_object_model.Statement"
+ParseResult = "snowfakery.parse_recipe_yaml.ParseResult"
 
 # Runtime objects and algorithms used during the generation of rows.
 
@@ -31,57 +35,12 @@ class StoppingCriteria(NamedTuple):
     count: int
 
 
-class FinishedChecker:
-    """Checks whether the Stopping Criteria have been met"""
-
-    stopping_criteria: StoppingCriteria
-
-    def __init__(self, start_ids, stopping_criteria):
-        self.start_ids = start_ids
-        self.stopping_criteria = stopping_criteria
-        self.target_progress_id = 0
-
-    def check_if_finished(self, id_manager):
-        "Check whether we've finished making as many objects as we promised"
-        # if nobody told us how much to make, finish after first run
-        if not self.stopping_criteria:
-            return True
-
-        target_table, count = self.stopping_criteria
-
-        # Snowfakery processes can be restarted. We would need
-        # to keep track of where we restarted to know whether
-        # we are truly finished
-        if self.start_ids:
-            start = self.start_ids.get(target_table, 1)
-        else:
-            start = 1
-        target_id = start + count - 1
-
-        last_used_id = id_manager[target_table]
-
-        self.ensure_progress_was_made(last_used_id, target_id)
-
-        return last_used_id >= target_id
-
-    def ensure_progress_was_made(self, last_used_id, target_id):
-        """Check that we are actually making progress towards our goal"""
-        if last_used_id == self.target_progress_id:
-            raise RuntimeError(
-                f"{self.stopping_criteria.tablename} max ID was {self.target_progress_id} "
-                f"before evaluating recipe and is {last_used_id} after. "
-                f"At this rate we will never hit our target of {target_id}!"
-            )
-
-        self.target_progress_id = last_used_id
-
-
 class IdManager:
     """Keep track of the most recent ID per Object type"""
 
-    def __init__(self, start_ids: Optional[Dict[str, int]] = None):
-        start_ids = start_ids or {}
+    def __init__(self):
         self.last_used_ids = defaultdict(lambda: 0)
+        self.start_ids = {}
 
     def generate_id(self, table_name: str) -> int:
         self.last_used_ids[table_name] += 1
@@ -95,6 +54,7 @@ class IdManager:
 
     def __setstate__(self, state):
         self.last_used_ids = defaultdict(lambda: 0, state["last_used_ids"])
+        self.start_ids = {name: val + 1 for name, val in self.last_used_ids.items()}
 
 
 SnowfakeryDumper.add_representer(defaultdict, SnowfakeryDumper.represent_dict)
@@ -124,6 +84,13 @@ class Transients:
 
     def first_new_id(self, tablename):
         return self.orig_used_ids.get(tablename, 0) + 1
+
+    def last_id_for_table(self, tablename):
+        last_obj = self.last_seen_obj_by_table.get(tablename)
+        if last_obj:
+            return last_obj.id
+        else:
+            return self.orig_used_ids.get(tablename)
 
 
 class Globals:
@@ -171,8 +138,7 @@ class Globals:
                 self.transients.nicknamed_objects[nickname] = obj
         if persistent_object:
             self.persistent_objects_by_table[obj._tablename] = obj
-        else:
-            self.transients.last_seen_obj_by_table[obj._tablename] = obj
+        self.transients.last_seen_obj_by_table[obj._tablename] = obj
 
     @property
     def object_names(self):
@@ -309,17 +275,19 @@ class Interpreter:
     """Snowfakery runtime interpreter state."""
 
     current_context: "RuntimeContext" = None
+    iteration_count = 0
 
     def __init__(
         self,
         output_stream: OutputStream,
+        parse_result: ParseResult,
         globals: Globals,
+        *,
+        parent_application,
         options: Mapping = None,
         snowfakery_plugins: Optional[Mapping[str, callable]] = None,
-        stopping_criteria: Optional[StoppingCriteria] = None,
-        start_ids: Optional[Mapping[str, int]] = None,
         faker_providers: Sequence[object] = (),
-        statements: Sequence[Statement] = (),
+        continuing=False,
     ):
         self.output_stream = output_stream
         self.options = options or {}
@@ -332,10 +300,18 @@ class Interpreter:
             name: plugin.custom_functions()
             for name, plugin in self.plugin_instances.items()
         }
-        self.finished_checker = FinishedChecker(start_ids, stopping_criteria)
-        self.faker_template_libraries = {}
-
         self.globals = globals
+        self.continuing = continuing
+        stop_table_name = parent_application.stopping_tablename
+        if stop_table_name and stop_table_name not in parse_result.tables:
+            raise DataGenNameError(
+                f"No template creating {stop_table_name}",
+            )
+
+        # make a plugin context for our Faker stuff to act like a plugin
+        self.faker_plugin_context = PluginContext(SnowfakeryPlugin(self))
+
+        self.faker_template_libraries = {}
 
         # inject context into the standard functions
         standard_funcs_obj = StandardFuncs(self).custom_functions()
@@ -345,12 +321,24 @@ class Interpreter:
             if not name.startswith("_") and name != "context"
         }
 
-        self.statements = statements
+        self.statements = parse_result.statements
+        self.parent_application = parent_application
+        self.instance_states = {}
+
+    def execute(self):
+        self.current_context = RuntimeContext(interpreter=self)
+        self.loop_over_templates_until_finished(self.continuing)
+        return self.globals
 
     def faker_template_library(self, locale):
+        """Create a faker template library for locale, or retrieve it from a cache"""
         rc = self.faker_template_libraries.get(locale)
         if not rc:
-            rc = FakerTemplateLibrary(self.faker_providers, locale)
+            rc = FakerTemplateLibrary(
+                self.faker_providers,
+                locale,
+                self.faker_plugin_context,
+            )
             self.faker_template_libraries[locale] = rc
         return rc
 
@@ -360,6 +348,7 @@ class Interpreter:
         while not finished:
             self.loop_over_templates_once(self.statements, continuing)
             finished = self.current_context.check_if_finished()
+            self.iteration_count += 1
             continuing = True
             self.globals.reset_slots()
 
@@ -376,7 +365,53 @@ class Interpreter:
 
     def __exit__(self, *args):
         for plugin in self.plugin_instances.values():
-            plugin.close()
+            try:
+                plugin.close()
+            except Exception as e:
+                warn(f"Could not close {plugin} because {e}")
+
+    def get_contextual_state(
+        self,
+        *,
+        make_state_func: T.Callable,
+        name: T.Union[str, tuple, None] = None,
+        parent: T.Optional[str] = None,
+        reset_every_iteration: bool = False,
+    ):
+        """Get state that is specific to a particular template&plugin
+
+        The first time the template is invoked in a particular context,
+        make_state_func is invoked to generate the state container.
+
+        The next time it is invoked, the state will be returned for reuse
+        and potential modification.
+
+        `name` allows you to reuse the same state among multiple templates.
+        The function should generally expose this to the end-user
+        through an argument called `name`.
+
+        `parent` allows the user to use some specific Object parent as
+        a parent object. The state will be only reused for the lifetime
+        of the parent and then discarded. This should also be
+        user-controlled.
+
+        `reset_every_iteration` is an experimental feature that should
+        not generally be used.
+        """
+        assert not reset_every_iteration
+        current_context = self.current_context
+        uniq_name = name or current_context.unique_context_identifier
+        if parent:
+            parent_obj = current_context.field_vars().get(parent)
+        # elif reset_every_iteration:           # in case we bring back this feature
+        #     parent_obj = self.iteration_count
+        else:
+            parent_obj = None
+        current_parent, value = self.instance_states.get(uniq_name, (None, None))
+        if current_parent != parent_obj or value is None:
+            value = make_state_func()
+            self.instance_states[uniq_name] = [parent_obj, value]
+        return value
 
 
 class RuntimeContext:
@@ -390,6 +425,7 @@ class RuntimeContext:
     obj: Optional[ObjectRow] = None
     template_evaluator_recipe = JinjaTemplateEvaluatorFactory()
     current_template = None
+    local_vars = None
 
     def __init__(
         self,
@@ -409,15 +445,19 @@ class RuntimeContext:
             self._plugin_context_vars = ChainMap()
         locale = self.variable_definitions().get("snowfakery_locale")
         self.faker_template_library = self.interpreter.faker_template_library(locale)
+        self.local_vars = {}
 
     # TODO: move this into the interpreter object
     def check_if_finished(self):
         "Have we iterated over the script enough times?"
         # check that every forward reference was resolved
-        self.interpreter.globals.check_slots_filled()
-        return self.interpreter.finished_checker.check_if_finished(
-            self.interpreter.globals.id_manager
-        )
+        globls = self.interpreter.globals
+        app = self.interpreter.parent_application
+
+        globls.check_slots_filled()
+        app.ensure_progress_was_made(globls.id_manager)
+
+        return app.check_if_finished(globls.id_manager)
 
     def generate_id(self, nickname: Optional[str]):
         "Generate a unique ID for this object"
@@ -482,6 +522,9 @@ class RuntimeContext:
         return self.evaluation_namespace.field_vars()
 
     def context_vars(self, plugin_namespace):
+        """Variables which are inherited by child scopes"""
+        # This looks like a candidate for optimization.
+        # An unconditional object copy seems expensive.
         local_plugin_vars = self._plugin_context_vars.get(plugin_namespace, {}).copy()
         self._plugin_context_vars[plugin_namespace] = local_plugin_vars
         return local_plugin_vars
@@ -525,9 +568,8 @@ class EvaluationNamespace(NamedTuple):
         "Return mapping of functions that can be used in YAML block functions"
         return {**self.field_funcs(), "fake": self.fake}
 
-    # todo: remove this special case
     def fake(self, name):
-        return str(getattr(self.runtime_context.faker_template_library, name))
+        return str(self.runtime_context.faker_template_library._get_fake_data(name))
 
     def field_vars(self):
         return {**self.simple_field_vars(), **self.field_funcs()}
@@ -540,65 +582,4 @@ def evaluate_function(func, args: Sequence, kwargs: Mapping, context):
             name: arg.render(context) if hasattr(arg, "render") else arg
             for name, arg in kwargs.items()
         }
-    value = func(*args, **kwargs)
-    return value
-
-
-def output_batches(
-    output_stream,
-    statements: List[Statement],
-    templates: List[ObjectTemplate],
-    options: Dict,
-    stopping_criteria: Optional[StoppingCriteria] = None,
-    continuation_data: Globals = None,
-    tables: Mapping[str, int] = None,
-    snowfakery_plugins: Mapping[str, snowfakery.SnowfakeryPlugin] = None,
-    faker_providers: List[object] = None,
-) -> Globals:
-    """Generate 'count' batches to 'output_stream' """
-    # check the stopping_criteria against the templates available
-    if stopping_criteria:
-        stop_table_name = stopping_criteria.tablename
-        if stop_table_name not in tables:
-            raise DataGenNameError(
-                f"No template creating {stop_table_name}",
-            )
-
-    if continuation_data:
-        globals = continuation_data
-        start_ids = {
-            name: val + 1 for name, val in globals.id_manager.last_used_ids.items()
-        }
-    else:
-        name_slots = {
-            template.nickname: template.tablename
-            for template in templates
-            if template.nickname
-        }
-        # table names are sort of nicknames for themselves too, because
-        # you can refer to them.
-        name_slots.update(
-            {template.tablename: template.tablename for template in templates}
-        )
-
-        globals = Globals(name_slots=name_slots)
-        # at one point start-ids were passed from the command line
-        # but for simplicity this feature has been removed and they can only
-        # be inferred from the continuation_file.
-        start_ids = {}
-
-    with Interpreter(
-        output_stream=output_stream,
-        globals=globals,
-        options=options,
-        snowfakery_plugins=snowfakery_plugins,
-        stopping_criteria=stopping_criteria,
-        start_ids=start_ids,
-        faker_providers=faker_providers,
-        statements=statements,
-    ) as interpreter:
-
-        interpreter.current_context = RuntimeContext(interpreter=interpreter)
-        continuing = bool(continuation_data)
-        interpreter.loop_over_templates_until_finished(continuing)
-        return interpreter.globals
+    return func(*args, **kwargs)

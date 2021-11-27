@@ -1,5 +1,6 @@
 from unittest import mock
 from io import StringIO
+from faker import Faker
 
 from snowfakery.data_generator import generate
 
@@ -20,7 +21,13 @@ class TestLocales:
             name:
               fake: name
         """
-        with mock.patch("snowfakery.utils.template_utils.Faker") as f:
+        with mock.patch("snowfakery.fakedata.fake_data_generator.Faker") as f:
+
+            class FakeFaker(Faker):
+                def name(self):
+                    return "xyzzy"
+
+            f.return_value = FakeFaker()
             generate(StringIO(yaml))
             locale_changes = [c[1][0] for c in f.mock_calls if not c[0]]
 

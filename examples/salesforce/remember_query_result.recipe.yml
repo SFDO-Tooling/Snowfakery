@@ -1,0 +1,12 @@
+- plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+- object: __RememberUser
+  just_once: True
+  fields:
+    __xxxx:
+      SalesforceQuery.find_record:
+        from: User
+        fields: FirstName, Id, LastName
+- object: Contact
+  fields:
+    FirstName: ${{__RememberUser.__xxxx.firstname}}
+    LastName: ${{__RememberUser.__xxxx.lastname}}

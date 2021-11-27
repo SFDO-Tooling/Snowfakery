@@ -1,20 +1,22 @@
-from io import StringIO
 import math
 import operator
+import time
+from base64 import b64decode
+from collections import Counter
+from io import StringIO
 
-from snowfakery.data_generator import generate
-from snowfakery import SnowfakeryPlugin, lazy
-from snowfakery.plugins import PluginResult, PluginContext
+from snowfakery import SnowfakeryPlugin, generate_data, lazy
 from snowfakery.data_gen_exceptions import (
     DataGenError,
-    DataGenTypeError,
     DataGenImportError,
+    DataGenTypeError,
 )
-from snowfakery.output_streams import JSONOutputStream
-from snowfakery import generate_data
+from snowfakery.plugins import PluginContext, PluginOption, PluginResult, memorable
 
+generate = generate_data
 
 from unittest import mock
+
 import pytest
 
 write_row_path = "snowfakery.output_streams.DebugOutputStream.write_row"
@@ -25,6 +27,15 @@ def row_values(write_row_mock, index, value):
 
 
 class SimpleTestPlugin(SnowfakeryPlugin):
+    allowed_options = [
+        PluginOption(
+            "tests.test_custom_plugins_and_providers.SimpleTestPlugin.option_str", str
+        ),
+        PluginOption(
+            "tests.test_custom_plugins_and_providers.SimpleTestPlugin.option_int", int
+        ),
+    ]
+
     class Functions:
         def double(self, value):
             return value * 2
@@ -56,7 +67,13 @@ class WrongTypePlugin(SnowfakeryPlugin):
         def return_bad_type(self, value):
             return int  # function
 
-        junk = None
+
+class TimeStampPlugin(SnowfakeryPlugin):
+    class Functions:
+        @memorable
+        def constant_time(self, value=None, name=None):
+            "Return the current time and then remember it."
+            return time.time()
 
 
 class MyEvaluator(PluginResult):
@@ -91,6 +108,14 @@ class EvalPlugin(SnowfakeryPlugin):
             )
 
 
+class DoesNotClosePlugin(SnowfakeryPlugin):
+    close = NotImplemented
+
+    class Functions:
+        def foo(self, a=None):
+            return None
+
+
 class TestCustomFakerProvider:
     @mock.patch(write_row_path)
     def test_custom_faker_provider(self, write_row_mock):
@@ -102,7 +127,7 @@ class TestCustomFakerProvider:
                 fake:
                     microservice
         """
-        generate(StringIO(yaml), {})
+        generate_data(StringIO(yaml))
         assert row_values(write_row_mock, 0, "service_name")
 
 
@@ -115,7 +140,7 @@ class TestCustomPlugin:
             service_name: saascrmlightning
         """
         with pytest.raises(DataGenTypeError) as e:
-            generate(StringIO(yaml), {})
+            generate_data(StringIO(yaml))
         assert "TestCustomPlugin" in str(e.value)
         assert ":2" in str(e.value)
 
@@ -127,7 +152,7 @@ class TestCustomPlugin:
             service_name: saascrmlightning
         """
         with pytest.raises(DataGenImportError) as e:
-            generate(StringIO(yaml), {})
+            generate_data(StringIO(yaml))
         assert "xyzzy" in str(e.value)
 
     @mock.patch(write_row_path)
@@ -140,7 +165,7 @@ class TestCustomPlugin:
                 SimpleTestPlugin.double: 2
             six: ${{SimpleTestPlugin.double(3)}}
         """
-        generate(StringIO(yaml), {})
+        generate_data(StringIO(yaml))
         assert row_values(write_row_mock, 0, "four") == 4
         assert row_values(write_row_mock, 0, "six") == 6
 
@@ -152,7 +177,7 @@ class TestCustomPlugin:
           fields:
             pi: ${{Math.pi}}
         """
-        generate(StringIO(yaml), {})
+        generate_data(StringIO(yaml))
         assert row_values(write_row_mock, 0, "pi") == math.pi
 
     @mock.patch(write_row_path)
@@ -166,7 +191,7 @@ class TestCustomPlugin:
             eleven: ${{Math.round(10.7)}}
             min: ${{Math.min(144, 200, 100)}}
         """
-        generate(StringIO(yaml), {})
+        generate_data(StringIO(yaml))
         assert row_values(write_row_mock, 0, "sqrt") == 12
         assert row_values(write_row_mock, 0, "max") == 200
         assert row_values(write_row_mock, 0, "eleven") == 11
@@ -181,7 +206,7 @@ class TestCustomPlugin:
             twelve:
                 Math.sqrt: ${{Math.min(144, 169)}}
         """
-        generate(StringIO(yaml), {})
+        generate_data(StringIO(yaml))
         assert row_values(write_row_mock, 0, "twelve") == 12
 
     @mock.patch(write_row_path)
@@ -198,10 +223,37 @@ class TestCustomPlugin:
                         - 3
         """
         with StringIO() as s:
-            output_stream = JSONOutputStream(s)
-            generate(StringIO(yaml), {}, output_stream)
-            output_stream.close()
+            generate_data(StringIO(yaml), output_file=s, output_format="json")
             assert eval(s.getvalue())[0]["some_value"] == 3
+
+    def test_binary(self, generated_rows):
+        sample = "examples/binary.recipe.yml"
+        with open(sample) as f:
+            generate(f)
+        b64data = generated_rows.table_values("BinaryData", 0)["encoded_data"]
+        rawdata = b64decode(b64data)
+        assert rawdata.startswith(b"%PDF-1.3")
+        assert b"Helvetica" in rawdata
+
+    def test_option__simple(self, generated_rows):
+        yaml = """-  plugin: tests.test_custom_plugins_and_providers.SimpleTestPlugin"""
+
+        generate_data(StringIO(yaml), plugin_options={"option_str": "AAA"})
+
+    def test_option__unknown(self, generated_rows):
+        yaml = """-  plugin: tests.test_custom_plugins_and_providers.SimpleTestPlugin"""
+
+        generate_data(StringIO(yaml), plugin_options={"option_str": "zzz"})
+
+    def test_option__bad_type(self, generated_rows):
+        yaml = """-  plugin: tests.test_custom_plugins_and_providers.SimpleTestPlugin"""
+        with pytest.raises(DataGenTypeError):
+            generate_data(StringIO(yaml), plugin_options={"option_int": "abcd"})
+
+    def test_option_type_coercion_needed(self, generated_rows):
+        yaml = """-  plugin: tests.test_custom_plugins_and_providers.SimpleTestPlugin"""
+
+        generate_data(StringIO(yaml), plugin_options={"option_int": "5"})
 
 
 class PluginThatNeedsState(SnowfakeryPlugin):
@@ -246,7 +298,7 @@ class TestContextVars:
                     name: OBJ4
                     path: ${{PluginThatNeedsState.object_path()}}
         """
-        generate(StringIO(yaml), {})
+        generate_data(StringIO(yaml))
 
         assert row_values(write_row, 0, "path") == "ROOT.OBJ1.OBJ2"
         assert row_values(write_row, 1, "path") == "ROOT.OBJ1"
@@ -267,7 +319,7 @@ class TestContextVars:
                 - DoubleVisionPlugin.do_it_twice:
                     - ${{PluginThatNeedsState.count()}}
         """
-        generate(StringIO(yaml), {})
+        generate_data(StringIO(yaml))
 
         assert row_values(write_row, 0, "some_value") == "abc : abc"
         assert row_values(write_row, 0, "some_value_2") == "1 : 2"
@@ -281,7 +333,7 @@ class TestContextVars:
                 WrongTypePlugin.return_bad_type: 5  #6
         """
         with pytest.raises(DataGenError) as e:
-            generate(StringIO(yaml))
+            generate_data(StringIO(yaml))
         assert 6 > e.value.line_num >= 3
 
     def test_incompatible_plugins(self):
@@ -338,11 +390,16 @@ class TestContextVars:
                     - fake: random_digit
 
         """
-        with mock.patch(
-            "faker.providers.BaseProvider.random_digit", wraps=lambda: "5"
-        ) as rand:
+
+        counter = Counter()
+
+        def fake_random_digit(*args, **kwargs):
+            counter["count"] += 1
+            return "5"
+
+        with mock.patch("faker.providers.BaseProvider.random_digit", fake_random_digit):
             generate(StringIO(yaml))
-        assert len(rand.mock_calls) == 10
+        assert counter["count"] == 10
         assert generated_rows.row_values(0, "A") == "5 : 5"
         assert generated_rows.row_values(0, "A1") == "5 : 5"
         assert generated_rows.row_values(0, "B") == "5"
@@ -364,7 +421,7 @@ class TestContextVars:
                 WrongTypePlugin.abcdef: 5  #6
         """
         with pytest.raises(DataGenError) as e:
-            generate(StringIO(yaml))
+            generate_data(StringIO(yaml))
         assert 6 > e.value.line_num >= 3
 
     def test_null_attributes(self):
@@ -376,5 +433,66 @@ class TestContextVars:
                 WrongTypePlugin.junk: 5  #6
         """
         with pytest.raises(DataGenError) as e:
-            generate(StringIO(yaml))
+            generate_data(StringIO(yaml))
         assert 6 > e.value.line_num >= 3
+
+    def test_memorable_plugin(self, generated_rows):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.TimeStampPlugin
+        - object: B
+          count: 5
+          fields:
+            foo:
+                TimeStampPlugin.constant_time:
+        """
+        generate_data(StringIO(yaml))
+        assert generated_rows.table_values(
+            "B", 1, "foo"
+        ) == generated_rows.table_values("B", 5, "foo")
+
+    def test_memorable_plugin__scopes(self, generated_rows):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.TimeStampPlugin
+        - object: A
+          fields:
+            foo:
+                TimeStampPlugin.constant_time:
+                    value: BLAH
+                    name: A
+        - object: B
+          fields:
+            foo:
+                TimeStampPlugin.constant_time:
+        - object: C
+          fields:
+            foo:
+                TimeStampPlugin.constant_time:
+        - object: D
+          count: 3
+          fields:
+            foo:
+                TimeStampPlugin.constant_time:
+                    name: A
+
+        """
+        generate_data(StringIO(yaml))
+        assert generated_rows.table_values(
+            "A", 1, "foo"
+        ) == generated_rows.table_values("D", 3, "foo")
+        assert generated_rows.table_values(
+            "A", 1, "foo"
+        ) != generated_rows.table_values("B", 1, "foo")
+        assert generated_rows.table_values(
+            "B", 1, "foo"
+        ) != generated_rows.table_values("C", 1, "foo")
+
+    def test_plugin_does_not_close(self):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.DoesNotClosePlugin
+        - object: B
+          fields:
+            foo:
+                DoesNotClosePlugin.foo:
+        """
+        with pytest.warns(UserWarning, match="close"):
+            generate_data(StringIO(yaml))

@@ -4,6 +4,113 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 2.2.1
+
+Removed an unnecessary dependency which could cause installation problems on some systems. (#534)
+
+## Snowfakery 2.2
+
+The `unique_id` and `unique_alpha_code` variables return a unique number that can be used to distinguish any record from others. For example, we can incorporate a unique ID into an email address or an employee ID. (#525)
+
+Numeric and date counters are now available with the `snowfakery.standard_plugins.Counters` plugin. (#525)
+
+Snowfakery will now accept UTF-8 CSV files generated from Excel with a Byte Order Mark (#516)
+
+Snowfakery gives more detailed information in the `snowfakery --version` message (#469)
+
+Booleans and dates can be the keys for `random_choice` lists. (#500)
+
+## Snowfakery 2.1
+
+Fix an issue with datasets not being closed in an orderly fashion (PR #492)
+
+Emails and usernames will now be generated to match firstnames and lastnames (PR #420)
+
+Documented Salesforce.ProfileId function which looks up a Profile
+in Salesforce by name and substitutes the ID automatically. (#438)
+
+## Snowfakery 2.0.1
+
+Fix problems installing through pipx.
+
+## Snowfakery 2.0
+
+Recipes can now merge in data from Salesforce orgs as
+records, IDs or datasets. (#395 and #401)
+
+Output streams can now be specified as 3rd party libraries. Any Python class name
+can be passed to --output-format as long as it adheres to the OutputStream
+protocol as shown in examples/YamlOutputStream.py (#351)
+
+Snowfakery is thread-safe/multi-processor-ready and available for parallel usage
+in CumulusCI. (CumulusCI Repo)
+
+Snowfakery now supports a --reps option as an easier way to repeat a recipe (#416)
+
+Snowfakery now accepts LeadingCaps syntax for all fakers, as well as
+underscore_separated and everythinglowercase. (#403)
+
+Salesforce.ContentVersion and Salesforce.ProfileId convenience functions were added
+(#421)
+
+Snowfakery now has voluminous documentation about Fakes in many languages and
+locales (#409)
+
+## Snowfakery 1.12
+
+Fix a regression: In some contexts it was impossible to call Faker with either
+positional arguments or keyword arguments. It is now possible to call with
+keyword arguments again. Positional arguments are still disallowed and older
+recipes may need to be updated to use keyword arguments. (#388)
+
+e.g. `${{fake.sentence(nb_words=4)}}` instead of `${{fake.sentence(4)}}`
+
+Snowfakery now informs you that it is not possible to use `just_once` in
+a nested context. Previously, the results of doing so were unpredictable.
+(#333)
+
+## Snowfakery 1.11
+
+Add a simple benchmarking tool available with the command `snowbench`. #346
+
+Update the namespace used for inline fakes to support the same new names as
+block-based fakes. (i.e. ${{fake.FirstName}} is the same as fake: FirstName) #357
+
+Fix a bug which caused problems outputting images. #351
+
+## Snowfakery 1.10
+
+Snowfakery now has some of its own built-in "Fake data types". For example "FirstName"
+(instead of first_name) and "Username" (which is like a Salesforce Username).
+These new names should be more intuitive for Salesforce users. PR #343
+
+Fake "emails" now use domains based on "example.com" and similar domains specified in
+RFC 2606. This ensure that they are never real email addresses. Broader domain
+email addressses are still available as described in th documentation. PR #343
+
+Fake names are now case agnostic. FIRSTname, firstNAME, firstname, FIRSTNAME,
+etc. are all identical. PR #343
+
+## Snowfakery 1.9
+
+Snowfakery's APIs have expanded. The changes should be backwards-compatible. #315
+
+Add support for embedding external files (text or base64 binary). #322
+
+Add support specifically for Salesforce ContentVersion. #322
+
+## Snowfakery 1.8.1
+
+Fixed packaging issue.
+
+## Snowfakery 1.8
+
+Fix regression when an SObject declares a RecordType on some records
+but not others. #301
+
+Add a new feature for integrating with CumulusCI's Load architecture.
+This feature will obsolete most (hopefully all) uses of mapping.yml with Snowfakery. Documentation for it will be in CumulusCI. #290
+
 ## Snowfakery 1.7
 
 Adds support for Salesforce Person Accounts to Snowfakery.
@@ -12,7 +119,7 @@ See the documentation for details. (#283)
 ## Snowfakery 1.6.1
 
 Fix regression: Can set RecordType on objects with names that
-are SQL keywords (like Case).  (#277)
+are SQL keywords (like Case). (#277)
 
 ## Snowfakery 1.6
 
@@ -27,8 +134,7 @@ schema is compatible with CCI's data loader, but can be used in other
 contexts. #162
 
 Add a `snowfakery_filename` variable to allow injecting the
-recipe filename into recipe output.
-#249
+recipe filename into recipe output. #249
 
 Add NULL to Snowfakery formulas #239
 
@@ -150,14 +256,14 @@ Snowfakery includes support for Salesforce RecordTypes.
 
 Snowfakery can output SQL/JSON NULL using YAML blank fields or the YAML literal 'null'
 
-Fields starting with __ are now properly suppressed as per the documentation.
+Fields starting with \_\_ are now properly suppressed as per the documentation.
 
 Various performance and reliability improvements:
 
-* parsed dates are now cached
-* Jinja values are always coerced to a string where appropriate
-* internal attributes were renamed for clarity
-* lookups are only generated in CCI mappings if they are actually needed
+- parsed dates are now cached
+- Jinja values are always coerced to a string where appropriate
+- internal attributes were renamed for clarity
+- lookups are only generated in CCI mappings if they are actually needed
 
 ## Snowfakery 0.8.0
 

@@ -1,5 +1,8 @@
 from io import StringIO
 from unittest import mock
+import pydantic
+import datetime
+
 
 from snowfakery.data_generator import generate
 from snowfakery.data_gen_exceptions import DataGenError
@@ -405,3 +408,21 @@ class TestTemplateFuncs:
                 {"id": 5, "EndDate": 1, "DateSupplied": "Yes"},
             ),
         ]
+
+    def test_random_choice_nonstring_keys(self, generated_rows):
+        with open("tests/random_choice.yml") as yaml:
+            generate(yaml)
+        result = generated_rows.table_values("foo", 0)
+
+        class ResultModel(pydantic.BaseModel):
+            id: int
+            bool: bool
+            date: datetime.date
+
+        assert ResultModel(**result)
+
+    def test_random_choice_wrong_type_keys(self, generated_rows):
+        with open("tests/bad_random_choice_keys.yml") as yaml:
+            with pytest.raises(DataGenError) as e:
+                generate(yaml)
+        assert "null" in str(e.value)

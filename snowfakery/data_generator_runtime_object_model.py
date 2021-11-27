@@ -14,7 +14,7 @@ from .data_gen_exceptions import (
     DataGenValueError,
     fix_exception,
 )
-from .plugins import Scalar, PluginResult
+from .plugins import Scalar, PluginResult, PluginResultIterator
 
 # objects that represent the hierarchy of a data generator.
 # roughly similar to the YAML structure but with domain-specific objects
@@ -40,20 +40,27 @@ class FieldDefinition(ABC):
     def exception_handling(self, message: str, *args, **kwargs):
         try:
             yield
-        except DataGenError as e:
-            raise fix_exception(message, self, e) from e
         except Exception as e:
-            message = message.format(*args, **kwargs)
-            raise DataGenError(f"{message} : {str(e)}", self.filename, self.line_num)
+            raise fix_exception(message, self, e, *args, **kwargs) from e
 
 
 class VariableDefinition:
-    """Defines a mutable variable"""
+    """Defines a mutable variable. Like:
+
+    - var: Foo
+      value: Bar
+    """
+
+    # TODO: Add an example
 
     tablename = None
 
     def __init__(
-        self, filename: str, line_num: int, varname: str, expression: Definition
+        self,
+        filename: str,
+        line_num: int,
+        varname: str,
+        expression: Definition,
     ):
         self.varname = varname
         self.expression = expression
@@ -128,7 +135,9 @@ class ObjectTemplate:
         except DataGenError:
             raise
         except Exception as e:
-            raise DataGenError(f"{message} : {str(e)}", self.filename, self.line_num)
+            raise DataGenError(
+                f"{message} : {str(e)}", self.filename, self.line_num
+            ) from e
 
     def _evaluate_count(self, context: RuntimeContext) -> int:
         """Evaluate the count expression to an integer"""
@@ -179,7 +188,11 @@ class ObjectTemplate:
         """Generate all of the fields of a row"""
         for field in self.fields:
             with self.exception_handling("Problem rendering value"):
-                row[field.name] = field.generate_value(context)
+                value = field.generate_value(context)
+                if isinstance(value, PluginResultIterator):
+                    value = value.next()
+                row[field.name] = value
+
                 self._check_type(field, row[field.name], context)
 
     def _check_type(self, field, generated_value, context: RuntimeContext):
@@ -210,7 +223,7 @@ class ObjectTemplate:
 
 
 class SimpleValue(FieldDefinition):
-    """A value with no sub-structure (although it could hold a template)
+    """A value with no sub-structure (although it could hold a formula)
 
     - object: abc
       fields:
@@ -239,6 +252,7 @@ class SimpleValue(FieldDefinition):
 
     def render(self, context: RuntimeContext) -> FieldValue:
         """Render the value: rendering a template if necessary."""
+        context.unique_context_identifier = str(id(self))
         evaluator = self.evaluator(context)
         if evaluator:
             try:
@@ -246,6 +260,7 @@ class SimpleValue(FieldDefinition):
             except jinja2.exceptions.UndefinedError as e:
                 raise DataGenNameError(e.message, self.filename, self.line_num) from e
             except Exception as e:
+                raise
                 raise DataGenValueError(str(e), self.filename, self.line_num) from e
         else:
             val = self.definition
@@ -286,6 +301,7 @@ class StructuredValue(FieldDefinition):
             self.kwargs = {}
 
     def render(self, context: RuntimeContext) -> FieldValue:
+        context.unique_context_identifier = str(id(self))
         if "." in self.function_name:
             objname, method, *rest = self.function_name.split(".")
             if rest:
@@ -306,7 +322,7 @@ class StructuredValue(FieldDefinition):
             except AttributeError:
                 # clean up the error message a bit
                 raise AttributeError(
-                    f"'{objname}' plugin exposes no attribute '{method}"
+                    f"'{objname}' plugin exposes no attribute '{method}'"
                 )
             if not func:
                 raise DataGenNameError(
@@ -326,7 +342,7 @@ class StructuredValue(FieldDefinition):
                 )
 
             with self.exception_handling(
-                "Cannot evaluate function {}", self.function_name
+                "Cannot evaluate function `{}`:\n {e}", [self.function_name]
             ):
                 value = evaluate_function(func, self.args, self.kwargs, context)
 
@@ -336,13 +352,6 @@ class StructuredValue(FieldDefinition):
         return (
             f"<StructuredValue: {self.function_name} (*{self.args}, **{self.kwargs})>"
         )
-
-
-class ReferenceValue(StructuredValue):
-    """- object: foo
-    fields:
-      - reference:
-          Y"""
 
 
 class FieldFactory:
@@ -364,7 +373,7 @@ class FieldFactory:
             return self.definition.render(context)
         except Exception as e:
             raise fix_exception(
-                f"Problem rendering field {self.name}:\n {str(e)}", self, e
+                "Problem rendering field {}:\n {e}", self, e, [self.name]
             ) from e
 
     def __repr__(self):

@@ -18,7 +18,7 @@
 - object: Account
   fields:
     Name:
-      fake: company
+      fake: Company
     Description:
       fake: catch_phrase
     BillingStreet:
@@ -60,9 +60,9 @@
     Salutation:
       fake: prefix
     FirstName:
-      fake: first_name
+      fake: FirstName
     LastName:
-      fake: last_name
+      fake: LastName
     Email:
       fake: email
     Phone:
@@ -105,6 +105,4 @@
             probability: 60%
             pick: New
     AccountId:
-      reference:
-        Account
-
+      reference: Account

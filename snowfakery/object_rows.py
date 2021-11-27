@@ -1,6 +1,7 @@
 from enum import Enum, auto
 
 import yaml
+import snowfakery  # noqa
 from .utils.yaml_utils import SnowfakeryDumper
 
 IdManager = "snowfakery.data_generator_runtime.IdManager"
@@ -49,10 +50,6 @@ class ObjectRow:
         for slot, value in state.items():
             setattr(self, slot, value)
 
-    @property
-    def _name(self):
-        return self._values.get("name")
-
 
 class ObjectReference(yaml.YAMLObject):
     def __init__(self, tablename, id):
@@ -77,7 +74,7 @@ class NicknameSlot(ObjectReference):
     id_manager: IdManager
     allocated_id: int = None
 
-    def __init__(self, tablename, id_manager):
+    def __init__(self, tablename: str, id_manager: IdManager):
         self._tablename = tablename
         self.id_manager = id_manager
 

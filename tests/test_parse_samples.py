@@ -1,5 +1,4 @@
 import pathlib
-import unittest
 from unittest import mock
 
 from snowfakery.data_generator import generate
@@ -9,7 +8,7 @@ data_imports = pathlib.Path(__file__).parent / "BDI_generator.yml"
 standard_objects = pathlib.Path(__file__).parent / "gen_sf_standard_objects.yml"
 npsp_standard_objects = pathlib.Path(__file__).parent / "gen_npsp_standard_objects.yml"
 simple_salesforce = (
-    pathlib.Path(__file__).parent / ".." / "examples" / "simple-salesforce.yml"
+    pathlib.Path(__file__).parent / ".." / "examples" / "basic-salesforce.recipe.yml"
 )
 
 
@@ -26,7 +25,7 @@ def find_row(row_type, compare, calls):
 write_row_path = "snowfakery.output_streams.DebugOutputStream.write_row"
 
 
-class TestParseAndOutput(unittest.TestCase):
+class TestParseAndOutput:
     @mock.patch(write_row_path)
     def test_d_and_d(self, write_row):
         with open(dnd_test) as open_yaml_file:

@@ -1,0 +1,186 @@
+interactions:
+- request:
+    body: <jobInfo xmlns="http://www.force.com/2009/06/asyncapi/dataload"><operation>query</operation><object>User</object><contentType>CSV</contentType></jobInfo>
+    headers:
+      Request-Headers:
+      - Elided
+    method: POST
+    uri: https://orgname.my.salesforce.com/services/async/vxx.0/job
+  response:
+    body:
+      string: "<?xml version=\"1.0\" encoding=\"UTF-8\"?><jobInfo\n   xmlns=\"http://www.force.com/2009/06/asyncapi/dataload\">\n
+        <id>75054000007qs3pAAA</id>\n <operation>query</operation>\n <object>User</object>\n
+        <createdById>00554000009d42yAAA</createdById>\n <createdDate>2021-09-23T00:57:43.000Z</createdDate>\n
+        <systemModstamp>2021-09-23T00:57:43.000Z</systemModstamp>\n <state>Open</state>\n
+        <concurrencyMode>Parallel</concurrencyMode>\n <contentType>CSV</contentType>\n
+        <numberBatchesQueued>0</numberBatchesQueued>\n <numberBatchesInProgress>0</numberBatchesInProgress>\n
+        <numberBatchesCompleted>0</numberBatchesCompleted>\n <numberBatchesFailed>0</numberBatchesFailed>\n
+        <numberBatchesTotal>0</numberBatchesTotal>\n <numberRecordsProcessed>0</numberRecordsProcessed>\n
+        <numberRetries>0</numberRetries>\n <apiVersion>vxx.0</apiVersion>\n <numberRecordsFailed>0</numberRecordsFailed>\n
+        <totalProcessingTime>0</totalProcessingTime>\n <apiActiveProcessingTime>0</apiActiveProcessingTime>\n
+        <apexProcessingTime>0</apexProcessingTime>\n</jobInfo>"
+    headers:
+      Content-Type:
+      - application/xml
+      Others: Elided
+    status:
+      code: 201
+      message: Created
+- request:
+    body: SELECT Id, FirstName, LastName FROM User  WHERE FirstName Like 'A%'
+    headers:
+      Request-Headers:
+      - Elided
+    method: POST
+    uri: https://orgname.my.salesforce.com/services/async/vxx.0/job/75054000007qs3pAAA/batch
+  response:
+    body:
+      string: "<?xml version=\"1.0\" encoding=\"UTF-8\"?><batchInfo\n   xmlns=\"http://www.force.com/2009/06/asyncapi/dataload\">\n
+        <id>75154000007mwsPAAQ</id>\n <jobId>75054000007qs3pAAA</jobId>\n <state>Queued</state>\n
+        <createdDate>2021-09-23T00:57:43.000Z</createdDate>\n <systemModstamp>2021-09-23T00:57:43.000Z</systemModstamp>\n
+        <numberRecordsProcessed>0</numberRecordsProcessed>\n <numberRecordsFailed>0</numberRecordsFailed>\n
+        <totalProcessingTime>0</totalProcessingTime>\n <apiActiveProcessingTime>0</apiActiveProcessingTime>\n
+        <apexProcessingTime>0</apexProcessingTime>\n</batchInfo>"
+    headers:
+      Content-Type:
+      - application/xml
+      Others: Elided
+    status:
+      code: 201
+      message: Created
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.my.salesforce.com/services/async/vxx.0/job/75054000007qs3pAAA
+  response:
+    body:
+      string: "<?xml version=\"1.0\" encoding=\"UTF-8\"?><jobInfo\n   xmlns=\"http://www.force.com/2009/06/asyncapi/dataload\">\n
+        <id>75054000007qs3pAAA</id>\n <operation>query</operation>\n <object>User</object>\n
+        <createdById>00554000009d42yAAA</createdById>\n <createdDate>2021-09-23T00:57:43.000Z</createdDate>\n
+        <systemModstamp>2021-09-23T00:57:43.000Z</systemModstamp>\n <state>Open</state>\n
+        <concurrencyMode>Parallel</concurrencyMode>\n <contentType>CSV</contentType>\n
+        <numberBatchesQueued>0</numberBatchesQueued>\n <numberBatchesInProgress>0</numberBatchesInProgress>\n
+        <numberBatchesCompleted>1</numberBatchesCompleted>\n <numberBatchesFailed>0</numberBatchesFailed>\n
+        <numberBatchesTotal>1</numberBatchesTotal>\n <numberRecordsProcessed>1</numberRecordsProcessed>\n
+        <numberRetries>0</numberRetries>\n <apiVersion>vxx.0</apiVersion>\n <numberRecordsFailed>0</numberRecordsFailed>\n
+        <totalProcessingTime>0</totalProcessingTime>\n <apiActiveProcessingTime>0</apiActiveProcessingTime>\n
+        <apexProcessingTime>0</apexProcessingTime>\n</jobInfo>"
+    headers:
+      Content-Type:
+      - application/xml
+      Others: Elided
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.my.salesforce.com/services/async/vxx.0/job/75054000007qs3pAAA/batch
+  response:
+    body:
+      string: "<?xml version=\"1.0\" encoding=\"UTF-8\"?><batchInfoList\n   xmlns=\"http://www.force.com/2009/06/asyncapi/dataload\">\n
+        <batchInfo>\n  <id>75154000007mwsPAAQ</id>\n  <jobId>75054000007qs3pAAA</jobId>\n
+        \ <state>Completed</state>\n  <createdDate>2021-09-23T00:57:43.000Z</createdDate>\n
+        \ <systemModstamp>2021-09-23T00:57:44.000Z</systemModstamp>\n  <numberRecordsProcessed>1</numberRecordsProcessed>\n
+        \ <numberRecordsFailed>0</numberRecordsFailed>\n  <totalProcessingTime>0</totalProcessingTime>\n
+        \ <apiActiveProcessingTime>0</apiActiveProcessingTime>\n  <apexProcessingTime>0</apexProcessingTime>\n
+        </batchInfo>\n</batchInfoList>"
+    headers:
+      Content-Type:
+      - application/xml
+      Others: Elided
+    status:
+      code: 200
+      message: OK
+- request:
+    body: <jobInfo xmlns="http://www.force.com/2009/06/asyncapi/dataload"><state>Closed</state></jobInfo>
+    headers:
+      Request-Headers:
+      - Elided
+    method: POST
+    uri: https://orgname.my.salesforce.com/services/async/vxx.0/job/75054000007qs3pAAA
+  response:
+    body:
+      string: "<?xml version=\"1.0\" encoding=\"UTF-8\"?><jobInfo\n   xmlns=\"http://www.force.com/2009/06/asyncapi/dataload\">\n
+        <id>75054000007qs3pAAA</id>\n <operation>query</operation>\n <object>User</object>\n
+        <createdById>00554000009d42yAAA</createdById>\n <createdDate>2021-09-23T00:57:43.000Z</createdDate>\n
+        <systemModstamp>2021-09-23T00:57:43.000Z</systemModstamp>\n <state>Closed</state>\n
+        <concurrencyMode>Parallel</concurrencyMode>\n <contentType>CSV</contentType>\n
+        <numberBatchesQueued>0</numberBatchesQueued>\n <numberBatchesInProgress>0</numberBatchesInProgress>\n
+        <numberBatchesCompleted>1</numberBatchesCompleted>\n <numberBatchesFailed>0</numberBatchesFailed>\n
+        <numberBatchesTotal>1</numberBatchesTotal>\n <numberRecordsProcessed>1</numberRecordsProcessed>\n
+        <numberRetries>0</numberRetries>\n <apiVersion>vxx.0</apiVersion>\n <numberRecordsFailed>0</numberRecordsFailed>\n
+        <totalProcessingTime>0</totalProcessingTime>\n <apiActiveProcessingTime>0</apiActiveProcessingTime>\n
+        <apexProcessingTime>0</apexProcessingTime>\n</jobInfo>"
+    headers:
+      Content-Type:
+      - application/xml
+      Others: Elided
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.my.salesforce.com/services/async/vxx.0/job/75054000007qs3pAAA/batch/75154000007mwsPAAQ
+  response:
+    body:
+      string: "<?xml version=\"1.0\" encoding=\"UTF-8\"?><batchInfo\n   xmlns=\"http://www.force.com/2009/06/asyncapi/dataload\">\n
+        <id>75154000007mwsPAAQ</id>\n <jobId>75054000007qs3pAAA</jobId>\n <state>Completed</state>\n
+        <createdDate>2021-09-23T00:57:43.000Z</createdDate>\n <systemModstamp>2021-09-23T00:57:44.000Z</systemModstamp>\n
+        <numberRecordsProcessed>1</numberRecordsProcessed>\n <numberRecordsFailed>0</numberRecordsFailed>\n
+        <totalProcessingTime>0</totalProcessingTime>\n <apiActiveProcessingTime>0</apiActiveProcessingTime>\n
+        <apexProcessingTime>0</apexProcessingTime>\n</batchInfo>"
+    headers:
+      Content-Type:
+      - application/xml
+      Others: Elided
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.my.salesforce.com/services/async/vxx.0/job/75054000007qs3pAAA/batch/75154000007mwsPAAQ/result
+  response:
+    body:
+      string: <result-list xmlns="http://www.force.com/2009/06/asyncapi/dataload"><result>75254000004H2qE</result></result-list>
+    headers:
+      Content-Type:
+      - application/xml
+      Others: Elided
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.my.salesforce.com/services/data/vxx.0/tooling/executeAnonymous?anonymousBody=delete+%5BSELECT+Id+FROM+Contact+WHERE+Name+LIKE+%27TestUser%25%27%5D%3B
+  response:
+    body:
+      string: "{\n  \"line\" : -1,\n  \"column\" : -1,\n  \"compiled\" : true,\n  \"success\"
+        : true,\n  \"compileProblem\" : null,\n  \"exceptionStackTrace\" : null,\n
+        \ \"exceptionMessage\" : null\n}"
+    headers:
+      Content-Type:
+      - application/json;charset=UTF-8
+      Others: Elided
+    status:
+      code: 200
+      message: OK
+version: 1

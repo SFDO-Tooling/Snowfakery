@@ -1,0 +1,18 @@
+- object: Opportunity
+  fields:
+    Contact:
+      reference: Contact
+    Account:
+      reference: Account
+- object: Contact
+  fields:
+    Account:
+      reference: Account
+    Opportunity:
+      reference: Opportunity
+- object: Account
+  fields:
+    Contact:
+      reference: Contact
+    Opportunity:
+      reference: Opportunity

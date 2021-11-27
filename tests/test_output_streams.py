@@ -1,4 +1,3 @@
-import unittest
 from abc import ABC, abstractmethod
 from io import StringIO
 import json
@@ -9,6 +8,8 @@ from contextlib import redirect_stdout
 
 
 import pytest
+
+from click.exceptions import ClickException
 
 from sqlalchemy import create_engine
 
@@ -25,7 +26,8 @@ from snowfakery.cli import generate_cli
 from tests.utils import named_temporary_file_path
 
 
-sample_yaml = Path(__file__).parent / "include_parent.yml"
+sample_yaml = Path(__file__).parent / "forward_reference.yml"
+sample_output = [{"_table": "A", "id": 1, "B": 1}, {"_table": "B", "id": 1, "A": 1}]
 
 
 def normalize(row):
@@ -133,11 +135,11 @@ class OutputCommonTests(ABC):
         )
 
 
-class TestSqlDbOutputStream(unittest.TestCase, OutputCommonTests):
+class TestSqlDbOutputStream(OutputCommonTests):
     def do_output(self, yaml):
         with named_temporary_file_path() as f:
             url = f"sqlite:///{f}"
-            output_stream = SqlDbOutputStream.from_url(url, None)
+            output_stream = SqlDbOutputStream.from_url(url)
             results = generate(StringIO(yaml), {}, output_stream)
             table_names = results.tables.keys()
             output_stream.close()
@@ -217,14 +219,8 @@ class TestJSONOutputStream(OutputCommonTests):
         with redirect_stdout(x):
             generate_cli.callback(yaml_file=sample_yaml, output_format="json")
         data = json.loads(x.getvalue())
-        assert data == [
-            {
-                "_table": "Account",
-                "id": 1,
-                "name": "Default Company Name",
-                "ShippingCountry": "Canada",
-            }
-        ]
+        print(data)
+        assert data == sample_output
 
     def test_null(self):
         yaml = """
@@ -251,7 +247,7 @@ class TestJSONOutputStream(OutputCommonTests):
             assert s.getvalue() == ""
 
 
-class TestCSVOutputStream(unittest.TestCase, OutputCommonTests):
+class TestCSVOutputStream(OutputCommonTests):
     def do_output(self, yaml):
         with TemporaryDirectory() as t:
             output_stream = CSVOutputStream(Path(t) / "csvoutput")
@@ -308,7 +304,7 @@ class TestCSVOutputStream(unittest.TestCase, OutputCommonTests):
         )  # CSV is no way of distingushing null from empty str
 
 
-class TestSQLTextOutputStream(unittest.TestCase, OutputCommonTests):
+class TestSQLTextOutputStream(OutputCommonTests):
     def do_output(self, yaml):
         with named_temporary_file_path() as f:
             path = str(f) + ".sql"
@@ -331,3 +327,46 @@ class TestSQLTextOutputStream(unittest.TestCase, OutputCommonTests):
                 for table_name in table_names
             }
             return tables
+
+
+class TestExternalOutputStream:
+    def test_external_output_stream(self):
+        x = StringIO()
+        with redirect_stdout(x):
+            generate_cli.callback(
+                yaml_file=sample_yaml, output_format="package1.TestOutputStream"
+            )
+        assert (
+            x.getvalue()
+            == """A - {'id': 1, 'B': 'B(1)'}
+B - {'id': 1, 'A': 'A(1)'}
+"""
+        )
+
+    def test_external_output_stream_yaml(self):
+        x = StringIO()
+        with redirect_stdout(x):
+            generate_cli.callback(
+                yaml_file=sample_yaml, output_format="examples.YamlOutputStream"
+            )
+        expected = """- object: A
+  nickname: row_1
+  fields:
+    id: 1
+    B:
+      reference: row_1
+- object: B
+  nickname: row_1
+  fields:
+    id: 1
+    A:
+      reference: row_1
+"""
+        print(x.getvalue())
+        assert x.getvalue() == expected
+
+    def test_external_output_stream__failure(self):
+        with pytest.raises(ClickException, match="no.such.output.Stream"):
+            generate_cli.callback(
+                yaml_file=sample_yaml, output_format="no.such.output.Stream"
+            )

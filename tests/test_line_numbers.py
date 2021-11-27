@@ -1,6 +1,5 @@
 from io import StringIO
-import unittest
-
+import pytest
 from snowfakery.parse_recipe_yaml import parse_recipe
 from snowfakery.data_generator import generate
 from snowfakery.data_gen_exceptions import DataGenSyntaxError, DataGenValueError
@@ -32,7 +31,7 @@ yaml_with_syntax_error = """            #1
 """
 
 
-class TestLineNumbers(unittest.TestCase):
+class TestLineNumbers:
     def test_line_numbers(self):
         result = parse_recipe(StringIO(yaml))
         templates = result.templates
@@ -43,11 +42,11 @@ class TestLineNumbers(unittest.TestCase):
         assert templates[1].count_expr.line_num == 8
 
     def test_value_error_reporting(self):
-        with self.assertRaises(DataGenValueError) as e:
+        with pytest.raises(DataGenValueError) as e:
             generate(StringIO(yaml), {}, None)
-        assert str(e.exception)[-2:] == ":8"
+        assert str(e.value)[-2:] == ":8"
 
     def test_syntax_error_number_reporting(self):
-        with self.assertRaises(DataGenSyntaxError) as e:
+        with pytest.raises(DataGenSyntaxError) as e:
             generate(StringIO(yaml_with_syntax_error), {})
-        assert str(e.exception)[-2:] == ":8"
+        assert str(e.value)[-2:] == ":8"

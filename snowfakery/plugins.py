@@ -6,6 +6,7 @@ from abc import abstractmethod
 from datetime import date, datetime
 from pathlib import Path
 from unittest.mock import patch
+from functools import wraps
 
 import yaml
 from yaml.representer import Representer
@@ -13,6 +14,7 @@ from faker.providers import BaseProvider as FakerProvider
 
 import snowfakery.data_gen_exceptions as exc
 from .utils.yaml_utils import SnowfakeryDumper
+from .utils.collections import CaseInsensitiveDict
 
 from numbers import Number
 
@@ -25,6 +27,7 @@ class ScalarLike:
 
 Scalar = Union[str, Number, date, datetime, None, ScalarLike]
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
+ObjectRow = "snowfakery.object_rows.ObjectRow"
 
 
 class LineTracker(NamedTuple):
@@ -102,10 +105,23 @@ class PluginContext:
     def field_vars(self):
         return self.interpreter.current_context.field_vars()
 
+    ## TODO: Deprecate this in favour of get_contextual_state
+    ##       which has more smarts about name=, parent= etc.
     def context_vars(self):
-        return self.interpreter.current_context.context_vars(
-            self.plugin.__class__.__name__
+        return self.interpreter.current_context.context_vars(id(self.plugin))
+
+    def local_vars(self):
+        return self.interpreter.current_context.local_vars.setdefault(
+            id(self.plugin), {}
         )
+
+    @property
+    def unique_context_identifier(self) -> str:
+        """An identifier representing a template context that will be
+        unique across iterations (but not portion invocations). It
+        allows templates that do counting or iteration for a particular
+        template context."""
+        return str(self.interpreter.current_context.unique_context_identifier)
 
     def evaluate_raw(self, field_definition):
         """Evaluate the contents of a field definition"""
@@ -125,6 +141,10 @@ class PluginContext:
                 None,
             )
 
+    @property
+    def current_filename(self):
+        return self.interpreter.current_context.current_template.filename
+
 
 def lazy(func: Any) -> Callable:
     """A lazy function is one that expects its arguments to be unparsed"""
@@ -132,10 +152,48 @@ def lazy(func: Any) -> Callable:
     return func
 
 
+def memorable(func: Any) -> Callable:
+    """A memorable function is one that is evaluated once per iteration and its result saved"""
+    func.memorable = True
+
+    @wraps(func)
+    def newfunc(self, *args, **kwargs):
+        return evaluate_memorable_function(self.context, func, self, args, kwargs)
+
+    return newfunc
+
+
+def evaluate_memorable_function(context, func, self, args, kwargs):
+    user_key = kwargs.get("name") or (
+        context.unique_context_identifier,
+        tuple(args),
+        tuple(kwargs.items()),
+    )
+    key = (
+        func.__module__,
+        func.__name__,
+        user_key,
+    )
+    return context.interpreter.get_contextual_state(
+        name=key,
+        parent=kwargs.get("parent", None),
+        reset_every_iteration=False,
+        make_state_func=lambda: func(self, *args, **kwargs),
+    )
+
+
 def resolve_plugins(
     plugin_specs: List[Tuple[str, object]], search_paths: List[Union[str, Path]]
 ):
     "Resolve a list of plugins and lineinfos"
+    with plugin_path(search_paths):
+        plugins = []
+        for plugin_spec in plugin_specs:
+            plugins.extend(resolve_plugin(*plugin_spec))
+        return plugins
+
+
+def plugin_path(search_paths):
     cwd_plugins = "./plugins"
     user_plugins = Path.home() / ".snowfakery/plugins"
     new_sys_path = [
@@ -144,25 +202,29 @@ def resolve_plugins(
         str(cwd_plugins),
         str(user_plugins),
     ]
-
-    with patch.object(sys, "path", new_sys_path):
-        return [resolve_plugin(*plugin_spec) for plugin_spec in plugin_specs]
+    return patch.object(sys, "path", new_sys_path)
 
 
 def resolve_plugin(plugin: str, lineinfo) -> object:
     """Resolve a plugin to a class"""
-    cls = _resolve_plugin_alternatives(plugin)
+    cls = resolve_plugin_alternatives(plugin)
     if not cls:
         raise exc.DataGenImportError(
             f"Cannot find plugin: {plugin}", lineinfo.filename, lineinfo.line_num
         )
 
+    categories = []
+
     if issubclass(cls, FakerProvider):
-        return (FakerProvider, cls)
-    elif issubclass(cls, SnowfakeryPlugin):
-        return (SnowfakeryPlugin, cls)
-    elif issubclass(cls, ParserMacroPlugin):
-        return (ParserMacroPlugin, cls)
+        categories.append((FakerProvider, cls))
+    else:
+        if issubclass(cls, SnowfakeryPlugin):
+            categories.append((SnowfakeryPlugin, cls))
+        if issubclass(cls, ParserMacroPlugin):
+            categories.append((ParserMacroPlugin, cls))
+
+    if categories:
+        return categories
     else:
         raise exc.DataGenTypeError(
             f"{cls} is not a Faker Provider nor Snowfakery Plugin",
@@ -171,7 +233,7 @@ def resolve_plugin(plugin: str, lineinfo) -> object:
         )
 
 
-def _resolve_plugin_alternatives(plugin):
+def resolve_plugin_alternatives(plugin):
     """Interpret the plugin declaration in 2 ways.
     Return it when we find one that matches.
 
@@ -200,6 +262,7 @@ def _resolve_plugin_alternatives(plugin):
         try:
             module = import_module(module_name)
             if hasattr(module, class_name):
+                assert getattr(module, class_name)
                 return getattr(module, class_name)
         except ModuleNotFoundError:
             pass
@@ -213,7 +276,7 @@ class PluginResult:
     PluginResults are serialized to continuation files as dicts."""
 
     def __init__(self, result: Mapping):
-        self.result = result
+        self.result = CaseInsensitiveDict(result)
 
     def __getattr__(self, name):
         # ensures that it won't recurse
@@ -228,10 +291,43 @@ class PluginResult:
     def __str__(self):
         return str(self.result)
 
+    @classmethod
+    def _from_continuation(cls, args):
+        return cls(**args)
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        _register_for_continuation(cls)
+
+
+def _register_for_continuation(cls):
+    SnowfakeryDumper.add_representer(cls, Representer.represent_object)
+    yaml.SafeLoader.add_constructor(
+        f"tag:yaml.org,2002:python/object/apply:{cls.__module__}.{cls.__name__}",
+        lambda loader, node: cls._from_continuation(
+            loader.construct_mapping(node.value[0])
+        ),
+    )
+
+
+class PluginResultIterator(PluginResult):
+    pass
+
+
+class PluginOption:
+    def __init__(self, name, typ):
+        self.name = name
+        self.type = typ
+
+    def convert(self, value):
+        try:
+            return self.type(value)
+        except (TypeError, ValueError) as e:
+            raise exc.DataGenTypeError(
+                f"{self.name} option is wrong type {type(value)} rather than {self.type}",
+                *e.args,
+            )
+
 
 # round-trip PluginResult objects through continuation YAML if needed.
-SnowfakeryDumper.add_representer(PluginResult, Representer.represent_object)
-yaml.SafeLoader.add_constructor(
-    "tag:yaml.org,2002:python/object/apply:snowfakery.plugins.PluginResult",
-    lambda loader, node: PluginResult(loader.construct_sequence(node)[0]),
-)
+_register_for_continuation(PluginResult)

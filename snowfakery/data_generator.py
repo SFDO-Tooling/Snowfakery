@@ -1,5 +1,6 @@
 import warnings
 from typing import IO, Tuple, Mapping, List, Dict, TextIO, Union
+import functools
 
 import yaml
 from faker.providers import BaseProvider as FakerProvider
@@ -8,11 +9,12 @@ from click.utils import LazyFile
 from .data_gen_exceptions import DataGenNameError
 from .output_streams import DebugOutputStream, OutputStream
 from .parse_recipe_yaml import parse_recipe
-from .data_generator_runtime import output_batches, StoppingCriteria, Globals
+from .data_generator_runtime import Globals, Interpreter
 from .data_gen_exceptions import DataGenError
-from . import SnowfakeryPlugin
-from .utils.yaml_utils import SnowfakeryDumper, hydrate
+from .plugins import SnowfakeryPlugin, PluginOption
 
+from .utils.yaml_utils import SnowfakeryDumper, hydrate
+from snowfakery.standard_plugins.UniqueId import UniqueId
 
 # This tool is essentially a three stage interpreter.
 #
@@ -39,11 +41,13 @@ class ExecutionSummary:
         self.templates = parse_results.templates
         self.intertable_dependencies = runtime_results.intertable_dependencies
 
-    def summarize_for_debugging(self):
+    def summarize_for_debugging(self):  # pragma: no cover
         return self.intertable_dependencies, self.templates
 
 
-def merge_options(option_definitions: List, user_options: Mapping) -> Tuple[Dict, set]:
+def merge_options(
+    option_definitions: List, user_options: Mapping, raw_plugin_options: Mapping = None
+) -> Tuple[Dict, set]:
     """Merge/compare options specified by end-user to those declared in YAML file.
 
     Takes options passed in from the command line or a config file and
@@ -61,7 +65,7 @@ def merge_options(option_definitions: List, user_options: Mapping) -> Tuple[Dict
     anything in the YAML generator file. The caller may want to warn the
     user about them or throw an error.
     """
-    options = {}
+    options = raw_plugin_options.copy() if raw_plugin_options else {}
     for option in option_definitions:
         name = option["option"]
         if user_options.get(name):
@@ -111,12 +115,18 @@ def process_plugins(plugins: List) -> Tuple[List[object], Mapping[str, object]]:
 def generate(
     open_yaml_file: IO[str],
     user_options: dict = None,
+    #  *,   TODO: fix test suite so these can be keyword-only arguments
     output_stream: OutputStream = None,
-    stopping_criteria: StoppingCriteria = None,
+    parent_application=None,
+    *,
+    stopping_criteria=None,
     generate_continuation_file: FileLike = None,
     continuation_file: TextIO = None,
+    plugin_options: dict = None,
 ) -> ExecutionSummary:
     """The main entry point to the package for Python applications."""
+    from .api import SnowfakeryApplication
+
     user_options = user_options or {}
 
     # Where are we going to put the rows?
@@ -125,8 +135,16 @@ def generate(
     # parse the YAML and any it refers to
     parse_result = parse_recipe(open_yaml_file)
 
+    faker_providers, snowfakery_plugins = process_plugins(parse_result.plugins)
+
+    snowfakery_plugins.setdefault("UniqueId", UniqueId)
+
+    plugin_options = process_plugins_options(snowfakery_plugins, plugin_options or {})
+
     # figure out how it relates to CLI-supplied generation variables
-    options, extra_options = merge_options(parse_result.options, user_options)
+    options, extra_options = merge_options(
+        parse_result.options, user_options, plugin_options
+    )
 
     if extra_options:
         warnings.warn(f"Warning: unknown options: {extra_options}")
@@ -139,19 +157,26 @@ def generate(
 
     faker_providers, snowfakery_plugins = process_plugins(parse_result.plugins)
 
+    globls = initialize_globals(continuation_data, parse_result.templates)
+
+    # for unit tests that call this function directly
+    # they should be updated to use generate_data instead
+    parent_application = parent_application or SnowfakeryApplication(stopping_criteria)
+
     try:
         # now do the output
-        runtime_context = output_batches(
-            output_stream,
-            parse_result.statements,
-            parse_result.templates,
-            options,
-            stopping_criteria=stopping_criteria,
-            continuation_data=continuation_data,
-            tables=parse_result.tables,
+        with Interpreter(
+            output_stream=output_stream,
+            options=options,
             snowfakery_plugins=snowfakery_plugins,
+            parent_application=parent_application,
             faker_providers=faker_providers,
-        )
+            parse_result=parse_result,
+            globals=globls,
+            continuing=bool(continuation_data),
+        ) as interpreter:
+            runtime_context = interpreter.execute()
+
     except DataGenError as e:
         if e.filename:
             raise
@@ -163,6 +188,57 @@ def generate(
         save_continuation_yaml(runtime_context, generate_continuation_file)
 
     return ExecutionSummary(parse_result, runtime_context)
+
+
+def process_plugins_options(
+    plugins: Mapping[str, SnowfakeryPlugin], raw_plugin_options: Mapping[str, object]
+) -> Mapping[str, object]:
+    """Replace option short names with fully qualified names
+       and convert types of options.
+    e.g. the option name that the user specifies on the CLI or API is just "org_name"
+         but we use the long name internally to avoid clashing with the
+         user's variable names."""
+
+    allowed_options = collect_allowed_plugin_options(tuple(plugins.values()))
+    plugin_options = {}
+    for option in allowed_options:
+        option_long_name = option.name
+        option_short_name = option_long_name.rsplit(".", 1)[-1]
+        if option_short_name in raw_plugin_options:
+            plugin_options[option_long_name] = option.convert(
+                raw_plugin_options[option_short_name]
+            )
+        elif option_long_name in raw_plugin_options:
+            plugin_options[option_long_name] = option.convert(
+                raw_plugin_options[option_long_name]
+            )
+    return plugin_options
+
+
+def collect_allowed_plugin_options(plugins: Tuple) -> List[PluginOption]:
+    """Collect the list of every option allowed by every used plugin"""
+    all_option_lists = [getattr(plugin, "allowed_options", []) for plugin in plugins]
+    return functools.reduce(lambda x, y: x + y, all_option_lists, [])
+
+
+def initialize_globals(continuation_data, templates):
+    if continuation_data:
+        globals = continuation_data
+    else:
+        name_slots = {
+            template.nickname: template.tablename
+            for template in templates
+            if template.nickname
+        }
+        # table names are sort of nicknames for themselves too, because
+        # you can refer to them.
+        name_slots.update(
+            {template.tablename: template.tablename for template in templates}
+        )
+
+        globals = Globals(name_slots=name_slots)
+
+    return globals
 
 
 if __name__ == "__main__":  # pragma: no cover

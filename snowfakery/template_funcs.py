@@ -18,6 +18,7 @@ import snowfakery.data_generator_runtime  # noqa
 from snowfakery.plugins import SnowfakeryPlugin, PluginContext, lazy
 from snowfakery.object_rows import ObjectReference
 from snowfakery.utils.template_utils import StringGenerator
+from snowfakery.standard_plugins.UniqueId import UniqueId
 
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
 
@@ -72,10 +73,12 @@ class StandardFuncs(SnowfakeryPlugin):
         # anything else should use the Faker from the Interpreter
         # which is locale-scoped.
         _faker_for_dates = Faker(use_weighting=False)
+        _uidgen = None
 
         def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
             self.snowfakery_filename = StringGenerator(self._snowfakery_filename)
+            self.unique_id = StringGenerator(self._unique_id)
+            self.unique_alpha_code = StringGenerator(self._unique_alpha_code)
 
         def date(
             self,
@@ -150,7 +153,7 @@ class StandardFuncs(SnowfakeryPlugin):
                         target = getattr(target, part)
                     except AttributeError:
                         raise DataGenError(
-                            f"Expression cannot be evaluated `{x}``. Problem before `{part}`: {target}",
+                            f"Expression cannot be evaluated `{x}``. Problem before `{part}`:\n {target}",
                             None,
                             None,
                         )
@@ -255,14 +258,14 @@ class StandardFuncs(SnowfakeryPlugin):
             """
 
             globls = self.context.interpreter.globals
-            last_object = globls.transients.last_seen_obj_by_table.get(tablename)
-            if last_object:
-                last_id = last_object.id
+            last_id = globls.transients.last_id_for_table(tablename)
+            if last_id:
                 if scope == "prior-and-current-iterations":
                     first_id = 1
                     warnings.warn("Global scope is an experimental feature.")
                 elif scope == "current-iteration":
                     first_id = globls.first_new_id(tablename)
+                    last_id = max(first_id, last_id)
                 else:
                     raise DataGenError(
                         f"Scope must be 'prior-and-current-iterations' or 'current-iteration' not {scope}",
@@ -323,6 +326,19 @@ class StandardFuncs(SnowfakeryPlugin):
         def _snowfakery_filename(self):
             template = self.context.field_vars()["template"]
             return template.filename
+
+        @property
+        def _unique_id_generator(self):
+            if not self._uidgen:
+                self._uidgen = UniqueId(self.context.interpreter).custom_functions()
+
+            return self._uidgen
+
+        def _unique_id(self):
+            return self._unique_id_generator.default_uniqifier.unique_id
+
+        def _unique_alpha_code(self):
+            return self._unique_id_generator.default_alpha_code_generator.unique_id
 
     setattr(Functions, "if", Functions.if_)
     setattr(Functions, "relativedelta", relativedelta)

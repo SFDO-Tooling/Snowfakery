@@ -1,0 +1,25 @@
+site_name: Snowfakery documentation
+site_url: ""
+use_directory_urls: False
+theme: readthedocs
+custom_dir: custom_theme
+repo_url: https://github.com/SFDO-Tooling/Snowfakery/
+nav:
+  - index.md
+  - salesforce.md
+  - Fake Data: fakedata.md
+  - Localization: locales.md
+  - embedding.md
+  - extending.md
+extra_css:
+  - stylesheets/extra.css
+markdown_extensions:
+  - toc:
+      permalink: True
+      toc_depth: 4
+plugins:
+  - search
+  - snowfakery_fakes:
+      build_locales: True # do generate locales
+      # set SF_MKDOCS_BUILD_LOCALES to overide
+      # future versions MAY turn off locale-info-building on main branch
