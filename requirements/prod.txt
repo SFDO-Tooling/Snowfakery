@@ -4,8 +4,6 @@
 #
 #    pip-compile --allow-unsafe requirements/prod.in
 #
-backports-datetime-fromisoformat==1.0.0
-    # via -r requirements/prod.in
 certifi==2021.10.8
     # via requests
 charset-normalizer==2.0.7
@@ -14,7 +12,7 @@ click==7.1.2
     # via -r requirements/prod.in
 contextvars==2.4
     # via -r requirements/prod.in
-faker==9.7.1
+faker==9.8.0
     # via -r requirements/prod.in
 greenlet==1.1.2
     # via sqlalchemy
