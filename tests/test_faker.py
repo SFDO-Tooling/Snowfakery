@@ -375,3 +375,18 @@ class TestFaker:
         generate(StringIO(yaml))
         assert first_name.mock_calls
         assert email.mock_calls
+
+    @mock.patch("faker.providers.person.en_US.Provider.first_name")
+    def test_username_length_limit(self, first_name, generated_rows):
+        yaml = """
+            - object: X
+              fields:
+                UserName:
+                  fake: UserName
+            """
+        first_name.return_value = "A" * 100
+
+        generate(StringIO(yaml))
+        assert len(generated_rows.row_values(0, "UserName")) == 80, len(
+            generated_rows.row_values(0, "UserName")
+        )

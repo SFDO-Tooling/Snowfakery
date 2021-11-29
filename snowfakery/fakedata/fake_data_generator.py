@@ -31,10 +31,16 @@ class FakeNames(T.NamedTuple):
     # need to.
     def user_name(self, matching: bool = True):
         "Salesforce-style username in the form of an email address"
+        domain = self.f.hostname()
         already_created = self._already_have(("firstname", "lastname"))
         if matching and all(already_created):
-            return f"{already_created[0]}.{already_created[1]}_{self.f.uuid4()}@{self.f.safe_domain_name()}"
-        return f"{self.f.first_name()}_{self.f.last_name()}_{self.f.uuid4()}@{self.f.hostname()}"
+            namepart = f"{already_created[0]}.{already_created[1]}_{self.f.uuid4()}"
+        else:
+            namepart = f"{self.f.first_name()}_{self.f.last_name()}_{self.f.uuid4()}"
+
+        namepart_max_len = 80 - (len(domain) + 1)
+        namepart = namepart[0:namepart_max_len]
+        return f"{namepart}@{domain}"
 
     def alias(self):
         """Salesforce-style 8-character alias: really an 8 char-truncated firstname.
