@@ -5,11 +5,11 @@ class TestParseNumbers:
     def test_parse_int(self):
         assert look_for_number("7") == 7
         assert look_for_number("7") != "7"
-        assert look_for_number("09") == 9
+        assert look_for_number("09") == "09"
 
     def test_parse_float(self):
         assert look_for_number("7.3") == 7.3
-        assert look_for_number("09.9") == 9.9
+        assert look_for_number("09.9") == "09.9"
 
     def test_do_not_parse_phone_number(self):
         assert look_for_number("117.344.3333") == "117.344.3333"
