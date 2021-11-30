@@ -66,7 +66,7 @@ number_chars = set(string.digits + ".")
 
 def look_for_number(arg):
     looks_like_float = False
-    if len(arg) == 0 or arg[0] == "0":
+    if len(arg) == 0 or (arg[0] == "0" and arg[1:2] != "."):
         return arg
     for char in arg:
         if char not in number_chars:

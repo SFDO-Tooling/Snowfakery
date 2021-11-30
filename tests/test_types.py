@@ -25,3 +25,14 @@ class TestTypes:
         generate(StringIO(yaml))
         assert generated_rows.row_values(0, "bar") == "012345"
         assert generated_rows.row_values(0, "bar2") == "012345"
+
+    def test_float(self, generated_rows):
+        yaml = """
+            - object: Foo
+              fields:
+                foo: 0.1
+                foo2: ${{0.1}}
+        """
+        generate(StringIO(yaml))
+        assert generated_rows.row_values(0, "foo") == 0.1
+        assert generated_rows.row_values(0, "foo2") == 0.1
