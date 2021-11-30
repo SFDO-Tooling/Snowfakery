@@ -3,127 +3,127 @@ name: CI
 on: [push]
 
 env:
-    COVERALLS_PARALLEL: true
-    COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-    SF_MKDOCS_BUILD_LOCALES: "False"
+  COVERALLS_PARALLEL: true
+  COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+  SF_MKDOCS_BUILD_LOCALES: "False"
 
 jobs:
-    test:
-        name: "Python ${{ matrix.python-version }}"
-        runs-on: ubuntu-latest
-        strategy:
-            matrix:
-                python-version: ["3.8", "3.9"]
-        steps:
-            - uses: "actions/checkout@v2"
-            - uses: "actions/setup-python@v1"
-              with:
-                  python-version: "${{ matrix.python-version }}"
+  test:
+    name: "Python ${{ matrix.python-version }}"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10"]
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v1"
+        with:
+          python-version: "${{ matrix.python-version }}"
 
-            - name: "Install dependencies"
-              run: |
-                  python -VV
-                  python -m pip install --upgrade pip
-                  make dev-install
+      - name: "Install dependencies"
+        run: |
+          python -VV
+          python -m pip install --upgrade pip
+          make dev-install
 
-            - name: "Run tox targets for ${{ matrix.python-version }}"
-              run: python -m tox
+      - name: "Run tox targets for ${{ matrix.python-version }}"
+        run: python -m tox
 
-            - name: Report Coverage
-              run: coveralls
+      - name: Report Coverage
+        run: coveralls
 
-            - name: Test snowbench
-              run: |
-                  python setup.py install
-                  snowbench snowfakery/tools/benchmark_1.yml --num-records 10_000  --num-records-tablename Account --number-of-processes 4
-                  snowbench
+      - name: Test snowbench
+        run: |
+          python setup.py install
+          snowbench snowfakery/tools/benchmark_1.yml --num-records 10_000  --num-records-tablename Account --number-of-processes 4
+          snowbench
 
-    with_cci:
-        name: With CumulusCI
-        runs-on: ubuntu-latest
-        steps:
-            - uses: "actions/checkout@v2"
-            - uses: "actions/setup-python@v1"
-              with:
-                  python-version: "3.9"
+  with_cci:
+    name: With CumulusCI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v1"
+        with:
+          python-version: "3.9"
 
-            - name: Install dependencies
-              run: |
-                  python -VV
-                  python -m pip install --upgrade pip
-                  make dev-install
-                  python -m pip install cumulusci
+      - name: Install dependencies
+        run: |
+          python -VV
+          python -m pip install --upgrade pip
+          make dev-install
+          python -m pip install cumulusci
 
-            - name: Run Tests
-              run: python -m pytest
+      - name: Run Tests
+        run: python -m pytest
 
-    faker_docs:
-        name: Faker Docs
-        runs-on: ubuntu-latest
-        steps:
-            - uses: "actions/checkout@v2"
-            - uses: "actions/setup-python@v1"
-              with:
-                  python-version: "3.9"
+  faker_docs:
+    name: Faker Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v1"
+        with:
+          python-version: "3.9"
 
-            - name: Install dependencies
-              run: |
-                  python -VV
-                  make dev-install
-                  python setup.py install
+      - name: Install dependencies
+        run: |
+          python -VV
+          make dev-install
+          python setup.py install
 
-            - name: Make Docs
-              run: make docs
+      - name: Make Docs
+        run: make docs
 
-    pip:
-        name: "Install from Pip ${{ matrix.python-version }}"
-        runs-on: ubuntu-latest
-        strategy:
-            matrix:
-                python-version: ["3.8", "3.9"]
-        steps:
-            - uses: "actions/checkout@v2"
-            - uses: "actions/setup-python@v1"
-              with:
-                  python-version: "${{ matrix.python-version }}"
+  pip:
+    name: "Install from Pip ${{ matrix.python-version }}"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.10"]
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v1"
+        with:
+          python-version: "${{ matrix.python-version }}"
 
-            - name: "Install dependencies"
-              run: |
-                  python -VV
-                  python -m pip install --upgrade pip
+      - name: "Install dependencies"
+        run: |
+          python -VV
+          python -m pip install --upgrade pip
 
-            - name: "Install using pip"
-              run: |
-                  pip install .
+      - name: "Install using pip"
+        run: |
+          pip install .
 
-            - name: "Test installation"
-              run: |
-                  python -m snowfakery --version
+      - name: "Test installation"
+        run: |
+          python -m snowfakery --version
 
-    windows:
-        name: Windows ${{ matrix.python-version }}
-        runs-on: windows-latest
-        strategy:
-            matrix:
-                python-version: ["3.8", "3.9"]
-        steps:
-            - uses: "actions/checkout@v2"
-            - uses: "actions/setup-python@v1"
-              with:
-                  python-version: "${{ matrix.python-version }}"
+  windows:
+    name: Windows ${{ matrix.python-version }}
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10"]
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v1"
+        with:
+          python-version: "${{ matrix.python-version }}"
 
-            - name: "Install dependencies"
-              run: |
-                  python -VV
-                  python -m pip install --upgrade pip
-                  make dev-install
+      - name: "Install dependencies"
+        run: |
+          python -VV
+          python -m pip install --upgrade pip
+          make dev-install
 
-            - name: Run Tests
-              run: python -m pytest
+      - name: Run Tests
+        run: python -m pytest
 
-    coveralls_done:
-        name: Finalize coveralls
-        needs: [test]
-        runs-on: ubuntu-latest
-        steps:
-            - run: curl -k https://coveralls.io/webhook?repo_token=$COVERALLS_REPO_TOKEN -d "payload[build_num]=$GITHUB_SHA&payload[status]=done"
+  coveralls_done:
+    name: Finalize coveralls
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -k https://coveralls.io/webhook?repo_token=$COVERALLS_REPO_TOKEN -d "payload[build_num]=$GITHUB_SHA&payload[status]=done"
