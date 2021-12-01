@@ -837,6 +837,7 @@ To include a file by a relative path:
 To insert data from one field into into another, use a formula.
 
 ```yaml
+# examples/price_math.recipe.yml
 - object: Sale
   fields:
     num_items:
@@ -874,9 +875,22 @@ Some general principles about formulas:
 
 Formulas are based on a similar language called Jinja2, but we use `${{` and `}}` to be more compatible with YAML.
 
-The relevant section of the Jinja document is called [Expressions](https://jinja.palletsprojects.com/en/2.11.x/templates/#expressions). It includes information about [Literals](https://jinja.palletsprojects.com/en/2.11.x/templates/#literals), [Math](https://jinja.palletsprojects.com/en/2.11.x/templates/#math), [Comparisons](https://jinja.palletsprojects.com/en/2.11.x/templates/#comparisons), [Logic](https://jinja.palletsprojects.com/en/2.11.x/templates/#logic), [Other Operators](https://jinja.palletsprojects.com/en/2.11.x/templates/#other-operators), [If Expressions](https://jinja.palletsprojects.com/en/2.11.x/templates/#if-expression), [Python Methods](https://jinja.palletsprojects.com/en/2.11.x/templates/#python-methods) and [Builtin Filters](https://jinja.palletsprojects.com/en/2.11.x/templates/#list-of-builtin-filters).
+The relevant section of the Jinja document is called [Expressions](https://jinja.palletsprojects.com/en/2.11.x/templates/#expressions). It includes information about [Literals](https://jinja.palletsprojects.com/en/2.11.x/templates/#literals), [Math](https://jinja.palletsprojects.com/en/2.11.x/templates/#math), [Comparisons](https://jinja.palletsprojects.com/en/2.11.x/templates/#comparisons), [Logic](https://jinja.palletsprojects.com/en/2.11.x/templates/#logic), [Other Operators](https://jinja.palletsprojects.com/en/2.11.x/templates/#other-operators), [If Expressions](https://jinja.palletsprojects.com/en/2.11.x/templates/#if-expression), [Python Methods](https://jinja.palletsprojects.com/en/2.11.x/templates/#python-methods) and
 
-In theory, you can use Jinja keywords like `${% if` (as opposed to `{% if`), but it isn't clear under what circumstances that's necessary.
+### Formula Functions and Variables
+
+"Filters" allow you to do transformations of strings and numbers like this:
+
+```yaml
+# examples/jinja_filters.recipe.yml
+- object: Campaign
+  fields:
+    Name: ${{fake.bs | title}} Campaign
+    UpperCaseName: ${{fake.bs | upper}}
+    LowerCaseName: ${{fake.bs | lower}}
+```
+
+The list of filters is in the [Jinja documentation](https://jinja.palletsprojects.com/en/2.11.x/templates/#list-of-builtin-filters)
 
 ### Formula Functions and Variables
 
