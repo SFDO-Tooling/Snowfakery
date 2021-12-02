@@ -875,7 +875,7 @@ Some general principles about formulas:
 
 Formulas are based on a similar language called Jinja2, but we use `${{` and `}}` to be more compatible with YAML.
 
-The relevant section of the Jinja document is called [Expressions](https://jinja.palletsprojects.com/en/2.11.x/templates/#expressions). It includes information about [Literals](https://jinja.palletsprojects.com/en/2.11.x/templates/#literals), [Math](https://jinja.palletsprojects.com/en/2.11.x/templates/#math), [Comparisons](https://jinja.palletsprojects.com/en/2.11.x/templates/#comparisons), [Logic](https://jinja.palletsprojects.com/en/2.11.x/templates/#logic), [Other Operators](https://jinja.palletsprojects.com/en/2.11.x/templates/#other-operators), [If Expressions](https://jinja.palletsprojects.com/en/2.11.x/templates/#if-expression), [Python Methods](https://jinja.palletsprojects.com/en/2.11.x/templates/#python-methods) and
+The relevant section of the Jinja document is called [Expressions](https://jinja.palletsprojects.com/en/2.11.x/templates/#expressions). It includes information about [Literals](https://jinja.palletsprojects.com/en/2.11.x/templates/#literals), [Math](https://jinja.palletsprojects.com/en/2.11.x/templates/#math), [Comparisons](https://jinja.palletsprojects.com/en/2.11.x/templates/#comparisons), [Logic](https://jinja.palletsprojects.com/en/2.11.x/templates/#logic), [Other Operators](https://jinja.palletsprojects.com/en/2.11.x/templates/#other-operators), [If Expressions](https://jinja.palletsprojects.com/en/2.11.x/templates/#if-expression) and [Python Methods](https://jinja.palletsprojects.com/en/2.11.x/templates/#python-methods).
 
 ### Formula Functions and Variables
 
@@ -890,7 +890,7 @@ The relevant section of the Jinja document is called [Expressions](https://jinja
     LowerCaseName: ${{fake.bs | lower}}
 ```
 
-The list of filters is in the [Jinja documentation](https://jinja.palletsprojects.com/en/2.11.x/templates/#list-of-builtin-filters)
+The list of filters is in the [Jinja documentation](https://jinja.palletsprojects.com/en/2.11.x/templates/#list-of-builtin-filters).
 
 ### Formula Functions and Variables
 
