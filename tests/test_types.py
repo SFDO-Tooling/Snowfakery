@@ -4,7 +4,7 @@ from io import StringIO
 from snowfakery.data_generator import generate
 
 
-class TestGenerateMapping:
+class TestTypes:
     @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
     def test_empty_string(self, write_row):
         yaml = """
@@ -13,4 +13,26 @@ class TestGenerateMapping:
                 bar: ""
         """
         generate(StringIO(yaml))
-        print(write_row.mock_calls[0][1][1]["bar"] == "")
+        assert write_row.mock_calls[0][1][1]["bar"] == ""
+
+    def test_zero_prefixed_string(self, generated_rows):
+        yaml = """
+            - object: Foo
+              fields:
+                bar: "012345"
+                bar2: ${{"012345"}}
+        """
+        generate(StringIO(yaml))
+        assert generated_rows.row_values(0, "bar") == "012345"
+        assert generated_rows.row_values(0, "bar2") == "012345"
+
+    def test_float(self, generated_rows):
+        yaml = """
+            - object: Foo
+              fields:
+                foo: 0.1
+                foo2: ${{0.1}}
+        """
+        generate(StringIO(yaml))
+        assert generated_rows.row_values(0, "foo") == 0.1
+        assert generated_rows.row_values(0, "foo2") == 0.1
