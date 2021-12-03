@@ -19,6 +19,10 @@ markdown_extensions:
       toc_depth: 4
 plugins:
   - search
+  - exclude-search:
+      exclude:
+        - docs/fakedata/*.md
+        - fakedata/*.md
   - snowfakery_fakes:
       build_locales: True # do generate locales
       # set SF_MKDOCS_BUILD_LOCALES to overide

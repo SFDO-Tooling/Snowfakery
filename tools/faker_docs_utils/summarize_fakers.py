@@ -26,10 +26,11 @@ def summarize_all_fakers(faker) -> T.Sequence[FakerInfo]:
         yaml_data = yaml.safe_load(f)
         common_fakes = yaml_data["common_fakes"]
         uncommon_fakes = yaml_data["uncommon_fakes"]
+        ignorables = [name.lower() for name in yaml_data["ignore"]]
 
     faker_infos = CaseInsensitiveDict()
     for name, meth in faker.fake_names.items():
-        if not isinstance(meth, types.MethodType):
+        if not isinstance(meth, types.MethodType) or name.lower() in ignorables:
             continue
         # python magic to introspect classnames, filenames, etc.
         friendly = _to_camel_case(name)

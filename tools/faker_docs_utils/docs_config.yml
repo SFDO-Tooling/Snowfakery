@@ -197,3 +197,7 @@ uncommon_fakes:
   building_number:
   country_code:
   current_country_code:
+ignore:
+  - Tar
+  - Sha256
+  - Zip
