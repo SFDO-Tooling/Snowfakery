@@ -1,7 +1,7 @@
 contextvars
 SQLAlchemy
 Faker
-importlib-metadata<4.3  # to be compatible with flake8
+importlib-metadata<4.9  # to be compatible with flake8
 jinja2<3        # until CCI is compatible
 PyYAML
 click<8         # until CCI is compatible
