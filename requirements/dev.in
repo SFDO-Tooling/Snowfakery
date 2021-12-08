@@ -7,7 +7,7 @@ mkdocs-exclude-search
 pre-commit
 pytest
 pytest-cov
-typeguard==2.10.0   # do not upgrade until #181 is fixed
+typeguard==2.13.2   # do not upgrade until #181 is fixed
 faker-microservice
 tox
 tox-gh-actions      # needed for CI only
