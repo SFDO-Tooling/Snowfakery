@@ -4,6 +4,14 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 2.3
+
+Remove support for Python 3.6 and Python 3.7. (#554)
+
+Allow zero-prefixed strings of digits, including zero-prefixed postal codes. (#551)
+
+Limit fake Usernames to 80 characters (#552)
+
 ## Snowfakery 2.2.1
 
 Removed an unnecessary dependency which could cause installation problems on some systems. (#534)
