@@ -2,7 +2,6 @@
 black
 coverage
 coveralls
-flake8
 mkdocs
 mkdocs-exclude-search
 pre-commit
