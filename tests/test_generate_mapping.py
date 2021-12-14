@@ -448,3 +448,22 @@ class TestPersonAccounts:
             exc.DataGenError, match="`nickname` argument should be a string"
         ):
             generate(StringIO(recipe_data), {}, None)
+
+    def test_recursive_users_and_permission_sets(self, generate_in_tmpdir):
+        recipe_data = """
+        - object: User
+          nickname: manager
+          friends:
+            - object: PermissionSetAssignment
+              fields:
+                AssigneeId:
+                  reference: User
+                PermissionSetId:  XYZZY
+
+            - object: User
+              fields:
+                ManagerId:
+                  reference: manager
+                """
+        with generate_in_tmpdir(recipe_data) as (mapping, db):
+            assert tuple(mapping.keys())[0] == "Insert User"

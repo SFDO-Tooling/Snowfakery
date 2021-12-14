@@ -85,7 +85,10 @@ def _table_is_free(table_name, dependencies, sorted_tables):
     """
     tables_this_table_depends_upon = dependencies.get(table_name, {}).copy()
     for dependency in sorted(tables_this_table_depends_upon):
-        if dependency.table_name_to in sorted_tables:
+        if (
+            dependency.table_name_to in sorted_tables
+            or dependency.table_name_to == table_name
+        ):
             tables_this_table_depends_upon.remove(dependency)
 
     return len(tables_this_table_depends_upon) == 0

@@ -1,0 +1,49 @@
+- plugin: snowfakery.standard_plugins.Salesforce
+- plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+
+- macro: userdata
+  fields:
+    Alias: 
+      fake: alias
+    FirstName: 
+      fake: firstname
+    LastName: 
+      fake: lastname
+    Username: ${{firstname}}${{random_number(1000, 100000)}}@${{random_number(1000, 10000)}}fake.claritycx1.com
+    Email: ${{Username}}
+    TimeZoneSidKey: America/Bogota
+    LocaleSidKey: en_US
+    EmailEncodingKey: UTF-8
+    LanguageLocaleKey: en_US
+    ProfileId:
+      Salesforce.ProfileId: Standard User
+
+- object: User
+  nickname: manager
+  include: userdata
+  friends:
+    - object: PermissionSetAssignment
+      fields:
+        AssigneeId:
+          reference: User
+        PermissionSetId:
+          SalesforceQuery.find_record:
+            from: PermissionSet
+            where: Name='B2BBuyerManager'
+
+    - object: User
+      include: userdata
+      fields:
+        ManagerId:
+          reference: manager
+
+      friends:
+        - object: PermissionSetAssignment
+          fields:
+            AssigneeId:
+              reference: User
+            PermissionSetId:
+              SalesforceQuery.find_record:
+                from: PermissionSet
+                where: Name='B2BBuyerManager'
+                
