@@ -5,7 +5,6 @@ from pathlib import Path
 
 import yaml
 from pydantic import BaseModel, Extra, validator
-from typing_extensions import Literal
 
 
 class AtomicDecl(T.NamedTuple):
@@ -60,11 +59,11 @@ class MergeRules:
 
 class SObjectRuleDeclaration(BaseModel):
     sf_object: str
-    priority: Literal["low", "medium", "high"] = None
+    priority: T.Literal["low", "medium", "high"] = None
 
-    api: Literal["smart", "rest", "bulk"] = None
+    api: T.Literal["smart", "rest", "bulk"] = None
     batch_size: int = None
-    bulk_mode: Literal["serial", "parallel"] = None
+    bulk_mode: T.Literal["serial", "parallel"] = None
     anchor_date: T.Union[str, date] = None
 
     load_after: str = None
