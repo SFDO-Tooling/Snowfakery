@@ -67,3 +67,11 @@ class CaseInsensitiveDict(MutableMapping):
 
     def __repr__(self):
         return str(dict(self.items()))
+
+
+class SortedSet(OrderedDict):
+    def add(self, item):
+        self[item] = item
+
+    def remove(self, item):
+        del self[item]

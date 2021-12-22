@@ -12,6 +12,7 @@ from snowfakery.generate_mapping_from_recipe import (
 from snowfakery.data_generator_runtime import Dependency
 from snowfakery.cci_mapping_files.post_processes import add_after_statements
 from snowfakery import data_gen_exceptions as exc
+from snowfakery.utils.collections import SortedSet
 
 
 try:
@@ -194,6 +195,37 @@ class TestGenerateMapping:
 
         assert mapping["Insert Ref"]["lookups"]["targ"]["table"] == "Target"
 
+    def test_order_is_predictable(self, generate_in_tmpdir):
+        yaml = """
+        - object: Contact
+        - object: Campaign
+          friends:
+          - object: CampaignMemberStatus
+            fields:
+              CampaignId:
+                reference: Campaign
+          - object: CampaignMemberStatus
+            fields:
+              CampaignId:
+                reference: Campaign
+        - object: CampaignMember
+          fields:
+            ContactId:
+              reference: Contact
+            CampaignId:
+              reference: Campaign
+"""
+        # if this test ever fails it will probably do so in
+        # an intermittent way. Running it in a loop could
+        # make it fail more consistently when you are testing.
+        with generate_in_tmpdir(yaml) as (mapping, db):
+            assert list(mapping.keys()) == [
+                "Insert Contact",
+                "Insert Campaign",
+                "Insert CampaignMemberStatus",
+                "Insert CampaignMember",
+            ], mapping.keys()
+
 
 class TestBuildDependencies:
     def test_build_dependencies_simple(self):
@@ -208,8 +240,8 @@ class TestBuildDependencies:
         deps = parent_deps + child_deps
         inferred_dependencies, _, reference_fields = build_dependencies(deps)
         assert inferred_dependencies == {
-            "parent": set(parent_deps),
-            "child": set(child_deps),
+            "parent": SortedSet(zip(parent_deps, parent_deps)),
+            "child": SortedSet(zip(child_deps, child_deps)),
         }
         assert reference_fields == {
             ("parent", "daughter"): "child",
