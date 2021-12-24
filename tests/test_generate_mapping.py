@@ -227,6 +227,130 @@ class TestGenerateMapping:
             ], mapping.keys()
 
 
+class TestGenerateMappingOutputOrder:
+    # if there is no order for two tables implied by the dependencies,
+    # use the or in which they appeared in the file
+
+    def test_file_order_is_preserved(self):
+        yaml = """
+            - object: A
+            - object: B
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert A", "Insert B")
+
+    def test_file_order_is_preserved_2(self):
+        yaml = """
+            - object: B
+            - object: A
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert B", "Insert A")
+
+    def test_file_order_is_preserved_recursive_1(self):
+        yaml = """
+            - object: A
+              fields:
+                reference: B
+            - object: B
+              fields:
+                reference: A
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert A", "Insert B")
+
+    def test_file_order_is_preserved_recursive_2(self):
+        yaml = """
+            - object: B
+              fields:
+                reference: A
+            - object: A
+              fields:
+                reference: B
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert B", "Insert A")
+
+    def test_file_order_is_preserved_recursive_2_groups_1(self):
+        yaml = """
+            - object: B
+              fields:
+                reference: A
+            - object: A
+              fields:
+                reference: B
+            - object: C
+              fields:
+                reference: D
+            - object: D
+              fields:
+                reference: C
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert B", "Insert A", "Insert C", "Insert D")
+
+    def test_file_order_is_preserved_recursive_2_groups_2(self):
+        yaml = """
+            - object: C
+              fields:
+                reference: D
+            - object: D
+              fields:
+                reference: C
+            - object: B
+              fields:
+                reference: A
+            - object: A
+              fields:
+                reference: B
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert C", "Insert D", "Insert B", "Insert A")
+
+    def test_order_is_predictable(self, generate_in_tmpdir):
+        yaml = """
+        - object: Contact
+        - object: Campaign
+          friends:
+          - object: CampaignMemberStatus
+            fields:
+              CampaignId:
+                reference: Campaign
+          - object: CampaignMemberStatus
+            fields:
+              CampaignId:
+                reference: Campaign
+        - object: CampaignMember
+          fields:
+            ContactId:
+              reference: Contact
+            CampaignId:
+              reference: Campaign
+"""
+        # if this test ever fails it will probably do so in
+        # an intermittent way. Running it in a loop could
+        # make it fail more consistently when you are testing.
+        with generate_in_tmpdir(yaml) as (mapping, db):
+            assert list(mapping.keys()) == [
+                "Insert Contact",
+                "Insert Campaign",
+                "Insert CampaignMemberStatus",
+                "Insert CampaignMember",
+            ], mapping.keys()
+
+
 class TestBuildDependencies:
     def test_build_dependencies_simple(self):
         parent_deps = [
