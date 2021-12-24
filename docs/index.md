@@ -1936,6 +1936,58 @@ Other encodings of binary data are not currently supported, and output streams g
 
 Snowfakery can be extended with custom plugins and fake data providers as described in [Extending Snowfakery with Python Code](./extending.md).
 
+### Update mode
+
+If your goal is to loop over every row of an input, update it, and then output
+the result, Snowfakery has a special mode for you that does that with minimal
+recipe code. For example, if you have a CSV of contacts, and you want to add
+an address for every one, you do it like this:
+
+```
+# examples/update_contexts.recipe.yml
+- object: Contact
+  fields:
+    BillingStreet:
+      fake: StreetAddress
+    BillingCity:
+      fake: City
+    BillingState:
+      fake: State
+    BillingPostalCode:
+      fake: PostalCode
+    BillingCountry:
+      fake: CurrentCountry
+```
+
+Given an input file like this:
+
+```
+id,FirstName,LastName
+0032D00000V6UvUQAV,Michael,Bluth
+032D00000V6UvVQAV,Isabella,Wright
+032D00000V6UvfQAF,Desiree,Shelton
+032D00000V6UvkQAF,Deanna,Mcdaniel
+```
+
+You can run:
+
+```
+$ snowfakery examples/update_records.recipe.yml --update-input-file examples/contacts.csv
+```
+
+This will generate output like this:
+
+```
+id,FirstName,LastName
+0032D00000V6UvUQAV,Michael,Bluth,32252 Marc Mall Suite 349,South Kristenview,Massachusetts,65450,United States
+032D00000V6UvVQAV,Isabella,Wright,41497 Henson Motorway,West Marisaland,Alaska,10293,United States
+032D00000V6UvfQAF,Desiree,Shelton,84504 Darren Knolls Suite 023,Port Sandra,Pennsylvania,68863,United States
+032D00000V6UvkQAF,Deanna,Mcdaniel,838 Montoya Circle Apt. 857,West Robert,Louisiana,03074,United States
+```
+
+An update recipe should have a single top-level object with no `count` on it.
+It will generate the same number of output rows as input rows.
+
 ## Use Snowfakery with Salesforce
 
 Snowfakery recipes that generate Salesforce records are like any other Snowfakery recipes, but instead use `SObject` names for the `objects`. There are several examples [in the Snowfakery repository](https://github.com/SFDO-Tooling/Snowfakery/tree/main/examples/salesforce).

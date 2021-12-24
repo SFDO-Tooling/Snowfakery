@@ -1,0 +1,12 @@
+- object: Contact
+  fields:
+    BillingStreet:
+      fake: StreetAddress
+    BillingCity:
+      fake: City
+    BillingState:
+      fake: State
+    BillingPostalCode:
+      fake: PostalCode
+    BillingCountry:
+      fake: CurrentCountry

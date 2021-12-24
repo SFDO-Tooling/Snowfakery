@@ -155,6 +155,11 @@ class VersionMessage:
     help="Declarations to mix into the generated mapping file",
     multiple=True,
 )
+@click.option(
+    "--update-input-file",
+    type=click.Path(exists=True, readable=True, dir_okay=False),
+    help="Run an update-style recipe on this input CSV",
+)
 @click.version_option(version=version, prog_name="snowfakery", message=VersionMessage())
 def generate_cli(
     yaml_file,
@@ -172,6 +177,7 @@ def generate_cli(
     plugin_option=(),
     should_create_cci_record_type_tables=False,
     load_declarations=None,
+    update_input_file=None,
 ):
     """
         Generates records from a YAML file
@@ -192,16 +198,16 @@ def generate_cli(
     """
     output_files = list(output_files) if output_files else []
     validate_options(
-        yaml_file,
-        option,
-        dburls,
-        debug_internals,
-        generate_cci_mapping_file,
-        output_format,
-        output_files,
-        output_folder,
-        target_number,
-        reps,
+        yaml_file=yaml_file,
+        option=option,
+        dburl=dburls,
+        debug_internals=debug_internals,
+        generate_cci_mapping_file=generate_cci_mapping_file,
+        output_format=output_format,
+        output_files=output_files,
+        output_folder=output_folder,
+        target_number=target_number,
+        reps=reps,
     )
     try:
         user_options = dict(option)
@@ -224,6 +230,7 @@ def generate_cli(
             should_create_cci_record_type_tables=should_create_cci_record_type_tables,
             load_declarations=load_declarations,
             plugin_options=plugin_options,
+            update_input_file=update_input_file,
         )
     except DataGenError as e:
         if debug_internals:
