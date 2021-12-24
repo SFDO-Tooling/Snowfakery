@@ -123,6 +123,7 @@ def generate(
     generate_continuation_file: FileLike = None,
     continuation_file: TextIO = None,
     plugin_options: dict = None,
+    update_input_file: FileLike = None,
 ) -> ExecutionSummary:
     """The main entry point to the package for Python applications."""
     from .api import SnowfakeryApplication
@@ -133,7 +134,7 @@ def generate(
     output_stream = output_stream or DebugOutputStream()
 
     # parse the YAML and any it refers to
-    parse_result = parse_recipe(open_yaml_file)
+    parse_result = parse_recipe(open_yaml_file, update_input_file)
 
     faker_providers, snowfakery_plugins = process_plugins(parse_result.plugins)
 

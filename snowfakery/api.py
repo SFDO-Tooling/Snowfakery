@@ -4,7 +4,6 @@ import typing as T
 import sys
 
 import yaml
-from click.utils import LazyFile
 
 from snowfakery.data_generator import generate
 
@@ -23,9 +22,7 @@ import snowfakery.data_gen_exceptions as exc
 from snowfakery.data_generator_runtime import (
     StoppingCriteria,
 )
-
-OpenFileLike = T.Union[T.TextIO, LazyFile]
-FileLike = T.Union[OpenFileLike, Path, str]
+from snowfakery.utils.files import FileLike, open_file_like
 
 OUTPUT_FORMATS = {
     "png": "snowfakery.output_streams.ImageOutputStream",
@@ -150,6 +147,7 @@ def generate_data(
         FileLike
     ] = None,  # read these load declarations for CCI
     plugin_options: T.Mapping = None,
+    update_input_file: FileLike = None,  # use this input file in update mode
 ) -> None:
     stopping_criteria = stopping_criteria_from_target_number(target_number)
     dburls = dburls or ([dburl] if dburl else [])
@@ -186,14 +184,8 @@ def generate_data(
             continuation_file=open_continuation_file,
             stopping_criteria=stopping_criteria,
             plugin_options=plugin_options,
+            update_input_file=update_input_file,
         )
-
-        # This feature seems seldom useful. Delete it if it isn't missed
-        # by fall 2021:
-
-        # if debug_internals:
-        #     debuginfo = yaml.dump(summary.summarize_for_debugging(), sort_keys=False)
-        #     sys.stderr.write(debuginfo)
 
         if open_cci_mapping_file:
             declarations = gather_declarations(yaml_path or "", load_declarations)
@@ -319,23 +311,3 @@ def infer_load_file_path(yaml_file: T.Union[str, Path]):
         return Path(yaml_file.replace(suffixes, ".load.yml"))
     else:
         return Path("")
-
-
-@contextmanager
-def open_file_like(
-    file_like: T.Optional[FileLike], mode
-) -> T.ContextManager[T.Tuple[str, OpenFileLike]]:
-    if not file_like:
-        yield None, None
-    if isinstance(file_like, str):
-        file_like = Path(file_like)
-
-    if isinstance(file_like, Path):
-        with file_like.open(mode) as f:
-            yield file_like, f
-
-    elif hasattr(file_like, "name"):
-        yield file_like.name, file_like
-
-    elif hasattr(file_like, "read"):
-        yield None, file_like
