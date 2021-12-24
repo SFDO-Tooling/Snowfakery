@@ -195,37 +195,6 @@ class TestGenerateMapping:
 
         assert mapping["Insert Ref"]["lookups"]["targ"]["table"] == "Target"
 
-    def test_order_is_predictable(self, generate_in_tmpdir):
-        yaml = """
-        - object: Contact
-        - object: Campaign
-          friends:
-          - object: CampaignMemberStatus
-            fields:
-              CampaignId:
-                reference: Campaign
-          - object: CampaignMemberStatus
-            fields:
-              CampaignId:
-                reference: Campaign
-        - object: CampaignMember
-          fields:
-            ContactId:
-              reference: Contact
-            CampaignId:
-              reference: Campaign
-"""
-        # if this test ever fails it will probably do so in
-        # an intermittent way. Running it in a loop could
-        # make it fail more consistently when you are testing.
-        with generate_in_tmpdir(yaml) as (mapping, db):
-            assert list(mapping.keys()) == [
-                "Insert Contact",
-                "Insert Campaign",
-                "Insert CampaignMemberStatus",
-                "Insert CampaignMember",
-            ], mapping.keys()
-
 
 class TestGenerateMappingOutputOrder:
     # if there is no order for two tables implied by the dependencies,
@@ -319,7 +288,27 @@ class TestGenerateMappingOutputOrder:
 
         assert tuple(mapping.keys()) == ("Insert C", "Insert D", "Insert B", "Insert A")
 
-    def test_order_is_predictable(self, generate_in_tmpdir):
+    def test_file_order_is_preserved_recursive_2_groups_3(self):
+        yaml = """
+            - object: C
+              fields:
+                reference: A
+            - object: D
+              fields:
+                reference: B
+            - object: B
+              fields:
+                reference: D
+            - object: A
+              fields:
+                reference: C
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert C", "Insert D", "Insert B", "Insert A")
+
+    def test_order_is_predictable_real_world_example(self, generate_in_tmpdir):
         yaml = """
         - object: Contact
         - object: Campaign
