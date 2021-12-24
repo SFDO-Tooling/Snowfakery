@@ -24,6 +24,7 @@ from .data_generator_runtime_object_model import (
 
 from snowfakery.plugins import resolve_plugins, LineTracker, ParserMacroPlugin
 import snowfakery.data_gen_exceptions as exc
+from snowfakery.utils.files import FileLike
 
 SHARED_OBJECT = "#SHARED_OBJECT"
 
@@ -633,9 +634,15 @@ def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
     return statements
 
 
-def parse_recipe(stream: IO[str]) -> ParseResult:
+def build_update_recipe(
+    statements: List[Statement], update_input_file: FileLike = None
+) -> List[Statement]:
+    raise NotImplementedError()
+
+
+def parse_recipe(stream: IO[str], update_input_file: FileLike = None) -> ParseResult:
     context = ParseContext()
-    objects = parse_file(stream, context)
+    objects = parse_file(stream, context)  # parse the yaml without semantics
     statements = parse_statement_list(objects, context)
     tables = context.table_infos
     tables = {
@@ -643,5 +650,7 @@ def parse_recipe(stream: IO[str]) -> ParseResult:
         for name, value in context.table_infos.items()
         if not name.startswith("__")
     }
+    if update_input_file:
+        statements = build_update_recipe(statements, update_input_file)
 
     return ParseResult(context.options, tables, statements, plugins=context.plugins)
