@@ -256,7 +256,7 @@ class TestExternalDatasets:
 
         assert "unable to open database file" in str(e.value)
 
-    def test_SQL_dataset_multitable_file(self, generated_rows):
+    def test_SQL_dataset_multitable_file(self):
         abs_path = str(Path(__file__).parent)
         yaml = (
             """
@@ -286,3 +286,66 @@ class TestExternalDatasets:
             generate(f, {})
             assert capsys.readouterr().err == ""
             assert caplog.text == ""
+
+    def test_nested_for_loops(self, generated_rows):
+        call = mock.call
+        with open(
+            Path(__file__).parent.parent
+            / "examples/datasets/nested_for_loops.recipe.yml"
+        ) as f:
+            generate(f, {})
+        print(generated_rows.mock_calls)
+        assert generated_rows.mock_calls == [
+            call("Foo", {"id": 1, "StreetAddress": "420 Kings Ave", "City": "Burnaby"}),
+            call(
+                "Person", {"id": 1, "StreetAddress": "420 Kings Ave", "City": "Burnaby"}
+            ),
+            call(
+                "Person",
+                {"id": 2, "StreetAddress": "421 Granville Street", "City": "Burnaby"},
+            ),
+            call(
+                "Person",
+                {"id": 3, "StreetAddress": "422 Kingsway Road", "City": "Burnaby"},
+            ),
+            call(
+                "Foo",
+                {
+                    "id": 2,
+                    "StreetAddress": "421 Granville Street",
+                    "City": "White Rock",
+                },
+            ),
+            call(
+                "Person",
+                {"id": 4, "StreetAddress": "420 Kings Ave", "City": "White Rock"},
+            ),
+            call(
+                "Person",
+                {
+                    "id": 5,
+                    "StreetAddress": "421 Granville Street",
+                    "City": "White Rock",
+                },
+            ),
+            call(
+                "Person",
+                {"id": 6, "StreetAddress": "422 Kingsway Road", "City": "White Rock"},
+            ),
+            call(
+                "Foo",
+                {"id": 3, "StreetAddress": "422 Kingsway Road", "City": "Richmond"},
+            ),
+            call(
+                "Person",
+                {"id": 7, "StreetAddress": "420 Kings Ave", "City": "Richmond"},
+            ),
+            call(
+                "Person",
+                {"id": 8, "StreetAddress": "421 Granville Street", "City": "Richmond"},
+            ),
+            call(
+                "Person",
+                {"id": 9, "StreetAddress": "422 Kingsway Road", "City": "Richmond"},
+            ),
+        ]

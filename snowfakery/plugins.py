@@ -300,7 +300,11 @@ def _register_for_continuation(cls):
 
 
 class PluginResultIterator(PluginResult):
-    pass
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.next()
 
 
 class PluginOption:

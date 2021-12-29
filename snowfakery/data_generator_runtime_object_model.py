@@ -2,9 +2,9 @@ from abc import abstractmethod, ABC
 from .data_generator_runtime import evaluate_function, RuntimeContext, Interpreter
 from .object_rows import ObjectRow, ObjectReference
 from contextlib import contextmanager
-from typing import Union, Dict, Sequence, Optional, cast
+from typing import Union, Dict, Sequence, Optional, cast, List
 from .utils.template_utils import look_for_number
-
+import itertools
 import jinja2
 
 from .data_gen_exceptions import (
@@ -80,6 +80,39 @@ class VariableDefinition:
         interp.register_variable(name, value)
 
 
+class ForEachVariableDefinition:
+    varname: str
+    expression: "StructuredValue"
+
+    def __init__(
+        self, filename: str, line_num: int, varname: str, expression: Definition
+    ):
+        self.varname = varname
+        self.expression = expression
+        self.filename = filename
+        self.line_num = line_num
+
+    def evaluate(self, context: RuntimeContext) -> FieldValue:
+        """Evaluate the expression"""
+        ret = self.expression.render(context)
+        ret.repeat = False  # fix me: make this a method
+        return ret
+        # FIXME
+        return self.expression.render(context, dereference_iterators=False)
+
+
+class LoopIterator:
+    name: str
+    iterator: object
+
+    def __init__(self, name, iterator):
+        self.name = name
+        self.iterator = iterator
+
+    def __iter__(self):
+        return ((self.name, value) for value in self.iterator)
+
+
 class ObjectTemplate:
     """A factory that generates rows.
 
@@ -99,6 +132,7 @@ class ObjectTemplate:
         line_num: int,
         nickname: str = None,
         count_expr: FieldDefinition = None,  # counts can be dynamic so they are expressions
+        for_each_exprs: List[ForEachVariableDefinition] = None,
         just_once: bool = False,
         fields: Sequence = (),
         friends: Sequence = (),
@@ -111,6 +145,14 @@ class ObjectTemplate:
         self.line_num = line_num
         self.fields = fields
         self.friends = friends
+        self.for_each_exprs = for_each_exprs
+
+        if count_expr and for_each_exprs:
+            raise DataGenError(
+                "Cannot specify both a count expression and a for-each expression at the same time.",
+                self.filename,
+                self.line_num,
+            )
 
     def render(self, context: RuntimeContext) -> Optional[ObjectRow]:
         return self.generate_rows(context.output_stream, context)
@@ -121,9 +163,20 @@ class ObjectTemplate:
         """Generate several rows"""
         rc = None
         with parent_context.child_context(self) as context:
-            count = self._evaluate_count(context)
+            if self.for_each_exprs:
+                iterators = self._evaluate_for_eaches(context)
+                iterators.append(LoopIterator("child_index", itertools.count()))
+            else:  # use a count, or a default count of 1
+                iterators = [
+                    LoopIterator(
+                        "child_index", iter(range(self._evaluate_count(context)))
+                    )
+                ]
             with self.exception_handling(f"Cannot generate {self.name}"):
-                for i in range(count):
+                master_iterator = zip(*iterators)
+                for i, next_value_list in enumerate(master_iterator):
+                    for name, value in next_value_list:
+                        context.interpreter.register_variable(name, value)
                     rc = self._generate_row(output_stream, context, i)
 
         return rc  # return last row
@@ -163,6 +216,31 @@ class ObjectTemplate:
     @property
     def id(self):
         return id(self)
+
+    def _evaluate_for_eaches(self, context: RuntimeContext) -> List[LoopIterator]:
+        if not self.for_each_exprs:
+            return None
+
+        def eval_to_iterator(vardef):
+            val = vardef.evaluate(context)
+            try:
+                # TODO: This comment is months old. I don't understand it,
+                #       but I'll leave it for later consideration (before PR)
+                # # TODO: this is ugly...I'm undoing the effects of caching.
+                # #       would be better if the caching only happened when
+                # #       it is helpful, i.e. in VariableDefinition.evaluate()
+                # #       and _generate_fields()? Perhaps another flag?
+                # # FIX BEFORE PR
+                val.restart()
+                iterator = iter(val)
+            except TypeError:
+                raise DataGenError(
+                    f"Object created by {vardef.varname} is not iterable: {val}"
+                )
+            return LoopIterator(vardef.varname, iterator)
+
+        with self.exception_handling("Cannot evaluate `for_each` definition"):
+            return [eval_to_iterator(expr) for expr in self.for_each_exprs]
 
     def _generate_row(
         self, output_stream, context: RuntimeContext, index: int

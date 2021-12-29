@@ -1,0 +1,22 @@
+# todo: figure out how to have multiple for-eaches
+#       or remove that code
+- plugin: snowfakery.standard_plugins.datasets.Dataset
+- object: Foo
+  for_each:
+    var: current_address
+    value:
+      Dataset.iterate:
+        dataset: addresses.csv
+  fields:
+    StreetAddress: ${{current_address.Number}} ${{current_address.Street}}
+    City: ${{current_address.City}}
+  friends:
+    - object: Person
+      for_each:
+        var: current_address2
+        value:
+          Dataset.iterate:
+            dataset: addresses.csv
+      fields:
+        StreetAddress: ${{current_address2.Number}} ${{current_address2.Street}}
+        City: ${{current_address.City}}

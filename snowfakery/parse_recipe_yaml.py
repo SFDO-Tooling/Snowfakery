@@ -15,6 +15,7 @@ from yaml.error import YAMLError
 from .data_generator_runtime_object_model import (
     ObjectTemplate,
     VariableDefinition,
+    ForEachVariableDefinition,
     FieldFactory,
     SimpleValue,
     StructuredValue,
@@ -346,12 +347,15 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
             "include": str,
             "nickname": str,
             "just_once": bool,
+            "for_each": (list, dict),
             "count": (str, int, dict),
         },
         context=context,
     )
     if not context.top_level and parsed_template.just_once:
-        raise exc.DataGenSyntaxError("just_once can only be used at the top level")
+        raise exc.DataGenSyntaxError(
+            "just_once can only be used at the top level", **context.line_num()
+        )
 
     assert yaml_sobj
     with context.change_current_parent_object(yaml_sobj):
@@ -375,6 +379,21 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
 
         if count_expr is not None:
             parse_count_expression(yaml_sobj, sobj_def, context)
+
+        for_each_exprs = yaml_sobj.get("for_each")
+        if for_each_exprs is not None:
+            if isinstance(for_each_exprs, dict):
+                for_each_exprs = [for_each_exprs]
+            if isinstance(for_each_exprs, list):
+                sobj_def["for_each_exprs"] = [
+                    parse_for_each_variable_definition(expr, context)
+                    for expr in for_each_exprs
+                ]
+            else:
+                raise exc.DataGenSyntaxError(
+                    "`for_each` must evaluate to a variable description or a list of them",
+                    **context.line_num(),
+                )
         new_template = ObjectTemplate(**sobj_def)
         context.register_template(new_template)
         return new_template
@@ -402,6 +421,32 @@ def parse_variable_definition(
         sobj_def["line_num"] = parsed_template.line_num.line_num
         sobj_def["filename"] = parsed_template.line_num.filename
         new_def = VariableDefinition(**sobj_def)
+        return new_def
+
+
+def parse_for_each_variable_definition(
+    yaml_sobj: Dict, context: ParseContext
+) -> ForEachVariableDefinition:
+    parsed_template: Any = parse_element(
+        yaml_sobj,
+        "var",
+        optional_keys={},
+        mandatory_keys={
+            "value": (dict,),
+        },
+        context=context,
+    )
+
+    assert yaml_sobj
+    with context.change_current_parent_object(yaml_sobj):
+        sobj_def = {}
+        sobj_def["varname"] = parsed_template.var
+        var_def_expr = yaml_sobj.get("value")
+
+        sobj_def["expression"] = parse_field_value("value", var_def_expr, context)
+        sobj_def["line_num"] = parsed_template.line_num.line_num
+        sobj_def["filename"] = parsed_template.line_num.filename
+        new_def = ForEachVariableDefinition(**sobj_def)
         return new_def
 
 

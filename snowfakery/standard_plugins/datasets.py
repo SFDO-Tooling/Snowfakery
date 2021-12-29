@@ -28,7 +28,7 @@ def _open_db(db_url):
     return engine, metadata
 
 
-def sql_dataset(db_url: str, tablename: str = None, mode="linear"):
+def sql_dataset(db_url: str, tablename: str = None, mode="linear", repeat: bool = True):
     "Open the right SQL Dataset iterator based on the params"
     assert db_url
     engine, metadata = _open_db(db_url)
@@ -50,9 +50,9 @@ def sql_dataset(db_url: str, tablename: str = None, mode="linear"):
             f"Database has multiple tables in it and none was selected: {metadata.tables.keys()}"
         )
     if mode == "linear":
-        return SQLDatasetLinearIterator(engine, table)
+        return SQLDatasetLinearIterator(engine, table, repeat)
     elif mode == "shuffle":
-        return SQLDatasetRandomPermutationIterator(engine, table)
+        return SQLDatasetRandomPermutationIterator(engine, table, repeat)
     else:
         raise NotImplementedError(f"Unknown mode: {mode}")
 
@@ -63,12 +63,18 @@ class DatasetIteratorBase(PluginResultIterator):
     Subclasses should implement 'self.restart' which puts an iterator into 'self.results'
     """
 
+    def __init__(self, repeat):
+        self.repeat = repeat
+
     def next(self):
         try:
             return next(self.results)
         except StopIteration:
-            self.restart()
-            return next(self.results)
+            if self.repeat:
+                self.restart()
+                return next(self.results)
+            else:
+                raise
 
     def start(self):
         "Initialize the iterator in self.results."
@@ -84,9 +90,10 @@ class DatasetIteratorBase(PluginResultIterator):
 
 
 class SQLDatasetIterator(DatasetIteratorBase):
-    def __init__(self, engine, table):
+    def __init__(self, engine, table, repeat):
         self.connection = engine.connect()
         self.table = table
+        super().__init__(repeat)
         self.start()
 
     def start(self):
@@ -119,10 +126,12 @@ class SQLDatasetRandomPermutationIterator(SQLDatasetIterator):
 
 
 class CSVDatasetLinearIterator(DatasetIteratorBase):
-    def __init__(self, datasource: Path):
+    def __init__(self, datasource: Path, repeat: bool):
         self.datasource = datasource
         self.file = open(self.datasource, newline="", encoding="utf-8-sig")
         self.start()
+        self.result = vars(self)  # FIXME
+        super().__init__(repeat)
 
     def start(self):
         self.file.seek(0)
@@ -196,10 +205,11 @@ class FileDataset(DatasetBase):
     def _load_dataset(self, iteration_mode, rootpath, kwargs):
         dataset = kwargs.get("dataset")
         tablename = kwargs.get("table")
+        repeat = kwargs.get("repeat", True)
 
         with chdir(rootpath):
             if "://" in dataset:
-                return sql_dataset(dataset, tablename, iteration_mode)
+                return sql_dataset(dataset, tablename, iteration_mode, repeat)
             else:
                 filename = Path(dataset)
 
@@ -212,9 +222,9 @@ class FileDataset(DatasetBase):
                     )
 
                 if iteration_mode == "linear":
-                    return CSVDatasetLinearIterator(filename)
+                    return CSVDatasetLinearIterator(filename, repeat)
                 elif iteration_mode == "shuffle":
-                    return CSVDatasetRandomPermutationIterator(filename)
+                    return CSVDatasetRandomPermutationIterator(filename, repeat)
 
 
 class DatasetPluginBase(SnowfakeryPlugin):
