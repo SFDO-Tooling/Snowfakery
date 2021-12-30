@@ -5,14 +5,17 @@ from snowfakery.cli import generate_cli
 
 class TestUpdates:
     def test_updates_through_cli(self):
-        sample_yaml = "tests/test_updates.py"
+        sample_yaml = "examples/update_contexts.recipe.yml"
         with TemporaryDirectory() as t:
             generate_cli.main(
                 [
                     sample_yaml,
-                    "--output-file",
-                    Path(t) / "foo.csv",
+                    "--output-format",
+                    "csv",
+                    "--output-folder",
+                    Path(t),
                     "--update-input-file",
+                    Path("examples/datasets/addresses.csv"),
                 ],
                 standalone_mode=False,
             )

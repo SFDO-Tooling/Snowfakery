@@ -22,7 +22,7 @@ from .data_generator_runtime_object_model import (
     Statement,
     Definition,
 )
-
+from snowfakery.standard_plugins.datasets import CSVDatasetLinearIterator
 from snowfakery.plugins import resolve_plugins, LineTracker, ParserMacroPlugin
 import snowfakery.data_gen_exceptions as exc
 from snowfakery.utils.files import FileLike
@@ -691,9 +691,42 @@ def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
 
 
 def build_update_recipe(
-    statements: List[Statement], update_input_file: FileLike = None
+    statements: List[Statement], update_input_file: Path = None
 ) -> List[Statement]:
-    raise NotImplementedError()
+    class DataSourceValue(SimpleValue):
+        def __init__(self):
+            self.datasource = CSVDatasetLinearIterator(update_input_file, False)
+
+        def render(self, *args, **kwargs):
+            return self.datasource
+
+    error_message = "Update recipes should have a single object declaration."
+    if len(statements) != 1:
+        raise exc.DataGenSyntaxError(error_message)
+    template = statements[0]
+    if not isinstance(template, ObjectTemplate):
+        raise exc.DataGenSyntaxError(error_message, **template.line_num())
+
+    if template.count_expr:
+        raise exc.DataGenSyntaxError(
+            "Update templates should have no 'count'", **template.line_num()
+        )
+
+    template.for_each_exprs = [
+        ForEachVariableDefinition("", -1, "input", DataSourceValue())
+    ]
+    id_definition = SimpleValue("${{input.Oid}}", "", -3)
+    id_field = FieldFactory("Oid", id_definition, "", -4)
+    template.fields.append(id_field)
+
+    return [template]
+
+
+def register_oid_table(tables: dict, template: Statement):
+    table_name = template.name
+    oid = [field for field in template.fields if field.name == "Oid"]
+    oid = oid[0]
+    tables[table_name].fields["Oid"] = oid
 
 
 def parse_recipe(stream: IO[str], update_input_file: FileLike = None) -> ParseResult:
@@ -708,5 +741,7 @@ def parse_recipe(stream: IO[str], update_input_file: FileLike = None) -> ParseRe
     }
     if update_input_file:
         statements = build_update_recipe(statements, update_input_file)
+        template = statements[0]
+        register_oid_table(tables, template)
 
     return ParseResult(context.options, tables, statements, plugins=context.plugins)

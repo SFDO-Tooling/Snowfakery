@@ -1,6 +1,7 @@
 import warnings
 from typing import IO, Tuple, Mapping, List, Dict, TextIO, Union
 import functools
+from pathlib import Path
 
 import yaml
 from faker.providers import BaseProvider as FakerProvider
@@ -123,7 +124,7 @@ def generate(
     generate_continuation_file: FileLike = None,
     continuation_file: TextIO = None,
     plugin_options: dict = None,
-    update_input_file: FileLike = None,
+    update_input_file: Path = None,
 ) -> ExecutionSummary:
     """The main entry point to the package for Python applications."""
     from .api import SnowfakeryApplication

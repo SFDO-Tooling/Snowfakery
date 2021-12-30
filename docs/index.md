@@ -1947,26 +1947,24 @@ an address for every one, you do it like this:
 # examples/update_contexts.recipe.yml
 - object: Contact
   fields:
-    BillingStreet:
-      fake: StreetAddress
-    BillingCity:
-      fake: City
-    BillingState:
-      fake: State
-    BillingPostalCode:
-      fake: PostalCode
-    BillingCountry:
-      fake: CurrentCountry
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+    BillingStreet: ${{input.Number}} ${{input.Street}}
+    BillingCity: ${{input.City}}
+    BillingState: Texas
+    BillingPostalCode: ${{input.Postcode}}
+    BillingCountry: US
 ```
 
 Given an input file like this:
 
 ```
-id,FirstName,LastName
-0032D00000V6UvUQAV,Michael,Bluth
-032D00000V6UvVQAV,Isabella,Wright
-032D00000V6UvfQAF,Desiree,Shelton
-032D00000V6UvkQAF,Deanna,Mcdaniel
+Number,Street,City,Postcode
+420,Kings Ave,Burnaby,85633
+421,Granville Street,White Rock,85633
+422,Kingsway Road,Richmond,85633
 ```
 
 You can run:

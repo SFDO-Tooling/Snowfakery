@@ -147,7 +147,7 @@ def generate_data(
         FileLike
     ] = None,  # read these load declarations for CCI
     plugin_options: T.Mapping = None,
-    update_input_file: FileLike = None,  # use this input file in update mode
+    update_input_file: Path = None,  # use this input file in update mode
 ) -> None:
     stopping_criteria = stopping_criteria_from_target_number(target_number)
     dburls = dburls or ([dburl] if dburl else [])

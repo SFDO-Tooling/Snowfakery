@@ -1,12 +1,11 @@
 - object: Contact
   fields:
-    BillingStreet:
-      fake: StreetAddress
-    BillingCity:
-      fake: City
-    BillingState:
-      fake: State
-    BillingPostalCode:
-      fake: PostalCode
-    BillingCountry:
-      fake: CurrentCountry
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+    BillingStreet: ${{input.Number}} ${{input.Street}}
+    BillingCity: ${{input.City}}
+    BillingState: Texas
+    BillingPostalCode: ${{input.Postcode}}
+    BillingCountry: US
