@@ -22,7 +22,7 @@ jinja2==2.11.3
     # via -r requirements/prod.in
 markupsafe==2.0.1
     # via jinja2
-pydantic==1.8.2
+pydantic==1.9.0
     # via -r requirements/prod.in
 python-baseconv==1.2.2
     # via -r requirements/prod.in

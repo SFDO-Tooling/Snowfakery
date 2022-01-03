@@ -62,9 +62,7 @@ idna==3.3
     #   requests
     #   yarl
 importlib-metadata==4.8.3
-    # via
-    #   markdown
-    #   mkdocs
+    # via mkdocs
 iniconfig==1.1.1
     # via pytest
 jinja2==2.11.3
@@ -112,7 +110,7 @@ py==1.11.0
     # via
     #   pytest
     #   tox
-pydantic==1.8.2
+pydantic==1.9.0
     # via -r requirements/prod.txt
 pyparsing==3.0.6
     # via packaging
