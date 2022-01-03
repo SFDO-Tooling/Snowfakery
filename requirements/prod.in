@@ -1,4 +1,3 @@
-contextvars
 SQLAlchemy
 Faker
 jinja2<3        # until CCI is compatible
@@ -7,6 +6,5 @@ click<8         # until CCI is compatible
 python-dateutil
 gvgen
 pydantic
-typing_extensions
 python-baseconv
 requests
