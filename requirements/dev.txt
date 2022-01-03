@@ -36,7 +36,7 @@ distlib==0.3.4
     # via virtualenv
 docopt==0.6.2
     # via coveralls
-faker==10.0.0
+faker==11.1.0
     # via
     #   -r requirements/prod.txt
     #   faker-microservice
@@ -62,9 +62,7 @@ idna==3.3
     #   requests
     #   yarl
 importlib-metadata==4.8.3
-    # via
-    #   markdown
-    #   mkdocs
+    # via mkdocs
 iniconfig==1.1.1
     # via pytest
 jinja2==2.11.3
