@@ -62,9 +62,7 @@ idna==3.3
     #   requests
     #   yarl
 importlib-metadata==4.8.3
-    # via
-    #   markdown
-    #   mkdocs
+    # via mkdocs
 iniconfig==1.1.1
     # via pytest
 jinja2==2.11.3
@@ -171,7 +169,7 @@ tomli==1.2.3
     # via
     #   black
     #   coverage
-tox==3.24.4
+tox==3.24.5
     # via
     #   -r requirements/dev.in
     #   tox-gh-actions
