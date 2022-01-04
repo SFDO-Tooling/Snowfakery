@@ -3,7 +3,7 @@ black
 coverage
 coveralls
 mkdocs
-mkdocs-exclude-search<0.6.0
+mkdocs-exclude-search<0.7.0
 pre-commit
 pytest
 pytest-cov
