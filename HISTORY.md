@@ -6,8 +6,8 @@ And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” an
 
 ## Snowfakery 2.4
 
-The Salesforce load order now takes into account the order in which
-object templates were declared in a recipe. The other considerations
+The Salesforce load order now follows the order of
+object template declarations in the recipe. The other considerations
 are described in the document (#563 and #566)
 
 Improved syntax error messaging (#565)
