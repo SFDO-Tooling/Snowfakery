@@ -418,8 +418,10 @@ def parse_statement_list(
             variable_definition = parse_variable_definition(obj, context)
             parsed_statements.append(variable_definition)
         else:
-            assert 0  # pragma: no cover
-
+            keys = [key for key in obj.keys() if not key.startswith("_")]
+            raise exc.DataGenSyntaxError(
+                f"This statement cannot be parsed: {keys}", **context.line_num(obj)
+            )
     return parsed_statements
 
 
