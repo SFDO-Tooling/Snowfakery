@@ -67,3 +67,18 @@ class CaseInsensitiveDict(MutableMapping):
 
     def __repr__(self):
         return str(dict(self.items()))
+
+
+class OrderedSet(dict):
+    """Extremely minimal ordered set
+
+    Use with care, because very few methods are implemented."""
+
+    def add(self, item):
+        self[item] = item
+
+    def remove(self, item):
+        del self[item]
+
+    def copy(self):
+        return OrderedSet(self)

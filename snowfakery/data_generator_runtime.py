@@ -17,6 +17,7 @@ from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError
 import snowfakery  # noQA
 from snowfakery.object_rows import NicknameSlot, SlotState, ObjectRow
 from snowfakery.plugins import PluginContext, SnowfakeryPlugin
+from snowfakery.utils.collections import OrderedSet
 
 OutputStream = "snowfakery.output_streams.OutputStream"
 VariableDefinition = "snowfakery.data_generator_runtime_object_model.VariableDefinition"
@@ -120,7 +121,7 @@ class Globals:
         self.persistent_objects_by_table = {}
 
         self.id_manager = IdManager()
-        self.intertable_dependencies = set()
+        self.intertable_dependencies = OrderedSet()
         self.today = today or date.today()
         self.nicknames_and_tables = name_slots or {}
 
@@ -218,7 +219,7 @@ class Globals:
         self.nicknames_and_tables = state["nicknames_and_tables"]
         self.id_manager = hydrate(IdManager, state["id_manager"])
 
-        self.intertable_dependencies = set(
+        self.intertable_dependencies = OrderedSet(
             Dependency(*dep) for dep in getattr(state, "intertable_dependencies", [])
         )
 
