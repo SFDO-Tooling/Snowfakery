@@ -12,7 +12,7 @@ from snowfakery.generate_mapping_from_recipe import (
 from snowfakery.data_generator_runtime import Dependency
 from snowfakery.cci_mapping_files.post_processes import add_after_statements
 from snowfakery import data_gen_exceptions as exc
-from snowfakery.utils.collections import SortedSet
+from snowfakery.utils.collections import OrderedSet
 
 
 try:
@@ -353,8 +353,8 @@ class TestBuildDependencies:
         deps = parent_deps + child_deps
         inferred_dependencies, _, reference_fields = build_dependencies(deps)
         assert inferred_dependencies == {
-            "parent": SortedSet(zip(parent_deps, parent_deps)),
-            "child": SortedSet(zip(child_deps, child_deps)),
+            "parent": OrderedSet(zip(parent_deps, parent_deps)),
+            "child": OrderedSet(zip(child_deps, child_deps)),
         }
         assert reference_fields == {
             ("parent", "daughter"): "child",
