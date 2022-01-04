@@ -50,7 +50,7 @@ $ cci flow run test_everything
 ...
 ```
 
-The order in which sobjects is loaded is inferred by Snowfakery and CumulusCI
+Snowfakery and CumulusCI infer the order in which sObjects are loaded
 based primarily on which tables have fields that depend on which other
 tables. Tables declared earlier in the recipe are also generally loaded
 before tables declared later. If you need precise control over load
