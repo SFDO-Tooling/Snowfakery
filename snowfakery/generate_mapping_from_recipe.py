@@ -5,6 +5,7 @@ from collections import defaultdict
 from snowfakery.data_generator import ExecutionSummary
 from snowfakery.salesforce import find_record_type_column
 from snowfakery.data_generator_runtime import Dependency
+from snowfakery.utils.collections import OrderedSet
 
 from .cci_mapping_files.declaration_parser import SObjectRuleDeclaration
 from .cci_mapping_files.post_processes import add_after_statements
@@ -58,8 +59,8 @@ def build_dependencies(
         1. a dictionary allowing easy lookup of dependencies by parent table
         2. a dictionary allowing lookups by (tablename, fieldname) pairs
     """
-    inferred_dependencies = defaultdict(set)
-    declared_dependencies = defaultdict(set)
+    inferred_dependencies = defaultdict(OrderedSet)
+    declared_dependencies = defaultdict(OrderedSet)
     reference_fields = {}
     declarations = declarations or ()
 
@@ -83,7 +84,7 @@ def _table_is_free(table_name, dependencies, sorted_tables):
     Look at the unit test test_table_is_free_simple to see some
     usage examples.
     """
-    tables_this_table_depends_upon = dependencies.get(table_name, {}).copy()
+    tables_this_table_depends_upon = dependencies.get(table_name, OrderedSet()).copy()
     for dependency in sorted(tables_this_table_depends_upon):
         if (
             dependency.table_name_to in sorted_tables
@@ -101,11 +102,11 @@ def sort_dependencies(inferred_dependencies, declared_dependencies, tables):
 
     while tables:
         remaining = len(tables)
-        leaf_tables = {
+        leaf_tables = [
             table
             for table in tables
             if _table_is_free(table, dependencies, sorted_tables)
-        }
+        ]
         sorted_tables.extend(leaf_tables)
         tables = [table for table in tables if table not in sorted_tables]
         if len(tables) == remaining:

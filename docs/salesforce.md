@@ -21,7 +21,6 @@ creates Snowfakery.
 The easiest way to learn about CumulusCI (and to learn how to
 install it) is with its [Trailhead Trail](https://trailhead.salesforce.com/en/content/learn/trails/build-applications-with-cumulusci).
 
-
 ```s
 $ cci task run generate_and_load_from_yaml -o generator_yaml examples/salesforce/Contact.recipe.yml -o num_records 300 -o num_records_tablename Contact --org qa
 ...
@@ -50,6 +49,14 @@ $ cci task run generate_opportunities_and_contacts
 $ cci flow run test_everything
 ...
 ```
+
+Snowfakery and CumulusCI infer the order in which sObjects are loaded
+based primarily on which tables have fields that depend on which other
+tables. Tables declared earlier in the recipe are also generally loaded
+before tables declared later. If you need precise control over load
+order, you can control that and many other aspects of the loading process
+(e.g. batch size) with a `load.yml` file as described in the
+[CumulusCI docs](https://cumulusci.readthedocs.io/en/latest/data.html#controlling-the-loading-process).
 
 ## Incorporating Information from Salesforce
 
@@ -323,7 +330,7 @@ in the `PersonContactId` field.
 There is also an alternate syntax which allows nicknaming:
 
 ```yaml
-...
+---
 - object: Account
   fields:
     PersonContactId:

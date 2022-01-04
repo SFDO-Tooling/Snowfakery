@@ -12,6 +12,7 @@ from snowfakery.generate_mapping_from_recipe import (
 from snowfakery.data_generator_runtime import Dependency
 from snowfakery.cci_mapping_files.post_processes import add_after_statements
 from snowfakery import data_gen_exceptions as exc
+from snowfakery.utils.collections import OrderedSet
 
 
 try:
@@ -195,6 +196,150 @@ class TestGenerateMapping:
         assert mapping["Insert Ref"]["lookups"]["targ"]["table"] == "Target"
 
 
+class TestGenerateMappingOutputOrder:
+    # if there is no order for two tables implied by the dependencies,
+    # use the or in which they appeared in the file
+
+    def test_file_order_is_preserved(self):
+        yaml = """
+            - object: A
+            - object: B
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert A", "Insert B")
+
+    def test_file_order_is_preserved_2(self):
+        yaml = """
+            - object: B
+            - object: A
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert B", "Insert A")
+
+    def test_file_order_is_preserved_recursive_1(self):
+        yaml = """
+            - object: A
+              fields:
+                reference: B
+            - object: B
+              fields:
+                reference: A
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert A", "Insert B")
+
+    def test_file_order_is_preserved_recursive_2(self):
+        yaml = """
+            - object: B
+              fields:
+                reference: A
+            - object: A
+              fields:
+                reference: B
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert B", "Insert A")
+
+    def test_file_order_is_preserved_recursive_2_groups_1(self):
+        yaml = """
+            - object: B
+              fields:
+                reference: A
+            - object: A
+              fields:
+                reference: B
+            - object: C
+              fields:
+                reference: D
+            - object: D
+              fields:
+                reference: C
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert B", "Insert A", "Insert C", "Insert D")
+
+    def test_file_order_is_preserved_recursive_2_groups_2(self):
+        yaml = """
+            - object: C
+              fields:
+                reference: D
+            - object: D
+              fields:
+                reference: C
+            - object: B
+              fields:
+                reference: A
+            - object: A
+              fields:
+                reference: B
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert C", "Insert D", "Insert B", "Insert A")
+
+    def test_file_order_is_preserved_recursive_2_groups_3(self):
+        yaml = """
+            - object: C
+              fields:
+                reference: A
+            - object: D
+              fields:
+                reference: B
+            - object: B
+              fields:
+                reference: D
+            - object: A
+              fields:
+                reference: C
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert C", "Insert D", "Insert B", "Insert A")
+
+    def test_order_is_predictable_real_world_example(self, generate_in_tmpdir):
+        yaml = """
+        - object: Contact
+        - object: Campaign
+          friends:
+          - object: CampaignMemberStatus
+            fields:
+              CampaignId:
+                reference: Campaign
+          - object: CampaignMemberStatus
+            fields:
+              CampaignId:
+                reference: Campaign
+        - object: CampaignMember
+          fields:
+            ContactId:
+              reference: Contact
+            CampaignId:
+              reference: Campaign
+"""
+        # if this test ever fails it will probably do so in
+        # an intermittent way. Running it in a loop could
+        # make it fail more consistently when you are testing.
+        with generate_in_tmpdir(yaml) as (mapping, db):
+            assert list(mapping.keys()) == [
+                "Insert Contact",
+                "Insert Campaign",
+                "Insert CampaignMemberStatus",
+                "Insert CampaignMember",
+            ], mapping.keys()
+
+
 class TestBuildDependencies:
     def test_build_dependencies_simple(self):
         parent_deps = [
@@ -208,8 +353,8 @@ class TestBuildDependencies:
         deps = parent_deps + child_deps
         inferred_dependencies, _, reference_fields = build_dependencies(deps)
         assert inferred_dependencies == {
-            "parent": set(parent_deps),
-            "child": set(child_deps),
+            "parent": OrderedSet(zip(parent_deps, parent_deps)),
+            "child": OrderedSet(zip(child_deps, child_deps)),
         }
         assert reference_fields == {
             ("parent", "daughter"): "child",
