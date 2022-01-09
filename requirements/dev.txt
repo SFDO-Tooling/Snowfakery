@@ -60,9 +60,7 @@ idna==3.3
     #   requests
     #   yarl
 importlib-metadata==4.10.0
-    # via
-    #   markdown
-    #   mkdocs
+    # via mkdocs
 iniconfig==1.1.1
     # via pytest
 jinja2==2.11.3
@@ -81,7 +79,7 @@ mkdocs==1.2.3
     # via
     #   -r requirements/dev.in
     #   mkdocs-exclude-search
-mkdocs-exclude-search==0.5.4
+mkdocs-exclude-search==0.6.4
     # via -r requirements/dev.in
 multidict==5.2.0
     # via yarl
