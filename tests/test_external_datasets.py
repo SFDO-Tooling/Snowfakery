@@ -294,7 +294,6 @@ class TestExternalDatasets:
             / "examples/datasets/nested_for_loops.recipe.yml"
         ) as f:
             generate(f, {})
-        print(generated_rows.mock_calls)
         assert generated_rows.mock_calls == [
             call("Foo", {"id": 1, "StreetAddress": "420 Kings Ave", "City": "Burnaby"}),
             call(
@@ -349,3 +348,10 @@ class TestExternalDatasets:
                 {"id": 9, "StreetAddress": "422 Kingsway Road", "City": "Richmond"},
             ),
         ]
+
+    def test_for_loop_over_empty_dataset(self, generated_rows):
+        with open(
+            Path(__file__).parent.parent / "examples/datasets/empty_dataset.recipe.yml"
+        ) as f:
+            generate(f, {})
+        assert len(generated_rows.mock_calls) == 1
