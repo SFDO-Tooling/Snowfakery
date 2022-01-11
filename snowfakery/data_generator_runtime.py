@@ -426,6 +426,7 @@ class RuntimeContext:
     template_evaluator_recipe = JinjaTemplateEvaluatorFactory()
     current_template = None
     local_vars = None
+    unique_context_identifier = None
 
     def __init__(
         self,

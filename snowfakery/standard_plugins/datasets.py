@@ -63,30 +63,8 @@ class DatasetIteratorBase(PluginResultIterator):
     Subclasses should implement 'self.restart' which puts an iterator into 'self.results'
     """
 
-    def __init__(self, repeat):
-        self.repeat = repeat
-
-    def next(self):
-        try:
-            return next(self.results)
-        except StopIteration:
-            if self.repeat:
-                self.restart()
-                return next(self.results)
-            else:
-                raise
-
-    def start(self):
-        "Initialize the iterator in self.results."
-        raise NotImplementedError(f"start method on {self.__class__.__name__}")
-
-    def restart(self):
-        "Restart the iterator by assigning to self.results"
-        self.start()
-
-    def close(self):
-        "Subclasses should implement this if they need to clean up resources"
-        pass  # pragma: no cover
+    def next_result(self):
+        return next(self.results)
 
 
 class SQLDatasetIterator(DatasetIteratorBase):

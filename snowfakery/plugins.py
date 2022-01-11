@@ -1,6 +1,7 @@
 import sys
 
 from typing import Any, Callable, Mapping, Union, NamedTuple, List, Tuple
+import typing as T
 from importlib import import_module
 from datetime import date, datetime
 from pathlib import Path
@@ -21,6 +22,10 @@ from numbers import Number
 Scalar = Union[str, Number, date, datetime, None]
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
 ObjectRow = "snowfakery.object_rows.ObjectRow"
+
+
+class NoCache:  # sentinel value
+    pass
 
 
 class LineTracker(NamedTuple):
@@ -109,12 +114,16 @@ class PluginContext:
         )
 
     @property
-    def unique_context_identifier(self) -> str:
+    def unique_context_identifier(self) -> T.Union[str, NoCache]:
         """An identifier representing a template context that will be
         unique across iterations (but not portion invocations). It
         allows templates that do counting or iteration for a particular
         template context."""
-        return str(self.interpreter.current_context.unique_context_identifier)
+        context_id = self.interpreter.current_context.unique_context_identifier
+        if context_id == NoCache:
+            return NoCache
+        else:
+            return str(context_id)
 
     def evaluate_raw(self, field_definition):
         """Evaluate the contents of a field definition"""
@@ -153,6 +162,9 @@ def memorable(func: Any) -> Callable:
 
 
 def evaluate_memorable_function(context, func, self, args, kwargs):
+    if context.unique_context_identifier == NoCache:
+        return func(self, *args, **kwargs)
+
     user_key = kwargs.get("name") or (
         context.unique_context_identifier,
         tuple(args),
@@ -300,11 +312,40 @@ def _register_for_continuation(cls):
 
 
 class PluginResultIterator(PluginResult):
+    def __init__(self, repeat):
+        self.repeat = repeat
+
     def __iter__(self):
         return self
 
     def __next__(self):
         return self.next()
+
+    def next(self):
+        try:
+            return self.next_result()
+        except StopIteration:
+            if self.repeat:
+                self.restart()
+                return self.next_result()
+            else:
+                raise
+
+    def next_result(self):
+        "Initialize the iterator in self.results."
+        raise NotImplementedError(f"start method on {self.__class__.__name__}")
+
+    def start(self):
+        "Initialize the iterator in self.results."
+        raise NotImplementedError(f"start method on {self.__class__.__name__}")
+
+    def restart(self):
+        "Restart the iterator by assigning to self.results"
+        self.start()
+
+    def close(self):
+        "Subclasses should implement this if they need to clean up resources"
+        pass  # pragma: no cover
 
 
 class PluginOption:

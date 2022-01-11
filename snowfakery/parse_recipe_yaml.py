@@ -173,20 +173,22 @@ def parse_structured_value_args(
 
         with context.change_current_parent_object(args):
             return {
-                as_str(name): parse_field_value(as_str(name), arg, context, False)
+                as_str(name): parse_field_value(as_str(name), arg, context)
                 for name, arg in args.items()
                 if name != "__line__"
             }
     elif isinstance(args, list):
         return [
-            parse_field_value(f"List element {i}", arg, context, False)
+            parse_field_value(f"List element {i}", arg, context)
             for i, arg in enumerate(args)
         ]
     else:
-        return parse_field_value("", args, context, False)
+        return parse_field_value("", args, context)
 
 
-def parse_structured_value(name: str, field: Dict, context: ParseContext) -> Definition:
+def parse_structured_value(
+    name: str, field: Dict, context: ParseContext, allow_caching: bool = True
+) -> Definition:
     """Parse something that might look like:
 
     {'choose': ['Option1', 'Option2', 'Option3', 'Option4'], '__line__': 9}
@@ -222,11 +224,16 @@ def parse_structured_value(name: str, field: Dict, context: ParseContext) -> Def
                 raise e
 
     args = parse_structured_value_args(args, context)
-    return StructuredValue(function_name, args, **context.line_num(field))
+    return StructuredValue(
+        function_name, args, allow_caching, **context.line_num(field)
+    )
 
 
 def parse_field_value(
-    name: str, field, context: ParseContext, allow_structured_values=True
+    name: str,
+    field,
+    context: ParseContext,
+    allow_caching: bool = True,
 ) -> Union[SimpleValue, StructuredValue, ObjectTemplate]:
     if isinstance(field, (str, Number, date, type(None))):
         return SimpleValue(field, **(context.line_num(field) or context.line_num()))
@@ -234,11 +241,16 @@ def parse_field_value(
         with context.change_current_parent_object(field):
             return parse_object_template(field, context)
     elif isinstance(field, dict):
-        return parse_structured_value(name, field, context)
+        return parse_structured_value(name, field, context, allow_caching)
     elif isinstance(field, list) and len(field) == 1 and isinstance(field[0], dict):
         # unwrap a list of a single item in this context because it is
         # a mistake and we can infer their real meaning
-        return parse_field_value(name, field[0], context)
+        return parse_field_value(
+            name,
+            field[0],
+            context,
+            allow_caching,
+        )
     else:
         raise exc.DataGenSyntaxError(
             f"Unknown field {type(field)} type for {name}. Should be a string or 'object': \n {field} ",
@@ -443,7 +455,9 @@ def parse_for_each_variable_definition(
         sobj_def["varname"] = parsed_template.var
         var_def_expr = yaml_sobj.get("value")
 
-        sobj_def["expression"] = parse_field_value("value", var_def_expr, context)
+        sobj_def["expression"] = parse_field_value(
+            "value", var_def_expr, context, allow_caching=False
+        )
         sobj_def["line_num"] = parsed_template.line_num.line_num
         sobj_def["filename"] = parsed_template.line_num.filename
         new_def = ForEachVariableDefinition(**sobj_def)

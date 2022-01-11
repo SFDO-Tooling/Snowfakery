@@ -14,7 +14,7 @@ from .data_gen_exceptions import (
     DataGenValueError,
     fix_exception,
 )
-from .plugins import Scalar, PluginResult, PluginResultIterator
+from .plugins import Scalar, PluginResult, PluginResultIterator, NoCache
 
 # objects that represent the hierarchy of a data generator.
 # roughly similar to the YAML structure but with domain-specific objects
@@ -95,10 +95,10 @@ class ForEachVariableDefinition:
     def evaluate(self, context: RuntimeContext) -> FieldValue:
         """Evaluate the expression"""
         ret = self.expression.render(context)
-        ret.repeat = False  # fix me: make this a method
+        if not isinstance(ret, PluginResultIterator):
+            raise DataGenValueError("`for_each` value must be a DatasetIterator")
+        ret.repeat = False
         return ret
-        # FIXME
-        return self.expression.render(context, dereference_iterators=False)
 
 
 class LoopIterator:
@@ -224,14 +224,6 @@ class ObjectTemplate:
         def eval_to_iterator(vardef):
             val = vardef.evaluate(context)
             try:
-                # TODO: This comment is months old. I don't understand it,
-                #       but I'll leave it for later consideration (before PR)
-                # # TODO: this is ugly...I'm undoing the effects of caching.
-                # #       would be better if the caching only happened when
-                # #       it is helpful, i.e. in VariableDefinition.evaluate()
-                # #       and _generate_fields()? Perhaps another flag?
-                # # FIX BEFORE PR
-                val.restart()
                 iterator = iter(val)
             except TypeError:
                 raise DataGenError(
@@ -330,6 +322,7 @@ class SimpleValue(FieldDefinition):
 
     def render(self, context: RuntimeContext) -> FieldValue:
         """Render the value: rendering a template if necessary."""
+        old_context_identifier = context.unique_context_identifier
         context.unique_context_identifier = str(id(self))
         evaluator = self.evaluator(context)
         if evaluator:
@@ -338,10 +331,10 @@ class SimpleValue(FieldDefinition):
             except jinja2.exceptions.UndefinedError as e:
                 raise DataGenNameError(e.message, self.filename, self.line_num) from e
             except Exception as e:
-                raise
                 raise DataGenValueError(str(e), self.filename, self.line_num) from e
         else:
             val = self.definition
+        context.unique_context_identifier = old_context_identifier
         return look_for_number(val) if isinstance(val, str) else val
 
     def __repr__(self):
@@ -364,7 +357,7 @@ class StructuredValue(FieldDefinition):
             - reference:
                 ..."""
 
-    def __init__(self, function_name, args, filename, line_num):
+    def __init__(self, function_name, args, allow_caching, filename, line_num):
         self.function_name = function_name
         self.filename = filename
         self.line_num = line_num
@@ -378,8 +371,13 @@ class StructuredValue(FieldDefinition):
             self.args = [args]
             self.kwargs = {}
 
+        if allow_caching:
+            self.unique_context_identifier = str(id(self))
+        else:
+            self.unique_context_identifier = NoCache
+
     def render(self, context: RuntimeContext) -> FieldValue:
-        context.unique_context_identifier = str(id(self))
+        context.unique_context_identifier = self.unique_context_identifier
         if "." in self.function_name:
             objname, method, *rest = self.function_name.split(".")
             if rest:
