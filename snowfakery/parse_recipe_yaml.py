@@ -392,15 +392,17 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
         if count_expr is not None:
             parse_count_expression(yaml_sobj, sobj_def, context)
 
-        for_each_exprs = yaml_sobj.get("for_each")
-        if for_each_exprs is not None:
-            if isinstance(for_each_exprs, dict):
-                for_each_exprs = [for_each_exprs]
-            if isinstance(for_each_exprs, list):
-                sobj_def["for_each_exprs"] = [
-                    parse_for_each_variable_definition(expr, context)
-                    for expr in for_each_exprs
-                ]
+        for_each_expr = yaml_sobj.get("for_each")
+        if for_each_expr is not None:
+            # it would be easy to support multiple parallel
+            # for-eaches here and at one point the code did,
+            # but the use-case wasn't obvious so it was removed
+            # after 9bc296a7df. If we get to 2023 without
+            # finding a use-case we can delete this comment.
+            if isinstance(for_each_expr, dict):
+                sobj_def["for_each_expr"] = parse_for_each_variable_definition(
+                    for_each_expr, context
+                )
             else:
                 raise exc.DataGenSyntaxError(
                     "`for_each` must evaluate to a variable description or a list of them",

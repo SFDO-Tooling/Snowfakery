@@ -2,7 +2,7 @@ from abc import abstractmethod, ABC
 from .data_generator_runtime import evaluate_function, RuntimeContext, Interpreter
 from .object_rows import ObjectRow, ObjectReference
 from contextlib import contextmanager
-from typing import Union, Dict, Sequence, Optional, cast, List
+from typing import Union, Dict, Sequence, Optional, cast
 from .utils.template_utils import look_for_number
 import itertools
 import jinja2
@@ -132,7 +132,7 @@ class ObjectTemplate:
         line_num: int,
         nickname: str = None,
         count_expr: FieldDefinition = None,  # counts can be dynamic so they are expressions
-        for_each_exprs: List[ForEachVariableDefinition] = None,
+        for_each_expr: ForEachVariableDefinition = None,
         just_once: bool = False,
         fields: Sequence = (),
         friends: Sequence = (),
@@ -145,9 +145,9 @@ class ObjectTemplate:
         self.line_num = line_num
         self.fields = fields
         self.friends = friends
-        self.for_each_exprs = for_each_exprs
+        self.for_each_expr = for_each_expr
 
-        if count_expr and for_each_exprs:
+        if count_expr and for_each_expr:
             raise DataGenError(
                 "Cannot specify both a count expression and a for-each expression at the same time.",
                 self.filename,
@@ -163,8 +163,13 @@ class ObjectTemplate:
         """Generate several rows"""
         rc = None
         with parent_context.child_context(self) as context:
-            if self.for_each_exprs:
-                iterators = self._evaluate_for_eaches(context)
+            if self.for_each_expr:
+                # it would be easy to support multiple parallel
+                # for-eaches here and at one point the code did,
+                # but the use-case wasn't obvious so it was removed
+                # after 9bc296a7df. If we get to 2023 without
+                # # finding a use-case we can delete this comment.
+                iterators = [self._evaluate_for_each(context)]
                 iterators.append(LoopIterator("child_index", itertools.count()))
             else:  # use a count, or a default count of 1
                 iterators = [
@@ -217,8 +222,8 @@ class ObjectTemplate:
     def id(self):
         return id(self)
 
-    def _evaluate_for_eaches(self, context: RuntimeContext) -> List[LoopIterator]:
-        if not self.for_each_exprs:
+    def _evaluate_for_each(self, context: RuntimeContext) -> LoopIterator:
+        if not self.for_each_expr:
             return None
 
         def eval_to_iterator(vardef):
@@ -232,7 +237,7 @@ class ObjectTemplate:
             return LoopIterator(vardef.varname, iterator)
 
         with self.exception_handling("Cannot evaluate `for_each` definition"):
-            return [eval_to_iterator(expr) for expr in self.for_each_exprs]
+            return eval_to_iterator(self.for_each_expr)
 
     def _generate_row(
         self, output_stream, context: RuntimeContext, index: int
