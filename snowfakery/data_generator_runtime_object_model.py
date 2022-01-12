@@ -2,7 +2,7 @@ from abc import abstractmethod, ABC
 from .data_generator_runtime import evaluate_function, RuntimeContext, Interpreter
 from .object_rows import ObjectRow, ObjectReference
 from contextlib import contextmanager
-from typing import Union, Dict, Sequence, Optional, cast
+from typing import NamedTuple, Union, Dict, Sequence, Optional, cast
 from .utils.template_utils import look_for_number
 import itertools
 import jinja2
@@ -101,16 +101,9 @@ class ForEachVariableDefinition:
         return ret
 
 
-class LoopIterator:
+class LoopIterator(NamedTuple):
     name: str
     iterator: object
-
-    def __init__(self, name, iterator):
-        self.name = name
-        self.iterator = iterator
-
-    def __iter__(self):
-        return ((self.name, value) for value in self.iterator)
 
 
 class ObjectTemplate:
@@ -178,9 +171,10 @@ class ObjectTemplate:
                     )
                 ]
             with self.exception_handling(f"Cannot generate {self.name}"):
-                master_iterator = zip(*iterators)
+                master_iterator = zip(*(it.iterator for it in iterators))
+                iterator_names = [it.name for it in iterators]
                 for i, next_value_list in enumerate(master_iterator):
-                    for name, value in next_value_list:
+                    for name, value in zip(iterator_names, next_value_list):
                         context.interpreter.register_variable(name, value)
                     rc = self._generate_row(output_stream, context, i)
 
@@ -223,6 +217,7 @@ class ObjectTemplate:
         return id(self)
 
     def _evaluate_for_each(self, context: RuntimeContext) -> LoopIterator:
+        """Evaluate the expression to get an iterator we can iterate over"""
         if not self.for_each_expr:
             return None
 
