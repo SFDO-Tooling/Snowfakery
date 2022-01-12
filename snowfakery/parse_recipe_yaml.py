@@ -712,9 +712,9 @@ def build_update_recipe(
             "Update templates should have no 'count'", **template.line_num()
         )
 
-    template.for_each_exprs = [
-        ForEachVariableDefinition("", -1, "input", DataSourceValue())
-    ]
+    template.for_each_expr = ForEachVariableDefinition(
+        "", -1, "input", DataSourceValue()
+    )
     id_definition = SimpleValue("${{input.Oid}}", "", -3)
     id_field = FieldFactory("Oid", id_definition, "", -4)
     template.fields.append(id_field)

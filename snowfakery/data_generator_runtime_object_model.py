@@ -2,7 +2,7 @@ from abc import abstractmethod, ABC
 from .data_generator_runtime import evaluate_function, RuntimeContext, Interpreter
 from .object_rows import ObjectRow, ObjectReference
 from contextlib import contextmanager
-from typing import NamedTuple, Union, Dict, Sequence, Optional, cast
+from typing import Union, Sequence, Optional, cast, NamedTuple, Dict
 from .utils.template_utils import look_for_number
 import itertools
 import jinja2
