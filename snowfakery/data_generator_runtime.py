@@ -427,6 +427,7 @@ class RuntimeContext:
     current_template = None
     local_vars = None
     unique_context_identifier = None
+    recalculate_every_time = False
 
     def __init__(
         self,
@@ -442,6 +443,7 @@ class RuntimeContext:
         self.parent = parent_context
         if self.parent:
             self._plugin_context_vars = self.parent._plugin_context_vars.new_child()
+            self.recalculate_every_time = parent_context.recalculate_every_time
         else:
             self._plugin_context_vars = ChainMap()
         locale = self.variable_definitions().get("snowfakery_locale")

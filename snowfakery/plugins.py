@@ -1,7 +1,6 @@
 import sys
 
 from typing import Any, Callable, Mapping, Union, NamedTuple, List, Tuple
-import typing as T
 from importlib import import_module
 from datetime import date, datetime
 from pathlib import Path
@@ -22,10 +21,6 @@ from numbers import Number
 Scalar = Union[str, Number, date, datetime, None]
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
 ObjectRow = "snowfakery.object_rows.ObjectRow"
-
-
-class NoCache:  # sentinel value
-    pass
 
 
 class LineTracker(NamedTuple):
@@ -114,16 +109,13 @@ class PluginContext:
         )
 
     @property
-    def unique_context_identifier(self) -> T.Union[str, NoCache]:
+    def unique_context_identifier(self) -> str:
         """An identifier representing a template context that will be
         unique across iterations (but not portion invocations). It
         allows templates that do counting or iteration for a particular
         template context."""
         context_id = self.interpreter.current_context.unique_context_identifier
-        if context_id == NoCache:
-            return NoCache
-        else:
-            return str(context_id)
+        return str(context_id)
 
     def evaluate_raw(self, field_definition):
         """Evaluate the contents of a field definition"""
@@ -162,9 +154,22 @@ def memorable(func: Any) -> Callable:
 
 
 def evaluate_memorable_function(context, func, self, args, kwargs):
-    if context.unique_context_identifier == NoCache:
+    """Memorable functions store state.
+
+    This function fetches that state unless the context has asked us
+    to re-start every time.
+
+    For example, a file would be retrieved over and over again, with
+    the file pointer advancing, unless the context asked us to re-open it
+    every time, in which case the file pointer would always be at the beginning.
+
+    For-loops are the primary example where we want to re-start an iterator
+    every time we evaluate.
+    """
+    if context.interpreter.current_context.recalculate_every_time:
         return func(self, *args, **kwargs)
 
+    # otherwise, do all of the caching magic
     user_key = kwargs.get("name") or (
         context.unique_context_identifier,
         tuple(args),

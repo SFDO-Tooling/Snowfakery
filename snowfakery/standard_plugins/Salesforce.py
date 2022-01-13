@@ -229,7 +229,7 @@ class Salesforce(ParserMacroPlugin, SnowfakeryPlugin, SalesforceConnectionMixin)
             ),
             FieldFactory(
                 "AccountId",
-                StructuredValue("reference", ["Account"], True, **line_info),
+                StructuredValue("reference", ["Account"], **line_info),
                 **line_info,
             ),
         ]

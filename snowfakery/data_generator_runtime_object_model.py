@@ -14,7 +14,7 @@ from .data_gen_exceptions import (
     DataGenValueError,
     fix_exception,
 )
-from .plugins import Scalar, PluginResult, PluginResultIterator, NoCache
+from .plugins import Scalar, PluginResult, PluginResultIterator
 
 # objects that represent the hierarchy of a data generator.
 # roughly similar to the YAML structure but with domain-specific objects
@@ -94,6 +94,7 @@ class ForEachVariableDefinition:
 
     def evaluate(self, context: RuntimeContext) -> FieldValue:
         """Evaluate the expression"""
+        context.recalculate_every_time = True
         ret = self.expression.render(context)
         if not isinstance(ret, PluginResultIterator):
             raise DataGenValueError("`for_each` value must be a DatasetIterator")
@@ -357,7 +358,7 @@ class StructuredValue(FieldDefinition):
             - reference:
                 ..."""
 
-    def __init__(self, function_name, args, allow_caching, filename, line_num):
+    def __init__(self, function_name, args, filename, line_num):
         self.function_name = function_name
         self.filename = filename
         self.line_num = line_num
@@ -370,11 +371,7 @@ class StructuredValue(FieldDefinition):
         else:  # scalars will be turned into a one-argument list
             self.args = [args]
             self.kwargs = {}
-
-        if allow_caching:
-            self.unique_context_identifier = str(id(self))
-        else:
-            self.unique_context_identifier = NoCache
+        self.unique_context_identifier = str(id(self))
 
     def render(self, context: RuntimeContext) -> FieldValue:
         context.unique_context_identifier = self.unique_context_identifier

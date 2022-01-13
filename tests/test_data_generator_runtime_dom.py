@@ -75,7 +75,6 @@ class TestDataGeneratorRuntimeDom:
         definition = StructuredValue(
             "random_choice",
             [SimpleValue("abc", "", 1), SimpleValue("def", "", 1)],
-            False,
             "abc.yml",
             10,
         )
@@ -127,23 +126,21 @@ class TestDataGeneratorRuntimeDom:
 
     def test_structured_value_errors(self):
         with pytest.raises(DataGenError) as e:
-            StructuredValue("this.that.foo", [], True, **line).render(
-                standard_runtime()
-            )
+            StructuredValue("this.that.foo", [], **line).render(standard_runtime())
         assert "only one" in str(e.value)
 
         with pytest.raises(DataGenError) as e:
-            StructuredValue("bar", [], False, **line).render(standard_runtime())
+            StructuredValue("bar", [], **line).render(standard_runtime())
         assert "Cannot find func" in str(e.value)
         assert "bar" in str(e.value)
 
         with pytest.raises(DataGenError) as e:
-            StructuredValue("xyzzy.abc", [], True, **line).render(standard_runtime())
+            StructuredValue("xyzzy.abc", [], **line).render(standard_runtime())
         assert "Cannot find defini" in str(e.value)
         assert "xyzzy" in str(e.value)
 
         with pytest.raises(DataGenError) as e:
-            StructuredValue("this.abc", [], False, **line).render(standard_runtime())
+            StructuredValue("this.abc", [], **line).render(standard_runtime())
         assert "Cannot find defini" in str(e.value)
         assert "abc" in str(e.value)
 
