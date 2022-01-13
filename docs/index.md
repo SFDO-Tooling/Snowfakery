@@ -1781,10 +1781,35 @@ Person(id=9, Name=Austin Wong, StreetAddress=422 Kingsway Road, City=Richmond)
 Person(id=10, Name=Kelly Jones, StreetAddress=420 Kings Ave, City=Burnaby)
 ```
 
-It's best to use this data with:
+You can use think of this feature either as using
 
 - A CSV file to "enrich" your fake data with real or pre-generated data
 - Snowfakery to "enrich" your real or pre-generated data with fake data
+
+If you would like to execute a template exactly once for every line in a
+CSV file (or database table, or Salesforce Query), you can do so like this:
+
+```yaml
+# examples/datasets/simple_for_each.yml
+- plugin: snowfakery.standard_plugins.datasets.Dataset
+
+- object: Person
+  for_each:
+    var: current_address
+    value:
+      Dataset.iterate:
+        dataset: addresses.csv
+  fields:
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+    StreetAddress: ${{current_address.Number}} ${{current_address.Street}}
+    City: ${{current_address.City}}
+```
+
+This binds a new row from the CSV to the variable named `current_address`
+over and over, expanding the template for each row.
 
 #### Iterate over Salesforce Datasets
 
