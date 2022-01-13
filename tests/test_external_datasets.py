@@ -355,3 +355,60 @@ class TestExternalDatasets:
         ) as f:
             generate(f, {})
         assert len(generated_rows.mock_calls) == 1
+
+    def test_for_loop_over_bad_type__int(self, generated_rows):
+        yaml = """
+        - object: Person
+          for_each:
+            var: blah
+            value: 11"""
+
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml), {})
+        assert "value" in str(e.value)
+
+    def test_for_loop_over_bad_type__str(self, generated_rows):
+        yaml = """
+        - object: Person
+          for_each:
+            var: blah
+            value: "eleven" """
+
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml), {})
+        assert "blah" in str(e.value)
+
+    def test_for_loop_and_count_error(self, generated_rows):
+        yaml = """
+        -   object: Person
+            count: 10
+            for_each:
+                var: blah
+                value: "eleven" """
+
+        with pytest.raises(exc.DataGenSyntaxError) as e:
+            generate(StringIO(yaml), {})
+        assert "Person" in str(e.value)
+
+    def test_for_loop_no_vardef_error__scalar(self, generated_rows):
+        yaml = """
+        -   object: Person
+            count: 10
+            for_each: 5
+        """
+
+        with pytest.raises(exc.DataGenSyntaxError) as e:
+            generate(StringIO(yaml), {})
+        assert "for_each" in str(e.value)
+
+    def test_for_loop_no_vardef_error__dict(self, generated_rows):
+        yaml = """
+        -   object: Person
+            count: 10
+            for_each:
+                foo: bar
+        """
+
+        with pytest.raises(exc.DataGenSyntaxError) as e:
+            generate(StringIO(yaml), {})
+        assert "foo" in str(e.value)

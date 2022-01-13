@@ -97,7 +97,11 @@ class ForEachVariableDefinition:
         context.recalculate_every_time = True
         ret = self.expression.render(context)
         if not isinstance(ret, PluginResultIterator):
-            raise DataGenValueError("`for_each` value must be a DatasetIterator")
+            raise DataGenValueError(
+                f"`for_each` value must be a DatasetIterator for `{self.varname}`",
+                self.filename,
+                self.line_num,
+            )
         ret.repeat = False
         return ret
 
@@ -142,8 +146,8 @@ class ObjectTemplate:
         self.for_each_expr = for_each_expr
 
         if count_expr and for_each_expr:
-            raise DataGenError(
-                "Cannot specify both a count expression and a for-each expression at the same time.",
+            raise DataGenSyntaxError(
+                f"Cannot specify both a count expression and a for-each expression at the same time in declaration for {self.tablename}.",
                 self.filename,
                 self.line_num,
             )
@@ -219,14 +223,12 @@ class ObjectTemplate:
 
     def _evaluate_for_each(self, context: RuntimeContext) -> LoopIterator:
         """Evaluate the expression to get an iterator we can iterate over"""
-        if not self.for_each_expr:
-            return None
 
         def eval_to_iterator(vardef):
             val = vardef.evaluate(context)
             try:
                 iterator = iter(val)
-            except TypeError:
+            except TypeError:  # pragma: no cover
                 raise DataGenError(
                     f"Object created by {vardef.varname} is not iterable: {val}"
                 )

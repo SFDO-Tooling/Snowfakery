@@ -353,7 +353,7 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
             "include": str,
             "nickname": str,
             "just_once": bool,
-            "for_each": (list, dict),
+            "for_each": dict,
             "count": (str, int, dict),
         },
         context=context,
@@ -397,9 +397,9 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
                 sobj_def["for_each_expr"] = parse_for_each_variable_definition(
                     for_each_expr, context
                 )
-            else:
+            else:  # pragma: no cover
                 raise exc.DataGenSyntaxError(
-                    "`for_each` must evaluate to a variable description or a list of them",
+                    "`for_each` must be to a variable description",
                     **context.line_num(),
                 )
         new_template = ObjectTemplate(**sobj_def)
@@ -440,7 +440,7 @@ def parse_for_each_variable_definition(
         "var",
         optional_keys={},
         mandatory_keys={
-            "value": (dict,),
+            "value": (dict, str),
         },
         context=context,
     )
@@ -534,14 +534,14 @@ def parse_element(
         for key in dct:
             key_definition = expected_keys.get(key)
             if not key_definition:
-                raise exc.DataGenError(
+                raise exc.DataGenSyntaxError(
                     f"Unexpected key: {key}", **context.line_num(key)
                 )
             else:
                 value = dct[key]
                 if not isinstance(value, key_definition):
-                    raise exc.DataGenError(
-                        f"Expected `{key}` to be of type {key_definition} instead of {type(value)}.",
+                    raise exc.DataGenSyntaxError(
+                        f"Expected `{key}` to be of type {key_definition} instead of `{type(value).__name__}`.",
                         **context.line_num(dct),
                     )
                 else:
