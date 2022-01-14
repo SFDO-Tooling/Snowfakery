@@ -1781,13 +1781,11 @@ Person(id=9, Name=Austin Wong, StreetAddress=422 Kingsway Road, City=Richmond)
 Person(id=10, Name=Kelly Jones, StreetAddress=420 Kings Ave, City=Burnaby)
 ```
 
-You can use think of this feature either as using
+You can use this feature to create "enriched" data by combining real or pre-generated data in a CSV file with fake data from Snowfakery.
 
-- A CSV file to "enrich" your fake data with real or pre-generated data
-- Snowfakery to "enrich" your real or pre-generated data with fake data
 
-If you would like to execute a template exactly once for every line in a
-CSV file (or database table, or Salesforce Query), you can do so like this:
+You can execute a template exactly once for every line in a
+CSV file (or database table, or Salesforce Query) like this:
 
 ```yaml
 # examples/datasets/simple_for_each.yml
