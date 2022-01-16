@@ -60,9 +60,7 @@ idna==3.3
     #   requests
     #   yarl
 importlib-metadata==4.10.0
-    # via
-    #   markdown
-    #   mkdocs
+    # via mkdocs
 iniconfig==1.1.1
     # via pytest
 jinja2==2.11.3
@@ -144,7 +142,7 @@ requests==2.27.0
     #   -r requirements/prod.txt
     #   coveralls
     #   responses
-responses==0.16.0
+responses==0.17.0
     # via -r requirements/dev.in
 six==1.16.0
     # via
