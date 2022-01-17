@@ -32,9 +32,7 @@ class FakeNames(T.NamedTuple):
     def user_name(self, matching: bool = True):
         "Salesforce-style username in the form of an email address"
         domain = self.f.hostname()
-        already_created = self._already_have(
-            ("firstname", "lastname"), must_be_ascii=True
-        )
+        already_created = self._already_have(("firstname", "lastname"))
         if matching and all(already_created):
             namepart = f"{already_created[0]}.{already_created[1]}_{self.f.uuid4()}"
         else:
@@ -52,9 +50,7 @@ class FakeNames(T.NamedTuple):
 
     def email(self, matching: bool = True):
         """Email address using one of the "example" domains"""
-        already_created = self._already_have(
-            ("firstname", "lastname"), must_be_ascii=True
-        )
+        already_created = self._already_have(("firstname", "lastname"))
         if matching and all(already_created):
             template = random.choice(email_templates)
 
@@ -73,13 +69,16 @@ class FakeNames(T.NamedTuple):
         """
         return self.f.email()
 
-    def _already_have(self, names: T.Sequence[str], must_be_ascii=True):
+    def _already_have(self, names: T.Sequence[str]):
         """Get a list of field values that we've already generated"""
         already_created = self.faker_context.local_vars()
         vals = [already_created.get(name) for name in names]
-        cleanup_func = replace_unicode_strings_with_None if must_be_ascii else NOOP
 
-        vals = [cleanup_func(replace_unicode_strings_with_None(val)) for val in vals]
+        # if we ever need to use this function in a context where Unicode
+        # is okay, here's how to implement that:
+        # cleanup_func = replace_unicode_strings_with_None if must_be_ascii else NOOP
+
+        vals = [replace_unicode_strings_with_None(val) for val in vals]
 
         return vals
 
@@ -159,7 +158,3 @@ class FakeData:
 
 def replace_unicode_strings_with_None(val):
     return None if (type(val) == str and not val.isascii()) else val
-
-
-def NOOP(val):
-    return val
