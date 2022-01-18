@@ -125,7 +125,7 @@ class OutputStream(ABC):
 
         Return a list of messages to print out.
         """
-        return super().close()
+        raise NotImplementedError()
 
     def __enter__(self, *args):
         return self
@@ -550,7 +550,7 @@ class ImageOutputStream(OutputStream):
         assert dotfile.exists()
         try:
             out = subprocess.Popen(
-                ["dot", "-T" + self.format, dotfile, "-o" + str(outfile)],
+                ["dot", "-T" + self.format, str(dotfile), "-o" + str(outfile)],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
             )
@@ -578,8 +578,20 @@ class MultiplexOutputStream(OutputStream):
             stream.write_row(tablename, row_with_references)
 
     def close(self) -> Optional[Sequence[str]]:
+        all_messages = []
+        closing_errors = []
         for stream in self.outputstreams:
-            stream.close()
+            try:
+                messages = stream.close() or []
+                all_messages.extend(messages)
+            except Exception as e:
+                closing_errors.append(e)
+
+        if len(closing_errors) == 1:
+            raise closing_errors[0]
+        elif closing_errors:
+            raise IOError(f"Could not close streams: {closing_errors}")
+        return all_messages
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
         return super().write_single_row(tablename, row)

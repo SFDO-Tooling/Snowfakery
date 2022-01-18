@@ -63,7 +63,7 @@ class TestEmbedding:
             with mapping_file.open() as f:
                 assert yaml.safe_load(f)
 
-    def test_parent_application__echo(self):
+    def test_parent_application__exception_raised(self):
         called = False
 
         class MyEmbedder(SnowfakeryApplication):
@@ -74,10 +74,10 @@ class TestEmbedding:
         meth = "snowfakery.output_streams.DebugOutputStream.close"
         with mock.patch(meth) as close:
             close.side_effect = AssertionError
-            generate_data(
-                yaml_file="examples/company.yml", parent_application=MyEmbedder()
-            )
-            assert called
+            with pytest.raises(AssertionError):
+                generate_data(
+                    yaml_file="examples/company.yml", parent_application=MyEmbedder()
+                )
 
     def test_parent_application__early_finish(self, generated_rows):
         class MyEmbedder(SnowfakeryApplication):
@@ -89,14 +89,9 @@ class TestEmbedding:
                 assert self.__class__.count < 100, "Runaway recipe!"
                 return idmanager["Employee"] >= 10
 
-        meth = "snowfakery.output_streams.DebugOutputStream.close"
-        with mock.patch(meth) as close:
-            close.side_effect = AssertionError
-            generate_data(
-                yaml_file="examples/company.yml", parent_application=MyEmbedder()
-            )
-            # called 5 times, after generating 2 employees each
-            assert MyEmbedder.count == 5
+        generate_data(yaml_file="examples/company.yml", parent_application=MyEmbedder())
+        # called 5 times, after generating 2 employees each
+        assert MyEmbedder.count == 5
 
     def test_embedding__cannot_infer_output_format(self):
         with pytest.raises(exc.DataGenError, match="No format"):

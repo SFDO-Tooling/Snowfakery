@@ -224,16 +224,9 @@ def configure_output_stream(
         try:
             yield output_stream
         finally:
-            try:
-                messages = output_stream.close()
-            except Exception as e:
-                messages = None
-                parent_application.echo(
-                    f"Could not close {output_stream}: {str(e)}", err=True
-                )
-            if messages:
-                for message in messages:
-                    parent_application.echo(message)
+            messages = output_stream.close() or []
+            for message in messages:
+                parent_application.echo(message)
 
 
 @contextmanager

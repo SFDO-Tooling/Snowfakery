@@ -6,6 +6,7 @@ import csv
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from contextlib import redirect_stdout
+from unittest import mock
 
 
 import pytest
@@ -375,3 +376,26 @@ B - {'id': 1, 'A': 'A(1)'}
             generate_cli.callback(
                 yaml_file=sample_yaml, output_format="no.such.output.Stream"
             )
+
+
+class TestMultiplexOutputStream:
+    @mock.patch("snowfakery.output_streams.DebugOutputStream.close")
+    def test_cannot_close_multiple_streams(self, close):
+        close.side_effect = AssertionError
+        with TemporaryDirectory() as t:
+            files = [Path(t) / "1.txt", Path(t) / "2.txt"]
+            with pytest.raises(IOError) as e:
+                generate_cli.callback(
+                    yaml_file="examples/company.yml", output_files=files
+                )
+        assert "Could not close streams:" in str(e.value)
+
+    @mock.patch("snowfakery.output_streams.DebugOutputStream.close")
+    def test_cannot_close_one_stream(self, close):
+        close.side_effect = AssertionError
+        with TemporaryDirectory() as t:
+            files = [Path(t) / "1.txt", Path(t) / "2.jpg"]
+            with pytest.raises(AssertionError):
+                generate_cli.callback(
+                    yaml_file="examples/company.yml", output_files=files
+                )
