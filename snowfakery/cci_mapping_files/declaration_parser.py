@@ -4,7 +4,7 @@ from datetime import date
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, Extra, validator
+from pydantic import BaseModel, Extra, validator, PositiveInt
 
 
 class AtomicDecl(T.NamedTuple):
@@ -106,8 +106,8 @@ class ChannelDeclaration(BaseModel):
     "Channel declarations are only of relevance to Salesforce employees"
     user: str
     recipe_options: T.Dict[str, T.Any] = None
-    num_generators: int = None
-    num_loaders: int = None
+    num_generators: PositiveInt = None
+    num_loaders: PositiveInt = None
 
     class Config:
         extra = Extra.forbid
