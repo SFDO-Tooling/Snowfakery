@@ -194,7 +194,7 @@ Here are some Python Faker providers:
 
 <https://faker.readthedocs.io/en/master/communityproviders.html>
 
-And you could make your own providers as well. Aaron Crossman
+And you could make your own providers as well. Aaron Crosman
 has written [a tutorial](https://spinningcode.org/2021/06/snowfakery-custom-plugins-part-2/)
 about that process.
 

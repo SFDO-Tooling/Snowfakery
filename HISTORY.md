@@ -4,6 +4,14 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 2.4
+
+The Salesforce load order now follows the order of
+object template declarations in the recipe. The other considerations
+are described in the document (#563 and #566)
+
+Improved syntax error messaging (#565)
+
 ## Snowfakery 2.3
 
 Remove support for Python 3.6 and Python 3.7. (#554)
