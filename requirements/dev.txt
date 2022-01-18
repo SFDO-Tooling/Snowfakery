@@ -83,7 +83,7 @@ mkdocs==1.2.3
     # via
     #   -r requirements/dev.in
     #   mkdocs-exclude-search
-mkdocs-exclude-search==0.5.4
+mkdocs-exclude-search==0.6.4
     # via -r requirements/dev.in
 multidict==5.2.0
     # via yarl
