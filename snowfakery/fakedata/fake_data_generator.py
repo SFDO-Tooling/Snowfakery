@@ -73,6 +73,13 @@ class FakeNames(T.NamedTuple):
         """Get a list of field values that we've already generated"""
         already_created = self.faker_context.local_vars()
         vals = [already_created.get(name) for name in names]
+
+        # if we ever need to use this function in a context where Unicode
+        # is okay, here's how to implement that:
+        # cleanup_func = replace_unicode_strings_with_None if must_be_ascii else NOOP
+
+        vals = [replace_unicode_strings_with_None(val) for val in vals]
+
         return vals
 
     def state(self):
@@ -147,3 +154,7 @@ class FakeData:
         if match_list:
             msg += f" Did you mean {match_list[0]}"
         raise AttributeError(msg)
+
+
+def replace_unicode_strings_with_None(val):
+    return None if (type(val) == str and not val.isascii()) else val
