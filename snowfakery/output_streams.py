@@ -118,7 +118,7 @@ class OutputStream(ABC):
         """Write a single row to the stream"""
         pass
 
-    def close(self) -> Optional[Sequence[str]]:
+    def close(self, **kwargs) -> Optional[Sequence[str]]:
         """Close any resources the stream opened.
 
         Do not close file handles which were passed in!
@@ -143,7 +143,7 @@ class SmartStream:
 
     mode = "wt"
 
-    def __init__(self, stream_or_path=None):
+    def __init__(self, stream_or_path=None, **kwargs):
         if hasattr(stream_or_path, "write"):
             self.owns_stream = False
             self.stream = stream_or_path
@@ -159,7 +159,7 @@ class SmartStream:
     def write(self, data):
         self.stream.write(data)
 
-    def close(self):
+    def close(self, **kwargs):
         if self.owns_stream:
             self.stream.close()
             return [f"Generated {self.stream.name}"]
@@ -173,7 +173,7 @@ class FileOutputStream(OutputStream):
         self.write = self.smart_stream.write
         self.stream = self.smart_stream.stream
 
-    def close(self):
+    def close(self, **kwargs):
         return self.smart_stream.close()
 
 
@@ -225,7 +225,7 @@ class CSVOutputStream(OutputStream):
     def write_single_row(self, tablename: str, row: Dict) -> None:
         self.writers[tablename].dictwriter.writerow(row)
 
-    def close(self) -> Optional[Sequence[str]]:
+    def close(self, **kwargs) -> Optional[Sequence[str]]:
         messages = []
         for context in self.writers.values():
             context.file.close()
@@ -267,7 +267,7 @@ class JSONOutputStream(FileOutputStream):
         values = {"_table": tablename, **row}
         self.write(json.dumps(values))
 
-    def close(self) -> Optional[Sequence[str]]:
+    def close(self, **kwargs) -> Optional[Sequence[str]]:
         if not self.first_row:
             self.write("]\n")
         return super().close()
@@ -326,7 +326,7 @@ class SqlDbOutputStream(OutputStream):
         self.flush()
         self.session.commit()
 
-    def close(self) -> Optional[Sequence[str]]:
+    def close(self, **kwargs) -> Optional[Sequence[str]]:
         self.commit()
         self.session.close()
 
@@ -493,7 +493,7 @@ class GraphvizOutputStream(FileOutputStream):
         )
         self.nodes[tablename, row["id"]] = self.G.newItem(node_name)
 
-    def close(self) -> Optional[Sequence[str]]:
+    def close(self, **kwargs) -> Optional[Sequence[str]]:
         for fieldname, source, target in self.links:
             mylink = self.G.newLink(self.nodes[source], self.nodes[target])
             self.G.propertyAppend(mylink, "label", fieldname)
@@ -539,7 +539,7 @@ class ImageOutputStream(OutputStream):
     def flatten(self, *args, **kwargs):
         return self.gv_os.flatten(*args, **kwargs)
 
-    def close(self) -> Optional[Sequence[str]]:
+    def close(self, **kwargs) -> Optional[Sequence[str]]:
         self.gv_os.close()
         assert self.dotfile.exists()
         rc = self._render(self.dotfile, self.path)
@@ -577,7 +577,7 @@ class MultiplexOutputStream(OutputStream):
         for stream in self.outputstreams:
             stream.write_row(tablename, row_with_references)
 
-    def close(self) -> Optional[Sequence[str]]:
+    def close(self, **kwargs) -> Optional[Sequence[str]]:
         for stream in self.outputstreams:
             stream.close()
 
