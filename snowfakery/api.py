@@ -187,16 +187,11 @@ def generate_data(
             stopping_criteria=stopping_criteria,
             plugin_options=plugin_options,
         )
+        declarations = gather_declarations(yaml_path or "", load_declarations)
 
-        # This feature seems seldom useful. Delete it if it isn't missed
-        # by fall 2021:
-
-        # if debug_internals:
-        #     debuginfo = yaml.dump(summary.summarize_for_debugging(), sort_keys=False)
-        #     sys.stderr.write(debuginfo)
+        output_stream.on_finished_execution(summary, declarations)
 
         if open_cci_mapping_file:
-            declarations = gather_declarations(yaml_path or "", load_declarations)
             yaml.safe_dump(
                 mapping_from_recipe_templates(summary, declarations),
                 open_cci_mapping_file,

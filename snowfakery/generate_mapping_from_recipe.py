@@ -11,11 +11,28 @@ from .cci_mapping_files.declaration_parser import SObjectRuleDeclaration
 from .cci_mapping_files.post_processes import add_after_statements
 
 
+# TODO: Could this be merged with Execution Summary?
+class ExecutionSummaryAndDeclarations(T.NamedTuple):
+    sorted_tables: T.Mapping
+    reference_fields: T.Mapping[T.Tuple, str]
+    declarations: T.Mapping[str, SObjectRuleDeclaration]
+
+
 def mapping_from_recipe_templates(
     summary: ExecutionSummary,
     declarations: T.Mapping[str, SObjectRuleDeclaration] = None,
 ):
     """Use the outputs of the recipe YAML and convert to Mapping.yml format"""
+    organized_exec_summary = organize_by_dependencies(summary, declarations)
+    mappings = mappings_from_sorted_tables(organized_exec_summary)
+    return mappings
+
+
+# TODO: Could be a method on ExecutionSummary
+def organize_by_dependencies(
+    summary: ExecutionSummary,
+    declarations: T.Optional[T.Mapping[str, SObjectRuleDeclaration]],
+) -> ExecutionSummaryAndDeclarations:
     declarations = declarations or {}
     relevant_declarations = [decl for decl in declarations.values() if decl.load_after]
 
@@ -27,10 +44,10 @@ def mapping_from_recipe_templates(
     table_order = sort_dependencies(
         inferred_dependencies, declared_dependencies, tables
     )
-    mappings = mappings_from_sorted_tables(
-        tables, table_order, reference_fields, declarations
+    sorted_tables = {tablename: tables[tablename] for tablename in table_order}
+    return ExecutionSummaryAndDeclarations(
+        sorted_tables, reference_fields, declarations
     )
-    return mappings
 
 
 def remove_person_contact_id(dependencies, tables):
@@ -95,7 +112,7 @@ def _table_is_free(table_name, dependencies, sorted_tables):
     return len(tables_this_table_depends_upon) == 0
 
 
-def sort_dependencies(inferred_dependencies, declared_dependencies, tables):
+def sort_dependencies(inferred_dependencies, declared_dependencies, tables) -> T.List:
     """Sort the dependencies to output tables in the right order."""
     dependencies = {**inferred_dependencies, **declared_dependencies}
     sorted_tables = []
@@ -123,16 +140,14 @@ def sort_dependencies(inferred_dependencies, declared_dependencies, tables):
     return sorted_tables
 
 
-def mappings_from_sorted_tables(
-    tables: dict,
-    table_order: list,
-    reference_fields: dict,
-    declarations: T.Mapping[str, SObjectRuleDeclaration],
-):
+def mappings_from_sorted_tables(exec_summary: ExecutionSummaryAndDeclarations):
     """Generate mapping.yml data structures."""
+    tables = exec_summary.sorted_tables
+    reference_fields = exec_summary.reference_fields
+    declarations = exec_summary.declarations
+
     mappings = {}
-    for table_name in table_order:
-        table = tables[table_name]
+    for table_name, table in tables.items():
         record_type_col = find_record_type_column(table_name, table.fields.keys())
 
         fields = {
@@ -168,3 +183,33 @@ def mappings_from_sorted_tables(
 
     add_after_statements(mappings)
     return mappings
+
+
+def _table_to_template(table_name, table, organized_exec_summary):
+    reference_fields = organized_exec_summary.reference_fields
+
+    def field_to_pair(field_name):
+        if (table_name, field_name) in reference_fields:
+            return {"reference": reference_fields[(table_name, field_name)]}
+        else:
+            return "${{current_row.%s}}" % field_name
+
+    for_each = {
+        "var": "current_row",
+        "value": {"Dataset.iterate": {"dataset": f"{table_name}.csv"}},
+    }
+
+    fields = {fieldname: field_to_pair(fieldname) for fieldname in table.fields}
+    return {"object": table_name, "for_each": for_each, "fields": fields}
+
+
+def generate_data_description_recipe_recipe_templates(
+    summary: ExecutionSummary,
+    declarations: T.Mapping[str, SObjectRuleDeclaration] = None,
+):
+    organized_exec_summary = organize_by_dependencies(summary, declarations)
+    templates = [
+        _table_to_template(table_name, table, organized_exec_summary)
+        for table_name, table in organized_exec_summary.sorted_tables.items()
+    ]
+    return [{"plugin": "snowfakery.standard_plugins.datasets.Dataset"}] + templates

@@ -2,6 +2,7 @@ from abc import abstractmethod, ABC
 import json
 from tempfile import TemporaryDirectory
 import csv
+import yaml
 import subprocess
 import datetime
 import sys
@@ -25,10 +26,16 @@ from sqlalchemy.orm import create_session
 from sqlalchemy.engine import Engine
 from sqlalchemy.sql import select
 
+import snowfakery  # noqa
 from .data_gen_exceptions import DataGenError
 
 from .object_rows import ObjectRow, ObjectReference
 from .parse_recipe_yaml import TableInfo
+
+SObjectRuleDeclaration = (
+    "snowfakery.cci_mapping_files.declaration_parser.SObjectRuleDeclaration"
+)
+ExecutionSummary = "snowfakery.data_generator.ExecutionSummary"
 
 
 def noop(x):
@@ -58,6 +65,13 @@ class OutputStream(ABC):
         pass
 
     def create_or_validate_tables(self, tables: Dict[str, TableInfo]) -> None:
+        pass
+
+    def on_finished_execution(
+        self,
+        summary: ExecutionSummary,
+        declarations: Mapping[str, SObjectRuleDeclaration] = None,
+    ):
         pass
 
     def flatten(
@@ -225,24 +239,48 @@ class CSVOutputStream(OutputStream):
     def write_single_row(self, tablename: str, row: Dict) -> None:
         self.writers[tablename].dictwriter.writerow(row)
 
+    def on_finished_execution(
+        self,
+        execution_summary: ExecutionSummary,
+        declarations: Mapping[str, SObjectRuleDeclaration] = None,
+    ):
+        from snowfakery.generate_mapping_from_recipe import (
+            generate_data_description_recipe_recipe_templates,
+        )
+
+        recipe = generate_data_description_recipe_recipe_templates(
+            execution_summary, declarations
+        )
+        recipe_filename = self.target_path / "loaddata.recipe.yml"
+        with recipe_filename.open("w") as stream:
+            yaml.dump(recipe, stream, sort_keys=False)
+        print(recipe_filename)
+
     def close(self, **kwargs) -> Optional[Sequence[str]]:
         messages = []
         for context in self.writers.values():
             context.file.close()
             messages.append(f"Created {context.file.name}")
 
-        table_metadata = [
-            {"url": f"{table_name}.csv"} for table_name, writer in self.writers.items()
-        ]
-        csv_metadata = {
-            "@context": "http://www.w3.org/ns/csvw",
-            "tables": table_metadata,
-        }
         csvw_filename = self.target_path / "csvw_metadata.json"
-        with open(csvw_filename, "w") as f:
-            json.dump(csv_metadata, f, indent=2)
-        messages.append(f"Created {csvw_filename}")
+        _generate_csvw(self.writers, csvw_filename)
+        messages.append(
+            f"Created {csvw_filename}. (warning: future versions of Snowfakery will not create this file anymore)"
+        )
+
         return messages
+
+
+def _generate_csvw(writers, csvw_filename):
+    table_metadata = [
+        {"url": f"{table_name}.csv"} for table_name, writer in writers.items()
+    ]
+    csv_metadata = {
+        "@context": "http://www.w3.org/ns/csvw",
+        "tables": table_metadata,
+    }
+    with open(csvw_filename, "w") as f:
+        json.dump(csv_metadata, f, indent=2)
 
 
 class JSONOutputStream(FileOutputStream):
@@ -583,3 +621,11 @@ class MultiplexOutputStream(OutputStream):
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
         return super().write_single_row(tablename, row)
+
+    def on_finished_execution(
+        self,
+        summary: ExecutionSummary,
+        declarations: Mapping[str, SObjectRuleDeclaration] = None,
+    ):
+        for stream in self.outputstreams:
+            stream.on_finished_execution(summary, declarations)
