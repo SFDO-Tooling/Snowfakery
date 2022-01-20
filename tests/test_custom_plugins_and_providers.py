@@ -63,6 +63,7 @@ class TimeStampPlugin(SnowfakeryPlugin):
         @memorable
         def constant_time(self, value=None, name=None):
             "Return the current time and then remember it."
+            time.sleep(0.01)
             return time.time()
 
 
