@@ -108,7 +108,6 @@ class CSVDatasetLinearIterator(DatasetIteratorBase):
         self.datasource = datasource
         self.file = open(self.datasource, newline="", encoding="utf-8-sig")
         self.start()
-        self.result = vars(self)  # FIXME
         super().__init__(repeat)
 
     def start(self):

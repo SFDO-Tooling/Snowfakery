@@ -1783,9 +1783,9 @@ Person(id=10, Name=Kelly Jones, StreetAddress=420 Kings Ave, City=Burnaby)
 
 You can use this feature to create "enriched" data by combining real or pre-generated data in a CSV file with fake data from Snowfakery.
 
-
 You can execute a template exactly once for every line in a
-CSV file (or database table, or Salesforce Query) like this:
+CSV file (or database table, or Salesforce Query) using the
+`for_each` keyword:
 
 ```yaml
 # examples/datasets/simple_for_each.yml
@@ -1807,7 +1807,8 @@ CSV file (or database table, or Salesforce Query) like this:
 ```
 
 This binds a new row from the CSV to the variable named `current_address`
-over and over, expanding the template for each row.
+over and over, expanding the template for each row. The `for_each` replaces
+the `count` in a template that uses it.
 
 #### Iterate over Salesforce Datasets
 

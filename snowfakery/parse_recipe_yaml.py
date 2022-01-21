@@ -398,8 +398,9 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
                     for_each_expr, context
                 )
             else:  # pragma: no cover
+                # this code should be unreachable due to checks earlier
                 raise exc.DataGenSyntaxError(
-                    "`for_each` must be to a variable description",
+                    "`for_each` must evaluate to a variable description",
                     **context.line_num(),
                 )
         new_template = ObjectTemplate(**sobj_def)

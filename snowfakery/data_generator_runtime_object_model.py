@@ -81,6 +81,8 @@ class VariableDefinition:
 
 
 class ForEachVariableDefinition:
+    """Represents a for_each statement."""
+
     varname: str
     expression: "StructuredValue"
 
@@ -93,7 +95,7 @@ class ForEachVariableDefinition:
         self.line_num = line_num
 
     def evaluate(self, context: RuntimeContext) -> FieldValue:
-        """Evaluate the expression"""
+        """Disable value caching for this context and evaluate the expression"""
         context.recalculate_every_time = True
         ret = self.expression.render(context)
         if not isinstance(ret, PluginResultIterator):
