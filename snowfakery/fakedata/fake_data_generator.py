@@ -30,7 +30,7 @@ class FakeNames(T.NamedTuple):
     # trying to incorporate one field into another if we
     # need to.
     def user_name(self, matching: bool = True):
-        "Salesforce-style username in the form of an email address"
+        "Globally unique Salesforce-style username in the form of an email address"
         domain = self.f.hostname()
         already_created = self._already_have(("firstname", "lastname"))
         if matching and all(already_created):

@@ -2,9 +2,9 @@ from abc import abstractmethod, ABC
 from .data_generator_runtime import evaluate_function, RuntimeContext, Interpreter
 from .object_rows import ObjectRow, ObjectReference
 from contextlib import contextmanager
-from typing import Union, Dict, Sequence, Optional, cast
+from typing import NamedTuple, Union, Dict, Sequence, Optional, cast
 from .utils.template_utils import look_for_number
-
+import itertools
 import jinja2
 
 from .data_gen_exceptions import (
@@ -80,6 +80,39 @@ class VariableDefinition:
         interp.register_variable(name, value)
 
 
+class ForEachVariableDefinition:
+    """Represents a for_each statement."""
+
+    varname: str
+    expression: "StructuredValue"
+
+    def __init__(
+        self, filename: str, line_num: int, varname: str, expression: Definition
+    ):
+        self.varname = varname
+        self.expression = expression
+        self.filename = filename
+        self.line_num = line_num
+
+    def evaluate(self, context: RuntimeContext) -> FieldValue:
+        """Disable value caching for this context and evaluate the expression"""
+        context.recalculate_every_time = True
+        ret = self.expression.render(context)
+        if not isinstance(ret, PluginResultIterator):
+            raise DataGenValueError(
+                f"`for_each` value must be a DatasetIterator for `{self.varname}`",
+                self.filename,
+                self.line_num,
+            )
+        ret.repeat = False
+        return ret
+
+
+class LoopIterator(NamedTuple):
+    name: str
+    iterator: object
+
+
 class ObjectTemplate:
     """A factory that generates rows.
 
@@ -99,6 +132,7 @@ class ObjectTemplate:
         line_num: int,
         nickname: str = None,
         count_expr: FieldDefinition = None,  # counts can be dynamic so they are expressions
+        for_each_expr: ForEachVariableDefinition = None,
         just_once: bool = False,
         fields: Sequence = (),
         friends: Sequence = (),
@@ -111,6 +145,14 @@ class ObjectTemplate:
         self.line_num = line_num
         self.fields = fields
         self.friends = friends
+        self.for_each_expr = for_each_expr
+
+        if count_expr and for_each_expr:
+            raise DataGenSyntaxError(
+                f"Cannot specify both a count expression and a for-each expression at the same time in declaration for {self.tablename}.",
+                self.filename,
+                self.line_num,
+            )
 
     def render(self, context: RuntimeContext) -> Optional[ObjectRow]:
         return self.generate_rows(context.output_stream, context)
@@ -121,9 +163,26 @@ class ObjectTemplate:
         """Generate several rows"""
         rc = None
         with parent_context.child_context(self) as context:
-            count = self._evaluate_count(context)
+            if self.for_each_expr:
+                # it would be easy to support multiple parallel
+                # for-eaches here and at one point the code did,
+                # but the use-case wasn't obvious so it was removed
+                # after 9bc296a7df. If we get to 2023 without
+                # # finding a use-case we can delete this comment.
+                iterators = [self._evaluate_for_each(context)]
+                iterators.append(LoopIterator("child_index", itertools.count()))
+            else:  # use a count, or a default count of 1
+                iterators = [
+                    LoopIterator(
+                        "child_index", iter(range(self._evaluate_count(context)))
+                    )
+                ]
             with self.exception_handling(f"Cannot generate {self.name}"):
-                for i in range(count):
+                master_iterator = zip(*(it.iterator for it in iterators))
+                iterator_names = [it.name for it in iterators]
+                for i, next_value_list in enumerate(master_iterator):
+                    for name, value in zip(iterator_names, next_value_list):
+                        context.interpreter.register_variable(name, value)
                     rc = self._generate_row(output_stream, context, i)
 
         return rc  # return last row
@@ -163,6 +222,22 @@ class ObjectTemplate:
     @property
     def id(self):
         return id(self)
+
+    def _evaluate_for_each(self, context: RuntimeContext) -> LoopIterator:
+        """Evaluate the expression to get an iterator we can iterate over"""
+
+        def eval_to_iterator(vardef):
+            val = vardef.evaluate(context)
+            try:
+                iterator = iter(val)
+            except TypeError:  # pragma: no cover
+                raise DataGenError(
+                    f"Object created by {vardef.varname} is not iterable: {val}"
+                )
+            return LoopIterator(vardef.varname, iterator)
+
+        with self.exception_handling("Cannot evaluate `for_each` definition"):
+            return eval_to_iterator(self.for_each_expr)
 
     def _generate_row(
         self, output_stream, context: RuntimeContext, index: int
@@ -252,6 +327,7 @@ class SimpleValue(FieldDefinition):
 
     def render(self, context: RuntimeContext) -> FieldValue:
         """Render the value: rendering a template if necessary."""
+        old_context_identifier = context.unique_context_identifier
         context.unique_context_identifier = str(id(self))
         evaluator = self.evaluator(context)
         if evaluator:
@@ -260,10 +336,10 @@ class SimpleValue(FieldDefinition):
             except jinja2.exceptions.UndefinedError as e:
                 raise DataGenNameError(e.message, self.filename, self.line_num) from e
             except Exception as e:
-                raise
                 raise DataGenValueError(str(e), self.filename, self.line_num) from e
         else:
             val = self.definition
+        context.unique_context_identifier = old_context_identifier
         return look_for_number(val) if isinstance(val, str) else val
 
     def __repr__(self):
@@ -299,9 +375,10 @@ class StructuredValue(FieldDefinition):
         else:  # scalars will be turned into a one-argument list
             self.args = [args]
             self.kwargs = {}
+        self.unique_context_identifier = str(id(self))
 
     def render(self, context: RuntimeContext) -> FieldValue:
-        context.unique_context_identifier = str(id(self))
+        context.unique_context_identifier = self.unique_context_identifier
         if "." in self.function_name:
             objname, method, *rest = self.function_name.split(".")
             if rest:

@@ -15,6 +15,7 @@ from yaml.error import YAMLError
 from .data_generator_runtime_object_model import (
     ObjectTemplate,
     VariableDefinition,
+    ForEachVariableDefinition,
     FieldFactory,
     SimpleValue,
     StructuredValue,
@@ -172,17 +173,17 @@ def parse_structured_value_args(
 
         with context.change_current_parent_object(args):
             return {
-                as_str(name): parse_field_value(as_str(name), arg, context, False)
+                as_str(name): parse_field_value(as_str(name), arg, context)
                 for name, arg in args.items()
                 if name != "__line__"
             }
     elif isinstance(args, list):
         return [
-            parse_field_value(f"List element {i}", arg, context, False)
+            parse_field_value(f"List element {i}", arg, context)
             for i, arg in enumerate(args)
         ]
     else:
-        return parse_field_value("", args, context, False)
+        return parse_field_value("", args, context)
 
 
 def parse_structured_value(name: str, field: Dict, context: ParseContext) -> Definition:
@@ -225,7 +226,9 @@ def parse_structured_value(name: str, field: Dict, context: ParseContext) -> Def
 
 
 def parse_field_value(
-    name: str, field, context: ParseContext, allow_structured_values=True
+    name: str,
+    field,
+    context: ParseContext,
 ) -> Union[SimpleValue, StructuredValue, ObjectTemplate]:
     if isinstance(field, (str, Number, date, type(None))):
         return SimpleValue(field, **(context.line_num(field) or context.line_num()))
@@ -237,7 +240,11 @@ def parse_field_value(
     elif isinstance(field, list) and len(field) == 1 and isinstance(field[0], dict):
         # unwrap a list of a single item in this context because it is
         # a mistake and we can infer their real meaning
-        return parse_field_value(name, field[0], context)
+        return parse_field_value(
+            name,
+            field[0],
+            context,
+        )
     else:
         raise exc.DataGenSyntaxError(
             f"Unknown field {type(field)} type for {name}. Should be a string or 'object': \n {field} ",
@@ -346,12 +353,15 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
             "include": str,
             "nickname": str,
             "just_once": bool,
+            "for_each": dict,
             "count": (str, int, dict),
         },
         context=context,
     )
     if not context.top_level and parsed_template.just_once:
-        raise exc.DataGenSyntaxError("just_once can only be used at the top level")
+        raise exc.DataGenSyntaxError(
+            "just_once can only be used at the top level", **context.line_num()
+        )
 
     assert yaml_sobj
     with context.change_current_parent_object(yaml_sobj):
@@ -375,6 +385,24 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
 
         if count_expr is not None:
             parse_count_expression(yaml_sobj, sobj_def, context)
+
+        for_each_expr = yaml_sobj.get("for_each")
+        if for_each_expr is not None:
+            # it would be easy to support multiple parallel
+            # for-eaches here and at one point the code did,
+            # but the use-case wasn't obvious so it was removed
+            # after 9bc296a7df. If we get to 2023 without
+            # finding a use-case we can delete this comment.
+            if isinstance(for_each_expr, dict):
+                sobj_def["for_each_expr"] = parse_for_each_variable_definition(
+                    for_each_expr, context
+                )
+            else:  # pragma: no cover
+                # this code should be unreachable due to checks earlier
+                raise exc.DataGenSyntaxError(
+                    "`for_each` must evaluate to a variable description",
+                    **context.line_num(),
+                )
         new_template = ObjectTemplate(**sobj_def)
         context.register_template(new_template)
         return new_template
@@ -402,6 +430,32 @@ def parse_variable_definition(
         sobj_def["line_num"] = parsed_template.line_num.line_num
         sobj_def["filename"] = parsed_template.line_num.filename
         new_def = VariableDefinition(**sobj_def)
+        return new_def
+
+
+def parse_for_each_variable_definition(
+    yaml_sobj: Dict, context: ParseContext
+) -> ForEachVariableDefinition:
+    parsed_template: Any = parse_element(
+        yaml_sobj,
+        "var",
+        optional_keys={},
+        mandatory_keys={
+            "value": (dict, str),
+        },
+        context=context,
+    )
+
+    assert yaml_sobj
+    with context.change_current_parent_object(yaml_sobj):
+        sobj_def = {}
+        sobj_def["varname"] = parsed_template.var
+        var_def_expr = yaml_sobj.get("value")
+
+        sobj_def["expression"] = parse_field_value("value", var_def_expr, context)
+        sobj_def["line_num"] = parsed_template.line_num.line_num
+        sobj_def["filename"] = parsed_template.line_num.filename
+        new_def = ForEachVariableDefinition(**sobj_def)
         return new_def
 
 
@@ -481,14 +535,14 @@ def parse_element(
         for key in dct:
             key_definition = expected_keys.get(key)
             if not key_definition:
-                raise exc.DataGenError(
+                raise exc.DataGenSyntaxError(
                     f"Unexpected key: {key}", **context.line_num(key)
                 )
             else:
                 value = dct[key]
                 if not isinstance(value, key_definition):
-                    raise exc.DataGenError(
-                        f"Expected `{key}` to be of type {key_definition} instead of {type(value)}.",
+                    raise exc.DataGenSyntaxError(
+                        f"Expected `{key}` to be of type {key_definition} instead of `{type(value).__name__}`.",
                         **context.line_num(dct),
                     )
                 else:
