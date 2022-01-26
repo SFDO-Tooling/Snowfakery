@@ -114,6 +114,12 @@ class SnowfakeryApplication:
 
         return last_used_id >= target_id
 
+    def configure_output_stream(
+        self,
+        **kwargs,
+    ):
+        return configure_output_stream(parent_application=self, **kwargs)
+
 
 def stopping_criteria_from_target_number(target_number):
     "Deconstruct a tuple of 'str number' or 'number str' and make a StoppingCriteria"
@@ -163,12 +169,15 @@ def generate_data(
             return exit_stack.enter_context(open_file_like(file, mode))
 
         parent_application = parent_application or SnowfakeryApplication(
-            stopping_criteria
+            stopping_criteria,
         )
 
         output_stream = exit_stack.enter_context(
-            configure_output_stream(
-                dburls, output_format, output_files, output_folder, parent_application
+            parent_application.configure_output_stream(
+                dburls=dburls,
+                output_format=output_format,
+                output_files=output_files,
+                output_folder=output_folder,
             )
         )
 

@@ -8,6 +8,7 @@ import pytest
 
 from snowfakery import generate_data
 from snowfakery.data_generator_runtime import IdManager
+from snowfakery.output_streams import OutputStream
 from snowfakery.api import SnowfakeryApplication
 from snowfakery import data_gen_exceptions as exc
 
@@ -137,3 +138,24 @@ class TestEmbedding:
             load_declarations=load_declarations,
         )
         assert generated_rows.table_values("Foo", 0)["id"] == 7
+
+    def test_parent_application__supply_output_streams(self, generated_rows):
+        class MyOutputStream(OutputStream):
+            def write_single_row(self, *args, **kwargs):
+                MyOutputStream.called = True
+
+        class MyEmbedder(SnowfakeryApplication):
+            def configure_output_stream(self, *args, **kwargs):
+                assert all(
+                    word in kwargs
+                    for word in (
+                        "dburls",
+                        "output_format",
+                        "output_files",
+                        "output_folder",
+                    )
+                )
+                return MyOutputStream("")
+
+        generate_data(yaml_file="examples/company.yml", parent_application=MyEmbedder())
+        assert MyOutputStream.called
