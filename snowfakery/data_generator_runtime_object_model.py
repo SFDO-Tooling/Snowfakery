@@ -1,5 +1,10 @@
 from abc import abstractmethod, ABC
-from .data_generator_runtime import evaluate_function, RuntimeContext, Interpreter
+from .data_generator_runtime import (
+    JinjaTemplateEvaluatorFactory,
+    evaluate_function,
+    RuntimeContext,
+    Interpreter,
+)
 from .object_rows import ObjectRow, ObjectReference
 from contextlib import contextmanager
 from typing import NamedTuple, Union, Dict, Sequence, Optional, cast
@@ -307,39 +312,39 @@ class SimpleValue(FieldDefinition):
          fieldname3: 42
     """
 
+    evaluator_factory = JinjaTemplateEvaluatorFactory()
+
     def __init__(self, definition: Scalar, filename: str, line_num: int):
         self.filename = filename
         self.line_num = line_num
         self.definition: Scalar = definition
         assert isinstance(filename, str)
         assert isinstance(line_num, int), line_num
-        self._evaluator = None
+        self.setup_evaluator()
 
-    def evaluator(self, context):
+    def setup_evaluator(self):
         """Populate the evaluator property once."""
-        if self._evaluator is None:
-            if isinstance(self.definition, str):
-                with self.exception_handling("Cannot parse value {}", self.definition):
-                    self._evaluator = context.get_evaluator(self.definition)
-            else:
-                self._evaluator = False
-        return self._evaluator
+        self._evaluator = None
+        if isinstance(self.definition, str):
+            with self.exception_handling("Cannot parse value {}", self.definition):
+                self._evaluator = self.evaluator_factory.get_evaluator(self.definition)
 
     def render(self, context: RuntimeContext) -> FieldValue:
         """Render the value: rendering a template if necessary."""
-        old_context_identifier = context.unique_context_identifier
-        context.unique_context_identifier = str(id(self))
-        evaluator = self.evaluator(context)
-        if evaluator:
+        if self._evaluator:
             try:
-                val = evaluator(context)
+                old_context_identifier = context.unique_context_identifier
+                context.unique_context_identifier = str(id(self))
+                val = self._evaluator(context)
             except jinja2.exceptions.UndefinedError as e:
                 raise DataGenNameError(e.message, self.filename, self.line_num) from e
             except Exception as e:
                 raise DataGenValueError(str(e), self.filename, self.line_num) from e
+            finally:
+                context.unique_context_identifier = old_context_identifier
+
         else:
             val = self.definition
-        context.unique_context_identifier = old_context_identifier
         return look_for_number(val) if isinstance(val, str) else val
 
     def __repr__(self):

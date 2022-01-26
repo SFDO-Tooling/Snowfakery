@@ -267,8 +267,6 @@ class JinjaTemplateEvaluatorFactory:
                 return lambda context: template.render(context.field_vars())
             except jinja2.exceptions.TemplateSyntaxError as e:
                 raise DataGenSyntaxError(str(e)) from e
-        else:
-            return lambda context: definition
 
 
 class Interpreter:
@@ -423,7 +421,6 @@ class RuntimeContext:
     but internally its mostly just proxying to other classes."""
 
     obj: Optional[ObjectRow] = None
-    template_evaluator_recipe = JinjaTemplateEvaluatorFactory()
     current_template = None
     local_vars = None
     unique_context_identifier = None
@@ -510,9 +507,6 @@ class RuntimeContext:
     @property
     def output_stream(self):
         return self.interpreter.output_stream
-
-    def get_evaluator(self, definition: str):
-        return self.template_evaluator_recipe.get_evaluator(definition)
 
     @property
     def evaluation_namespace(self):
