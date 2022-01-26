@@ -8,7 +8,6 @@ import sys
 from pathlib import Path
 from collections import namedtuple, defaultdict
 from typing import Dict, Union, Optional, Mapping, Callable, Sequence
-from warnings import warn
 
 from sqlalchemy import (
     create_engine,
@@ -125,7 +124,7 @@ class OutputStream(ABC):
 
         Return a list of messages to print out.
         """
-        return super().close()
+        pass
 
     def __enter__(self, *args):
         return self
@@ -278,9 +277,7 @@ class SqlDbOutputStream(OutputStream):
 
     should_close_session = False
 
-    def __init__(self, engine: Engine, mappings: None = None, **kwargs):
-        if mappings:
-            warn("Please do not pass mappings argument to __init__", DeprecationWarning)
+    def __init__(self, engine: Engine, **kwargs):
         self.buffered_rows = defaultdict(list)
         self.table_info = {}
         self.engine = engine
@@ -289,9 +286,7 @@ class SqlDbOutputStream(OutputStream):
         self.base = automap_base(bind=engine, metadata=self.metadata)
 
     @classmethod
-    def from_url(cls, db_url: str, mappings: None = None):
-        if mappings:
-            warn("Please do not pass mappings argument to from_url", DeprecationWarning)
+    def from_url(cls, db_url: str):
         engine = create_engine(db_url)
         self = cls(engine)
         return self

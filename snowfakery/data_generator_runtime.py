@@ -16,7 +16,7 @@ from .template_funcs import StandardFuncs
 from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError
 import snowfakery  # noQA
 from snowfakery.object_rows import NicknameSlot, SlotState, ObjectRow
-from snowfakery.plugins import PluginContext, SnowfakeryPlugin
+from snowfakery.plugins import PluginContext, SnowfakeryPlugin, Scalar
 from snowfakery.utils.collections import OrderedSet
 
 OutputStream = "snowfakery.output_streams.OutputStream"
@@ -569,7 +569,11 @@ class EvaluationNamespace(NamedTuple):
         return {**self.field_funcs(), "fake": self.fake}
 
     def fake(self, name):
-        return str(self.runtime_context.faker_template_library._get_fake_data(name))
+        val = self.runtime_context.faker_template_library._get_fake_data(name)
+        if isinstance(val, Scalar.__args__):
+            return val
+        else:
+            return str(val)
 
     def field_vars(self):
         return {**self.simple_field_vars(), **self.field_funcs()}
