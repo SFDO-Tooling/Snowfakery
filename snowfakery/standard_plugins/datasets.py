@@ -1,23 +1,22 @@
-from pathlib import Path
-from csv import DictReader
-from contextlib import contextmanager
 import os
+from contextlib import contextmanager
+from csv import DictReader
+from pathlib import Path
 from random import shuffle
 
-from sqlalchemy import create_engine, MetaData
-from sqlalchemy.sql.expression import func, select
+from sqlalchemy import MetaData, create_engine
 from sqlalchemy.sql.elements import quoted_name
-
+from sqlalchemy.sql.expression import func, select
 from yaml.representer import Representer
-from snowfakery.data_gen_exceptions import DataGenNameError
-from snowfakery.utils.files import FileLike
 
+from snowfakery.data_gen_exceptions import DataGenError, DataGenNameError
 from snowfakery.plugins import (
-    SnowfakeryPlugin,
     PluginResult,
     PluginResultIterator,
+    SnowfakeryPlugin,
     memorable,
 )
+from snowfakery.utils.files import FileLike
 from snowfakery.utils.yaml_utils import SnowfakeryDumper
 
 
@@ -123,12 +122,22 @@ class CSVDatasetLinearIterator(DatasetIteratorBase):
     def start(self):
         self.file.seek(0)
         d = DictReader(self.file)
-        self.results = (DatasetPluginResult(row) for row in d)
+
+        plugin_result = self.plugin_result
+        self.results = (plugin_result(row) for row in d)
 
     def close(self):
         self.results = None
         if not self.borrowed_file:
             self.file.close()
+
+    def plugin_result(self, row):
+        if None in row:
+            raise DataGenError(
+                f"Your CSV row has more columns than the CSV header:  {row[None]}, {self.datasource}"
+            )
+
+        return DatasetPluginResult(row)
 
 
 class DatasetPluginResult(PluginResult):
