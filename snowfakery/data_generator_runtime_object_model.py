@@ -323,7 +323,8 @@ class SimpleValue(FieldDefinition):
         self.setup_evaluator()
 
     def setup_evaluator(self):
-        """Populate the evaluator property once."""
+        """Populate the evaluator property once, if and only if this field
+        contains Jinja syntax."""
         self._evaluator = None
         if isinstance(self.definition, str):
             with self.exception_handling("Cannot parse value {}", self.definition):
