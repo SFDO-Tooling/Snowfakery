@@ -187,6 +187,24 @@ class TestExternalDatasets:
             generate(StringIO(yaml), {})
         assert "'xname ', 'fake'" in str(e.value)
 
+    def test_csv_row_has_too_many_columns(self):
+        abs_path = str(Path(__file__).parent)
+        yaml = (
+            """
+        - plugin: snowfakery.standard_plugins.datasets.Dataset
+        - object: XXX
+          fields:
+            __address_from_csv:
+              Dataset.iterate:
+                dataset: %s/badcsv_too_many_columns.csv
+            foo: ${{__address_from_csv.name}}
+        """
+            % abs_path
+        )
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml), {})
+        assert "more columns" in str(e.value)
+
     def test_csv_utf_8_bom(self, generated_rows):
         abs_path = Path(__file__).parent
         yaml = (

@@ -9,7 +9,7 @@ from sqlalchemy.sql.expression import func, select
 from sqlalchemy.sql.elements import quoted_name
 
 from yaml.representer import Representer
-from snowfakery.data_gen_exceptions import DataGenNameError
+from snowfakery.data_gen_exceptions import DataGenError, DataGenNameError
 
 from snowfakery.plugins import (
     SnowfakeryPlugin,
@@ -113,11 +113,21 @@ class CSVDatasetLinearIterator(DatasetIteratorBase):
     def start(self):
         self.file.seek(0)
         d = DictReader(self.file)
-        self.results = (DatasetPluginResult(row) for row in d)
+
+        plugin_result = self.plugin_result
+        self.results = (plugin_result(row) for row in d)
 
     def close(self):
         self.results = None
         self.file.close()
+
+    def plugin_result(self, row):
+        if None in row:
+            raise DataGenError(
+                f"Your CSV row has more columns than the CSV header:  {row[None]}, {self.datasource}"
+            )
+
+        return DatasetPluginResult(row)
 
 
 class DatasetPluginResult(PluginResult):
