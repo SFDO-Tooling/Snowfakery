@@ -1970,7 +1970,7 @@ Number,Street,City,Postcode
 You can run:
 
 ```
-$ snowfakery examples/update_records.recipe.yml --update-input-file examples/contacts.csv
+$ snowfakery examples/updates/update_contacts.recipe.yml --update-input-file examples/datasets/addresses.csv
 ```
 
 This will generate output like this:
@@ -2029,26 +2029,26 @@ Snowfakery is a domain-specific programming language with access to most of the 
       - object: woman
         count: 7
         fields:
-          husband: 
+          husband:
             reference: man
           luggage:
             - object: sack
               count: 7
               fields:
-                holder: 
+                holder:
                   reference: woman
                 contents:
                   - object: cat
                     count: 7
                     fields:
-                      container: 
+                      container:
                         reference: sack
                       offspring:
-                      - object: kit
-                        count: 7
-                        fields:
-                          parent: 
-                            reference: cat
+                        - object: kit
+                          count: 7
+                          fields:
+                            parent:
+                              reference: cat
 - object: stats
   fields:
     num_narrators: ${{ man.id }}
