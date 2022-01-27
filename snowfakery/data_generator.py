@@ -1,7 +1,6 @@
 import warnings
 from typing import IO, Tuple, Mapping, List, Dict, TextIO, Union
 import functools
-from pathlib import Path
 
 import yaml
 from faker.providers import BaseProvider as FakerProvider
@@ -31,7 +30,7 @@ from snowfakery.standard_plugins.UniqueId import UniqueId
 # of it.
 
 
-FileLike = Union[TextIO, LazyFile]
+OpenFileLike = Union[TextIO, LazyFile]
 
 
 class ExecutionSummary:
@@ -82,12 +81,12 @@ def merge_options(
     return options, extra_options
 
 
-def load_continuation_yaml(continuation_file: FileLike):
+def load_continuation_yaml(continuation_file: OpenFileLike):
     """Load a continuation file from YAML."""
     return hydrate(Globals, yaml.safe_load(continuation_file))
 
 
-def save_continuation_yaml(continuation_data: Globals, continuation_file: FileLike):
+def save_continuation_yaml(continuation_data: Globals, continuation_file: OpenFileLike):
     """Save the global interpreter state from Globals into a continuation_file"""
     yaml.dump(
         continuation_data.__getstate__(),
@@ -121,10 +120,10 @@ def generate(
     parent_application=None,
     *,
     stopping_criteria=None,
-    generate_continuation_file: FileLike = None,
+    generate_continuation_file: OpenFileLike = None,
     continuation_file: TextIO = None,
     plugin_options: dict = None,
-    update_input_file: Path = None,
+    update_input_file: OpenFileLike = None,
 ) -> ExecutionSummary:
     """The main entry point to the package for Python applications."""
     from .api import SnowfakeryApplication
@@ -241,9 +240,3 @@ def initialize_globals(continuation_data, templates):
         globals = Globals(name_slots=name_slots)
 
     return globals
-
-
-if __name__ == "__main__":  # pragma: no cover
-    from .snowfakery import generate_cli
-
-    generate_cli()

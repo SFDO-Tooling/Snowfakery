@@ -10,6 +10,7 @@ from sqlalchemy.sql.elements import quoted_name
 
 from yaml.representer import Representer
 from snowfakery.data_gen_exceptions import DataGenNameError
+from snowfakery.utils.files import FileLike
 
 from snowfakery.plugins import (
     SnowfakeryPlugin,
@@ -104,11 +105,20 @@ class SQLDatasetRandomPermutationIterator(SQLDatasetIterator):
 
 
 class CSVDatasetLinearIterator(DatasetIteratorBase):
-    def __init__(self, datasource: Path, repeat: bool):
+    def __init__(self, datasource: FileLike, repeat: bool):
         self.datasource = datasource
-        self.file = open(self.datasource, newline="", encoding="utf-8-sig")
+        # datasource is already an open file-like
+        if self.borrowed_file:
+            self.file = datasource
+        else:
+            self.file = open(self.datasource, newline="", encoding="utf-8-sig")
         self.start()
         super().__init__(repeat)
+
+    @property
+    def borrowed_file(self):
+        """Was this datastream opened by someone else? Or us?"""
+        return hasattr(self.datasource, "close")
 
     def start(self):
         self.file.seek(0)
@@ -117,7 +127,8 @@ class CSVDatasetLinearIterator(DatasetIteratorBase):
 
     def close(self):
         self.results = None
-        self.file.close()
+        if not self.borrowed_file:
+            self.file.close()
 
 
 class DatasetPluginResult(PluginResult):

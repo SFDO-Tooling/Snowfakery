@@ -147,7 +147,7 @@ def generate_data(
         FileLike
     ] = None,  # read these load declarations for CCI
     plugin_options: T.Mapping = None,
-    update_input_file: Path = None,  # use this input file in update mode
+    update_input_file: FileLike = None,  # use this input file in update mode
 ) -> None:
     stopping_criteria = stopping_criteria_from_target_number(target_number)
     dburls = dburls or ([dburl] if dburl else [])
@@ -174,6 +174,7 @@ def generate_data(
         _, open_new_continue_file = open_with_cleanup(generate_continuation_file, "w")
         _, open_continuation_file = open_with_cleanup(continuation_file, "r")
         _, open_cci_mapping_file = open_with_cleanup(generate_cci_mapping_file, "w")
+        _, open_update_input_file = open_with_cleanup(update_input_file, "r")
 
         summary = generate(
             open_yaml_file=open_yaml_file,
@@ -184,7 +185,7 @@ def generate_data(
             continuation_file=open_continuation_file,
             stopping_criteria=stopping_criteria,
             plugin_options=plugin_options,
-            update_input_file=update_input_file,
+            update_input_file=open_update_input_file,
         )
 
         if open_cci_mapping_file:

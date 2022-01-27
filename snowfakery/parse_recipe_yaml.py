@@ -691,7 +691,7 @@ def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
 
 
 def build_update_recipe(
-    statements: List[Statement], update_input_file: Path = None
+    statements: List[Statement], update_input_file: FileLike = None
 ) -> List[Statement]:
     class DataSourceValue(SimpleValue):
         def __init__(self):

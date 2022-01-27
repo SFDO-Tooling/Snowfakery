@@ -1944,7 +1944,7 @@ recipe code. For example, if you have a CSV of contacts, and you want to add
 an address for every one, you do it like this:
 
 ```
-# examples/update_contexts.recipe.yml
+# examples/updates/update_contacts.recipe.yml
 - object: Contact
   fields:
     FirstName:
@@ -1984,7 +1984,8 @@ id,FirstName,LastName
 ```
 
 An update recipe should have a single top-level object with no `count` on it.
-It will generate the same number of output rows as input rows.
+The recipe can take `options` if needed. It will generate the same number of
+output rows as input rows.
 
 ## Use Snowfakery with Salesforce
 
