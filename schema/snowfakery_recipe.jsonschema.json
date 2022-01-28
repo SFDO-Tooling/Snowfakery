@@ -1,0 +1,235 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://github.com/SFDO-Tooling/Snowfakery/schema/snowfakery_recipe.jsonschema.json",
+  "description": "Snowfakery recipe schema",
+  "title": "Snowfakery Recipe",
+  "type": "array",
+  "items": {
+    "anyOf": [
+      {
+        "$ref": "#/$defs/object"
+      },
+      {
+        "$ref": "#/$defs/include_file"
+      },
+      {
+        "$ref": "#/$defs/var"
+      },
+      {
+        "$ref": "#/$defs/macro"
+      },
+      {
+        "$ref": "#/$defs/plugin"
+      },
+      {
+        "$ref": "#/$defs/option"
+      }
+    ]
+  },
+  "$defs": {
+    "object": {
+      "title": "Object Template",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "object": {
+          "description": "The object name",
+          "type": "string"
+        },
+        "nickname": {
+          "type": "string"
+        },
+        "just_once": {
+          "type": "boolean"
+        },
+        "count": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "object"
+            }
+          ]
+        },
+        "fields": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "friends": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/object"
+              },
+              {
+                "$ref": "#/$defs/var"
+              }
+            ]
+          }
+        },
+        "include": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "object"
+      ]
+    },
+    "include_file": {
+      "title": "Include File",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "include_file": {
+          "description": "The file name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "include_file"
+      ]
+    },
+    "plugin": {
+      "title": "Plugin Declaration",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "plugin": {
+          "description": "The plugin name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plugin"
+      ]
+    },
+    "var": {
+      "title": "Variable",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "var": {
+          "description": "The var name",
+          "type": "string"
+        },
+        "value": {
+          "description": "The value",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/object"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "object"
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/object"
+                  },
+                  {
+                    "$ref": "#/$defs/var"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "required": [
+        "var",
+        "value"
+      ]
+    },
+    "option": {
+      "title": "Variable",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "option": {
+          "description": "The var name",
+          "type": "string"
+        },
+        "default": {
+          "description": "The value",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/object"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "object"
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/object"
+                  },
+                  {
+                    "$ref": "#/$defs/var"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "required": [
+        "option"
+      ]
+    },
+    "macro": {
+      "title": "Macro",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "macro": {
+          "description": "The object name",
+          "type": "string"
+        },
+        "include": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "friends": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/object"
+              },
+              {
+                "$ref": "#/$defs/var"
+              }
+            ]
+          }
+        }
+      },
+      "required": [
+        "macro"
+      ]
+    }
+  }
+}
