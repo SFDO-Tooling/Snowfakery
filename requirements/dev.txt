@@ -5,7 +5,9 @@
 #    pip-compile --allow-unsafe requirements/dev.in
 #
 attrs==21.4.0
-    # via pytest
+    # via
+    #   jsonschema
+    #   pytest
 black==21.12b0
     # via -r requirements/dev.in
 certifi==2021.10.8
@@ -60,9 +62,7 @@ idna==3.3
     #   requests
     #   yarl
 importlib-metadata==4.10.1
-    # via
-    #   markdown
-    #   mkdocs
+    # via mkdocs
 importlib-resources==5.4.0
     # via tox-gh-actions
 iniconfig==1.1.1
@@ -72,8 +72,7 @@ jinja2==2.11.3
     #   -r requirements/prod.txt
     #   mkdocs
 jsonschema==4.2.1
-    # via
-    #   -r requirements/dev.txt
+    # via -r requirements/dev.in
 markdown==3.3.6
     # via mkdocs
 markupsafe==2.0.1
@@ -119,6 +118,8 @@ pydantic==1.9.0
     # via -r requirements/prod.txt
 pyparsing==3.0.6
     # via packaging
+pyrsistent==0.18.1
+    # via jsonschema
 pytest==6.2.5
     # via
     #   -r requirements/dev.in
@@ -159,7 +160,7 @@ six==1.16.0
     #   tox
     #   vcrpy
     #   virtualenv
-sqlalchemy==1.4.29
+sqlalchemy==1.4.31
     # via -r requirements/prod.txt
 text-unidecode==1.3
     # via
@@ -207,6 +208,4 @@ wrapt==1.13.3
 yarl==1.7.2
     # via vcrpy
 zipp==3.7.0
-    # via
-    #   importlib-metadata
-    #   importlib-resources
+    # via importlib-metadata
