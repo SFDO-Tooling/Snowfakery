@@ -187,6 +187,24 @@ class TestExternalDatasets:
             generate(StringIO(yaml), {})
         assert "'xname ', 'fake'" in str(e.value)
 
+    def test_csv_row_has_too_many_columns(self):
+        abs_path = str(Path(__file__).parent)
+        yaml = (
+            """
+        - plugin: snowfakery.standard_plugins.datasets.Dataset
+        - object: XXX
+          fields:
+            __address_from_csv:
+              Dataset.iterate:
+                dataset: %s/badcsv_too_many_columns.csv
+            foo: ${{__address_from_csv.name}}
+        """
+            % abs_path
+        )
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml), {})
+        assert "more columns" in str(e.value)
+
     def test_csv_utf_8_bom(self, generated_rows):
         abs_path = Path(__file__).parent
         yaml = (
@@ -256,7 +274,7 @@ class TestExternalDatasets:
 
         assert "unable to open database file" in str(e.value)
 
-    def test_SQL_dataset_multitable_file(self, generated_rows):
+    def test_SQL_dataset_multitable_file(self):
         abs_path = str(Path(__file__).parent)
         yaml = (
             """
@@ -286,3 +304,129 @@ class TestExternalDatasets:
             generate(f, {})
             assert capsys.readouterr().err == ""
             assert caplog.text == ""
+
+    def test_nested_for_loops(self, generated_rows):
+        call = mock.call
+        with open(
+            Path(__file__).parent.parent
+            / "examples/datasets/nested_for_loops.recipe.yml"
+        ) as f:
+            generate(f, {})
+        assert generated_rows.mock_calls == [
+            call("Foo", {"id": 1, "StreetAddress": "420 Kings Ave", "City": "Burnaby"}),
+            call(
+                "Person", {"id": 1, "StreetAddress": "420 Kings Ave", "City": "Burnaby"}
+            ),
+            call(
+                "Person",
+                {"id": 2, "StreetAddress": "421 Granville Street", "City": "Burnaby"},
+            ),
+            call(
+                "Person",
+                {"id": 3, "StreetAddress": "422 Kingsway Road", "City": "Burnaby"},
+            ),
+            call(
+                "Foo",
+                {
+                    "id": 2,
+                    "StreetAddress": "421 Granville Street",
+                    "City": "White Rock",
+                },
+            ),
+            call(
+                "Person",
+                {"id": 4, "StreetAddress": "420 Kings Ave", "City": "White Rock"},
+            ),
+            call(
+                "Person",
+                {
+                    "id": 5,
+                    "StreetAddress": "421 Granville Street",
+                    "City": "White Rock",
+                },
+            ),
+            call(
+                "Person",
+                {"id": 6, "StreetAddress": "422 Kingsway Road", "City": "White Rock"},
+            ),
+            call(
+                "Foo",
+                {"id": 3, "StreetAddress": "422 Kingsway Road", "City": "Richmond"},
+            ),
+            call(
+                "Person",
+                {"id": 7, "StreetAddress": "420 Kings Ave", "City": "Richmond"},
+            ),
+            call(
+                "Person",
+                {"id": 8, "StreetAddress": "421 Granville Street", "City": "Richmond"},
+            ),
+            call(
+                "Person",
+                {"id": 9, "StreetAddress": "422 Kingsway Road", "City": "Richmond"},
+            ),
+        ]
+
+    def test_for_loop_over_empty_dataset(self, generated_rows):
+        with open(
+            Path(__file__).parent.parent / "examples/datasets/empty_dataset.recipe.yml"
+        ) as f:
+            generate(f, {})
+        assert len(generated_rows.mock_calls) == 1
+
+    def test_for_loop_over_bad_type__int(self, generated_rows):
+        yaml = """
+        - object: Person
+          for_each:
+            var: blah
+            value: 11"""
+
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml), {})
+        assert "value" in str(e.value)
+
+    def test_for_loop_over_bad_type__str(self, generated_rows):
+        yaml = """
+        - object: Person
+          for_each:
+            var: blah
+            value: "eleven" """
+
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml), {})
+        assert "blah" in str(e.value)
+
+    def test_for_loop_and_count_error(self, generated_rows):
+        yaml = """
+        -   object: Person
+            count: 10
+            for_each:
+                var: blah
+                value: "eleven" """
+
+        with pytest.raises(exc.DataGenSyntaxError) as e:
+            generate(StringIO(yaml), {})
+        assert "Person" in str(e.value)
+
+    def test_for_loop_no_vardef_error__scalar(self, generated_rows):
+        yaml = """
+        -   object: Person
+            count: 10
+            for_each: 5
+        """
+
+        with pytest.raises(exc.DataGenSyntaxError) as e:
+            generate(StringIO(yaml), {})
+        assert "for_each" in str(e.value)
+
+    def test_for_loop_no_vardef_error__dict(self, generated_rows):
+        yaml = """
+        -   object: Person
+            count: 10
+            for_each:
+                foo: bar
+        """
+
+        with pytest.raises(exc.DataGenSyntaxError) as e:
+            generate(StringIO(yaml), {})
+        assert "foo" in str(e.value)
