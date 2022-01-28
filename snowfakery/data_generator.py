@@ -1,5 +1,6 @@
 import warnings
 from typing import IO, Tuple, Mapping, List, Dict, TextIO, Union
+import typing as T
 import functools
 
 import yaml
@@ -124,6 +125,7 @@ def generate(
     continuation_file: TextIO = None,
     plugin_options: dict = None,
     update_input_file: OpenFileLike = None,
+    update_passthrough_fields: T.Sequence[str] = (),
 ) -> ExecutionSummary:
     """The main entry point to the package for Python applications."""
     from .api import SnowfakeryApplication
@@ -134,7 +136,9 @@ def generate(
     output_stream = output_stream or DebugOutputStream()
 
     # parse the YAML and any it refers to
-    parse_result = parse_recipe(open_yaml_file, update_input_file)
+    parse_result = parse_recipe(
+        open_yaml_file, update_input_file, update_passthrough_fields
+    )
 
     faker_providers, snowfakery_plugins = process_plugins(parse_result.plugins)
 

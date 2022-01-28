@@ -35,6 +35,7 @@ class TestUpdates:
         generate_data(
             "examples/updates/update_contacts.recipe.yml",
             update_input_file="examples/datasets/addresses.csv",
+            update_passthrough_fields=("Oid",),
         )
         print(generated_rows.mock_calls)
         assert generated_rows.mock_calls == _expected_data(ANY)
@@ -44,6 +45,7 @@ class TestUpdates:
             generate_data(
                 "examples/basic-salesforce.recipe.yml",
                 update_input_file="examples/datasets/addresses.csv",
+                update_passthrough_fields=("Oid",),
             )
 
     def test_updates_with_options(self, generated_rows):
@@ -51,52 +53,58 @@ class TestUpdates:
             "examples/updates/update_contacts_with_options.recipe.yml",
             update_input_file="examples/datasets/addresses.csv",
             user_options={"FirstName": "Jane"},
+            update_passthrough_fields=("Oid",),
         )
         assert generated_rows.mock_calls == _expected_data("Jane")
 
+    def test_updates_no_oid(self, generated_rows):
+        generate_data(
+            "examples/updates/update_contacts.recipe.yml",
+            update_input_file="examples/datasets/addresses.csv",
+        )
+        assert generated_rows.mock_calls == _expected_data(ANY, include_oids=False)
 
-def _expected_data(firstname):
-    return [
-        call(
-            "Contact",
-            {
-                "id": 1,
-                "FirstName": firstname,
-                "LastName": ANY,
-                "BillingStreet": "420 Kings Ave",
-                "BillingCity": "Burnaby",
-                "BillingState": "Texas",
-                "BillingPostalCode": 85633,
-                "BillingCountry": "US",
-                "Oid": "0032D00000V6UvUQAV",
-            },
-        ),
-        call(
-            "Contact",
-            {
-                "id": 2,
-                "FirstName": firstname,
-                "LastName": ANY,
-                "BillingStreet": "421 Granville Street",
-                "BillingCity": "White Rock",
-                "BillingState": "Texas",
-                "BillingPostalCode": 85633,
-                "BillingCountry": "US",
-                "Oid": "032D00000V6UvVQAV",
-            },
-        ),
-        call(
-            "Contact",
-            {
-                "id": 3,
-                "FirstName": firstname,
-                "LastName": ANY,
-                "BillingStreet": "422 Kingsway Road",
-                "BillingCity": "Richmond",
-                "BillingState": "Texas",
-                "BillingPostalCode": 85633,
-                "BillingCountry": "US",
-                "Oid": "032D00000V6UvfQAF",
-            },
-        ),
+
+def _expected_data(firstname, include_oids=True):
+    data = [
+        {
+            "id": 1,
+            "FirstName": firstname,
+            "LastName": ANY,
+            "BillingStreet": "420 Kings Ave",
+            "BillingCity": "Burnaby",
+            "BillingState": "Texas",
+            "BillingPostalCode": 85633,
+            "BillingCountry": "US",
+            "Oid": "0032D00000V6UvUQAV",
+        },
+        {
+            "id": 2,
+            "FirstName": firstname,
+            "LastName": ANY,
+            "BillingStreet": "421 Granville Street",
+            "BillingCity": "White Rock",
+            "BillingState": "Texas",
+            "BillingPostalCode": 85633,
+            "BillingCountry": "US",
+            "Oid": "032D00000V6UvVQAV",
+        },
+        {
+            "id": 3,
+            "FirstName": firstname,
+            "LastName": ANY,
+            "BillingStreet": "422 Kingsway Road",
+            "BillingCity": "Richmond",
+            "BillingState": "Texas",
+            "BillingPostalCode": 85633,
+            "BillingCountry": "US",
+            "Oid": "032D00000V6UvfQAF",
+        },
     ]
+    if not include_oids:
+        for row in data:
+            del row["Oid"]
+
+    rc = [call("Contact", d) for d in data]
+
+    return rc

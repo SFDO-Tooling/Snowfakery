@@ -148,6 +148,9 @@ def generate_data(
     ] = None,  # read these load declarations for CCI
     plugin_options: T.Mapping = None,
     update_input_file: FileLike = None,  # use this input file in update mode
+    update_passthrough_fields: T.Sequence[
+        str
+    ] = (),  # pass through these fields from input to output
 ) -> None:
     stopping_criteria = stopping_criteria_from_target_number(target_number)
     dburls = dburls or ([dburl] if dburl else [])
@@ -186,6 +189,7 @@ def generate_data(
             stopping_criteria=stopping_criteria,
             plugin_options=plugin_options,
             update_input_file=open_update_input_file,
+            update_passthrough_fields=update_passthrough_fields,
         )
 
         if open_cci_mapping_file:

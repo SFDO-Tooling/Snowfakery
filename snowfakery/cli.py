@@ -160,6 +160,13 @@ class VersionMessage:
     type=click.Path(exists=True, readable=True, dir_okay=False),
     help="Run an update-style recipe on this input CSV",
 )
+@click.option(
+    "--update-passthrough-fields",
+    type=str,
+    help="Pass through these fields from input to output automatically",
+    hidden=True,
+    default=(),
+)
 @click.version_option(version=version, prog_name="snowfakery", message=VersionMessage())
 def generate_cli(
     yaml_file,
@@ -178,6 +185,7 @@ def generate_cli(
     should_create_cci_record_type_tables=False,
     load_declarations=None,
     update_input_file=None,
+    update_passthrough_fields=(),  # undocumented feature used mostly for testing
 ):
     """
         Generates records from a YAML file
@@ -209,6 +217,8 @@ def generate_cli(
         target_number=target_number,
         reps=reps,
     )
+    if update_passthrough_fields:
+        update_passthrough_fields = update_passthrough_fields.split(",")
     try:
         user_options = dict(option)
         plugin_options = dict(plugin_option)
@@ -231,6 +241,7 @@ def generate_cli(
             load_declarations=load_declarations,
             plugin_options=plugin_options,
             update_input_file=update_input_file,
+            update_passthrough_fields=update_passthrough_fields,
         )
     except DataGenError as e:
         if debug_internals:

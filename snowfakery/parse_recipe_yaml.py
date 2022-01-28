@@ -691,7 +691,10 @@ def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
 
 
 def build_update_recipe(
-    statements: List[Statement], update_input_file: FileLike = None
+    statements: List[Statement],
+    tables: dict,
+    update_input_file: FileLike = None,
+    passthrough_fields: T.Sequence = (),
 ) -> List[Statement]:
     class DataSourceValue(SimpleValue):
         def __init__(self):
@@ -715,21 +718,26 @@ def build_update_recipe(
     template.for_each_expr = ForEachVariableDefinition(
         "", -1, "input", DataSourceValue()
     )
-    id_definition = SimpleValue("${{input.Oid}}", "", -3)
-    id_field = FieldFactory("Oid", id_definition, "", -4)
-    template.fields.append(id_field)
+
+    def _make_passthrough_attribute_for_update_recipe(attrname):
+        field_def = SimpleValue("${{input.%s}}" % attrname, "", -3)
+        new_field = FieldFactory(attrname, field_def, "", -4)
+        tables[template.name].fields[attrname] = new_field
+        return new_field
+
+    template.fields.extend(
+        _make_passthrough_attribute_for_update_recipe(attr)
+        for attr in passthrough_fields
+    )
 
     return [template]
 
 
-def register_oid_table(tables: dict, template: Statement):
-    table_name = template.name
-    oid = [field for field in template.fields if field.name == "Oid"]
-    oid = oid[0]
-    tables[table_name].fields["Oid"] = oid
-
-
-def parse_recipe(stream: IO[str], update_input_file: FileLike = None) -> ParseResult:
+def parse_recipe(
+    stream: IO[str],
+    update_input_file: FileLike = None,
+    update_passthrough_fields: T.Sequence[str] = (),
+) -> ParseResult:
     context = ParseContext()
     objects = parse_file(stream, context)  # parse the yaml without semantics
     statements = parse_statement_list(objects, context)
@@ -740,8 +748,8 @@ def parse_recipe(stream: IO[str], update_input_file: FileLike = None) -> ParseRe
         if not name.startswith("__")
     }
     if update_input_file:
-        statements = build_update_recipe(statements, update_input_file)
-        template = statements[0]
-        register_oid_table(tables, template)
+        statements = build_update_recipe(
+            statements, tables, update_input_file, update_passthrough_fields
+        )
 
     return ParseResult(context.options, tables, statements, plugins=context.plugins)
