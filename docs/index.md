@@ -1939,7 +1939,7 @@ Snowfakery can be extended with custom plugins and fake data providers as descri
 ### Update mode
 
 If your goal is to loop over every row of an input, update it, and then output
-the result, Snowfakery has a special mode for you that does that with minimal
+the result, Snowfakery has a special mode for you to do that with minimal
 recipe code. For example, if you have a CSV of contacts, and you want to add
 an address for every one, you do it like this:
 
