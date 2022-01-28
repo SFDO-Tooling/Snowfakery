@@ -8,7 +8,7 @@ certifi==2021.10.8
     # via requests
 charset-normalizer==2.0.10
     # via requests
-click==7.1.2
+click==8.0.3
     # via -r requirements/prod.in
 faker==11.3.0
     # via -r requirements/prod.in
