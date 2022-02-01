@@ -156,5 +156,19 @@ class FakeData:
         raise AttributeError(msg)
 
 
+def translate(x):
+    if chr(x).isalnum():
+        return x
+    else:
+        return None
+
+
+REMOVE_WEIRD_CHARS = {x: translate(x) for x in range(0, 128)}
+
+
 def replace_unicode_strings_with_None(val):
-    return None if (type(val) == str and not (val.isalnum() and val.isascii())) else val
+    if type(val) == str:
+        if not val.isascii():
+            return None
+        return val.translate(REMOVE_WEIRD_CHARS)
+    return val
