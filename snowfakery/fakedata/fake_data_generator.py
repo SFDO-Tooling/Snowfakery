@@ -157,4 +157,4 @@ class FakeData:
 
 
 def replace_unicode_strings_with_None(val):
-    return None if (type(val) == str and not val.isascii()) else val
+    return None if (type(val) == str and not (val.isalnum() and val.isascii())) else val
