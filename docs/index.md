@@ -1970,17 +1970,16 @@ Number,Street,City,Postcode
 You can run:
 
 ```
-$ snowfakery examples/updates/update_contacts.recipe.yml --update-input-file examples/datasets/addresses.csv
+$ snowfakery examples/updates/update_contacts.recipe.yml --update-input-file examples/datasets/addresses.csv --output-format csv
 ```
 
 This will generate output like this:
 
 ```
-id,FirstName,LastName
-0032D00000V6UvUQAV,Michael,Bluth,32252 Marc Mall Suite 349,South Kristenview,Massachusetts,65450,United States
-032D00000V6UvVQAV,Isabella,Wright,41497 Henson Motorway,West Marisaland,Alaska,10293,United States
-032D00000V6UvfQAF,Desiree,Shelton,84504 Darren Knolls Suite 023,Port Sandra,Pennsylvania,68863,United States
-032D00000V6UvkQAF,Deanna,Mcdaniel,838 Montoya Circle Apt. 857,West Robert,Louisiana,03074,United States
+FirstName,LastName,BillingStreet,BillingCity,BillingState,BillingPostalCode,BillingCountry,id
+Tommy,Nash,420 Kings Ave,Burnaby,Texas,85633,US
+Lindsey,Callahan,421 Granville Street,White Rock,Texas,85633,US
+Greg,Sellers,422 Kingsway Road,Richmond,Texas,85633,US
 ```
 
 An update recipe should have a single top-level object with no `count` on it.
