@@ -411,6 +411,7 @@ class TestFaker:
         first_name.return_value = "A B C"
         generate(StringIO(yaml))
         assert " " not in generated_rows.row_values(0, "Email")
+        assert "ABC" in generated_rows.row_values(0, "Email")
 
     @mock.patch("faker.providers.person.en_US.Provider.first_name")
     def test_username_length_limit(self, first_name, generated_rows):
