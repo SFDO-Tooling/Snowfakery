@@ -376,8 +376,7 @@ class TestFaker:
         assert first_name.mock_calls
         assert email.mock_calls
 
-    @mock.patch("faker.providers.person.en_US.Provider.first_name")
-    def test_emails_are_ascii(self, first_name, generated_rows):
+    def test_emails_are_ascii(self, generated_rows):
         yaml = """
             - var: snowfakery_locale
               value: jp_JP
@@ -392,6 +391,27 @@ class TestFaker:
         """
         generate(StringIO(yaml))
         assert generated_rows.row_values(0, "Email").isascii()
+
+    @mock.patch("faker.providers.person.en_US.Provider.first_name")
+    @mock.patch(
+        "snowfakery.fakedata.fake_data_generator.email_templates",
+        ["{firstname}.{lastname}@{domain}"],
+    )
+    def test_emails_do_not_contain_spaces(self, first_name, generated_rows):
+        yaml = """
+            - object: X
+              fields:
+                FirstName:
+                    fake: FirstName
+                LastName:
+                    fake: last_name
+                Email:
+                    fake: email
+        """
+        first_name.return_value = "A B C"
+        generate(StringIO(yaml))
+        assert " " not in generated_rows.row_values(0, "Email")
+        assert "ABC" in generated_rows.row_values(0, "Email")
 
     @mock.patch("faker.providers.person.en_US.Provider.first_name")
     def test_username_length_limit(self, first_name, generated_rows):
