@@ -129,7 +129,7 @@ class TestFaker:
 
         for dt in generated_rows.table_values("Contact", field="EmailBouncedDate"):
             assert "+0" in dt or dt.endswith("Z"), dt
-            assert dateparser.parse(dt).tzinfo
+            assert dateparser.isoparse(dt).tzinfo
 
     def test_hidden_fakers(self):
         yaml = """
@@ -167,7 +167,7 @@ class TestFaker:
         """
         generate(StringIO(yaml))
         date = generated_rows.table_values("A", 0, "date")
-        assert dateparser.parse(date).tzinfo is None
+        assert dateparser.isoparse(date).tzinfo is None
 
     def test_relative_dates(self, generated_rows):
         with open("tests/test_relative_dates.yml") as f:
@@ -176,11 +176,16 @@ class TestFaker:
         # there is a miniscule chance that FutureDateTime picks a DateTime 1 second in the future
         # and then by the time we get here it isn't the future anymore. We'll see if it ever
         # happens in practice
-        assert dateparser.parse(generated_rows.table_values("Test", 1, "future")) >= now
         assert (
-            dateparser.parse(generated_rows.table_values("Test", 1, "future2")) >= now
+            dateparser.isoparse(generated_rows.table_values("Test", 1, "future")) >= now
         )
-        assert dateparser.parse(generated_rows.table_values("Test", 1, "past")) <= now
+        assert (
+            dateparser.isoparse(generated_rows.table_values("Test", 1, "future2"))
+            >= now
+        )
+        assert (
+            dateparser.isoparse(generated_rows.table_values("Test", 1, "past")) <= now
+        )
 
     @mock.patch(write_row_path)
     def test_snowfakery_names(self, write_row_mock):
