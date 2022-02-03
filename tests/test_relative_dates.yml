@@ -1,0 +1,14 @@
+- object: Test
+  fields:
+    future:
+      fake.date_time_between:
+        start_date: +1m
+        end_date: +1h
+
+    past:
+      fake.date_time_between:
+        start_date: -1h
+        end_date: now
+
+    future2:
+      fake: FutureDateTime

@@ -36,6 +36,7 @@ def noop(x):
 
 
 def format_datetime(dt: datetime.datetime):
+    """Format into the Salesforce-preferred syntax."""
     return str(dt).replace(" ", "T")
 
 
