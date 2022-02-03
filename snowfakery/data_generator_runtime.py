@@ -324,6 +324,7 @@ class Interpreter:
         self.statements = parse_result.statements
         self.parent_application = parent_application
         self.instance_states = {}
+        self.filter_row_values = self.filter_row_values_normal
 
     def execute(self):
         self.current_context = RuntimeContext(interpreter=self)
@@ -413,6 +414,14 @@ class Interpreter:
             self.instance_states[uniq_name] = [parent_obj, value]
         return value
 
+    def filter_row_values_normal(self, row: dict):
+        return {k: v for k, v in row.items() if not k.startswith("__")}
+
+    # for future use:
+
+    # def filter_row_values_and_remove_ids(self, row: dict):
+    #     return {k: v for k, v in row.items() if not k.startswith("__") or k == "id"}
+
 
 class RuntimeContext:
     """Local "stack frame" type object. RuntimeContexts live on the Python stack.
@@ -449,6 +458,10 @@ class RuntimeContext:
         locale = self.variable_definitions().get("snowfakery_locale")
         self.faker_template_library = self.interpreter.faker_template_library(locale)
         self.local_vars = {}
+
+    @property
+    def filter_row_values(self):
+        return self.interpreter.filter_row_values
 
     # TODO: move this into the interpreter object
     def check_if_finished(self):

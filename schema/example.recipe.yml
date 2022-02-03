@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=snowfakery_recipe.jsonschema.json
+- include_file: foo.yml
+- object: Account
+  nickname: An ice sculpture
+  count: abcdee
+  fields:
+    a: blah
+  friends:
+    - object: q
+- object: Contact
+  nickname: A blue mouse
+  count: 5
+- var: xxxx
+  value: jiojoioj
+  fjkioesjkf: fjeiosjfosi
+  fioesjfoi: fjieosjfso
+

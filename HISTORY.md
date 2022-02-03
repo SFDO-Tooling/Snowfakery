@@ -4,6 +4,16 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 2.5
+
+Snowfakery now ensures that faked firstnames and lastnames are ASCII alphanumeric
+before attemptiing to incorporate them into a fake email (#597)
+
+Snowfakery publishes a JSON Schema for IDE usage (#556)
+
+Snowfakery gives a better error message if a CSV datasource has
+rows that have more columns than the header row. (#594)
+
 ## Snowfakery 2.4
 
 The Salesforce load order now follows the order of

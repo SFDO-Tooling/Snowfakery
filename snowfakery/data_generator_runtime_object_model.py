@@ -254,7 +254,7 @@ class ObjectTemplate:
         with self.exception_handling("Cannot write row"):
             self.register_row_intertable_references(row, context)
             if not self.tablename.startswith("__"):
-                output_stream.write_row(self.tablename, row)
+                output_stream.write_row(self.tablename, context.filter_row_values(row))
 
         context.interpreter.loop_over_templates_once(self.friends, True)
         return sobj
