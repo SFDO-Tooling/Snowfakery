@@ -3,7 +3,7 @@ from unittest import mock
 from datetime import date
 
 import pytest
-
+from dateutil import parser as dateparser
 from snowfakery.data_generator import generate
 from snowfakery import data_gen_exceptions as exc
 
@@ -122,6 +122,52 @@ class TestFaker:
         the_date = row_values(write_row_mock, 0, "date")
         assert (date.today() - the_date).days > 80
         assert (date.today() - the_date).days < 130
+
+    def test_date_times(self, generated_rows):
+        with open("tests/test_datetimes.yml") as yaml:
+            generate(yaml)
+
+        for dt in generated_rows.table_values("Contact", field="EmailBouncedDate"):
+            assert "+0" in dt or dt.endswith("Z"), dt
+            assert dateparser.parse(dt).tzinfo
+
+    def test_hidden_fakers(self):
+        yaml = """
+        - object: A
+          fields:
+            date:
+              fake: DateTimeThisCentury
+        """
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml))
+
+        assert e
+
+    def test_bad_tz_param(self):
+        yaml = """
+        - object: A
+          fields:
+            date:
+              fake.datetime:
+                timezone: PST
+        """
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml))
+
+        assert "timezone" in str(e.value)
+        assert "relativedelta" in str(e.value)
+
+    def test_no_timezone(self, generated_rows):
+        yaml = """
+        - object: A
+          fields:
+            date:
+              fake.datetime:
+                timezone: False
+        """
+        generate(StringIO(yaml))
+        date = generated_rows.table_values("A", 0, "date")
+        assert dateparser.parse(date).tzinfo is None
 
     @mock.patch(write_row_path)
     def test_snowfakery_names(self, write_row_mock):

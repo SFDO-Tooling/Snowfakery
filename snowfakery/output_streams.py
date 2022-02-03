@@ -35,6 +35,10 @@ def noop(x):
     return x
 
 
+def format_datetime(dt: datetime.datetime):
+    return str(dt).replace(" ", "T")
+
+
 class OutputStream(ABC):
     """Common base class for all output streams"""
 
@@ -46,7 +50,7 @@ class OutputStream(ABC):
         int: int,
         float: float,
         datetime.date: noop,
-        datetime.datetime: noop,
+        datetime.datetime: format_datetime,
         type(None): noop,
         bool: int,
     }

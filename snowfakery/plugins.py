@@ -10,6 +10,7 @@ from functools import wraps
 import yaml
 from yaml.representer import Representer
 from faker.providers import BaseProvider as FakerProvider
+from dateutil.relativedelta import relativedelta
 
 import snowfakery.data_gen_exceptions as exc
 from .utils.yaml_utils import SnowfakeryDumper
@@ -18,7 +19,7 @@ from .utils.collections import CaseInsensitiveDict
 from numbers import Number
 
 
-Scalar = Union[str, Number, date, datetime, None]
+Scalar = Union[str, Number, date, datetime, None, relativedelta]
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
 ObjectRow = "snowfakery.object_rows.ObjectRow"
 

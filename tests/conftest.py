@@ -27,9 +27,8 @@ def generated_rows(request):
     def row_values(index, value):
         return mockobj.mock_calls[index][1][1][value]
 
-    def table_values(tablename, index, field=None):
+    def table_values(tablename, index=None, field=None):
         """Look up a value from a table."""
-        index = index - 1  # use 1-based indexing like Snowfakery does
 
         # create and cache a dict of table names to lists of rows
         if type(mockobj._index) != dict:
@@ -38,10 +37,17 @@ def generated_rows(request):
                 table = row[1][0]
                 mockobj._index.setdefault(table, []).append(row[1][1])
 
-        if field:  # return just one field
-            return mockobj._index[tablename][index][field]
-        else:  # return a full row
-            return mockobj._index[tablename][index]
+        if index is None:  # return all rows
+            if field is None:  # return full rows
+                return mockobj._index[tablename]
+            else:  # return a single field
+                return [row[field] for row in mockobj._index[tablename]]
+        else:  # return data from just one row
+            index = index - 1  # use 1-based indexing like Snowfakery does
+            if field:  # return just one field
+                return mockobj._index[tablename][index][field]
+            else:  # return a full row
+                return mockobj._index[tablename][index]
 
     with patch(
         "snowfakery.output_streams.DebugOutputStream.write_single_row"

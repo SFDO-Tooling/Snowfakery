@@ -168,7 +168,53 @@ We can even pick the locale randomly:
 The main Snowfakery documentation describes how to fake
 [dates](index.md#date-between) and [numbers](index.md#random-number).
 
-That's it. Those are all of the concepts you need.
+Datetimes are in UTC timezone by default:
+
+```yaml
+# examples/simple_datetime.recipe.yml
+- object: Contact
+  fields:
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+    EmailBouncedDate:
+      fake: DateTime
+```
+
+Which might generate:
+
+```json
+Contact(id=1, FirstName=Shawn, LastName=Cole, EmailBouncedDate=1984-06-07T10:41:20+00:00)
+```
+
+Or you can use this more elaborate syntax to control the time-zone, start-date
+and end-date:
+
+```yaml
+# examples/datetime_with_params.recipe.yml
+- object: Contact
+  fields:
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+    EmailBouncedDate:
+      fake.datetime:
+        start_date: -10y
+        end_date: now
+        timezone:
+          relativedelta:
+            hours: +8
+```
+
+Which generates data like:
+
+```json
+Contact(id=1, FirstName=Selena, LastName=Sampson, EmailBouncedDate=2012-10-09T21:56:17+08:00)
+```
+
+If you need a Datetime with no timezone, pass `False` as the timezone.
 
 ##### Custom Faker Providers
 
