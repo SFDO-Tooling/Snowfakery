@@ -160,8 +160,8 @@ def generate_data(
 
     with ExitStack() as exit_stack:
 
-        def open_with_cleanup(file, mode):
-            return exit_stack.enter_context(open_file_like(file, mode))
+        def open_with_cleanup(file, mode, **kwargs):
+            return exit_stack.enter_context(open_file_like(file, mode, **kwargs))
 
         parent_application = parent_application or SnowfakeryApplication(
             stopping_criteria
@@ -177,7 +177,10 @@ def generate_data(
         _, open_new_continue_file = open_with_cleanup(generate_continuation_file, "w")
         _, open_continuation_file = open_with_cleanup(continuation_file, "r")
         _, open_cci_mapping_file = open_with_cleanup(generate_cci_mapping_file, "w")
-        _, open_update_input_file = open_with_cleanup(update_input_file, "r")
+        # utf-8-sig and newline="" are for Windows
+        _, open_update_input_file = open_with_cleanup(
+            update_input_file, "r", newline="", encoding="utf-8-sig"
+        )
 
         summary = generate(
             open_yaml_file=open_yaml_file,

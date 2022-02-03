@@ -1,5 +1,5 @@
 import os
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 from csv import DictReader
 from pathlib import Path
 from random import shuffle
@@ -16,7 +16,7 @@ from snowfakery.plugins import (
     SnowfakeryPlugin,
     memorable,
 )
-from snowfakery.utils.files import FileLike
+from snowfakery.utils.files import FileLike, open_file_like
 from snowfakery.utils.yaml_utils import SnowfakeryDumper
 
 
@@ -105,19 +105,14 @@ class SQLDatasetRandomPermutationIterator(SQLDatasetIterator):
 
 class CSVDatasetLinearIterator(DatasetIteratorBase):
     def __init__(self, datasource: FileLike, repeat: bool):
-        self.datasource = datasource
-        # datasource is already an open file-like
-        if self.borrowed_file:
-            self.file = datasource
-        else:
-            self.file = open(self.datasource, newline="", encoding="utf-8-sig")
+        self.cleanup = ExitStack()
+        # utf-8-sig and newline="" are for Windows
+        self.path, self.file = self.cleanup.enter_context(
+            open_file_like(datasource, "r", newline="", encoding="utf-8-sig")
+        )
+
         self.start()
         super().__init__(repeat)
-
-    @property
-    def borrowed_file(self):
-        """Was this datastream opened by someone else? Or us?"""
-        return hasattr(self.datasource, "close")
 
     def start(self):
         self.file.seek(0)
@@ -128,13 +123,12 @@ class CSVDatasetLinearIterator(DatasetIteratorBase):
 
     def close(self):
         self.results = None
-        if not self.borrowed_file:
-            self.file.close()
+        self.cleanup.close()
 
     def plugin_result(self, row):
         if None in row:
             raise DataGenError(
-                f"Your CSV row has more columns than the CSV header:  {row[None]}, {self.datasource}"
+                f"Your CSV row has more columns than the CSV header:  {row[None]}, {self.path} {self.file}"
             )
 
         return DatasetPluginResult(row)

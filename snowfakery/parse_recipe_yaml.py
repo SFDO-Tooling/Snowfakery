@@ -720,6 +720,8 @@ def build_update_recipe(
     )
 
     def _make_passthrough_attribute_for_update_recipe(attrname):
+        # the magic numbers are fake line-numbers. They should be irrelevant
+        # but perhaps they will be useful in debugging some future problem
         field_def = SimpleValue("${{input.%s}}" % attrname, "", -3)
         new_field = FieldFactory(attrname, field_def, "", -4)
         tables[template.name].fields[attrname] = new_field
