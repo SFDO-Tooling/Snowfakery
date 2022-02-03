@@ -6,6 +6,7 @@ from datetime import date, datetime
 from pathlib import Path
 from unittest.mock import patch
 from functools import wraps
+import typing as T
 
 import yaml
 from yaml.representer import Representer
@@ -22,6 +23,7 @@ from numbers import Number
 Scalar = Union[str, Number, date, datetime, None, relativedelta]
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
 ObjectRow = "snowfakery.object_rows.ObjectRow"
+ScalarTypes = T.get_args(Scalar)
 
 
 class LineTracker(NamedTuple):
@@ -125,7 +127,7 @@ class PluginContext:
     def evaluate(self, field_definition):
         """Evaluate the contents of a field definition and simplify to a primitive value."""
         rc = self.evaluate_raw(field_definition)
-        if isinstance(rc, Scalar.__args__):
+        if isinstance(rc, ScalarTypes):
             return rc
         elif hasattr(rc, "simplify"):
             return rc.simplify()
