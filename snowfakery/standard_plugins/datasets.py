@@ -1,22 +1,22 @@
-from pathlib import Path
-from csv import DictReader
-from contextlib import contextmanager
 import os
+from contextlib import contextmanager, ExitStack
+from csv import DictReader
+from pathlib import Path
 from random import shuffle
 
-from sqlalchemy import create_engine, MetaData
-from sqlalchemy.sql.expression import func, select
+from sqlalchemy import MetaData, create_engine
 from sqlalchemy.sql.elements import quoted_name
-
+from sqlalchemy.sql.expression import func, select
 from yaml.representer import Representer
-from snowfakery.data_gen_exceptions import DataGenError, DataGenNameError
 
+from snowfakery.data_gen_exceptions import DataGenError, DataGenNameError
 from snowfakery.plugins import (
-    SnowfakeryPlugin,
     PluginResult,
     PluginResultIterator,
+    SnowfakeryPlugin,
     memorable,
 )
+from snowfakery.utils.files import FileLike, open_file_like
 from snowfakery.utils.yaml_utils import SnowfakeryDumper
 
 
@@ -104,9 +104,13 @@ class SQLDatasetRandomPermutationIterator(SQLDatasetIterator):
 
 
 class CSVDatasetLinearIterator(DatasetIteratorBase):
-    def __init__(self, datasource: Path, repeat: bool):
-        self.datasource = datasource
-        self.file = open(self.datasource, newline="", encoding="utf-8-sig")
+    def __init__(self, datasource: FileLike, repeat: bool):
+        self.cleanup = ExitStack()
+        # utf-8-sig and newline="" are for Windows
+        self.path, self.file = self.cleanup.enter_context(
+            open_file_like(datasource, "r", newline="", encoding="utf-8-sig")
+        )
+
         self.start()
         super().__init__(repeat)
 
@@ -119,12 +123,12 @@ class CSVDatasetLinearIterator(DatasetIteratorBase):
 
     def close(self):
         self.results = None
-        self.file.close()
+        self.cleanup.close()
 
     def plugin_result(self, row):
         if None in row:
             raise DataGenError(
-                f"Your CSV row has more columns than the CSV header:  {row[None]}, {self.datasource}"
+                f"Your CSV row has more columns than the CSV header:  {row[None]}, {self.path} {self.file}"
             )
 
         return DatasetPluginResult(row)

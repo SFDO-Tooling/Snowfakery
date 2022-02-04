@@ -211,7 +211,7 @@ class CSVOutputStream(OutputStream):
             Path.mkdir(self.target_path, exist_ok=True)
 
     def open_writer(self, table_name, table):
-        file = open(self.target_path / f"{table_name}.csv", "w")
+        file = open(self.target_path / f"{table_name}.csv", "w", newline="")
         writer = csv.DictWriter(file, list(table.fields.keys()) + ["id"])
         writer.writeheader()
         return CSVContext(dictwriter=writer, file=file)

@@ -22,9 +22,10 @@ from .data_generator_runtime_object_model import (
     Statement,
     Definition,
 )
-
+from snowfakery.standard_plugins.datasets import CSVDatasetLinearIterator
 from snowfakery.plugins import resolve_plugins, LineTracker, ParserMacroPlugin
 import snowfakery.data_gen_exceptions as exc
+from snowfakery.utils.files import FileLike
 
 SHARED_OBJECT = "#SHARED_OBJECT"
 
@@ -689,9 +690,58 @@ def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
     return statements
 
 
-def parse_recipe(stream: IO[str]) -> ParseResult:
+def build_update_recipe(
+    statements: List[Statement],
+    tables: dict,
+    update_input_file: FileLike = None,
+    passthrough_fields: T.Sequence = (),
+) -> List[Statement]:
+    class DataSourceValue(SimpleValue):
+        def __init__(self):
+            self.datasource = CSVDatasetLinearIterator(update_input_file, False)
+
+        def render(self, *args, **kwargs):
+            return self.datasource
+
+    error_message = "Update recipes should have a single object declaration."
+    if len(statements) != 1:
+        raise exc.DataGenSyntaxError(error_message)
+    template = statements[0]
+    if not isinstance(template, ObjectTemplate):
+        raise exc.DataGenSyntaxError(error_message, **template.line_num())
+
+    if template.count_expr:
+        raise exc.DataGenSyntaxError(
+            "Update templates should have no 'count'", **template.line_num()
+        )
+
+    template.for_each_expr = ForEachVariableDefinition(
+        "", -1, "input", DataSourceValue()
+    )
+
+    def _make_passthrough_attribute_for_update_recipe(attrname):
+        # the magic numbers are fake line-numbers. They should be irrelevant
+        # but perhaps they will be useful in debugging some future problem
+        field_def = SimpleValue("${{input.%s}}" % attrname, "", -3)
+        new_field = FieldFactory(attrname, field_def, "", -4)
+        tables[template.name].fields[attrname] = new_field
+        return new_field
+
+    template.fields.extend(
+        _make_passthrough_attribute_for_update_recipe(attr)
+        for attr in passthrough_fields
+    )
+
+    return [template]
+
+
+def parse_recipe(
+    stream: IO[str],
+    update_input_file: FileLike = None,
+    update_passthrough_fields: T.Sequence[str] = (),
+) -> ParseResult:
     context = ParseContext()
-    objects = parse_file(stream, context)
+    objects = parse_file(stream, context)  # parse the yaml without semantics
     statements = parse_statement_list(objects, context)
     tables = context.table_infos
     tables = {
@@ -699,5 +749,9 @@ def parse_recipe(stream: IO[str]) -> ParseResult:
         for name, value in context.table_infos.items()
         if not name.startswith("__")
     }
+    if update_input_file:
+        statements = build_update_recipe(
+            statements, tables, update_input_file, update_passthrough_fields
+        )
 
     return ParseResult(context.options, tables, statements, plugins=context.plugins)

@@ -1936,6 +1936,56 @@ Other encodings of binary data are not currently supported, and output streams g
 
 Snowfakery can be extended with custom plugins and fake data providers as described in [Extending Snowfakery with Python Code](./extending.md).
 
+### Update mode
+
+Snowfakery has a special mode that lets you loop over every row of an input, update it, and then output
+the result with minimal
+recipe code. For example, if you have a CSV of contacts, and you want to add
+an address for every one, you do it like this:
+
+```
+# examples/updates/update_contacts.recipe.yml
+- object: Contact
+  fields:
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+    BillingStreet: ${{input.Number}} ${{input.Street}}
+    BillingCity: ${{input.City}}
+    BillingState: Texas
+    BillingPostalCode: ${{input.Postcode}}
+    BillingCountry: US
+```
+
+Given an input file like this:
+
+```
+Number,Street,City,Postcode
+420,Kings Ave,Burnaby,85633
+421,Granville Street,White Rock,85633
+422,Kingsway Road,Richmond,85633
+```
+
+You can run:
+
+```
+$ snowfakery examples/updates/update_contacts.recipe.yml --update-input-file examples/datasets/addresses.csv --output-format csv
+```
+
+This generates output like this:
+
+```
+FirstName,LastName,BillingStreet,BillingCity,BillingState,BillingPostalCode,BillingCountry,id
+Tommy,Nash,420 Kings Ave,Burnaby,Texas,85633,US
+Lindsey,Callahan,421 Granville Street,White Rock,Texas,85633,US
+Greg,Sellers,422 Kingsway Road,Richmond,Texas,85633,US
+```
+
+An update recipe should have a single top-level object with no `count` on it.
+The recipe can take `options` if needed. It will generate the same number of
+output rows as input rows.
+
 ## Use Snowfakery with Salesforce
 
 Snowfakery recipes that generate Salesforce records are like any other Snowfakery recipes, but instead use `SObject` names for the `objects`. There are several examples [in the Snowfakery repository](https://github.com/SFDO-Tooling/Snowfakery/tree/main/examples/salesforce).

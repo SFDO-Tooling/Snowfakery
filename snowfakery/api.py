@@ -4,7 +4,6 @@ import typing as T
 import sys
 
 import yaml
-from click.utils import LazyFile
 
 from snowfakery.data_generator import generate
 
@@ -23,9 +22,7 @@ import snowfakery.data_gen_exceptions as exc
 from snowfakery.data_generator_runtime import (
     StoppingCriteria,
 )
-
-OpenFileLike = T.Union[T.TextIO, LazyFile]
-FileLike = T.Union[OpenFileLike, Path, str]
+from snowfakery.utils.files import FileLike, open_file_like
 
 OUTPUT_FORMATS = {
     "png": "snowfakery.output_streams.ImageOutputStream",
@@ -150,6 +147,10 @@ def generate_data(
         FileLike
     ] = None,  # read these load declarations for CCI
     plugin_options: T.Mapping = None,
+    update_input_file: FileLike = None,  # use this input file in update mode
+    update_passthrough_fields: T.Sequence[
+        str
+    ] = (),  # pass through these fields from input to output
 ) -> None:
     stopping_criteria = stopping_criteria_from_target_number(target_number)
     dburls = dburls or ([dburl] if dburl else [])
@@ -159,8 +160,8 @@ def generate_data(
 
     with ExitStack() as exit_stack:
 
-        def open_with_cleanup(file, mode):
-            return exit_stack.enter_context(open_file_like(file, mode))
+        def open_with_cleanup(file, mode, **kwargs):
+            return exit_stack.enter_context(open_file_like(file, mode, **kwargs))
 
         parent_application = parent_application or SnowfakeryApplication(
             stopping_criteria
@@ -176,6 +177,10 @@ def generate_data(
         _, open_new_continue_file = open_with_cleanup(generate_continuation_file, "w")
         _, open_continuation_file = open_with_cleanup(continuation_file, "r")
         _, open_cci_mapping_file = open_with_cleanup(generate_cci_mapping_file, "w")
+        # utf-8-sig and newline="" are for Windows
+        _, open_update_input_file = open_with_cleanup(
+            update_input_file, "r", newline="", encoding="utf-8-sig"
+        )
 
         summary = generate(
             open_yaml_file=open_yaml_file,
@@ -186,14 +191,9 @@ def generate_data(
             continuation_file=open_continuation_file,
             stopping_criteria=stopping_criteria,
             plugin_options=plugin_options,
+            update_input_file=open_update_input_file,
+            update_passthrough_fields=update_passthrough_fields,
         )
-
-        # This feature seems seldom useful. Delete it if it isn't missed
-        # by fall 2021:
-
-        # if debug_internals:
-        #     debuginfo = yaml.dump(summary.summarize_for_debugging(), sort_keys=False)
-        #     sys.stderr.write(debuginfo)
 
         if open_cci_mapping_file:
             declarations = gather_declarations(yaml_path or "", load_declarations)
@@ -319,23 +319,3 @@ def infer_load_file_path(yaml_file: T.Union[str, Path]):
         return Path(yaml_file.replace(suffixes, ".load.yml"))
     else:
         return Path("")
-
-
-@contextmanager
-def open_file_like(
-    file_like: T.Optional[FileLike], mode
-) -> T.ContextManager[T.Tuple[str, OpenFileLike]]:
-    if not file_like:
-        yield None, None
-    if isinstance(file_like, str):
-        file_like = Path(file_like)
-
-    if isinstance(file_like, Path):
-        with file_like.open(mode) as f:
-            yield file_like, f
-
-    elif hasattr(file_like, "name"):
-        yield file_like.name, file_like
-
-    elif hasattr(file_like, "read"):
-        yield None, file_like

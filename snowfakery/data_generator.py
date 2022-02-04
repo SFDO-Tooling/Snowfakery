@@ -1,5 +1,6 @@
 import warnings
 from typing import IO, Tuple, Mapping, List, Dict, TextIO, Union
+import typing as T
 import functools
 
 import yaml
@@ -30,7 +31,7 @@ from snowfakery.standard_plugins.UniqueId import UniqueId
 # of it.
 
 
-FileLike = Union[TextIO, LazyFile]
+OpenFileLike = Union[TextIO, LazyFile]
 
 
 class ExecutionSummary:
@@ -81,12 +82,12 @@ def merge_options(
     return options, extra_options
 
 
-def load_continuation_yaml(continuation_file: FileLike):
+def load_continuation_yaml(continuation_file: OpenFileLike):
     """Load a continuation file from YAML."""
     return hydrate(Globals, yaml.safe_load(continuation_file))
 
 
-def save_continuation_yaml(continuation_data: Globals, continuation_file: FileLike):
+def save_continuation_yaml(continuation_data: Globals, continuation_file: OpenFileLike):
     """Save the global interpreter state from Globals into a continuation_file"""
     yaml.dump(
         continuation_data.__getstate__(),
@@ -120,9 +121,11 @@ def generate(
     parent_application=None,
     *,
     stopping_criteria=None,
-    generate_continuation_file: FileLike = None,
+    generate_continuation_file: OpenFileLike = None,
     continuation_file: TextIO = None,
     plugin_options: dict = None,
+    update_input_file: OpenFileLike = None,
+    update_passthrough_fields: T.Sequence[str] = (),
 ) -> ExecutionSummary:
     """The main entry point to the package for Python applications."""
     from .api import SnowfakeryApplication
@@ -133,7 +136,9 @@ def generate(
     output_stream = output_stream or DebugOutputStream()
 
     # parse the YAML and any it refers to
-    parse_result = parse_recipe(open_yaml_file)
+    parse_result = parse_recipe(
+        open_yaml_file, update_input_file, update_passthrough_fields
+    )
 
     faker_providers, snowfakery_plugins = process_plugins(parse_result.plugins)
 
@@ -239,9 +244,3 @@ def initialize_globals(continuation_data, templates):
         globals = Globals(name_slots=name_slots)
 
     return globals
-
-
-if __name__ == "__main__":  # pragma: no cover
-    from .snowfakery import generate_cli
-
-    generate_cli()

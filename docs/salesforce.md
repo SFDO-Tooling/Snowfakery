@@ -330,7 +330,6 @@ in the `PersonContactId` field.
 There is also an alternate syntax which allows nicknaming:
 
 ```yaml
----
 - object: Account
   fields:
     PersonContactId:
