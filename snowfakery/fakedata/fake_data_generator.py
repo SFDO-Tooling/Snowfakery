@@ -1,11 +1,14 @@
-from difflib import get_close_matches
-import typing as T
 import random
-from snowfakery.plugins import PluginContext
+import typing as T
+import datetime
+from difflib import get_close_matches
 from itertools import product
-from datetime import datetime
 
+import dateutil
 from faker import Faker, Generator
+
+from snowfakery.plugins import PluginContext
+import snowfakery.data_gen_exceptions as exc
 
 # .format language doesn't allow slicing. :(
 first_name_patterns = ("{firstname}", "{firstname[0]}", "{firstname[0]}{firstname[1]}")
@@ -19,7 +22,10 @@ email_templates = [
     )
 ]
 
-this_year = datetime.today().year
+this_year = datetime.datetime.today().year
+DateLike = T.Union[datetime.date, datetime.datetime, datetime.timedelta, str, int]
+TimeZoneAsRelDelta = T.Union[dateutil.relativedelta.relativedelta, T.Literal[False]]
+UTCAsRelDelta = dateutil.relativedelta.relativedelta(hours=0)
 
 
 class FakeNames(T.NamedTuple):
@@ -90,6 +96,62 @@ class FakeNames(T.NamedTuple):
         """Return whatever counts as a postalcode for a particular locale"""
         return self.f.postcode()
 
+    def date_time_between(
+        self,
+        start_date: DateLike = "-30y",
+        end_date: DateLike = "now",
+        timezone: TimeZoneAsRelDelta = UTCAsRelDelta,
+    ) -> datetime.datetime:
+        timezone = _normalize_timezone(timezone)
+        return self.f.date_time_between(start_date, end_date, timezone)
+
+    date_time_between_dates = date_time_between
+
+    def future_datetime(
+        self,
+        end_date: DateLike = "+30d",
+        timezone: TimeZoneAsRelDelta = UTCAsRelDelta,
+    ) -> datetime.datetime:
+        timezone = _normalize_timezone(timezone)
+        return self.f.future_datetime(end_date, timezone)
+
+    def iso8601(
+        self,
+        timezone: TimeZoneAsRelDelta = UTCAsRelDelta,
+        end_datetime: DateLike = None,
+    ) -> str:
+        timezone = _normalize_timezone(timezone)
+        return self.f.iso8601(
+            timezone,
+            end_datetime,
+        )
+
+    date_time = datetime = date_time_between
+
+    # These faker types are not available in Snowfakery
+    # because they are redundant
+    date_time_this_year = NotImplemented
+    date_this_year = NotImplemented
+    date_time_this_month = NotImplemented
+    date_time_ad = NotImplemented
+    date_time_this_century = NotImplemented
+    date_time_this_decade = NotImplemented
+
+
+def _normalize_timezone(timezone=None):
+    if timezone in (None, False):
+        return None
+    elif timezone is UTCAsRelDelta:
+        return datetime.timezone.utc
+    else:
+        if not isinstance(timezone, dateutil.relativedelta.relativedelta):
+            raise exc.DataGenError(  # pragma: no cover
+                f"Type should be a relativedelta, not {type(timezone)}: {timezone}"
+            )
+        return datetime.timezone(
+            datetime.timedelta(hours=timezone.hours, minutes=timezone.minutes)
+        )
+
 
 # we will use this to exclude Faker's internal book-keeping methods
 # from our faker interface
@@ -142,15 +204,16 @@ class FakeData:
         # faker names are all lower-case
         name = origname.lower()
 
-        meth = self.fake_names.get(name)
+        meth = self.fake_names.get(name, NotImplemented)
 
-        if meth:
+        if meth != NotImplemented:
             ret = meth(*args, **kwargs)
             local_faker_vars[name.replace("_", "")] = ret
             return ret
 
         msg = f"No fake data type named {origname}."
-        match_list = get_close_matches(name, self.fake_names.keys(), n=1)
+        all_fake_names = [k for k, v in self.fake_names.items() if v != NotImplemented]
+        match_list = get_close_matches(name, all_fake_names, n=1)
         if match_list:
             msg += f" Did you mean {match_list[0]}"
         raise AttributeError(msg)
