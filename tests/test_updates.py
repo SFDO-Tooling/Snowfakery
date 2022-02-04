@@ -37,7 +37,6 @@ class TestUpdates:
             update_input_file="examples/datasets/addresses.csv",
             update_passthrough_fields=("Oid",),
         )
-        print(generated_rows.mock_calls)
         assert generated_rows.mock_calls == _expected_data(ANY)
 
     def test_updates_bad_recipe_format(self):
