@@ -32,7 +32,7 @@ is you can scroll down on this page to see a long list with descriptions.
 
 The description above might generate output like this:
 
-```json
+```python
 Account(id=1, Name=Nelson-Deleon, Description=Secured bandwidth-monitored moratorium, BillingStreet=2187 Kerry Way, BillingCity=Rangelland, BillingState=Colorado, BillingPostalCode=08388, BillingCountry=United States, Phone=001-738-530-9719)
 ```
 
@@ -121,13 +121,13 @@ Phrase will be in French and so forth.
 
 For example:
 
-```json
+```python
 Account(id=1, Name=Parent Auger S.A.S., Description=Le confort de rouler de manière sûre, BillingStreet=54, rue de Bailly, BillingCity=Charrier, BillingState=Île-de-France, BillingPostalCode=72902, BillingCountry=France, Phone=08 05 11 90 19)
 ```
 
 We can do many countries. For example, Japanese (ja_JP locale):
 
-```json
+```python
 Account(id=1, Name=有限会社山下電気, Description=Inverse 24hour pricing structure, BillingStreet=040 佐々木 Street, BillingCity=横浜市金沢区, BillingState=福岡県, BillingPostalCode=181-5538, BillingCountry=Japan, Phone=070-4156-5072)
 ```
 
@@ -168,7 +168,53 @@ We can even pick the locale randomly:
 The main Snowfakery documentation describes how to fake
 [dates](index.md#date-between) and [numbers](index.md#random-number).
 
-That's it. Those are all of the concepts you need.
+Datetimes are in UTC timezone by default:
+
+```yaml
+# examples/simple_datetime.recipe.yml
+- object: Contact
+  fields:
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+    EmailBouncedDate:
+      fake: DateTime
+```
+
+Which might generate:
+
+```python
+Contact(id=1, FirstName=Shawn, LastName=Cole, EmailBouncedDate=1984-06-07T10:41:20+00:00)
+```
+
+Or you can use this more elaborate syntax to control the time-zone, start-date
+and end-date:
+
+```yaml
+# examples/datetime_with_params.recipe.yml
+- object: Contact
+  fields:
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+    EmailBouncedDate:
+      fake.datetime:
+        start_date: -10y
+        end_date: now
+        timezone:
+          relativedelta:
+            hours: +8
+```
+
+Which generates data like:
+
+```python
+Contact(id=1, FirstName=Selena, LastName=Sampson, EmailBouncedDate=2012-10-09T21:56:17+08:00)
+```
+
+If you need a Datetime with no timezone, pass `False` as the timezone.
 
 ##### Custom Faker Providers
 

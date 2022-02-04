@@ -6,10 +6,12 @@ from datetime import date, datetime
 from pathlib import Path
 from unittest.mock import patch
 from functools import wraps
+import typing as T
 
 import yaml
 from yaml.representer import Representer
 from faker.providers import BaseProvider as FakerProvider
+from dateutil.relativedelta import relativedelta
 
 import snowfakery.data_gen_exceptions as exc
 from .utils.yaml_utils import SnowfakeryDumper
@@ -18,9 +20,10 @@ from .utils.collections import CaseInsensitiveDict
 from numbers import Number
 
 
-Scalar = Union[str, Number, date, datetime, None]
+Scalar = Union[str, Number, date, datetime, None, relativedelta]
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
 ObjectRow = "snowfakery.object_rows.ObjectRow"
+ScalarTypes = T.get_args(Scalar)
 
 
 class LineTracker(NamedTuple):
@@ -124,7 +127,7 @@ class PluginContext:
     def evaluate(self, field_definition):
         """Evaluate the contents of a field definition and simplify to a primitive value."""
         rc = self.evaluate_raw(field_definition)
-        if isinstance(rc, Scalar.__args__):
+        if isinstance(rc, ScalarTypes):
             return rc
         elif hasattr(rc, "simplify"):
             return rc.simplify()
