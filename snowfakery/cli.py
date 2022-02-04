@@ -165,7 +165,7 @@ class VersionMessage:
     type=str,
     help="Pass through these fields from input to output automatically",
     hidden=True,
-    default=(),
+    default=None,
 )
 @click.version_option(version=version, prog_name="snowfakery", message=VersionMessage())
 def generate_cli(
@@ -219,6 +219,8 @@ def generate_cli(
     )
     if update_passthrough_fields:
         update_passthrough_fields = update_passthrough_fields.split(",")
+    else:
+        update_passthrough_fields = ()
     try:
         user_options = dict(option)
         plugin_options = dict(plugin_option)
