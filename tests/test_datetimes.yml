@@ -65,3 +65,26 @@
     LastName:
       fake: LastName
     EmailBouncedDate: ${{fake.iso8601(timezone=False)}}Z
+
+- object: Contact
+  fields:
+    LastName:
+      fake: LastName
+    EmailBouncedDate:
+      datetime:
+        year: 2000
+        month: 1
+        day: 1
+
+- object: Contact
+  fields:
+    LastName:
+      fake: LastName
+    EmailBouncedDate:
+      datetime:
+        year: 2000
+        month: 1
+        day: 1
+        timezone:
+          relativedelta:
+            hours: 8

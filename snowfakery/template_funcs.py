@@ -18,6 +18,7 @@ from snowfakery.plugins import SnowfakeryPlugin, PluginContext, lazy
 from snowfakery.object_rows import ObjectReference
 from snowfakery.utils.template_utils import StringGenerator
 from snowfakery.standard_plugins.UniqueId import UniqueId
+from snowfakery.fakedata.fake_data_generator import UTCAsRelDelta, _normalize_timezone
 
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
 
@@ -103,9 +104,13 @@ class StandardFuncs(SnowfakeryPlugin):
             minute=0,
             second=0,
             microsecond=0,
+            timezone=UTCAsRelDelta,
         ):
             """A YAML-embeddable function to construct a datetime from strings or integers"""
-            return datetime(year, month, day, hour, minute, second, microsecond)
+            timezone = _normalize_timezone(timezone)
+            return datetime(
+                year, month, day, hour, minute, second, microsecond, tzinfo=timezone
+            )
 
         def date_between(self, *, start_date, end_date):
             """A YAML-embeddable function to pick a date between two ranges"""
