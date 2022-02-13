@@ -12,7 +12,7 @@ Snowfakery can write its output to `stdout`, or any database accessible to SQLAl
 
 If you intend to use Snowfakery with Salesforce, we recommend installing CumulusCI, which includes Snowfakery in the installation. To install CumulusCI, follow the steps in the [Get Started](https://cumulusci.readthedocs.io/en/latest/get_started.html) section of the CumulusCI documentation. (Don't forget to install [Python](https://www.python.org/downloads/), too!)
 
-After installation, use the `snowfakery` task command to invoke Snowfakery.
+After installation, from your development environment of choice (e.g. VS Code), create a Snowfakery recipe file in your working directory (with a file extension .yml).  Then, open a terminal and use the `snowfakery` task command to invoke Snowfakery, referencing the file you just created.  Of course, you will want your recipe to include good instructions.  We'll cover that in the rest of this documentation!
 
 ```s
 $ snowfakery somefile.yml
@@ -29,6 +29,7 @@ $ pip3 install pipx
 $ pipx install snowfakery
 ...
 ```
+After installation, from your development environment of choice (e.g. VS Code), create a Snowfakery recipe file recipe file in your working directory (with a file extension .yml).  Then, open a terminal and use the `snowfakery` task command to invoke Snowfakery, referencing the file you just created.  Of course, you will want your recipe to include good instructions.  We'll cover that in the rest of this documentation!
 
 After installation, use the `snowfakery` task command to invoke Snowfakery.
 
