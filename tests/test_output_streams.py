@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from io import StringIO
 import json
 import datetime
+from datetime import timezone
 import csv
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -56,9 +57,16 @@ class OutputCommonTests(ABC):
         assert values["y2k"] == str(datetime.date(year=2000, month=1, day=1))
         assert values["party"] == str(
             datetime.datetime(
-                year=1999, month=12, day=31, hour=23, minute=59, second=59
+                year=1999,
+                month=12,
+                day=31,
+                hour=23,
+                minute=59,
+                second=59,
+                tzinfo=timezone.utc,
             )
         )
+
         assert len(values["randodate"].split("-")) == 3
         assert values["randodate"].startswith("200")
 
