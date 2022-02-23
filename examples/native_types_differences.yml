@@ -1,0 +1,6 @@
+# snowfakery examples/native_types_differences.yml --plugin-option snowfakery_version 3
+- snowfakery_version: 3
+- object: Example
+  fields:
+    y: ${{datetime(year=2000, month=1, day=1)}}
+    z: ${{y.date()}}
