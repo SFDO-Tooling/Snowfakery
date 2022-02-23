@@ -784,7 +784,28 @@ Macros can include other macros. In fact, macros are especially powerful if you 
 
 ### Debug
 
-The `debug` function can be used to output values to your command line for debugging. Specifically, it outputs the value to `stderr`.
+Snowfakery's `debug` function can be used to output values to your command line for debugging. Specifically, it outputs the value to `stderr`.
+
+The debug function can "wrap" any formula expression and return its value.
+
+```yaml
+# tests/debug.recipe.yml
+- object: Example
+  fields:
+    value1: ${{ debug(399 + 21) / 10 }}
+    value2: ${{ debug((399 + 21) / 10) }}
+    value3:
+      debug:
+        - fake: datetime
+```
+
+In addition to its usual output, this would output:
+
+```txt
+DEBUG - 420 (<class 'int'>)
+DEBUG - 42.0 (<class 'float'>)
+DEBUG - 2017-06-19 22:10:13+00:00 (<class 'datetime.datetime'>)
+```
 
 ## Define Variables
 
