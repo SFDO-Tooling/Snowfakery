@@ -1998,7 +1998,7 @@ Salesforce-specific patterns and tools are described in [Use Snowfakery with Sal
 
 ### Snowfakery 3
 
-Snowfakery 3 may require very minor updates to a few recipes. In
+Moving to Snowfakery 3 might require you to make very minor updates to a few recipes. In
 Snowfakery 2, all formulas are evaluated to either a string or
 number. In Snowfakery 3, other types are possible.
 
@@ -2016,21 +2016,21 @@ relative date calculations between fields:
 
 Note the `snowfakery_version` declaration which triggers the
 Snowfakery 3 interpretation of the recipe. Becauses of this
-interpretation `bassdate` is a datetime, rather than a
+interpretation `basedate` is a datetime, rather than a
 string.
 
 In very obscure cases this might cause changes in the meaning
 of a recipe which depended on values being flattened to strings.
-For example, a recipe might append a striinng to a date, which
+For example, a recipe might append a string to a date, which
 would generate an error in Snowfakery 3.
 
-Few or no cases of this are expected but you can validate your
+These errors are expected to be rare, but you can validate your
 own recipes by adding the `snowfakery_version: 3` declaration.
 
 In June of 2022, Snowfakery 3 formula interpretation will
-become the default: all recipes should be tested with
+become the default. You should test all your recipes with
 the `snowfakery_version: 3` declaration before then, so that
-recipes can be fixed at your leisure.
+you have time to fix any recipes needed.
 
 ## Appendices
 
