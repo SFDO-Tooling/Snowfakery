@@ -2032,26 +2032,26 @@ Snowfakery is a domain-specific programming language with access to most of the 
       - object: woman
         count: 7
         fields:
-          husband: 
+          husband:
             reference: man
           luggage:
             - object: sack
               count: 7
               fields:
-                holder: 
+                holder:
                   reference: woman
                 contents:
                   - object: cat
                     count: 7
                     fields:
-                      container: 
+                      container:
                         reference: sack
                       offspring:
-                      - object: kit
-                        count: 7
-                        fields:
-                          parent: 
-                            reference: cat
+                        - object: kit
+                          count: 7
+                          fields:
+                            parent:
+                              reference: cat
 - object: stats
   fields:
     num_narrators: ${{ man.id }}
