@@ -985,6 +985,19 @@ Contact(id=3, FirstName=Gene, LastName=Wall, DepartmentCode=42Q3XX3N)
 
 The `today` variable returns a date representing the current date. This date does not change chanage during the execution of a single recipe.
 
+#### `now`
+
+The `now` variable returns a datetime
+representing the current moment. Experimentally,
+this variable seems to return a unique value
+every time (microsecond precision), but it might depend on
+your operating system and hardware setup
+(e.g. a very fast CPU with a very slow system clock).
+
+You might need to verify on your own operating system
+and hardware to be sure, or research the underlying
+Python [datetime](https://docs.python.org/3/library/datetime.html#datetime-objects) library.
+
 #### `fake:` and `fake.`
 
 The `fake:` block function and `fake.` namespace both generate fake data as described in the [Fake Data Tutorial](fakedata.md).
@@ -1018,7 +1031,7 @@ another_date: ${{date(year=2018, month=11, day=30)}}
 The [`relativedelta` function](https://dateutil.readthedocs.io/en/stable/relativedelta.html) from `dateutil` is available for use in calculations. For example:
 
 ```yaml
-${{ date(Date_Established__c) + relativedelta(months=child_index) }}
+${{ date(Date_Established__c) + relativedelta(months=) }}
 ```
 
 Some plugins are also interested in a `template` variable that has an `id` attribute that represents a unique identifier for the current template. Look at
