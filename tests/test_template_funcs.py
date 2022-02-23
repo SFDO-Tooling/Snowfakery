@@ -426,3 +426,15 @@ class TestTemplateFuncs:
             with pytest.raises(DataGenError) as e:
                 generate(yaml)
         assert "null" in str(e.value)
+
+    def test_debug(self, capsys):
+        yaml = """
+        - object : A
+          fields:
+            a: ${{debug("XYZZY")}}
+            b: ${{debug(420)}}
+        """
+        generate(StringIO(yaml))
+        stderr = capsys.readouterr().err
+        assert "XYZZY" in stderr
+        assert "420" in stderr

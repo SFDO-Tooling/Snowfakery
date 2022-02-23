@@ -782,6 +782,10 @@ Macros can include other macros. In fact, macros are especially powerful if you 
 .. note::
 `fields` or `friends` declared in the macros listed later override those listed earlier. `fields` or `friends` declared in the Object Template override those declared in macros.
 
+### Debug
+
+The `debug` function can be used to output values to your command line for debugging. Specifically, it outputs the value to `stderr`.
+
 ## Define Variables
 
 To generate a value shared by multiple templates, create a variable with `var`.
