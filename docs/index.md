@@ -1996,6 +1996,42 @@ Snowfakery recipes that generate Salesforce records are like any other Snowfaker
 
 Salesforce-specific patterns and tools are described in [Use Snowfakery with Salesforce](salesforce.md)
 
+### Snowfakery 3
+
+Snowfakery 3 may require very minor updates to a few recipes. In
+Snowfakery 2, all formulas are evaluated to either a string or
+number. In Snowfakery 3, other types are possible.
+
+In most cases, this will enable things that were previously
+difficult or impossible. For example, this recipe does
+relative date calculations between fields:
+
+```yaml
+- snowfakery_version: 3
+- object: OBJ
+  fields:
+    basedate: ${{datetime(year=2000, month=1, day=1)}}
+    dateplus: ${{basedate + relativedelta(years=22)}}
+```
+
+Note the `snowfakery_version` declaration which triggers the
+Snowfakery 3 interpretation of the recipe. Becauses of this
+interpretation `bassdate` is a datetime, rather than a
+string.
+
+In very obscure cases this might cause changes in the meaning
+of a recipe which depended on values being flattened to strings.
+For example, a recipe might append a striinng to a date, which
+would generate an error in Snowfakery 3.
+
+Few or no cases of this are expected but you can validate your
+own recipes by adding the `snowfakery_version: 3` declaration.
+
+In June of 2022, Snowfakery 3 formula interpretation will
+become the default: all recipes should be tested with
+the `snowfakery_version: 3` declaration before then, so that
+recipes can be fixed at your leisure.
+
 ## Appendices
 
 ### Snowfakery Glossary
