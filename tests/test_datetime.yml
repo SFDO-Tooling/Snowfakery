@@ -1,0 +1,10 @@
+- object: Datetimes
+  fields:
+    from_date: ${{datetime(year=2000, month=1, day=1)}}
+    from_datetime: ${{datetime(year=2000, month=1, day=1, hour=1, minute=1, second=1)}}
+    right_now: ${{now}}
+    hour: ${{now.hour}}
+    minute: ${{now.minute}}
+    second: ${{now.second}}
+    right_now_with_timezone: ${{now.astimezone()}}
+    to_date: ${{now.date()}}
