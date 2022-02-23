@@ -7,6 +7,7 @@ import typing as T
 from warnings import warn
 
 import jinja2
+from jinja2 import nativetypes
 import yaml
 
 from .utils.template_utils import FakerTemplateLibrary
@@ -234,7 +235,21 @@ class Globals:
 
 
 class JinjaTemplateEvaluatorFactory:
-    def __init__(self):
+    def __init__(self, native_types: bool):
+        if native_types:
+            self.compilers = [
+                nativetypes.NativeEnvironment(
+                    block_start_string="${%",
+                    block_end_string="%}",
+                    variable_start_string="${{",
+                    variable_end_string="}}",
+                )
+            ]
+
+            return
+
+        # TODO: Delete this old code_path when the
+        #       transition to native_types is complete.
         self.compilers = [
             jinja2.Environment(
                 block_start_string="${%",
@@ -325,6 +340,12 @@ class Interpreter:
         self.parent_application = parent_application
         self.instance_states = {}
         self.filter_row_values = self.filter_row_values_normal
+        snowfakery_version = self.options.get(
+            "snowfakery.standard_plugins.SnowfakeryVersion.snowfakery_version", 2
+        )
+        assert snowfakery_version in (2, 3)
+        native_types = snowfakery_version == 3
+        self.template_evaluator_factory = JinjaTemplateEvaluatorFactory(native_types)
 
     def execute(self):
         self.current_context = RuntimeContext(interpreter=self)
@@ -432,7 +453,6 @@ class RuntimeContext:
     but internally its mostly just proxying to other classes."""
 
     obj: Optional[ObjectRow] = None
-    template_evaluator_recipe = JinjaTemplateEvaluatorFactory()
     current_template = None
     local_vars = None
     unique_context_identifier = None
@@ -525,7 +545,7 @@ class RuntimeContext:
         return self.interpreter.output_stream
 
     def get_evaluator(self, definition: str):
-        return self.template_evaluator_recipe.get_evaluator(definition)
+        return self.interpreter.template_evaluator_factory.get_evaluator(definition)
 
     @property
     def evaluation_namespace(self):

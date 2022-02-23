@@ -144,8 +144,20 @@ class StandardFuncs(SnowfakeryPlugin):
             """Pick a random number between min and max like Python's randint."""
             return random.randrange(min, max + 1, step)
 
-        def reference(self, x: Any):
+        def reference(
+            self, x: Any = None, object: str = None, id: Union[str, int] = None
+        ):
             """YAML-embeddable function to Reference another object."""
+            if x is not None:
+                return self._reference_from_scalar(x)
+            elif object:
+                try:
+                    id = int(id)
+                except TypeError:
+                    raise DataGenError("Cannot interpret id as integer")
+                return ObjectReference(object, id)
+
+        def _reference_from_scalar(self, x: Any):
             if hasattr(x, "id"):  # reference to an object with an id
                 target = x
             elif isinstance(x, str):  # name of an object

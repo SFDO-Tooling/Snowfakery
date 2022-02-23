@@ -123,15 +123,17 @@ class TestFaker:
         assert (date.today() - the_date).days > 80
         assert (date.today() - the_date).days < 130
 
-    def test_date_times(self, generated_rows):
+    @pytest.mark.parametrize("snowfakery_version", (2, 3))
+    def test_date_times(self, generated_rows, snowfakery_version):
         with open("tests/test_datetimes.yml") as yaml:
-            generate(yaml)
+            generate(yaml, plugin_options={"snowfakery_version": snowfakery_version})
 
         for dt in generated_rows.table_values("Contact", field="EmailBouncedDate"):
             assert "+0" in dt or dt.endswith("Z"), dt
             assert dateparser.isoparse(dt).tzinfo
 
-    def test_hidden_fakers(self):
+    @pytest.mark.parametrize("snowfakery_version", (2, 3))
+    def test_hidden_fakers(self, snowfakery_version):
         yaml = """
         - object: A
           fields:
@@ -139,11 +141,15 @@ class TestFaker:
               fake: DateTimeThisCentury
         """
         with pytest.raises(exc.DataGenError) as e:
-            generate(StringIO(yaml))
+            generate(
+                StringIO(yaml),
+                plugin_options={"snowfakery_version": snowfakery_version},
+            )
 
         assert e
 
-    def test_bad_tz_param(self):
+    @pytest.mark.parametrize("snowfakery_version", (2, 3))
+    def test_bad_tz_param(self, snowfakery_version):
         yaml = """
         - object: A
           fields:
@@ -152,12 +158,16 @@ class TestFaker:
                 timezone: PST
         """
         with pytest.raises(exc.DataGenError) as e:
-            generate(StringIO(yaml))
+            generate(
+                StringIO(yaml),
+                plugin_options={"snowfakery_version": snowfakery_version},
+            )
 
         assert "timezone" in str(e.value)
         assert "relativedelta" in str(e.value)
 
-    def test_no_timezone(self, generated_rows):
+    @pytest.mark.parametrize("snowfakery_version", (2, 3))
+    def test_no_timezone(self, generated_rows, snowfakery_version):
         yaml = """
         - object: A
           fields:
@@ -165,13 +175,20 @@ class TestFaker:
               fake.datetime:
                 timezone: False
         """
-        generate(StringIO(yaml))
+        generate(
+            StringIO(yaml),
+            plugin_options={"snowfakery_version": snowfakery_version},
+        )
         date = generated_rows.table_values("A", 0, "date")
         assert dateparser.isoparse(date).tzinfo is None
 
-    def test_relative_dates(self, generated_rows):
+    @pytest.mark.parametrize("snowfakery_version", (2, 3))
+    def test_relative_dates(self, generated_rows, snowfakery_version):
         with open("tests/test_relative_dates.yml") as f:
-            generate(f)
+            generate(
+                f,
+                plugin_options={"snowfakery_version": snowfakery_version},
+            )
         now = datetime.now(timezone.utc)
         # there is a miniscule chance that FutureDateTime picks a DateTime 1 second in the future
         # and then by the time we get here it isn't the future anymore. We'll see if it ever
