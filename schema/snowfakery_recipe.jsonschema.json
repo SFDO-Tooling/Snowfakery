@@ -23,6 +23,9 @@
       },
       {
         "$ref": "#/$defs/option"
+      },
+      {
+        "$ref": "#/$defs/version"
       }
     ]
   },
@@ -226,10 +229,20 @@
             ]
           }
         }
+      }
+    },
+    "version": {
+      "title": "Version Declaration",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "snowfakery_version": {
+          "description": "The Snowfakery version",
+          "type": "integer",
+          "enum": [2, 3]
+        }
       },
-      "required": [
-        "macro"
-      ]
+      "required": ["snowfakery_version"]
     }
   }
 }
