@@ -992,8 +992,8 @@ to learn more about this type of object.
 #### `now`
 
 The `now` variable returns a [datetime](#datetime)
-representing the current moment. It stores
-microsecond precision.
+representing the current moment. It outputs
+microsecond precision and is in the UTC timezone.
 
 Using this recipe, you can see three different
 ways of outputting the timestamp:
@@ -1010,28 +1010,13 @@ ways of outputting the timestamp:
 This would generate field values similar to these:
 
 ```yaml
-current_datetime="2021-09-08 15:12:47.444352"
-current_datetime_as_number=1631139167.444973
-current_datetime_without_microseconds=1631139167
+current_datetime=2022-02-23 15:39:49.513086+00:00, current_datetime_as_number=1645630789.513975, current_datetime_without_microseconds=1645630789
 ```
 
 Experimentally, this variable seems to return a unique value
 every time it is called, but it might depend on
 your operating system and hardware setup
 (e.g. a very fast CPU with a very slow system clock).
-
-#### `now`
-
-The `now` variable returns a datetime
-representing the current moment. Experimentally,
-this variable seems to return a unique value
-every time (microsecond precision), but it might depend on
-your operating system and hardware setup
-(e.g. a very fast CPU with a very slow system clock).
-
-You might need to verify on your own operating system
-and hardware to be sure, or research the underlying
-Python [datetime](https://docs.python.org/3/library/datetime.html#datetime-objects) library.
 
 #### `fake:` and `fake.`
 
