@@ -1,0 +1,5 @@
+- object: Times
+  fields:
+    current_datetime: ${{now}}
+    current_datetime_as_number: ${{now.timestamp()}}
+    current_datetime_without_microseconds: ${{int(now.timestamp())}}
