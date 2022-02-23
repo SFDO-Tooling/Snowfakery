@@ -258,6 +258,19 @@ class TestTemplateFuncs:
             "A", 0, "b"
         )
 
+    @mock.patch("snowfakery.data_generator_runtime.datetime")
+    def test_now_calls_datetime_now(self, datetime):
+        now = datetime.now = mock.Mock()
+        yaml = """
+        - object : A
+          fields:
+            a: ${{now}}
+            b: ${{now}}
+            c: ${{now}}
+        """
+        generate(StringIO(yaml))
+        assert len(now.mock_calls) == 3
+
     @mock.patch(write_row_path)
     def test_old_syntax(self, write_row):
         yaml = """
