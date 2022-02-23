@@ -1,0 +1,7 @@
+- object: Example
+  fields:
+    value1: ${{ debug(399 + 21) / 10 }}
+    value2: ${{ debug((399 + 21) / 10) }}
+    value3:
+      debug:
+        - fake: datetime
