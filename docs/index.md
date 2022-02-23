@@ -784,7 +784,7 @@ Macros can include other macros. In fact, macros are especially powerful if you 
 
 ### Debug
 
-Snowfakery's `debug` function can be used to output values to your command line for debugging. Specifically, it outputs the value to `stderr`.
+You can use Snowfakery's `debug` function to output values to `stderr` (usually, the command line) for debugging. 
 
 The debug function can "wrap" any formula expression and return its value.
 
