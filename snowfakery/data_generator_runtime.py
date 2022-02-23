@@ -1,5 +1,5 @@
 from collections import defaultdict, ChainMap
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from contextlib import contextmanager
 
 from typing import Optional, Dict, Sequence, Mapping, NamedTuple, Set
@@ -566,7 +566,7 @@ class EvaluationNamespace(NamedTuple):
             "child_index": obj._child_index if obj else None,
             "this": obj,
             "today": interpreter.globals.today,
-            "now": datetime.now(),
+            "now": datetime.now(timezone.utc),
             "fake": self.runtime_context.faker_template_library,
             "template": self.runtime_context.current_template,
             **interpreter.options,
