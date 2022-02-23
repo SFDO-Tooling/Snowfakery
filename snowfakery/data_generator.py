@@ -7,6 +7,8 @@ import yaml
 from faker.providers import BaseProvider as FakerProvider
 from click.utils import LazyFile
 
+from snowfakery.standard_plugins.SnowfakeryVersion import SnowfakeryVersion
+
 from .data_gen_exceptions import DataGenNameError
 from .output_streams import DebugOutputStream, OutputStream
 from .parse_recipe_yaml import parse_recipe
@@ -143,8 +145,12 @@ def generate(
     faker_providers, snowfakery_plugins = process_plugins(parse_result.plugins)
 
     snowfakery_plugins.setdefault("UniqueId", UniqueId)
+    snowfakery_plugins.setdefault("SnowfakeryVersion", SnowfakeryVersion)
+    plugin_options = plugin_options or {}
+    if parse_result.version:
+        plugin_options["snowfakery_version"] = parse_result.version
 
-    plugin_options = process_plugins_options(snowfakery_plugins, plugin_options or {})
+    plugin_options = process_plugins_options(snowfakery_plugins, plugin_options)
 
     # figure out how it relates to CLI-supplied generation variables
     options, extra_options = merge_options(
@@ -203,7 +209,6 @@ def process_plugins_options(
     e.g. the option name that the user specifies on the CLI or API is just "org_name"
          but we use the long name internally to avoid clashing with the
          user's variable names."""
-
     allowed_options = collect_allowed_plugin_options(tuple(plugins.values()))
     plugin_options = {}
     for option in allowed_options:

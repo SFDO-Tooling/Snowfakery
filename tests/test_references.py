@@ -518,3 +518,23 @@ class TestReferences:
         with pytest.raises(DataGenError) as e:
             generate(StringIO(yaml))
         assert "there is no table named parent" in str(e).lower()
+
+    def test_reference_by_id(self, generated_rows):
+        yaml = """
+              - object: Parent
+                nickname: ParentNickname
+                just_once: true
+
+              - object: Child
+                fields:
+                  parent1:
+                    reference: ParentNickname
+                  parent2:
+                    reference:
+                      object: Parent
+                      id: 1
+                """
+
+        generate(StringIO(yaml))
+        child = generated_rows.table_values("Child", 0)
+        assert child["parent1"] == child["parent2"]

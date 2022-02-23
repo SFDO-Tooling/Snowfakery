@@ -36,13 +36,19 @@ TemplateLike = Union[ObjectTemplate, StructuredValue]
 
 class ParseResult:
     def __init__(
-        self, options, tables: Mapping, statements: Sequence, plugins: Sequence = ()
+        self,
+        options,
+        tables: Mapping,
+        statements: Sequence,
+        plugins: Sequence = (),
+        version: int = None,
     ):
         self.options = options
         self.tables = tables
         self.statements = statements
         self.templates = [obj for obj in statements if isinstance(obj, ObjectTemplate)]
         self.plugins = plugins
+        self.version = version
 
 
 class TableInfo:
@@ -604,12 +610,14 @@ collection_rules = {
     "plugin": "plugin",
     "object": "statement",
     "var": "statement",
+    "snowfakery_version": "snowfakery_version",
 }
 
 
 def categorize_top_level_objects(data: List, context: ParseContext):
     """Look at all of the top-level declarations and categorize them"""
     top_level_collections: Dict = {
+        "snowfakery_version": [],
         "option": [],
         "include_file": [],
         "macro": [],
@@ -655,11 +663,35 @@ def parse_top_level_elements(path: Path, data: List, context: ParseContext):
     context.plugins.extend(
         resolve_plugins(plugin_specs, search_paths=[plugin_near_recipe])
     )
+    context.version = parse_version(top_level_objects["snowfakery_version"], context)
     statements.extend(top_level_objects["statement"])
     for pluginbase, plugin in context.plugins:
         if pluginbase == ParserMacroPlugin:
             context.parser_macros_plugins[plugin.__name__] = plugin()
     return statements
+
+
+def parse_version(version_declarations: T.List[T.Dict], context: ParseContext):
+    if version_declarations:
+        base_version = version_declarations[0]["snowfakery_version"]
+        mismatched_versions = [
+            obj
+            for obj in version_declarations
+            if obj["snowfakery_version"] != base_version
+        ]
+        if mismatched_versions:
+            with context.change_current_parent_object(version_declarations[1]):
+                raise exc.DataGenSyntaxError(
+                    "Cannot have multiple conflicting versions in the same recipe: ",
+                    **context.line_num(),
+                )
+        if base_version not in (2, 3):
+            with context.change_current_parent_object(version_declarations[0]):
+                raise exc.DataGenSyntaxError(
+                    "Version must be 2 or 3: ",
+                    **context.line_num(),
+                )
+        return base_version
 
 
 def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
@@ -754,4 +786,10 @@ def parse_recipe(
             statements, tables, update_input_file, update_passthrough_fields
         )
 
-    return ParseResult(context.options, tables, statements, plugins=context.plugins)
+    return ParseResult(
+        context.options,
+        tables,
+        statements,
+        plugins=context.plugins,
+        version=context.version,
+    )
