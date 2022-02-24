@@ -10,7 +10,7 @@ charset-normalizer==2.0.11
     # via requests
 click==8.0.3
     # via -r requirements/prod.in
-faker==12.0.0
+faker==13.2.0
     # via -r requirements/prod.in
 greenlet==1.1.2
     # via sqlalchemy
