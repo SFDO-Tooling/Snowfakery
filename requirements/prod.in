@@ -1,6 +1,6 @@
 SQLAlchemy
 Faker
-jinja2<3        # until CCI is compatible
+jinja2<4        # until CCI is compatible
 PyYAML
 click
 python-dateutil
