@@ -784,7 +784,7 @@ Macros can include other macros. In fact, macros are especially powerful if you 
 
 ### Debug
 
-You can use Snowfakery's `debug` function to output values to `stderr` (usually, the command line) for debugging. 
+You can use Snowfakery's `debug` function to output values to `stderr` (usually, the command line) for debugging.
 
 The debug function can "wrap" any formula expression and return its value.
 
@@ -1034,10 +1034,8 @@ This would generate field values similar to these:
 current_datetime=2022-02-23 15:39:49.513086+00:00, current_datetime_as_number=1645630789.513975, current_datetime_without_microseconds=1645630789
 ```
 
-Experimentally, this variable seems to return a unique value
-every time it is called, but it might depend on
-your operating system and hardware setup
-(e.g. a very fast CPU with a very slow system clock).
+Experimentally, this variable is not guaranteed to return a unique
+value each time, especially on Windows.
 
 #### `fake:` and `fake.`
 

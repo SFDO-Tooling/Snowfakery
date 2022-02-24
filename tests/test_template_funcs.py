@@ -254,9 +254,6 @@ class TestTemplateFuncs:
         generate(StringIO(yaml), {}, None)
         assert datetime.fromisoformat(generated_rows.table_values("A", 0, "a"))
         assert datetime.fromisoformat(generated_rows.table_values("A", 0, "b"))
-        assert generated_rows.table_values("A", 0, "a") != generated_rows.table_values(
-            "A", 0, "b"
-        )
 
     @mock.patch("snowfakery.data_generator_runtime.datetime")
     def test_now_calls_datetime_now(self, datetime):
