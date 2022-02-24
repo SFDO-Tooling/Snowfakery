@@ -4,6 +4,20 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 3.0
+
+Snowfakery can now be used to do transformations of CSV files. (#586)
+
+When embedded in Cumulusc, Snowfakery can now do SObject Updates. (#586)
+
+Snowfakery has a `now` function which returns a UTC datetime representing the present moment. (#485)
+
+Snowfakery has a mode (`snowfakery_version: 3`) whereby formulas can result in the output of types other than just strings. For example, date objects, amenable to date manipulations. This is an opt-in feature for the time being, but will become the default later this year. (#617)
+
+Snowfakery has a `debug` function for inspecting expressions and values. (#613 and #615)
+
+Snowfakery uses UTC to output datetimes, for better Salesforce compatibility. (#601, #694)
+
 ## Snowfakery 2.5
 
 Snowfakery now ensures that faked firstnames and lastnames are ASCII alphanumeric
