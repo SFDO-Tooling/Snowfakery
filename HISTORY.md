@@ -12,7 +12,7 @@ Snowfakery can be used to do transformations of CSV files. (#586)
 
 Snowfakery has a `now` function which returns a UTC datetime representing the present moment. (#485)
 
-Snowfakery has a mode (`snowfakery_version: 3`) whereby formulas can result in the output of types other than just strings. For example, they can generate date objects, which are amenable to date manipulations. This is an opt-in feature for the time being, but will become the default in June 2022. (#617)
+Snowfakery has a mode (`snowfakery_version: 3`) that lets formulas output types other than just strings. For example, they can generate date objects, which are amenable to date manipulations. This is an opt-in feature for the time being, but will become the default in June 2022. (#617)
 
 Snowfakery has a `debug` function for inspecting expressions and values. (#613 and #615)
 
