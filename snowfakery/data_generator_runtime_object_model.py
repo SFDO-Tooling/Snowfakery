@@ -136,6 +136,7 @@ class ObjectTemplate:
         just_once: bool = False,
         fields: Sequence = (),
         friends: Sequence = (),
+        update_key: str = None,
     ):
         self.tablename = tablename
         self.nickname = nickname
@@ -146,6 +147,7 @@ class ObjectTemplate:
         self.fields = fields
         self.friends = friends
         self.for_each_expr = for_each_expr
+        self.update_key = update_key
 
         if count_expr and for_each_expr:
             raise DataGenSyntaxError(
@@ -245,6 +247,8 @@ class ObjectTemplate:
         """Generate an individual row"""
         id = context.generate_id(self.nickname)
         row = {"id": id}
+        if self.update_key:
+            row["_sf_update_key"] = self.update_key
         sobj = ObjectRow(self.tablename, row, index)
 
         context.register_object(sobj, self.nickname, self.just_once)

@@ -362,6 +362,7 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
             "just_once": bool,
             "for_each": dict,
             "count": (str, int, dict),
+            "update_key": str,
         },
         context=context,
     )
@@ -385,6 +386,7 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
         sobj_def["nickname"] = nickname = parsed_template.nickname
         check_identifier(nickname, yaml_sobj, "Nicknames")
         sobj_def["just_once"] = parsed_template.just_once or False
+        sobj_def["update_key"] = parsed_template.update_key or None
         sobj_def["line_num"] = parsed_template.line_num.line_num
         sobj_def["filename"] = parsed_template.line_num.filename
 
