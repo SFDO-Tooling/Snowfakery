@@ -247,6 +247,10 @@ class ObjectTemplate:
         """Generate an individual row"""
         id = context.generate_id(self.nickname)
         row = {"id": id}
+
+        # add a column keeping track of what update_key was specified by
+        # the template. This allows multiple templates to have different
+        # update_keys.
         if self.update_key:
             row["_sf_update_key"] = self.update_key
         sobj = ObjectRow(self.tablename, row, index)

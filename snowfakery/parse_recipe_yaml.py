@@ -62,6 +62,7 @@ class TableInfo:
         self.name = name
         self.fields = {}
         self.friends = {}
+        self.has_update_keys = False
         self._templates = []
 
     def register(self, template: ObjectTemplate) -> None:
@@ -79,6 +80,8 @@ class TableInfo:
                 if hasattr(friend, "tablename")
             }
         )
+        if template.update_key:
+            self.has_update_keys = True
         self._templates.append(template)
 
     def __repr__(self) -> str:

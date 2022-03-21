@@ -1,19 +1,18 @@
-from pathlib import Path
 from io import StringIO
+from pathlib import Path
 
 import pytest
 
-from snowfakery.data_generator import generate
-from snowfakery.generate_mapping_from_recipe import (
-    mapping_from_recipe_templates,
-    build_dependencies,
-    _table_is_free,
-)
-from snowfakery.data_generator_runtime import Dependency
-from snowfakery.cci_mapping_files.post_processes import add_after_statements
 from snowfakery import data_gen_exceptions as exc
+from snowfakery.cci_mapping_files.post_processes import add_after_statements
+from snowfakery.data_generator import generate
+from snowfakery.data_generator_runtime import Dependency
+from snowfakery.generate_mapping_from_recipe import (
+    _table_is_free,
+    build_dependencies,
+    mapping_from_recipe_templates,
+)
 from snowfakery.utils.collections import OrderedSet
-
 
 try:
     import cumulusci
@@ -612,3 +611,63 @@ class TestPersonAccounts:
                 """
         with generate_in_tmpdir(recipe_data) as (mapping, db):
             assert tuple(mapping.keys())[0] == "Insert User"
+
+    def test_upsert(self, generate_in_tmpdir):
+        recipe_data = """
+        - object: User
+          update_key: Name
+          fields:
+            Name: AAA
+        - object: User
+          update_key: Username
+          fields:
+            Name: Username
+        - object: User
+          fields:
+            Name: BBBB
+        - object: User
+          update_key: Name
+          fields:
+            Name: AAA2
+        - object: User
+          update_key: Username
+          fields:
+            Name: Username2
+        - object: User
+          fields:
+            Name: BBBB2
+        """
+        with generate_in_tmpdir(recipe_data) as (mapping, db):
+            assert mapping == {
+                "Upsert User on Name": {
+                    "sf_object": "User",
+                    "filters": ["_sf_update_key = 'Name'"],
+                    "table": "User",
+                    "fields": {"Name": "Name"},
+                    "action": "upsert",
+                    "update_key": "Name",
+                },
+                "Upsert User on Username": {
+                    "sf_object": "User",
+                    "filters": ["_sf_update_key = 'Username'"],
+                    "table": "User",
+                    "fields": {"Name": "Name"},
+                    "action": "upsert",
+                    "update_key": "Username",
+                },
+                "Insert User": {
+                    "sf_object": "User",
+                    "filters": ["_sf_update_key = NULL"],
+                    "table": "User",
+                    "fields": {"Name": "Name"},
+                },
+            }
+            rows = list(db.execute("select Name, _sf_update_key from User"))
+            assert rows == [
+                ("AAA", "Name"),
+                ("Username", "Username"),
+                ("BBBB", None),
+                ("AAA2", "Name"),
+                ("Username2", "Username"),
+                ("BBBB2", None),
+            ]
