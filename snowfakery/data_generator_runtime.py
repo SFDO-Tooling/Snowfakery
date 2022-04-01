@@ -12,11 +12,11 @@ import yaml
 
 from .utils.template_utils import FakerTemplateLibrary
 from .utils.yaml_utils import SnowfakeryDumper, hydrate
-
+from .row_history import RowHistory
 from .template_funcs import StandardFuncs
 from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError
 import snowfakery  # noQA
-from snowfakery.object_rows import NicknameSlot, SlotState, ObjectRow
+from snowfakery.object_rows import NicknameSlot, SlotState, ObjectRow, ObjectReference
 from snowfakery.plugins import PluginContext, SnowfakeryPlugin, ScalarTypes
 from snowfakery.utils.collections import OrderedSet
 
@@ -348,6 +348,7 @@ class Interpreter:
         self.template_evaluator_factory = JinjaTemplateEvaluatorFactory(
             self.native_types
         )
+        self.row_history = RowHistory()
 
     def execute(self):
         self.current_context = RuntimeContext(interpreter=self)
@@ -515,16 +516,18 @@ class RuntimeContext:
         )
         return rc
 
+    def remember_row(self, tablename: str, nickname: str, row: dict):
+        for fieldname, fieldvalue in row.items():
+            if isinstance(fieldvalue, (ObjectRow, ObjectReference)):
+                self.interpreter.globals.register_intertable_reference(
+                    tablename, fieldvalue._tablename, fieldname
+                )
+        self.interpreter.row_history.write_row(tablename, nickname, row)
+
     def register_object(self, obj, name: Optional[str], persistent: bool):
         "Keep track of this object in case other objects refer to it."
         self.obj = obj
         self.interpreter.globals.register_object(obj, name, persistent)
-
-    def register_intertable_reference(self, table_name_from, table_name_to, fieldname):
-        "Keep track of a dependency between two tables. e.g. for mapping file generation"
-        self.interpreter.globals.register_intertable_reference(
-            table_name_from, table_name_to, fieldname
-        )
 
     @contextmanager
     def child_context(self, template):
