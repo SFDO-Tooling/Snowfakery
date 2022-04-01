@@ -333,6 +333,8 @@ class SimpleValue(FieldDefinition):
         if evaluator:
             try:
                 val = evaluator(context)
+                if hasattr(val, "render"):
+                    val = val.render()
             except jinja2.exceptions.UndefinedError as e:
                 raise DataGenNameError(e.message, self.filename, self.line_num) from e
             except Exception as e:
@@ -340,7 +342,9 @@ class SimpleValue(FieldDefinition):
         else:
             val = self.definition
         context.unique_context_identifier = old_context_identifier
-        return look_for_number(val) if isinstance(val, str) else val
+        if isinstance(val, str) and not context.interpreter.native_types:
+            val = look_for_number(val)
+        return val
 
     def __repr__(self):
         return f"<{self.__class__.__name__ , self.definition}>"

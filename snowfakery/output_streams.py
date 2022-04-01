@@ -5,6 +5,7 @@ import csv
 import subprocess
 import datetime
 import sys
+from decimal import Decimal
 from pathlib import Path
 from collections import namedtuple, defaultdict
 from typing import Dict, Union, Optional, Mapping, Callable, Sequence
@@ -54,6 +55,7 @@ class OutputStream(ABC):
         datetime.datetime: format_datetime,
         type(None): noop,
         bool: int,
+        Decimal: str,
     }
     uses_folder = False
     uses_path = False

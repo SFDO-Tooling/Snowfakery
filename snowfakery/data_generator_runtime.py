@@ -344,8 +344,10 @@ class Interpreter:
             "snowfakery.standard_plugins.SnowfakeryVersion.snowfakery_version", 2
         )
         assert snowfakery_version in (2, 3)
-        native_types = snowfakery_version == 3
-        self.template_evaluator_factory = JinjaTemplateEvaluatorFactory(native_types)
+        self.native_types = snowfakery_version == 3
+        self.template_evaluator_factory = JinjaTemplateEvaluatorFactory(
+            self.native_types
+        )
 
     def execute(self):
         self.current_context = RuntimeContext(interpreter=self)

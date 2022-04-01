@@ -50,14 +50,19 @@ class TestFaker:
         generate(StringIO(yaml), {})
         assert len(row_values(write_row_mock, 0, "country")) == 2
 
+    @pytest.mark.parametrize("snowfakery_version", (2, 3))
     @mock.patch(write_row_path)
-    def test_fake_inline(self, write_row_mock):
+    def test_fake_inline(self, write_row_mock, snowfakery_version):
         yaml = """
         - object: OBJ
           fields:
             country: ${{fake.country_code(representation='alpha-2')}}
         """
-        generate(StringIO(yaml), {}, None)
+        generate(
+            StringIO(yaml),
+            {},
+            plugin_options={"snowfakery_version": snowfakery_version},
+        )
         assert len(row_values(write_row_mock, 0, "country")) == 2
 
     @mock.patch(write_row_path)
