@@ -16,6 +16,8 @@ class ObjectRow:
     yaml_dumper = SnowfakeryDumper
     yaml_tag = "!snowfakery_objectrow"
 
+    # be careful changing these slots because these objects must be serializable
+    # to YAML and JSON
     __slots__ = ["_tablename", "_values", "_child_index"]
 
     def __init__(self, tablename, values=(), index=0):

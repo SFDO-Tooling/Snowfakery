@@ -1,28 +1,96 @@
+from collections import defaultdict
+import typing as T
 import sqlite3
+import pickle
+from random import choices, randint
+from copy import deepcopy
+from snowfakery.object_rows import ObjectReference, ObjectRow
 
 
 class RowHistory:
     def __init__(self):
-        self.conn = _make_history_table(":memory:")
+        self.conn = sqlite3.connect(":memory:")
+        self.table_counters = defaultdict(lambda: defaultdict(int))
+        self.reset_locals()
 
-    def write_row(self, tablename: str, nickname: str, row: dict):
+    def reset_locals(self):
+        """Reset the minimum count that counts as "local" """
+        self.local_counters = deepcopy(self.table_counters)
+
+    def save_row(self, tablename: str, nickname: T.Optional[str], row: dict):
+        nickname_counters = self.table_counters[tablename]
+        sql_tablename = nickname if nickname else tablename
+
+        pk = nickname_counters[sql_tablename]
+
+        if not pk:
+            _make_history_table(self.conn, sql_tablename)
+        pk += 1
+        nickname_counters[sql_tablename] = pk
+
         self.conn.execute(
-            "INSERT INTO snowfakery_history VALUES (?, ?, ?, ?)",
+            f'INSERT INTO "{sql_tablename}" VALUES (?, ?, ?)',
             (
-                str(id),
-                tablename,
-                nickname,
-                repr(row),
+                pk,
+                row["id"],
+                pickle.dumps(row),
             ),
         )
+        # print("IN SAVE", self.table_counters, id(self.table_counters))
+
+    def read_random_row(
+        self, tablename: str, nickname: T.Optional[str], scope: str
+    ) -> ObjectRow:
+        # print("IN READ", self.table_counters, id(self.table_counters))
+        nickname_counters = self.table_counters.get(tablename)
+        # print(
+        #     "ZZZ2",
+        #     len(self.table_counters),
+        #     self.table_counters,
+        #     nickname_counters,
+        #     id(self.table_counters),
+        # )
+        if not nickname_counters:
+            raise AssertionError(f"Cannot find tablename {tablename}")
+
+        if nickname:
+            sql_tablename = nickname
+            if not nickname_counters.get(sql_tablename):
+                raise AssertionError(f"Cannot find nickname {nickname}")
+        else:
+            # pick which nickname to pull from (including the null nickname)
+            sql_tablename = choices(
+                tuple(nickname_counters.keys()), tuple(nickname_counters.values()), k=1
+            )[0]
+
+        if scope == "prior-and-current-iterations":
+            minpk = 1
+        else:
+            minpk = self.local_counters[tablename].get(nickname or tablename, 0) + 1
+        maxpk = nickname_counters[sql_tablename]
+
+        pk = randint(minpk, maxpk)
+        qr = self.conn.execute(
+            f'SELECT DATA FROM "{sql_tablename}" WHERE pk=?',
+            (pk,),
+        )
+        first_row = next(qr, None)
+        assert first_row, breakpoint()
+
+        data = pickle.loads(first_row[0])
+        return ObjectRow(tablename, data)
 
 
-def _make_history_table(dbname):
-    conn = sqlite3.connect(dbname)
+def _make_history_table(conn, tablename):
     c = conn.cursor()
-    c.execute("DROP TABLE IF EXISTS snowfakery_history;")
+    c.execute(f'DROP TABLE IF EXISTS "{tablename}"')
     c.execute(
-        "CREATE TABLE snowfakery_history (id INTEGER NOT NULL, tablename VARCHAR(255) NOT NULL, nickname VARCHAR(255) , data VARCHAR NOT NULL)"
+        f'CREATE TABLE "{tablename}" (pk INTEGER NOT NULL UNIQUE, id INTEGER NOT NULL , data VARCHAR NOT NULL)'
     )
-    conn.commit()
-    return conn
+
+
+def _default(val):
+    if isinstance(val, (ObjectRow, ObjectReference)):
+        return (val._tablename, val.id)
+    else:
+        return val

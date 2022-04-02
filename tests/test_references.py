@@ -368,7 +368,7 @@ class TestReferences:
             A_ref:                  #8
               random_reference: A   #9
     """
-        with mock.patch("random.randint") as randint:
+        with mock.patch("snowfakery.row_history.randint") as randint:
             randint.side_effect = [8, 3]
             generate(StringIO(yaml))
         assert generated_rows.row_values(10, "A_ref") == "A(8)"
@@ -385,7 +385,7 @@ class TestReferences:
                 tablename: A        #10
                 scope: current-iteration        #11
     """
-        with mock.patch("random.randint") as randint:
+        with mock.patch("snowfakery.row_history.randint") as randint:
             randint.side_effect = [8, 12]
             generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 2))
             assert randint.mock_calls == [mock.call(1, 10), mock.call(11, 20)]
@@ -404,7 +404,7 @@ class TestReferences:
                 tablename: A   #9
                 scope: prior-and-current-iterations
     """
-        with mock.patch("random.randint") as randint, mock.patch(
+        with mock.patch("snowfakery.row_history.randint") as randint, mock.patch(
             "warnings.warn"
         ) as warn:
             randint.side_effect = [8, 3, 8, 3]

@@ -376,6 +376,7 @@ class Interpreter:
             self.iteration_count += 1
             continuing = True
             self.globals.reset_slots()
+            self.row_history.reset_locals()
 
     def loop_over_templates_once(self, statement_list, continuing: bool):
         for statement in statement_list:
@@ -516,13 +517,13 @@ class RuntimeContext:
         )
         return rc
 
-    def remember_row(self, tablename: str, nickname: str, row: dict):
+    def remember_row(self, tablename: str, nickname: T.Optional[str], row: dict):
         for fieldname, fieldvalue in row.items():
             if isinstance(fieldvalue, (ObjectRow, ObjectReference)):
                 self.interpreter.globals.register_intertable_reference(
                     tablename, fieldvalue._tablename, fieldname
                 )
-        self.interpreter.row_history.write_row(tablename, nickname, row)
+        self.interpreter.row_history.save_row(tablename, nickname, row)
 
     def register_object(self, obj, name: Optional[str], persistent: bool):
         "Keep track of this object in case other objects refer to it."

@@ -289,7 +289,10 @@ class StandardFuncs(SnowfakeryPlugin):
                         None,
                         None,
                     )
-                return ObjectReference(tablename, random.randint(first_id, last_id))
+                nickname = None  # FIXME
+                return self.context.interpreter.row_history.read_random_row(
+                    tablename, nickname, scope
+                )
             elif tablename in globls.transients.nicknamed_objects:
                 raise DataGenError(
                     "Nicknames cannot be used in random_reference", None, None
