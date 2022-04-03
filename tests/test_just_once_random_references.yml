@@ -1,0 +1,14 @@
+- object: Parent
+  count: 3
+  just_once: true
+- object: Parent
+  count: 3
+  just_once: true
+- object: Parent
+  count: 3
+
+- object: Child
+  count: 2
+  fields:
+    parent:
+      random_reference: Parent

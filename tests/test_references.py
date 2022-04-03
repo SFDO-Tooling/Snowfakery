@@ -501,8 +501,67 @@ class TestReferences:
                   parent:
                     random_reference: Parent
                 """
-        generate(StringIO(yaml), stopping_criteria=StoppingCriteria("Child", 2))
-        assert len(generated_rows.mock_calls) == 3
+        generate(StringIO(yaml), stopping_criteria=StoppingCriteria("Child", 3))
+        assert len(generated_rows.mock_calls) == 4
+
+    @pytest.mark.parametrize("rand_top", [True, False])
+    def test_random_reference_to_just_once_obj_many(self, generated_rows, rand_top):
+        yaml = """
+              - object: Parent
+                count: 3
+                just_once: true
+              - object: Parent
+                count: 3
+                just_once: true
+
+              - object: Child
+                fields:
+                  parent:
+                    random_reference: Parent
+                """
+
+        def randint_mock(x, y):
+            return y if rand_top else x
+
+        with mock.patch("snowfakery.row_history.randint", randint_mock):
+            generate(StringIO(yaml), stopping_criteria=StoppingCriteria("Child", 2))
+        if rand_top:
+            assert generated_rows.table_values("Child", 1, "parent") == "Parent(6)"
+        else:
+            assert generated_rows.table_values("Child", 1, "parent") == "Parent(1)"
+
+    @pytest.mark.parametrize("rand_top", [True, False])
+    def test_random_reference_to_just_once_obj_and_local(
+        self, generated_rows, rand_top
+    ):
+        yaml = """
+              - object: Parent
+                count: 3
+                just_once: true
+
+              - object: Parent
+                count: 3
+
+              - object: Child
+                fields:
+                  parent:
+                    random_reference: Parent
+                """
+
+        def randint_mock(x, y):
+            return y if rand_top else x
+
+        with mock.patch("snowfakery.row_history.randint", randint_mock):
+            generate(StringIO(yaml), stopping_criteria=StoppingCriteria("Child", 3))
+        FIRST, LAST = 1, -1
+        if rand_top:
+            assert generated_rows.table_values("Child", FIRST, "parent") == "Parent(6)"
+            assert generated_rows.table_values("Child", LAST, "parent") == "Parent(12)"
+        else:  # bottom
+            print(FIRST)
+            print(generated_rows.mock_calls)
+            assert generated_rows.table_values("Child", FIRST, "parent") == "Parent(1)"
+            assert generated_rows.table_values("Child", LAST, "parent") == "Parent(10)"
 
     def test_random_reference_to_nickname_fails(self):
         yaml = """
