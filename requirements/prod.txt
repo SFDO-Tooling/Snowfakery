@@ -36,7 +36,7 @@ requests==2.27.1
     # via -r requirements/prod.in
 six==1.16.0
     # via python-dateutil
-sqlalchemy==1.4.31
+sqlalchemy==1.4.34
     # via -r requirements/prod.in
 typing-extensions==4.0.1
     # via pydantic
