@@ -12,7 +12,10 @@ from snowfakery.standard_plugins.SnowfakeryVersion import SnowfakeryVersion
 from .data_gen_exceptions import DataGenNameError
 from .output_streams import DebugOutputStream, OutputStream
 from .parse_recipe_yaml import parse_recipe
-from .data_generator_runtime import Globals, Interpreter
+from .data_generator_runtime import (
+    Globals,
+    Interpreter,
+)
 from .data_gen_exceptions import DataGenError
 from .plugins import SnowfakeryPlugin, PluginOption
 
@@ -240,11 +243,17 @@ def initialize_globals(continuation_data, templates):
             for template in templates
             if template.nickname
         }
+
+        tablenames = {template.tablename: template.tablename for template in templates}
+
+        reused_names = set(name_slots).intersection(tablenames)
+        if reused_names:
+            warnings.warn(
+                f"Should not reuse names as both nickname and table name: {reused_names}"
+            )
         # table names are sort of nicknames for themselves too, because
         # you can refer to them.
-        name_slots.update(
-            {template.tablename: template.tablename for template in templates}
-        )
+        name_slots.update(tablenames)
 
         globals = Globals(name_slots=name_slots)
 

@@ -442,8 +442,7 @@ class TestReferences:
             generate(StringIO(yaml))
         assert "Scope must be" in str(e)
 
-    def test_random_reference_to_nickname(self):
-        # undocumented experimental feature!
+    def test_random_reference_to_nickname(self, generated_rows):
         yaml = """
       - object: A
         nickname: AA
@@ -453,9 +452,8 @@ class TestReferences:
             A_ref:
               random_reference: AA
     """
-        with pytest.raises(DataGenError) as e:
-            generate(StringIO(yaml))
-        assert "nickname" in str(e).lower()
+        generate(StringIO(yaml))
+        assert generated_rows.table_values("B", 2, "A_ref") == "A(1)"
 
     def test_reference_unknown_object(self):
         yaml = """
@@ -563,7 +561,7 @@ class TestReferences:
             assert generated_rows.table_values("Child", FIRST, "parent") == "Parent(1)"
             assert generated_rows.table_values("Child", LAST, "parent") == "Parent(10)"
 
-    def test_random_reference_to_nickname_fails(self):
+    def test_random_reference_to_just_once_nickname_succeeds(self, generated_rows):
         yaml = """
               - object: Parent
                 nickname: ParentNickname
@@ -574,9 +572,8 @@ class TestReferences:
                   parent:
                     random_reference: ParentNickname
                 """
-        with pytest.raises(DataGenError) as e:
-            generate(StringIO(yaml))
-        assert "there is no table named parent" in str(e).lower()
+        generate(StringIO(yaml))
+        assert generated_rows.table_values("Child", 0, "parent") == "Parent(1)"
 
     def test_reference_by_id(self, generated_rows):
         yaml = """

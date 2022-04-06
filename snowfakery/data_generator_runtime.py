@@ -354,6 +354,7 @@ class Interpreter:
         self.template_evaluator_factory = JinjaTemplateEvaluatorFactory(
             self.native_types
         )
+        self.tables_to_keep_history_for = find_tables_to_keep_history_for(parse_result)
         self.row_history = RowHistory()
 
     def execute(self):
@@ -530,7 +531,10 @@ class RuntimeContext:
                 self.interpreter.globals.register_intertable_reference(
                     tablename, fieldvalue._tablename, fieldname
                 )
-        self.interpreter.row_history.save_row(tablename, nickname, row)
+        history_tables = self.interpreter.tables_to_keep_history_for
+        should_save = (tablename in history_tables) or (nickname in history_tables)
+        if should_save:
+            self.interpreter.row_history.save_row(tablename, nickname, row)
 
     def register_object(self, obj, name: Optional[str], persistent: bool):
         "Keep track of this object in case other objects refer to it."
@@ -637,3 +641,25 @@ def evaluate_function(func, args: Sequence, kwargs: Mapping, context):
             for name, arg in kwargs.items()
         }
     return func(*args, **kwargs)
+
+
+def find_tables_to_keep_history_for(parse_result: ParseResult) -> T.Set[str]:
+    random_references = parse_result.random_references
+    referenced_tables = set(
+        get_referent_name(random_reference) for random_reference in random_references
+    )
+    return referenced_tables
+
+
+def get_referent_name(random_reference):
+    args, kwargs = random_reference.args, random_reference.kwargs
+    assert not (args and kwargs)
+    if args:
+        ret = args[0].definition
+    elif kwargs:
+        ret = kwargs["tablename"].definition
+    if not isinstance(ret, str):
+        raise DataGenSyntaxError(
+            f"random_reference should only refer to a name, not {ret}"
+        )
+    return ret

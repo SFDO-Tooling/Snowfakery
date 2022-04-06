@@ -9,11 +9,9 @@ from snowfakery.object_rows import (
     ObjectReference,
     LazyLoadedObjectReference,
 )
-
+import warnings
 
 # TODO:
-#   * use static analysis to turn on RowHistory only where relevant
-#   * lazy-load referenced row data
 #   * figure out just-once + random_reference semantics
 #       * can only refer to just_once by nickname
 #   * test random_reference of nicknames and just_once/nicknames
@@ -24,6 +22,7 @@ class RowHistory:
         self.conn = sqlite3.connect(":memory:")
         self.table_counters = defaultdict(lambda: defaultdict(int))
         self.reset_locals()
+        self.nicknames_to_tables = {}
 
     def reset_locals(self):
         """Reset the minimum count that counts as "local" """
@@ -31,7 +30,12 @@ class RowHistory:
 
     def save_row(self, tablename: str, nickname: T.Optional[str], row: dict):
         nickname_counters = self.table_counters[tablename]
-        sql_tablename = nickname if nickname else tablename
+        if nickname:
+            if nickname not in self.nicknames_to_tables:
+                self.nicknames_to_tables[nickname] = tablename
+            sql_tablename = nickname
+        else:
+            sql_tablename = tablename
 
         pk = nickname_counters[sql_tablename]
 
@@ -50,10 +54,15 @@ class RowHistory:
             ),
         )
 
-    def random_row_reference(
-        self, tablename: str, nickname: T.Optional[str], scope: str
-    ):
+    def random_row_reference(self, name: str, scope: str):
         # print("IN READ", self.table_counters, id(self.table_counters))
+        if name in self.nicknames_to_tables:
+            nickname = name
+            tablename = self.nicknames_to_tables[nickname]
+        else:
+            nickname = None
+            tablename = name
+
         nickname_counters = self.table_counters.get(tablename)
         # print(
         #     "ZZZ2",
@@ -63,12 +72,10 @@ class RowHistory:
         #     id(self.table_counters),
         # )
         if not nickname_counters:
-            raise AssertionError(f"Cannot find tablename {tablename}")
+            raise AssertionError(f"There is no table named {tablename}")
 
         if nickname:
             sql_tablename = nickname
-            if not nickname_counters.get(sql_tablename):
-                raise AssertionError(f"Cannot find nickname {nickname}")
         else:
             # pick which nickname to pull from (including the null nickname)
 
@@ -78,6 +85,7 @@ class RowHistory:
             )[0]
 
         if scope == "prior-and-current-iterations":
+            warnings.warn("Global scope is an experimental feature.")
             minpk = 1
         else:
             relevant_name = nickname or tablename

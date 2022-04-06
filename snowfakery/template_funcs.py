@@ -257,7 +257,9 @@ class StandardFuncs(SnowfakeryPlugin):
                 probability = parse_weight_str(self.context, probability)
             return probability or when, pick
 
-        def random_reference(self, tablename: str, scope: str = "current-iteration"):
+        def random_reference(
+            self, tablename: str, scope: str = "current-iteration"
+        ) -> ObjectReference:
             """Select a random, already-created row from 'sobject'
 
             - object: Owner
@@ -274,30 +276,18 @@ class StandardFuncs(SnowfakeryPlugin):
             See the docs for more info.
             """
 
-            globls = self.context.interpreter.globals
-            last_id = globls.transients.last_id_for_table(tablename)
-            if last_id:
-                # TODO: move this code
-                if scope == "prior-and-current-iterations":
-                    warnings.warn("Global scope is an experimental feature.")
-                elif scope == "current-iteration":
-                    ...
-                else:
-                    raise DataGenError(
-                        f"Scope must be 'prior-and-current-iterations' or 'current-iteration' not {scope}",
-                        None,
-                        None,
-                    )
-                nickname = None  # FIXME
-                return self.context.interpreter.row_history.random_row_reference(
-                    tablename, nickname, scope
-                )
-            elif tablename in globls.transients.nicknamed_objects:
+            # TODO: move this code
+            if scope == "prior-and-current-iterations":
+                warnings.warn("Global scope is an experimental feature.")
+            elif scope != "current-iteration":
                 raise DataGenError(
-                    "Nicknames cannot be used in random_reference", None, None
+                    f"Scope must be 'prior-and-current-iterations' or 'current-iteration' not {scope}",
+                    None,
+                    None,
                 )
-            else:
-                raise DataGenError(f"There is no table named {tablename}", None, None)
+            return self.context.interpreter.row_history.random_row_reference(
+                tablename, scope
+            )
 
         @lazy
         def if_(self, *choices: FieldDefinition):
