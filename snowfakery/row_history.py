@@ -4,7 +4,11 @@ import sqlite3
 import pickle
 from random import choices, randint
 from copy import deepcopy
-from snowfakery.object_rows import ObjectReference, ObjectRow
+from snowfakery.object_rows import (
+    ObjectRow,
+    ObjectReference,
+    LazyLoadedObjectReference,
+)
 
 
 # TODO:
@@ -36,6 +40,7 @@ class RowHistory:
         pk += 1
         nickname_counters[sql_tablename] = pk
 
+        # TODO: think about whether it is okay to save trees of objects or not.
         self.conn.execute(
             f'INSERT INTO "{sql_tablename}" VALUES (?, ?, ?)',
             (
@@ -44,11 +49,10 @@ class RowHistory:
                 pickle.dumps(row),
             ),
         )
-        # print("IN SAVE", self.table_counters, id(self.table_counters))
 
-    def read_random_row(
+    def random_row_reference(
         self, tablename: str, nickname: T.Optional[str], scope: str
-    ) -> ObjectRow:
+    ):
         # print("IN READ", self.table_counters, id(self.table_counters))
         nickname_counters = self.table_counters.get(tablename)
         # print(
@@ -85,11 +89,14 @@ class RowHistory:
         #
         # This happens usually when you are referring to just_once
         if maxpk <= minpk:
-            print("AAA", minpk, maxpk)
             minpk = 1
-        print("BBB", minpk, maxpk)
 
         pk = randint(minpk, maxpk)
+
+        # return ObjectRow(tablename, self.read_random_row(sql_tablename, pk))
+        return LazyLoadedObjectReference(tablename, pk, sql_tablename)
+
+    def read_random_row(self, sql_tablename: str, pk: int):
         qr = self.conn.execute(
             f'SELECT DATA FROM "{sql_tablename}" WHERE pk=?',
             (pk,),
@@ -97,8 +104,7 @@ class RowHistory:
         first_row = next(qr, None)
         assert first_row
 
-        data = pickle.loads(first_row[0])
-        return ObjectRow(tablename, data)
+        return pickle.loads(first_row[0])
 
 
 def _make_history_table(conn, tablename):

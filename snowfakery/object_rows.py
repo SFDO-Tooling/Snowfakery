@@ -3,8 +3,10 @@ from enum import Enum, auto
 import yaml
 import snowfakery  # noqa
 from .utils.yaml_utils import SnowfakeryDumper
+from contextvars import ContextVar
 
 IdManager = "snowfakery.data_generator_runtime.IdManager"
+RowHistoryCV = ContextVar("RowHistory")
 
 
 class ObjectRow:
@@ -54,9 +56,34 @@ class ObjectRow:
 
 
 class ObjectReference(yaml.YAMLObject):
-    def __init__(self, tablename, id):
+    def __init__(self, tablename: str, id: int):
         self._tablename = tablename
         self.id = id
+
+
+class LazyLoadedObjectReference(ObjectReference):
+    _data = None
+
+    def __init__(
+        self,
+        tablename: str,
+        pk: int,
+        sql_tablename: str,
+    ):
+        self._tablename = tablename
+        self.sql_tablename = sql_tablename
+        self.pk = pk
+
+    def __reduce__(self) -> tuple:
+        return (self.__class__, tuple(self.__dict__.values()))
+
+    def __getattr__(self, attrname):
+        if attrname.startswith("__"):
+            raise AttributeError(attrname)
+        if self._data is None:
+            row_history = RowHistoryCV.get()
+            self._data = row_history.read_random_row(self.sql_tablename, self.pk)
+        return self._data[attrname]
 
 
 class SlotState(Enum):

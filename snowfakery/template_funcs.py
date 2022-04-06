@@ -277,12 +277,11 @@ class StandardFuncs(SnowfakeryPlugin):
             globls = self.context.interpreter.globals
             last_id = globls.transients.last_id_for_table(tablename)
             if last_id:
+                # TODO: move this code
                 if scope == "prior-and-current-iterations":
-                    first_id = 1
                     warnings.warn("Global scope is an experimental feature.")
                 elif scope == "current-iteration":
-                    first_id = globls.first_new_id(tablename)
-                    last_id = max(first_id, last_id)
+                    ...
                 else:
                     raise DataGenError(
                         f"Scope must be 'prior-and-current-iterations' or 'current-iteration' not {scope}",
@@ -290,7 +289,7 @@ class StandardFuncs(SnowfakeryPlugin):
                         None,
                     )
                 nickname = None  # FIXME
-                return self.context.interpreter.row_history.read_random_row(
+                return self.context.interpreter.row_history.random_row_reference(
                     tablename, nickname, scope
                 )
             elif tablename in globls.transients.nicknamed_objects:

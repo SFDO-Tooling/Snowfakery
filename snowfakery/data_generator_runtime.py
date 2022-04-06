@@ -16,7 +16,13 @@ from .row_history import RowHistory
 from .template_funcs import StandardFuncs
 from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError
 import snowfakery  # noQA
-from snowfakery.object_rows import NicknameSlot, SlotState, ObjectRow, ObjectReference
+from snowfakery.object_rows import (
+    NicknameSlot,
+    SlotState,
+    ObjectRow,
+    ObjectReference,
+    RowHistoryCV,
+)
 from snowfakery.plugins import PluginContext, SnowfakeryPlugin, ScalarTypes
 from snowfakery.utils.collections import OrderedSet
 
@@ -351,6 +357,7 @@ class Interpreter:
         self.row_history = RowHistory()
 
     def execute(self):
+        RowHistoryCV.set(self.row_history)
         self.current_context = RuntimeContext(interpreter=self)
         self.loop_over_templates_until_finished(self.continuing)
         return self.globals
