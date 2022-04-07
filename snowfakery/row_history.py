@@ -1,6 +1,5 @@
 import copyreg
 import io
-from collections import defaultdict
 import typing as T
 import sqlite3
 import pickle
@@ -22,8 +21,8 @@ import warnings
 
 class RowHistory:
     def __init__(self):
-        self.conn = sqlite3.connect(":memory:")
-        self.table_counters = defaultdict(lambda: defaultdict(int))
+        self.conn = sqlite3.connect("")
+        self.table_counters = {}
         self.reset_locals()
         self.nicknames_to_tables = {}
 
@@ -32,7 +31,7 @@ class RowHistory:
         self.local_counters = deepcopy(self.table_counters)
 
     def save_row(self, tablename: str, nickname: T.Optional[str], row: dict):
-        nickname_counters = self.table_counters[tablename]
+        nickname_counters = self.table_counters.setdefault(tablename, {})
         if nickname:
             if nickname not in self.nicknames_to_tables:
                 self.nicknames_to_tables[nickname] = tablename
@@ -40,7 +39,7 @@ class RowHistory:
         else:
             sql_tablename = tablename
 
-        pk = nickname_counters[sql_tablename]
+        pk = nickname_counters.setdefault(sql_tablename, 0)
 
         if not pk:
             _make_history_table(self.conn, sql_tablename)
@@ -90,7 +89,7 @@ class RowHistory:
             minpk = 1
         else:
             relevant_name = nickname or tablename
-            minpk = self.local_counters[tablename].get(relevant_name, 0) + 1
+            minpk = self.local_counters.get(tablename, {}).get(relevant_name, 0) + 1
         maxpk = nickname_counters[sql_tablename]
 
         # if no records can be found in this iteration
@@ -102,7 +101,6 @@ class RowHistory:
 
         pk = randint(minpk, maxpk)
 
-        # return ObjectRow(tablename, self.load_row(sql_tablename, pk))
         return LazyLoadedObjectReference(tablename, pk, sql_tablename)
 
     def load_row(self, sql_tablename: str, pk: int):

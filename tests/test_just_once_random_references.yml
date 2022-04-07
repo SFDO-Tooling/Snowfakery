@@ -7,8 +7,13 @@
 - object: Parent
   count: 3
 
-- object: Child
+- object: Account
   count: 2
   fields:
     parent:
       random_reference: Parent
+
+- object: Contact
+  fields:
+    AccountId:
+      random_reference: Account
