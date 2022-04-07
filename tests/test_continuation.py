@@ -1,8 +1,6 @@
 from unittest import mock
 from io import StringIO
 
-import pytest
-
 from snowfakery.data_generator import generate
 
 
@@ -106,19 +104,28 @@ class TestContinuation:
             continuation_file=StringIO(continuation_yaml),
         )
 
-    @pytest.mark.skip()  # TEMP DO NOT MERGE
     def test_reference_just_once(self, generated_rows):
         yaml_data = """
                         - object: Parent
                           just_once: true
 
+                        - object: Parent2
+                          nickname: xyzzy
+                          just_once: True
+
                         - object: Child
                           fields:
                             parent:
                                 random_reference: Parent
+
+                        - object: Child
+                          fields:
+                            parent:
+                                random_reference: xyzzy
                             """
         generate_twice(yaml_data)
-        assert generated_rows()
+        assert generated_rows.table_values("Child", 1, "parent") == "Parent(1)"
+        assert generated_rows.table_values("Child", 2, "parent") == "Parent2(1)"
 
 
 def generate_twice(yaml):

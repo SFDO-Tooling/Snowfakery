@@ -1,3 +1,5 @@
+"""Runtime objects and algorithms used during the generation of rows."""
+import os
 from collections import defaultdict, ChainMap
 from datetime import date, datetime, timezone
 from contextlib import contextmanager
@@ -32,7 +34,9 @@ ObjectTemplate = "snowfakery.data_generator_runtime_object_model.ObjectTemplate"
 Statement = "snowfakery.data_generator_runtime_object_model.Statement"
 ParseResult = "snowfakery.parse_recipe_yaml.ParseResult"
 
-# Runtime objects and algorithms used during the generation of rows.
+
+# save every single object to history. Useful for testing saving of datatypes
+SAVE_EVERYTHING = os.environ.get("SF_SAVE_EVERYTHING")
 
 
 class StoppingCriteria(NamedTuple):
@@ -357,6 +361,20 @@ class Interpreter:
         self.tables_to_keep_history_for = find_tables_to_keep_history_for(parse_result)
         self.row_history = RowHistory()
 
+        persistent_objs = []
+
+        for tablename, obj in globals.persistent_objects_by_table.items():
+            self.row_history.save_row(tablename, None, obj._values)
+
+        for nickname, obj in globals.persistent_nicknames.items():
+            self.row_history.save_row(obj._tablename, nickname, obj._values)
+
+        tuple(globals.persistent_nicknames.values()) + tuple(
+            globals.persistent_objects_by_table.values()
+        )
+        for obj in persistent_objs:
+            self.row_history.save_row(obj)
+
     def execute(self):
         RowHistoryCV.set(self.row_history)
         self.current_context = RuntimeContext(interpreter=self)
@@ -532,7 +550,11 @@ class RuntimeContext:
                     tablename, fieldvalue._tablename, fieldname
                 )
         history_tables = self.interpreter.tables_to_keep_history_for
-        should_save = (tablename in history_tables) or (nickname in history_tables)
+        should_save = (
+            (tablename in history_tables)
+            or (nickname in history_tables)
+            or SAVE_EVERYTHING
+        )
         if should_save:
             self.interpreter.row_history.save_row(tablename, nickname, row)
 

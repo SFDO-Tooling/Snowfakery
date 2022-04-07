@@ -78,11 +78,11 @@ class LazyLoadedObjectReference(ObjectReference):
         return (self.__class__, tuple(self.__dict__.values()))
 
     def __getattr__(self, attrname):
-        if attrname.startswith("__"):
+        if attrname.endswith("__"):
             raise AttributeError(attrname)
         if self._data is None:
             row_history = RowHistoryCV.get()
-            self._data = row_history.read_random_row(self.sql_tablename, self.pk)
+            self._data = row_history.load_row(self.sql_tablename, self.pk)
         return self._data[attrname]
 
 

@@ -1,3 +1,5 @@
+import copyreg
+import io
 from collections import defaultdict
 import typing as T
 import sqlite3
@@ -5,6 +7,7 @@ import pickle
 from random import choices, randint
 from copy import deepcopy
 from snowfakery.object_rows import (
+    NicknameSlot,
     ObjectRow,
     ObjectReference,
     LazyLoadedObjectReference,
@@ -45,13 +48,11 @@ class RowHistory:
         nickname_counters[sql_tablename] = pk
 
         # TODO: think about whether it is okay to save trees of objects or not.
+        data = restricted_dumps(row)
+        # print("ZZZZZ", len(data))
         self.conn.execute(
             f'INSERT INTO "{sql_tablename}" VALUES (?, ?, ?)',
-            (
-                pk,
-                row["id"],
-                pickle.dumps(row),
-            ),
+            (pk, row["id"], data),
         )
 
     def random_row_reference(self, name: str, scope: str):
@@ -101,10 +102,10 @@ class RowHistory:
 
         pk = randint(minpk, maxpk)
 
-        # return ObjectRow(tablename, self.read_random_row(sql_tablename, pk))
+        # return ObjectRow(tablename, self.load_row(sql_tablename, pk))
         return LazyLoadedObjectReference(tablename, pk, sql_tablename)
 
-    def read_random_row(self, sql_tablename: str, pk: int):
+    def load_row(self, sql_tablename: str, pk: int):
         qr = self.conn.execute(
             f'SELECT DATA FROM "{sql_tablename}" WHERE pk=?',
             (pk,),
@@ -112,7 +113,7 @@ class RowHistory:
         first_row = next(qr, None)
         assert first_row
 
-        return pickle.loads(first_row[0])
+        return restricted_loads(first_row[0])
 
 
 def _make_history_table(conn, tablename):
@@ -128,3 +129,48 @@ def _default(val):
         return (val._tablename, val.id)
     else:
         return val
+
+
+NOOP = object()
+
+_SAFE_CLASSES = {
+    ("snowfakery.object_rows", "ObjectRow"): NOOP,
+    ("snowfakery.object_rows", "ObjectReference"): NOOP,
+    # ("decimal", "Decimal"): NOOP,
+}
+DISPATCH_TABLE = copyreg.dispatch_table.copy()
+DISPATCH_TABLE[NicknameSlot] = lambda n: (
+    ObjectReference,
+    (n._tablename, n.allocated_id),
+)
+
+
+def restricted_dumps(data):
+    outs = io.BytesIO()
+    pickler = pickle.Pickler(outs)
+    pickler.dispatch_table = DISPATCH_TABLE
+    pickler.dump(data)
+    return outs.getvalue()
+
+
+class Type_Cannot_Be_Used_With_Random_Reference(T.NamedTuple):
+    name: str
+
+
+class RestrictedUnpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        # Only allow safe classes from builtins.
+        transformer = _SAFE_CLASSES.get((module, name))
+        if transformer is NOOP:
+            return super().find_class(module, name)
+        elif transformer:
+            return super().find_class(*transformer)
+
+        # Forbid everything else.
+        return lambda *args: Type_Cannot_Be_Used_With_Random_Reference(name)
+        # raise pickle.UnpicklingError("global '%s.%s' is forbidden" % (module, name))
+
+
+def restricted_loads(s):
+    """Helper function analogous to pickle.loads()."""
+    return RestrictedUnpickler(io.BytesIO(s)).load()
