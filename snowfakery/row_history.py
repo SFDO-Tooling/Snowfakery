@@ -15,14 +15,13 @@ import warnings
 
 # TODO:
 #   * test random_reference of nicknames and just_once/nicknames
-#   * single table per sobject
-#   * nickname field
-#   * "skinny" objects when random_referencing obj
-#   * "fat" object when random_referenciing nickname.
-#       * select from objname where pk >= $randnum and nickname = $nickname order by randnum
 
 
 class RowHistory:
+    """Remember tables that might be random_reference'd."""
+
+    already_warned = False
+
     def __init__(self):
         self.conn = sqlite3.connect("")
         self.table_counters = {}
@@ -34,27 +33,29 @@ class RowHistory:
         self.local_counters = deepcopy(self.table_counters)
 
     def save_row(self, tablename: str, nickname: T.Optional[str], row: dict):
-        pk = self.table_counters.setdefault(tablename, 0)
-        if not pk:  # new table
+        """Save a row to temporary storage"""
+        row_id = row["id"]
+        if tablename not in self.table_counters:  # newly discovered table
             _make_history_table(self.conn, tablename)
-            # nickname_counters[None] = 0
-        pk += 1
-        self.table_counters[tablename] = pk
+            self.table_counters[tablename] = 0
+        self.table_counters[tablename] = row_id
+
         if nickname and nickname not in self.nicknames_to_tables:
             self.nicknames_to_tables[nickname] = tablename
 
-        # pk = nickname_counters.setdefault(nickname, 0) + 1
-        # nickname_counters[nickname] = pk
-
-        # TODO: think about whether it is okay to save trees of objects or not.
-        data = restricted_dumps(row)
+        # note that this dumps a full object tree
+        # that will cause some duplication of data but doing a big
+        # "join" across multiple tables would have other costs (even if done lazily).
+        # For now this seems best and simplest.
+        # The data de-dupling algorithm would be slightly complex and slow.
+        data = _restricted_dumps(row)
         self.conn.execute(
             f'INSERT INTO "{tablename}" VALUES (?, ?, ?)',
             (row["id"], nickname, data),
         )
 
     def random_row_reference(self, name: str, scope: str):
-        # print("IN READ", self.table_counters, id(self.table_counters))
+        """Find a random row and load it"""
         if name in self.nicknames_to_tables:
             nickname = name
             tablename = self.nicknames_to_tables[nickname]
@@ -62,125 +63,126 @@ class RowHistory:
             nickname = None
             tablename = name
 
-        maxpk = self.table_counters.get(tablename)
-        if not maxpk:
+        max_id = self.table_counters.get(tablename)
+        if not max_id:
             raise AssertionError(f"There is no table named {tablename}")
 
         if scope == "prior-and-current-iterations":
-            warnings.warn("Global scope is an experimental feature.")
-            minpk = 1
+            if not self.already_warned:
+                warnings.warn("Global scope is an experimental feature.")
+                self.already_warned = True
+            min_id = 1
         else:
-            minpk = self.local_counters.get(tablename, 0) + 1
-        # maxpk = nickname_counters[nickname]
-
+            min_id = self.local_counters.get(tablename, 0) + 1
         # if no records can be found in this iteration
         # just look through the whole table.
         #
         # This happens usually when you are referring to just_once
-        if maxpk <= minpk:
-            minpk = 1
+        if max_id <= min_id:
+            min_id = 1
 
-        # TODO: think is this right? PK and ID are not necessarily
-        #       the same in the case where a nickname is indexed
-        #       but its underlying table is not.
-        rand_id = randint(minpk, maxpk)
+        rand_id = randint(min_id, max_id)
 
         if nickname:
             # nickname rows cannot be lazy-loaded because we need to do a real
-            # query to get the 'id' anyhow
+            # query to get the 'real id' anyhow
 
-            # the rand_id is just an approximation.
+            # the rand_id is just an approximation in this case
             return self.load_nicknamed_row(tablename, nickname, rand_id)
         else:
-            # if nickname is specified, load it eagerly because we need 'id'
+            # if nickname is not specified, we don't need to read anything
+            # from DB until a property is asked for.
             return LazyLoadedObjectReference(tablename, rand_id, tablename)
 
-    def load_row(self, tablename: str, _id: int):
+    def load_row(self, tablename: str, row_id: int):
+        """Load a row from the DB by row_id/object_id"""
         qr = self.conn.execute(
             f'SELECT DATA FROM "{tablename}" WHERE id=?',
-            (_id,),
+            (row_id,),
         )
         first_row = next(qr, None)
-        assert first_row
+        assert first_row, f"Something went wrong: we cannot find {tablename}: {row_id}"
 
         return restricted_loads(first_row[0])
 
-    def load_nicknamed_row(self, tablename: str, nickname: str, _id: int):
+    def load_nicknamed_row(self, tablename: str, nickname: str, approx_row_id: int):
+        """Find a nicknamed row close to the row_id specified"""
+
+        def find_first_row(query):
+            qr = self.conn.execute(query, (nickname, approx_row_id))
+            return next(qr, None)
+
         # find the closest nicknamed row
-        qr = self.conn.execute(
-            f'SELECT DATA FROM "{tablename}" WHERE nickname = ? AND id >= ? ORDER BY id LIMIT 1',
-            (nickname, _id),
+        row = find_first_row(
+            f'SELECT DATA FROM "{tablename}" WHERE nickname = ? AND id >= ? ORDER BY id LIMIT 1'
         )
-        first_row = next(qr, None)
 
-        if not first_row:
-            qr = self.conn.execute(
-                f'SELECT DATA FROM "{tablename}" WHERE nickname = ? AND id <= ? ORDER BY id DESC LIMIT 1',
-                (nickname, _id),
+        if not row:
+            row = find_first_row(
+                f'SELECT DATA FROM "{tablename}" WHERE nickname = ? AND id <= ? ORDER BY id DESC LIMIT 1'
             )
-            first_row = next(qr, None)
 
-        assert first_row
-
-        return ObjectRow(tablename, restricted_loads(first_row[0]))
+        # TODO: Maybe this case can be provoked by making a recipe that does
+        #       a forward reference?
+        assert row, f"Snowfakery bug: No row found for {nickname}: {id}"
+        data = row[0]
+        return ObjectRow(tablename, restricted_loads(data))
 
 
 def _make_history_table(conn, tablename):
+    """Make a history table"""
+
     c = conn.cursor()
-    c.execute(f'DROP TABLE IF EXISTS "{tablename}"')
+    # c.execute(f'DROP TABLE IF EXISTS "{tablename}"')
     c.execute(
         f'CREATE TABLE "{tablename}" (id INTEGER NOT NULL UNIQUE , nickname VARCHAR, data VARCHAR NOT NULL)'
     )
-    c.execute(
-        f'CREATE UNIQUE INDEX "{tablename}_nickname_id" ON "{tablename}" (nickname, id);'
-    )
+    # helps with sparsely scattered nicknames. Of debatable value. Can speed up benchmarks
+    # but hard to see it in real recipes.
+    # c.execute(
+    #     f'CREATE UNIQUE INDEX "{tablename}_nickname_id" ON "{tablename}" (nickname, id);'
+    # )
 
 
-def _default(val):
-    if isinstance(val, (ObjectRow, ObjectReference)):
-        return (val._tablename, val.id)
-    else:
-        return val
-
-
-NOOP = object()
-
-_SAFE_CLASSES = {
-    ("snowfakery.object_rows", "ObjectRow"): NOOP,
-    ("snowfakery.object_rows", "ObjectReference"): NOOP,
-    # ("decimal", "Decimal"): NOOP,
-}
-DISPATCH_TABLE = copyreg.dispatch_table.copy()
-DISPATCH_TABLE[NicknameSlot] = lambda n: (
+_DISPATCH_TABLE = copyreg.dispatch_table.copy()
+_DISPATCH_TABLE[NicknameSlot] = lambda n: (
     ObjectReference,
     (n._tablename, n.allocated_id),
 )
 
 
-def restricted_dumps(data):
+def _restricted_dumps(data):
+    """Only allow saving "safe" classes"""
     outs = io.BytesIO()
     pickler = pickle.Pickler(outs)
-    pickler.dispatch_table = DISPATCH_TABLE
+    pickler.dispatch_table = _DISPATCH_TABLE
     pickler.dump(data)
     return outs.getvalue()
 
 
 class Type_Cannot_Be_Used_With_Random_Reference(T.NamedTuple):
+    """This type cannot be unpickled."""
+
     name: str
 
 
+_SAFE_CLASSES = {
+    ("snowfakery.object_rows", "ObjectRow"),
+    ("snowfakery.object_rows", "ObjectReference"),
+    ("decimal", "Decimal"),
+}
+
+
 class RestrictedUnpickler(pickle.Unpickler):
+    """Safe unpickler with an allowed-list"""
+
     def find_class(self, module, name):
         # Only allow safe classes from builtins.
-        transformer = _SAFE_CLASSES.get((module, name))
-        if transformer is NOOP:
+        if (module, name) in _SAFE_CLASSES:
             return super().find_class(module, name)
-        elif transformer:
-            return super().find_class(*transformer)
-
-        # Forbid everything else.
-        return lambda *args: Type_Cannot_Be_Used_With_Random_Reference(name)
-        # raise pickle.UnpicklingError("global '%s.%s' is forbidden" % (module, name))
+        else:
+            # Return a "safe" object that does nothing.
+            return lambda *args: Type_Cannot_Be_Used_With_Random_Reference(name)
 
 
 def restricted_loads(s):

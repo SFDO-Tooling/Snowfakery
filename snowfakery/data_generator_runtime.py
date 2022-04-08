@@ -361,19 +361,16 @@ class Interpreter:
         self.tables_to_keep_history_for = find_tables_to_keep_history_for(parse_result)
         self.row_history = RowHistory()
 
-        persistent_objs = []
-
-        for tablename, obj in globals.persistent_objects_by_table.items():
-            self.row_history.save_row(tablename, None, obj._values)
+        already_saved_ids = set()
 
         for nickname, obj in globals.persistent_nicknames.items():
-            self.row_history.save_row(obj._tablename, nickname, obj._values)
+            if (obj._tablename, obj._id) not in already_saved_ids:
+                self.row_history.save_row(obj._tablename, nickname, obj._values)
+                already_saved_ids.add((obj._tablename, obj._id))
 
-        tuple(globals.persistent_nicknames.values()) + tuple(
-            globals.persistent_objects_by_table.values()
-        )
-        for obj in persistent_objs:
-            self.row_history.save_row(obj)
+        for tablename, obj in globals.persistent_objects_by_table.items():
+            if (obj._tablename, obj._id) not in already_saved_ids:
+                self.row_history.save_row(tablename, None, obj._values)
 
     def execute(self):
         RowHistoryCV.set(self.row_history)

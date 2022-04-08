@@ -1,0 +1,18 @@
+- object: Contact
+  count: 10
+  fields:
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+    AccountId:
+      - object: Account
+        fields:
+          Name: ${{Contact.LastName}} Corporation
+
+- object: Opportunity
+  fields:
+    Contact:
+      random_reference: Contact
+    Name: ${{Contact.AccountId.Name}} Opportunity
+    Account: ${{Contact.AccountId}}

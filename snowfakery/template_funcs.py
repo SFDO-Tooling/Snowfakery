@@ -16,7 +16,7 @@ from .data_gen_exceptions import DataGenError
 
 import snowfakery.data_generator_runtime  # noqa
 from snowfakery.plugins import SnowfakeryPlugin, PluginContext, lazy
-from snowfakery.object_rows import ObjectReference
+from snowfakery.object_rows import ObjectReference, ObjectRow
 from snowfakery.utils.template_utils import StringGenerator
 from snowfakery.standard_plugins.UniqueId import UniqueId
 from snowfakery.fakedata.fake_data_generator import UTCAsRelDelta, _normalize_timezone
@@ -259,7 +259,7 @@ class StandardFuncs(SnowfakeryPlugin):
 
         def random_reference(
             self, tablename: str, scope: str = "current-iteration"
-        ) -> ObjectReference:
+        ) -> Union[ObjectReference, ObjectRow]:
             """Select a random, already-created row from 'sobject'
 
             - object: Owner

@@ -33,6 +33,13 @@ class ObjectRow:
         except KeyError:
             raise AttributeError(name)
 
+    # prefer this to .id or _values["id"] so we can
+    # one day move away from having "id" in the user's
+    # namespace
+    @property
+    def _id(self):
+        return self._values["id"]
+
     def __str__(self):
         return str(self.id)
 
