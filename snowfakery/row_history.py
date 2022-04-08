@@ -3,7 +3,7 @@ import io
 import typing as T
 import sqlite3
 import pickle
-from random import choices, randint
+from random import randint
 from copy import deepcopy
 from snowfakery.object_rows import (
     NicknameSlot,
@@ -14,9 +14,12 @@ from snowfakery.object_rows import (
 import warnings
 
 # TODO:
-#   * figure out just-once + random_reference semantics
-#       * can only refer to just_once by nickname
 #   * test random_reference of nicknames and just_once/nicknames
+#   * single table per sobject
+#   * nickname field
+#   * "skinny" objects when random_referencing obj
+#   * "fat" object when random_referenciing nickname.
+#       * select from objname where pk >= $randnum and nickname = $nickname order by randnum
 
 
 class RowHistory:
@@ -31,27 +34,23 @@ class RowHistory:
         self.local_counters = deepcopy(self.table_counters)
 
     def save_row(self, tablename: str, nickname: T.Optional[str], row: dict):
-        nickname_counters = self.table_counters.setdefault(tablename, {})
-        if nickname:
-            if nickname not in self.nicknames_to_tables:
-                self.nicknames_to_tables[nickname] = tablename
-            sql_tablename = nickname
-        else:
-            sql_tablename = tablename
-
-        pk = nickname_counters.setdefault(sql_tablename, 0)
-
-        if not pk:
-            _make_history_table(self.conn, sql_tablename)
+        pk = self.table_counters.setdefault(tablename, 0)
+        if not pk:  # new table
+            _make_history_table(self.conn, tablename)
+            # nickname_counters[None] = 0
         pk += 1
-        nickname_counters[sql_tablename] = pk
+        self.table_counters[tablename] = pk
+        if nickname and nickname not in self.nicknames_to_tables:
+            self.nicknames_to_tables[nickname] = tablename
+
+        # pk = nickname_counters.setdefault(nickname, 0) + 1
+        # nickname_counters[nickname] = pk
 
         # TODO: think about whether it is okay to save trees of objects or not.
         data = restricted_dumps(row)
-        # print("ZZZZZ", len(data))
         self.conn.execute(
-            f'INSERT INTO "{sql_tablename}" VALUES (?, ?, ?)',
-            (pk, row["id"], data),
+            f'INSERT INTO "{tablename}" VALUES (?, ?, ?, ?)',
+            (pk, row["id"], nickname, data),
         )
 
     def random_row_reference(self, name: str, scope: str):
@@ -63,34 +62,16 @@ class RowHistory:
             nickname = None
             tablename = name
 
-        nickname_counters = self.table_counters.get(tablename)
-        # print(
-        #     "ZZZ2",
-        #     len(self.table_counters),
-        #     self.table_counters,
-        #     nickname_counters,
-        #     id(self.table_counters),
-        # )
-        if not nickname_counters:
+        maxpk = self.table_counters.get(tablename)
+        if not maxpk:
             raise AssertionError(f"There is no table named {tablename}")
-
-        if nickname:
-            sql_tablename = nickname
-        else:
-            # pick which nickname to pull from (including the null nickname)
-
-            # TODO: exclude just_once nicknames
-            sql_tablename = choices(
-                tuple(nickname_counters.keys()), tuple(nickname_counters.values()), k=1
-            )[0]
 
         if scope == "prior-and-current-iterations":
             warnings.warn("Global scope is an experimental feature.")
             minpk = 1
         else:
-            relevant_name = nickname or tablename
-            minpk = self.local_counters.get(tablename, {}).get(relevant_name, 0) + 1
-        maxpk = nickname_counters[sql_tablename]
+            minpk = self.local_counters.get(tablename, 0) + 1
+        # maxpk = nickname_counters[nickname]
 
         # if no records can be found in this iteration
         # just look through the whole table.
@@ -99,26 +80,53 @@ class RowHistory:
         if maxpk <= minpk:
             minpk = 1
 
-        pk = randint(minpk, maxpk)
+        rand_id = randint(minpk, maxpk)
 
-        return LazyLoadedObjectReference(tablename, pk, sql_tablename)
+        if nickname:
+            # nickname rows cannot be lazy-loaded because we need to do a real
+            # query to get the 'id' anyhow
 
-    def load_row(self, sql_tablename: str, pk: int):
+            # the rand_id is just an approximation.
+            return self.load_nicknamed_row(tablename, nickname, rand_id)
+        else:
+            # if nickname is specified, load it eagerly because we need 'id'
+            return LazyLoadedObjectReference(tablename, rand_id, tablename)
+
+    def load_row(self, tablename: str, _id: int):
         qr = self.conn.execute(
-            f'SELECT DATA FROM "{sql_tablename}" WHERE pk=?',
-            (pk,),
+            f'SELECT DATA FROM "{tablename}" WHERE id=?',
+            (_id,),
         )
         first_row = next(qr, None)
         assert first_row
 
         return restricted_loads(first_row[0])
 
+    def load_nicknamed_row(self, tablename: str, nickname: str, _id: int):
+        # find the closest nicknamed row
+        qr = self.conn.execute(
+            f'SELECT DATA FROM "{tablename}" WHERE nickname = ? AND id >= ? ORDER BY id LIMIT 1',
+            (nickname, _id),
+        )
+        first_row = next(qr, None)
+
+        if not first_row:
+            qr = self.conn.execute(
+                f'SELECT DATA FROM "{tablename}" WHERE nickname = ? AND id <= ? ORDER BY id DESC LIMIT 1',
+                (nickname, _id),
+            )
+            first_row = next(qr, None)
+
+        assert first_row
+
+        return ObjectRow(tablename, restricted_loads(first_row[0]))
+
 
 def _make_history_table(conn, tablename):
     c = conn.cursor()
     c.execute(f'DROP TABLE IF EXISTS "{tablename}"')
     c.execute(
-        f'CREATE TABLE "{tablename}" (pk INTEGER NOT NULL UNIQUE, id INTEGER NOT NULL , data VARCHAR NOT NULL)'
+        f'CREATE TABLE "{tablename}" (pk INTEGER NOT NULL UNIQUE, id INTEGER NOT NULL , nickname VARCHAR, data VARCHAR NOT NULL)'
     )
 
 
