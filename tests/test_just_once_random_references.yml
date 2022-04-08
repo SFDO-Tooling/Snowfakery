@@ -8,12 +8,23 @@
   count: 3
 
 - object: Account
-  count: 2
+  nickname: CountChocula
+  count: 10_000
   fields:
     parent:
+      # reference: Parent
+      random_reference: Parent
+
+- object: Account
+  count: 10_000
+  fields:
+    parent:
+      # reference: Parent
       random_reference: Parent
 
 - object: Contact
+  count: 1_000
   fields:
     AccountId:
-      random_reference: Account
+      # reference: Account
+      random_reference: CountChocula

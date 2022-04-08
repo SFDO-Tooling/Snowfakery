@@ -49,8 +49,8 @@ class RowHistory:
         # TODO: think about whether it is okay to save trees of objects or not.
         data = restricted_dumps(row)
         self.conn.execute(
-            f'INSERT INTO "{tablename}" VALUES (?, ?, ?, ?)',
-            (pk, row["id"], nickname, data),
+            f'INSERT INTO "{tablename}" VALUES (?, ?, ?)',
+            (row["id"], nickname, data),
         )
 
     def random_row_reference(self, name: str, scope: str):
@@ -80,6 +80,9 @@ class RowHistory:
         if maxpk <= minpk:
             minpk = 1
 
+        # TODO: think is this right? PK and ID are not necessarily
+        #       the same in the case where a nickname is indexed
+        #       but its underlying table is not.
         rand_id = randint(minpk, maxpk)
 
         if nickname:
@@ -126,7 +129,10 @@ def _make_history_table(conn, tablename):
     c = conn.cursor()
     c.execute(f'DROP TABLE IF EXISTS "{tablename}"')
     c.execute(
-        f'CREATE TABLE "{tablename}" (pk INTEGER NOT NULL UNIQUE, id INTEGER NOT NULL , nickname VARCHAR, data VARCHAR NOT NULL)'
+        f'CREATE TABLE "{tablename}" (id INTEGER NOT NULL UNIQUE , nickname VARCHAR, data VARCHAR NOT NULL)'
+    )
+    c.execute(
+        f'CREATE UNIQUE INDEX "{tablename}_nickname_id" ON "{tablename}" (nickname, id);'
     )
 
 
