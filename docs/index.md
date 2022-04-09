@@ -594,9 +594,16 @@ The `random_reference` property creates a reference to a random, existing row fr
       random_reference: Owner
 ```
 
-The selected row can be any one that matches the object type and was already created in the current iteration of the recipe. For example, this previous recipe was executed twenty times (iterations) to generate 200 `Pets` and `Owners`. The selected rows in the first iteration would be one of the first ten `Owners`, and the selected rows in the last iteration would be one of the last ten.
+The selected row can be any one that matches the object type (or nickname) and was already created in the current iteration of the recipe. For example, this previous recipe was executed twenty times (iterations) to generate 200 `Pets` and `Owners`. The selected rows in the first iteration would be one of the first ten `Owners`, and the selected rows in the last iteration would be one of the last ten.
 
-Snowfakery cannot currently generate a random reference based on a nickname or to a row created in a previous or future iteration of the recipe. If you need these features, contact the Snowfakery team through a GitHub issue.
+If there were no matching records created in the current iteration, it will look in previous iterations. This usually happens when the object you tried to reference was created with the `just_once` feature..
+
+Other than that exception, Snowfakery will not generate a random reference to a row created in a previous or future iteration of the recipe. If you need that feature, contact the Snowfakery team through a GitHub issue.
+
+Performance tip: Tables and nicknames that are referred to by `random_reference`
+are "indexed", which makes them slightly slower to generate than normal. This
+should seldom be a problem in practice, but if you experience performance problems
+you could switch to a normal `reference` to see if that improves things.
 
 ### `fake`
 

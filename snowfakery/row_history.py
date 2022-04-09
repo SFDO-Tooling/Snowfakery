@@ -11,6 +11,7 @@ from snowfakery.object_rows import (
     ObjectReference,
     LazyLoadedObjectReference,
 )
+from snowfakery import data_gen_exceptions as exc
 import warnings
 
 # TODO:
@@ -65,7 +66,9 @@ class RowHistory:
 
         max_id = self.table_counters.get(tablename)
         if not max_id:
-            raise AssertionError(f"There is no table named {tablename}")
+            raise exc.DataGenError(
+                f"There is no table or nickname `{tablename}` at this point in the recipe."
+            )
 
         if scope == "prior-and-current-iterations":
             if not self.already_warned:
