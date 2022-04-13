@@ -26,6 +26,7 @@ class RowHistory:
     def __init__(self):
         self.conn = sqlite3.connect("")
         self.table_counters = {}
+        self.nickname_counters = {}
         self.reset_locals()
         self.nicknames_to_tables = {}
 
@@ -43,6 +44,14 @@ class RowHistory:
 
         if nickname and nickname not in self.nicknames_to_tables:
             self.nicknames_to_tables[nickname] = tablename
+            nickname_table = self.nickname_counters.setdefault(tablename, {})
+            nickname_table[nickname] = 0
+
+        if nickname:
+            self.nickname_counters[tablename][nickname] += 1
+            nickname_id = self.nickname_counters[tablename][nickname]
+        else:
+            nickname_id = None
 
         # note that this dumps a full object tree
         # that will cause some duplication of data but doing a big
@@ -51,12 +60,13 @@ class RowHistory:
         # The data de-dupling algorithm would be slightly complex and slow.
         data = _restricted_dumps(row)
         self.conn.execute(
-            f'INSERT INTO "{tablename}" VALUES (?, ?, ?)',
-            (row["id"], nickname, data),
+            f'INSERT INTO "{tablename}" VALUES (?, ?, ?, ?)',
+            (row["id"], nickname, nickname_id, data),
         )
 
-    def random_row_reference(self, name: str, scope: str):
+    def random_row_reference(self, name: str, scope: str, unique: bool):
         """Find a random row and load it"""
+        # TODO implement "unique" with LCG
         if name in self.nicknames_to_tables:
             nickname = name
             tablename = self.nicknames_to_tables[nickname]
@@ -91,7 +101,8 @@ class RowHistory:
             # query to get the 'real id' anyhow
 
             # the rand_id is just an approximation in this case
-            return self.load_nicknamed_row(tablename, nickname, rand_id)
+            data = self.load_nicknamed_row(tablename, nickname, rand_id)
+            return ObjectRow(tablename, data)
         else:
             # if nickname is not specified, we don't need to read anything
             # from DB until a property is asked for.
@@ -108,28 +119,38 @@ class RowHistory:
 
         return restricted_loads(first_row[0])
 
-    def load_nicknamed_row(self, tablename: str, nickname: str, approx_row_id: int):
-        """Find a nicknamed row close to the row_id specified"""
-
-        def find_first_row(query):
-            qr = self.conn.execute(query, (nickname, approx_row_id))
-            return next(qr, None)
-
-        # find the closest nicknamed row
-        row = find_first_row(
-            f'SELECT DATA FROM "{tablename}" WHERE nickname = ? AND id >= ? ORDER BY id LIMIT 1'
+    def load_nicknamed_row(self, tablename: str, nickname: str, nickname_id: int):
+        """Find a nicknamed row by its nickname_id"""
+        qr = self.conn.execute(
+            f'SELECT DATA FROM "{tablename}" WHERE nickname=? AND nickname_id=?',
+            (nickname, nickname_id),
         )
+        first_row = next(qr, None)
+        assert (
+            first_row
+        ), f"Something went wrong: we cannot find {tablename}: {nickname} : {nickname_id}"
 
-        if not row:
-            row = find_first_row(
-                f'SELECT DATA FROM "{tablename}" WHERE nickname = ? AND id <= ? ORDER BY id DESC LIMIT 1'
-            )
+        return restricted_loads(first_row[0])
 
-        # TODO: Maybe this case can be provoked by making a recipe that does
-        #       a forward reference?
-        assert row, f"Snowfakery bug: No row found for {nickname}: {id}"
-        data = row[0]
-        return ObjectRow(tablename, restricted_loads(data))
+        # def find_first_row(query):
+        #     qr = self.conn.execute(query, (nickname, approx_row_id))
+        #     return next(qr, None)
+
+        # # find the closest nicknamed row
+        # row = find_first_row(
+        #     f'SELECT DATA FROM "{tablename}" WHERE nickname = ? AND id >= ? ORDER BY id LIMIT 1'
+        # )
+
+        # if not row:
+        #     row = find_first_row(
+        #         f'SELECT DATA FROM "{tablename}" WHERE nickname = ? AND id <= ? ORDER BY id DESC LIMIT 1'
+        #     )
+
+        # # TODO: Maybe this case can be provoked by making a recipe that does
+        # #       a forward reference?
+        # assert row, f"Snowfakery bug: No row found for {nickname}: {id}"
+        # data = row[0]
+        # return ObjectRow(tablename, restricted_loads(data))
 
 
 def _make_history_table(conn, tablename):
@@ -138,13 +159,13 @@ def _make_history_table(conn, tablename):
     c = conn.cursor()
     # c.execute(f'DROP TABLE IF EXISTS "{tablename}"')
     c.execute(
-        f'CREATE TABLE "{tablename}" (id INTEGER NOT NULL UNIQUE , nickname VARCHAR, data VARCHAR NOT NULL)'
+        f'CREATE TABLE "{tablename}" (id INTEGER NOT NULL UNIQUE , nickname VARCHAR, nickname_id INTEGER, data VARCHAR NOT NULL)'
     )
     # helps with sparsely scattered nicknames. Of debatable value. Can speed up benchmarks
     # but hard to see it in real recipes.
-    # c.execute(
-    #     f'CREATE UNIQUE INDEX "{tablename}_nickname_id" ON "{tablename}" (nickname, id);'
-    # )
+    c.execute(
+        f'CREATE UNIQUE INDEX "{tablename}_nickname_id" ON "{tablename}" (nickname, nickname_id);'
+    )
 
 
 _DISPATCH_TABLE = copyreg.dispatch_table.copy()

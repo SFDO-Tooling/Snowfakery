@@ -439,7 +439,7 @@ class TestRandomReferencesOriginal:
         fields:                     #7
             A_ref:                  #8
               random_reference:     #9
-                tablename: A        #10
+                to: A        #10
                 scope: current-iteration        #11
     """
         with mock.patch("snowfakery.row_history.randint") as randint:
@@ -458,7 +458,7 @@ class TestRandomReferencesOriginal:
         fields:                     #7
             A_ref:                  #8
               random_reference:
-                tablename: A   #9
+                to: A   #9
                 scope: prior-and-current-iterations
     """
         with mock.patch("snowfakery.row_history.randint") as randint, mock.patch(
@@ -477,7 +477,7 @@ class TestRandomReferencesOriginal:
         fields:                     #4
             A_ref:                  #5
               random_reference:
-                tablename: B
+                to: B
     """
         with pytest.raises(DataGenError) as e:
             generate(StringIO(yaml))
@@ -492,7 +492,7 @@ class TestRandomReferencesOriginal:
         fields:                     #5
             A_ref:                  #6
               random_reference:
-                tablename: A
+                to: A
                 scope: xyzzy
     """
         with pytest.raises(DataGenError) as e:

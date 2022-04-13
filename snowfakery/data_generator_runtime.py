@@ -676,7 +676,7 @@ def get_referent_name(random_reference):
     if args:
         ret = args[0].definition
     elif kwargs:
-        ret = kwargs["tablename"].definition
+        ret = kwargs["to"].definition
     if not isinstance(ret, str):
         raise DataGenSyntaxError(
             f"random_reference should only refer to a name, not {ret}"
