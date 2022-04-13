@@ -258,7 +258,11 @@ class StandardFuncs(SnowfakeryPlugin):
             return probability or when, pick
 
         def random_reference(
-            self, tablename: str, scope: str = "current-iteration"
+            self,
+            to: str,
+            *,
+            scope: str = "current-iteration",
+            unique: bool = False,
         ) -> Union[ObjectReference, ObjectRow]:
             """Select a random, already-created row from 'sobject'
 
@@ -285,8 +289,10 @@ class StandardFuncs(SnowfakeryPlugin):
                     None,
                     None,
                 )
+            if unique:
+                raise NotImplementedError()
             return self.context.interpreter.row_history.random_row_reference(
-                tablename, scope
+                to, scope, unique
             )
 
         @lazy
