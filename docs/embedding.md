@@ -100,7 +100,7 @@ def generate_data(
     yaml_file: FileLike,
     *,
     parent_application: SnowfakeryApplication = None,  # the parent application
-    user_options: T.Dict[str, str] = None,  # same as --option
+    user_options: T.Dict[str, T.Any] = None,  # same as --option
     dburl: str = None,  # same as --dburl
     dburls=[],  # same as multiple --dburl options
     target_number: T.Tuple = None,  # same as --target-number
@@ -113,7 +113,7 @@ def generate_data(
     continuation_file: FileLike = None,  # continuation file from last execution
     generate_continuation_file: FileLike = None,  # place to generate continuation file
     should_create_cci_record_type_tables: bool = False,  # create CCI Record type tables?
-    load_declarations: T.Sequence[FileLike] = None,  # read these load declarations for CCI 
+    load_declarations: T.Sequence[FileLike] = None,  # read these load declarations for CCI
     plugin_options:Mapping = None,
 ) -> None:
 ```
