@@ -617,57 +617,64 @@ class TestPersonAccounts:
         - object: User
           update_key: Name
           fields:
-            Name: AAA
+            Name: UpdateByNamePerson
+            Username: UpdateByNamePerson@example.com
         - object: User
           update_key: Username
           fields:
-            Name: Username
+            Name: UpdateByUsernamePerson
+            Username: UpdateByUsernamePerson@example.com
         - object: User
           fields:
-            Name: BBBB
+            Name: NoUpdatePerson
+            Username: NoUpdatePerson@example.com
         - object: User
           update_key: Name
           fields:
-            Name: AAA2
+            Name: UpdateByNamePerson2
+            Username: UpdateByNamePerson2@example.com
         - object: User
           update_key: Username
           fields:
-            Name: Username2
+            Name: UpdateByUsernamePerson2
+            Username: UpdateByUsernamePerson2@example.com
         - object: User
           fields:
-            Name: BBBB2
+            Name: NoUpdatePerson2
+            Username: NoUpdatePerson2@example.com
         """
         with generate_in_tmpdir(recipe_data) as (mapping, db):
             assert mapping == {
                 "Upsert User on Name": {
                     "sf_object": "User",
-                    "filters": ["_sf_update_key = 'Name'"],
                     "table": "User",
-                    "fields": {"Name": "Name"},
+                    "fields": {"Name": "Name", "Username": "Username"},
                     "action": "upsert",
                     "update_key": "Name",
+                    "filters": ["_sf_update_key = 'Name'"],
                 },
                 "Upsert User on Username": {
                     "sf_object": "User",
-                    "filters": ["_sf_update_key = 'Username'"],
                     "table": "User",
-                    "fields": {"Name": "Name"},
+                    "fields": {"Name": "Name", "Username": "Username"},
                     "action": "upsert",
                     "update_key": "Username",
+                    "filters": ["_sf_update_key = 'Username'"],
                 },
                 "Insert User": {
                     "sf_object": "User",
-                    "filters": ["_sf_update_key = NULL"],
                     "table": "User",
-                    "fields": {"Name": "Name"},
+                    "fields": {"Name": "Name", "Username": "Username"},
+                    "filters": ["_sf_update_key = NULL"],
                 },
             }
             rows = list(db.execute("select Name, _sf_update_key from User"))
+            print(rows)
             assert rows == [
-                ("AAA", "Name"),
-                ("Username", "Username"),
-                ("BBBB", None),
-                ("AAA2", "Name"),
-                ("Username2", "Username"),
-                ("BBBB2", None),
+                ("UpdateByNamePerson", "Name"),
+                ("UpdateByUsernamePerson", "Username"),
+                ("NoUpdatePerson", None),
+                ("UpdateByNamePerson2", "Name"),
+                ("UpdateByUsernamePerson2", "Username"),
+                ("NoUpdatePerson2", None),
             ]
