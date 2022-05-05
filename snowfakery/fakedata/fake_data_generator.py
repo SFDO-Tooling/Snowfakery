@@ -131,7 +131,7 @@ class FakeNames(T.NamedTuple):
     # These faker types are not available in Snowfakery
     # because they are redundant
     date_time_this_year = NotImplemented
-    date_this_year = NotImplemented
+    date_time_this_year = NotImplemented
     date_time_this_month = NotImplemented
     date_time_ad = NotImplemented
     date_time_this_century = NotImplemented
