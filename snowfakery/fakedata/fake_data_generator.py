@@ -130,8 +130,17 @@ class FakeNames(T.NamedTuple):
 
     # These faker types are not available in Snowfakery
     # because they are redundant
+    #
+    # It seemed odd to me to have a faker that would generate all dates in the future on
+    # Jan 1 and all dates in the past on Dec. 31.
+    #
+    # Seems more reasonable to use random_date, which reliably generates data in the past,
+    # or in the future, or a mix, if that's what you want.
     date_time_this_year = NotImplemented
-    date_time_this_year = NotImplemented
+    date_this_year = NotImplemented
+    date_this_month = NotImplemented
+    date_this_decade = NotImplemented
+    date_this_century = NotImplemented
     date_time_this_month = NotImplemented
     date_time_ad = NotImplemented
     date_time_this_century = NotImplemented
