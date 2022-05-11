@@ -368,3 +368,7 @@ Files can be used as Salesforce ContentVersions like this:
     FirstPublishLocationId:
       reference: Account
 ```
+
+## Other features
+
+To do updates or upserts in a Salesforce org, refer to the [CumulusCI documentation](https://cumulusci.readthedocs.io/en/stable/data.html#update-data).

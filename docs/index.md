@@ -2090,6 +2090,8 @@ An update recipe should have a single top-level object with no `count` on it.
 The recipe can take `options` if needed. It will generate the same number of
 output rows as input rows.
 
+To do updates in a Salesforce org, refer to the [CumulusCI documentation](https://cumulusci.readthedocs.io/en/stable/data.html#update-data).
+
 ## Use Snowfakery with Salesforce
 
 Snowfakery recipes that generate Salesforce records are like any other Snowfakery recipes, but instead use `SObject` names for the `objects`. There are several examples [in the Snowfakery repository](https://github.com/SFDO-Tooling/Snowfakery/tree/main/examples/salesforce).
