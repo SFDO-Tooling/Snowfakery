@@ -19,7 +19,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -VV
-          make dev-install
+          pip install requirements_dev.txt
+          # docs build requires a proper install
           python setup.py install
 
       - name: Make Docs
