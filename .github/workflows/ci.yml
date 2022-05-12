@@ -24,7 +24,7 @@ jobs:
         run: |
           python -VV
           python -m pip install --upgrade pip
-          make dev-install
+          pip install -r requirements_dev.txt
 
       - name: "Run tox targets for ${{ matrix.python-version }}"
         run: python -m tox
@@ -51,7 +51,7 @@ jobs:
         run: |
           python -VV
           python -m pip install --upgrade pip
-          make dev-install
+          pip install -r requirements_dev.txt
           python -m pip install cumulusci
 
       - name: Run Tests
@@ -69,7 +69,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -VV
-          make dev-install
+          pip install -r requirements_dev.txt
+          # docs build requires a proper install
           python setup.py install
 
       - name: Make Docs
@@ -116,7 +117,7 @@ jobs:
         run: |
           python -VV
           python -m pip install --upgrade pip
-          make dev-install
+          pip install -r requirements_dev.txt
 
       - name: Run Tests
         run: python -m pytest
