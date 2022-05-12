@@ -253,6 +253,7 @@ class JSONOutputStream(FileOutputStream):
         **OutputStream.encoders,
         datetime.date: str,
         datetime.datetime: str,
+        bool: bool,
     }
     is_text = True
 

@@ -259,6 +259,15 @@ class TestJSONOutputStream(OutputCommonTests):
             output_stream.close()
             assert s.getvalue() == ""
 
+    def test_bool(self):
+        yaml = """
+          - object: foo
+            fields:
+                is_true: True
+            """
+        values = self.do_output(yaml)["foo"][0]
+        assert values["is_true"] is True
+
 
 class TestCSVOutputStream(OutputCommonTests):
     def do_output(self, yaml):
