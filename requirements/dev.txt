@@ -77,7 +77,7 @@ jsonschema==4.5.1
     # via -r requirements/dev.in
 markdown==3.3.7
     # via mkdocs
-markupsafe==2.1.1
+markupsafe==2.0.1
     # via
     #   -r requirements/prod.txt
     #   jinja2

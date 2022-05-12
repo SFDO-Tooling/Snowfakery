@@ -8,3 +8,5 @@ gvgen
 pydantic
 python-baseconv
 requests
+# This whole line should be deleted when Jinja and MarkupSafe are compatible:
+MarkupSafe<2.1.0

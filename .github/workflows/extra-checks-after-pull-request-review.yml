@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -VV
-          pip install requirements_dev.txt
+          pip install -r requirements_dev.txt
           # docs build requires a proper install
           python setup.py install
 
