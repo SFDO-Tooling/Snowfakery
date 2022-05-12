@@ -2,12 +2,12 @@
 black
 coverage
 coveralls
-mkdocs<1.3.0      # need to change Snowfakery monkey-patching before upgrade
+mkdocs      # need to change Snowfakery monkey-patching before upgrade
 mkdocs-exclude-search
 pre-commit
 pytest
 pytest-cov
-typeguard==2.10.0   # do not upgrade until #181 is fixed
+typeguard
 faker-microservice
 tox
 tox-gh-actions      # needed for CI only

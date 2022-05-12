@@ -36,7 +36,7 @@ distlib==0.3.4
     # via virtualenv
 docopt==0.6.2
     # via coveralls
-faker==12.3.3
+faker==13.11.0
     # via
     #   -r requirements/prod.txt
     #   faker-microservice
