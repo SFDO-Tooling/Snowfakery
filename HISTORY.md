@@ -4,6 +4,14 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 3.1
+
+When embedded in CumulusCI, Snowfakery can now do SObject Upserts. (#644)
+
+Add a Decimal datatype (#631)
+
+Output Boolean values using the JSON boolean type in JSON outputs. (#663)
+
 ## Snowfakery 3.0
 
 When embedded in CumulusCI, Snowfakery can now do SObject Updates. (#586)
