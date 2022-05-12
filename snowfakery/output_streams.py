@@ -9,6 +9,7 @@ from decimal import Decimal
 from pathlib import Path
 from collections import namedtuple, defaultdict
 from typing import Dict, Union, Optional, Mapping, Callable, Sequence
+import typing as T
 from warnings import warn
 
 from sqlalchemy import (
@@ -342,14 +343,19 @@ class SqlDbOutputStream(OutputStream):
 
         for tablename, model in self.metadata.tables.items():
             if tablename in inferred_tables:
-                self.table_info[tablename] = TableTuple(
+                table_info = TableTuple(
                     insert_statement=model.insert(bind=self.engine, inline=True),
                     fallback_dict={
                         key: None for key in inferred_tables[tablename].fields.keys()
                     },
                 )
                 # id is special
-                self.table_info[tablename].fallback_dict.setdefault("id", None)
+                table_info.fallback_dict.setdefault("id", None)
+
+                # See create_tables_from_inferred_fields to see what _sf_update_key are for
+                if inferred_tables[tablename].has_update_keys:
+                    table_info.fallback_dict.setdefault("_sf_update_key", None)
+                self.table_info[tablename] = table_info
 
 
 # backwards-compatible name for CCI
@@ -404,7 +410,9 @@ class SqlTextOutputStream(FileOutputStream):
         self.tempdir.cleanup()
 
 
-def create_tables_from_inferred_fields(tables, engine, metadata):
+def create_tables_from_inferred_fields(
+    tables: T.Dict[str, TableInfo], engine, metadata
+):
     """Create tables based on dictionary of tables->field-list."""
     with engine.connect() as conn:
         inspector = inspect(engine)
@@ -422,6 +430,12 @@ def create_tables_from_inferred_fields(tables, engine, metadata):
                 id_column = Column(
                     "id", Integer(), primary_key=True, autoincrement=True
                 )
+
+            # add a column keeping track of what update_key was specified by
+            # the template. This allows multiple templates to have different
+            # update_keys.
+            if table.has_update_keys:
+                columns.append(Column("_sf_update_key", Unicode(255)))
 
             t = Table(table_name, metadata, id_column, *columns)
 
