@@ -7,51 +7,7 @@
       type="text/javascript"
       src="https://cdn.jsdelivr.net/pyodide/v0.20.0/full/pyodide.js"
     ></script>
-    <script type="text/javascript">
-      var pyodide;
 
-      function loadLocal(package) {
-        pyodide.loadPackage(new URL(package, document.baseURI));
-      }
-      async function main() {
-        pyodide = await loadPyodide();
-        await pyodide.loadPackage("micropip");
-        await loadLocal("MarkupSafe-2.1.1-cp310-cp310-emscripten_wasm32.whl");
-        await loadLocal("python_baseconv-1.2.2-py3-none-any.whl");
-        await loadLocal("SQLAlchemy-1.4.36-cp310-cp310-emscripten_wasm32.whl");
-        await pyodide.loadPackage(
-          "https://files.pythonhosted.org/packages/bd/7f/b01c7bfc66b448867b0019b9407bd101a780c3d9e332dcac29c73fc0a039/snowfakery-3.1.0-py3-none-any.whl"
-        );
-
-        await pyodide.runPythonAsync(`
-        import micropip
-        import sqlalchemy
-        import baseconv
-        from io import StringIO
-        await micropip.install(['pyyaml', 'faker', 'click', 'jinja2', 'pydantic'], keep_going=True)
-        from snowfakery import generate_data
-
-        recipe = """
-        - object: Account
-          fields:
-             name:
-                fake: company
-        """
-        generate_data(StringIO(recipe))
-              `);
-      }
-      main();
-      function go() {
-        let recipe_data = document.getElementById("myTextarea").value;
-        pyodide.globals.set("recipe", recipe_data);
-        out = pyodide.runPython(`
-        out = StringIO()
-        generate_data(StringIO(recipe), output_files=[out], output_format="txt")
-        out.getvalue()
-        `);
-        document.getElementById("out").value = out;
-      }
-    </script>
     <p>Your recipe</p>
     <textarea id="myTextarea" cols="80" rows="20">
 - object: Contact
@@ -63,11 +19,22 @@
       fake: LastName
 
     </textarea>
-    <p><button id="theButton" onclick="go()" disabled="disabled">Go</button></p>
+  <div id="form" style="display: none;">
+      <p><button id="theButton" onclick="go()">Run Recipe</button></p>
     <p id="output"></p>
     <textarea id="out" cols="80" rows="20"> </textarea>
   </body>
-  <script>
-    document.getElementById("theButton").disabled = false;
-  </script>
+</div>
+<div id="loading">
+    Loading...
+</div>
+<script type="text/javascript" src="./snowfakery.js"></script>
+<script type="text/javascript">
+  function on_snowfakery_ready(e) {
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("form").style.display = "block";
+  }
+  
+  document.addEventListener('snowfakery_ready', on_snowfakery_ready, false);
+</script>
 </html>
