@@ -20,7 +20,7 @@ idna==3.3
     # via requests
 jinja2==2.11.3
     # via -r requirements/prod.in
-markupsafe==2.0.1
+markupsafe==2.1.1
     # via
     #   -r requirements/prod.in
     #   jinja2
