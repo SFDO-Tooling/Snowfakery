@@ -4,7 +4,7 @@
 // cci task run execute_anon --path examples/salesforce/LoadCompositeAPIData.apex --org qa
 
 
-public class JSONSObjectLoader { 
+public class LoadCompositeAPIData { 
     public void loadJson(String url) {
         String json_records = downloadJSON(url);
         loadRecords(json_records);
@@ -89,6 +89,7 @@ public class JSONSObjectLoader {
 }
 
 JSONSObjectLoader loader = new JSONSObjectLoader();
+LoadCompositeAPIData loader = new LoadCompositeAPIData();
 // experimentally, much more than 20 hits a cumulative
 // maximum time allotted for callout error
 for (Integer i = 0; i < 20;) {
