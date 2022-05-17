@@ -1,12 +1,18 @@
 # Use this experimental OutputStream like this:
 
-# snowfakery --output-format snowfakery.experimental.SalesforceCompositeOutput recipe.yml > composite.json
+# snowfakery --output-format snowfakery.experimental.SalesforceCompositeAPIOutput recipe.yml > composite.json
 #
 # Once you have the file you can make it accessible to Salesforce by uploading it
 # to some form of server. E.g. Github gist, Heroku, etc.
 #
-# Then you can use Anon Apex like that in `ReadCompositeAPIData.apex` to load it into
-# any org.
+# Then you can use Anon Apex like that in `LoadCompositeAPIData.apex` to load it into
+# any org. e.g.:
+
+# sfdx force:apex:execute -f ./examples/salesforce/LoadCompositeAPIData.apex -u Snowfakery__qa
+# or
+# cci task run execute_anon --path examples/salesforce/LoadCompositeAPIData.apex --org qa
+#
+# Note that Salesforce will complain if the dataset has more than 500 rows.
 
 import json
 import typing as T
@@ -15,7 +21,7 @@ import datetime
 from snowfakery.output_streams import FileOutputStream
 
 
-class SalesforceCompositeOutput(FileOutputStream):
+class SalesforceCompositeAPIOutput(FileOutputStream):
     """Output stream that generates records for Salesforce's Composite API"""
 
     encoders: T.Mapping[type, T.Callable] = {
