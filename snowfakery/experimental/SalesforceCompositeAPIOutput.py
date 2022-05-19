@@ -14,11 +14,14 @@
 #
 # Note that Salesforce will complain if the dataset has more than 500 rows.
 
+# TODO: Add tests
+
 import json
 import typing as T
 import datetime
+from pathlib import Path
 
-from snowfakery.output_streams import FileOutputStream
+from snowfakery.output_streams import FileOutputStream, OutputStream
 
 
 class SalesforceCompositeAPIOutput(FileOutputStream):
@@ -62,3 +65,59 @@ class SalesforceCompositeAPIOutput(FileOutputStream):
         data = {"graphs": [{"graphId": "graph", "compositeRequest": self.rows}]}
         self.write(json.dumps(data, indent=2))
         return super().close()
+
+
+class Folder(OutputStream):
+    uses_folder = True
+
+    def __init__(self, output_folder, **kwargs):
+        super().__init__(None, **kwargs)
+        self.target_path = Path(output_folder)
+        if not Path.exists(self.target_path):
+            Path.mkdir(self.target_path, exist_ok=True)
+        self.recipe_sets = [[]]
+        self.filenum = 0
+        self.filenames = []
+
+    def write_single_row(self, tablename: str, row: T.Dict) -> None:
+        self.recipe_sets[-1].append((tablename, row))
+
+    def close(self, **kwargs) -> T.Optional[T.Sequence[str]]:
+        self.flush_sets()
+        table_metadata = [{"url": str(filename)} for filename in self.filenames]
+        metadata = {
+            "@context": "http://www.w3.org/ns/csvw",
+            "tables": table_metadata,
+        }
+        metadata_filename = self.target_path / "csvw_metadata.json"
+        with open(metadata_filename, "w") as f:
+            json.dump(metadata, f, indent=2)
+        return [f"Created {self.target_path}"]
+
+    def complete_recipe(self, *args):
+        ready_rows = sum(len(s) for s in self.recipe_sets)
+        if ready_rows > 500:
+            self.flush_sets()
+        self.recipe_sets.append([])
+
+    def flush_sets(self):
+        sets = self.recipe_sets
+        batches = [[]]
+        for set in sets:
+            if len(batches[-1]) + len(set) > 500:
+                batches.append(set.copy())
+            else:
+                batches[-1].extend(set)
+        for batch in batches:
+            if len(batch):
+                self.filenum += 1
+                filename = Path(self.target_path) / f"{self.filenum}.composite.json"
+                self.save_batch(filename, batch)
+
+    def save_batch(self, filename, batch):
+        with open(filename, "w") as open_file, SalesforceCompositeAPIOutput(
+            open_file
+        ) as out:
+            self.filenames.append(filename)
+            for tablename, row in batch:
+                out.write_row(tablename, row)

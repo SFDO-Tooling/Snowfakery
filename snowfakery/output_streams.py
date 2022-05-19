@@ -136,6 +136,11 @@ class OutputStream(ABC):
     def __exit__(self, *args):
         self.close()
 
+    def complete_recipe(self, *args):
+        """Let the output stream know that a complete recipe
+        set was generated."""
+        pass
+
 
 class SmartStream:
     """Common code for managing stream/file opening/closing

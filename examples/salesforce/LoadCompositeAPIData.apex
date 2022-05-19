@@ -5,18 +5,31 @@
 
 
 public class LoadCompositeAPIData { 
-    public void loadJson(String url) {
+
+    public void loadSingleJson(String url) {
+        System.debug('Loading JSON ' + url);
         String json_records = downloadJSON(url);
         loadRecords(json_records);
         System.debug('Loaded JSON ' + url);
     }
 
-    public String downloadJSON(String url){
+    public void loadJsonSet(String set_url){
+        String json_record_sets = downloadJSON(set_url);
+        Map<String, Object> data = (Map<String, Object>)Json.deserializeUntyped(json_record_sets);
+        List<Object> tables = (List<Object>)data.get('tables');
+        for(Object table_url: tables){
+            Map<String, Object> url_obj = (Map<String, Object>) table_url;
+            String url = (String)url_obj.get('url');
+            loadSingleJson(url);
+        }
+    }
+
+    private String downloadJSON(String url){
         HttpResponse response = makeHTTPCall('GET', url, null);
         return response.getBody();
     }
 
-    public HttpResponse makeHTTPCall(String method, String url, String post_body){
+    private HttpResponse makeHTTPCall(String method, String url, String post_body){
         Http h = new Http();
         HttpRequest request = new HttpRequest();
         request.setEndpoint(url);
@@ -31,7 +44,7 @@ public class LoadCompositeAPIData {
         return h.send(request);
     }
 
-    public void loadRecords(String json_records){
+    private void loadRecords(String json_records){
         String error = null;
         String graph_url = System.URL.getSalesforceBaseUrl().toExternalForm() + '/services/data/v54.0/composite/graph';
         HttpResponse response = makeHTTPCall('POST', graph_url, json_records);
@@ -39,11 +52,7 @@ public class LoadCompositeAPIData {
         if(response.getStatusCode()!=200){
             error = 'Error creating objects! ' + response.getStatus() + ' ' + response_body;
         }else{
-            try{
-                error = parseResponse(response_body);
-            }catch(Exception e){
-                error = 'Error creating objects! ' + e.getMessage();
-            }
+            error = parseResponse(response_body);
         }
 
         if(error!=null){
@@ -90,13 +99,17 @@ public class LoadCompositeAPIData {
 
 JSONSObjectLoader loader = new JSONSObjectLoader();
 LoadCompositeAPIData loader = new LoadCompositeAPIData();
-// experimentally, much more than 20 hits a cumulative
+
+// load a single Composite Graph JSON
+loader.loadSingleJson('https://gist.githubusercontent.com/prescod/13302ecbd08fc3fe92db7d6ee4614d25/raw/c88949d2170c7c11f94958ec672ec8b972cc10d4/composite.json');
+
+// load a set of 3 Composite Graph JSONs
+loader.loadJsonSet('https://gist.githubusercontent.com/prescod/6f3aebafde63971d1093549c3bef4e41/raw/8885df2618ece474c196d5d94b594dd2b5961c71/csvw_metadata.json');
+System.debug('SUCCESS! SUCCESS! SUCCESS! SUCCESS! SUCCESS! SUCCESS! SUCCESS! ');
+// experimentally, much more than 15 hits a cumulative
 // maximum time allotted for callout error
-for (Integer i = 0; i < 20;) {
-    loader.LoadJson('https://gist.githubusercontent.com/prescod/13302ecbd08fc3fe92db7d6ee4614d25/raw/c88949d2170c7c11f94958ec672ec8b972cc10d4/composite.json');
-    System.debug(++i);
-    loader.LoadJson('https://gist.githubusercontent.com/prescod/86a64c63fe294b8123b895b489852e6f/raw/e8ae51b7f5af5db6b5b800a3f9c40ebd0c7a1998/composite2.json');
-    System.debug(++i);
-    loader.LoadJson('https://gist.githubusercontent.com/prescod/21b4a0b9fe5cac171abb8f6a633cb39a/raw/cd7e0f1025a61946b4f923999afa546f099282fa/composite3.json');
-    System.debug(++i);
-}
+//
+// for (Integer i = 0; i < 15; i++) {
+//     loader.loadSingleJson('https://gist.githubusercontent.com/prescod/13302ecbd08fc3fe92db7d6ee4614d25/raw/c88949d2170c7c11f94958ec672ec8b972cc10d4/composite.json');
+//     System.debug(i);
+// }
