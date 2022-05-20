@@ -6,21 +6,73 @@
 
 public class LoadCompositeAPIData { 
 
-    public void loadSingleJson(String url) {
+    // Load one of three JSON formats. 
+    //
+    // 1. One with a top-level key called "tables" which links to other
+    //    composite graph payload jsons, like this:
+    //
+    //  https://gist.githubusercontent.com/prescod/6f3aebafde63971d1093549c3bef4e41/raw/8885df2618ece474c196d5d94b594dd2b5961c71/csvw_metadata.json
+    //
+    //  Create the files with snowfakery.experimental.SalesforceCompositeAPIOutput.Folder
+    //
+    // 2. One with a top-level key called "data" which embeds compsite graph
+    //    payloads as strings. Like this:
+    //
+    //  https://gist.githubusercontent.com/prescod/6220fa27d8493be954be949c9f57f2b2/raw/b603a4d11ef20f0a30e79260322baa52f969068d/out.bundle.json'
+    //
+    //  Create the files with snowfakery.experimental.SalesforceCompositeAPIOutput.Bundle
+    //
+    // 3. One which is just a single composite graph payload like this:
+    //
+    //  https://gist.githubusercontent.com/prescod/13302ecbd08fc3fe92db7d6ee4614d25/raw/c88949d2170c7c11f94958ec672ec8b972cc10d4/composite.json
+    //
+    //  Which is recognizable by its top-level "graphs" key.
+    //
+    //  Create the files with snowfakery.experimental.SalesforceCompositeAPIOutput
+
+    public void loadJsonSet(String set_url){
+        String json_record_sets = downloadJSON(set_url);
+        Map<String, Object> data = (Map<String, Object>)Json.deserializeUntyped(json_record_sets);
+        List<Object> tables = (List<Object>)data.get('tables');
+        if(tables != null){
+            loadDistributedJsonSet(tables);
+            return;
+        }
+
+        List<Object> graph_jsons = (List<Object>)data.get('data');
+        if(graph_jsons != null){
+            loadBundledJsonSet(graph_jsons);
+            return;
+        }
+
+        List<Object> graphs = (List<Object>)data.get('graphs');
+        if(graphs != null){
+            loadRecords(json_record_sets);
+            return;
+        }
+
+    }
+
+    // optimized method for a single composite graph (<500 records)
+    // This method doesn't parse the JSON to see what's in it.
+    public void loadSingleJsonGraphPayload(String url) {
         System.debug('Loading JSON ' + url);
         String json_records = downloadJSON(url);
         loadRecords(json_records);
         System.debug('Loaded JSON ' + url);
     }
 
-    public void loadJsonSet(String set_url){
-        String json_record_sets = downloadJSON(set_url);
-        Map<String, Object> data = (Map<String, Object>)Json.deserializeUntyped(json_record_sets);
-        List<Object> tables = (List<Object>)data.get('tables');
+    public void loadDistributedJsonSet(List<Object> tables){
         for(Object table_url: tables){
             Map<String, Object> url_obj = (Map<String, Object>) table_url;
             String url = (String)url_obj.get('url');
-            loadSingleJson(url);
+            loadSingleJsonGraphPayload(url);
+        }
+    }
+
+    public void loadBundledJsonSet(List<Object> graph_jsons){
+        for(Object graph_json: graph_jsons){
+            loadRecords((String)graph_json);
         }
     }
 
@@ -41,6 +93,7 @@ public class LoadCompositeAPIData {
 
         request.setHeader('Authorization', 'OAuth ' + UserInfo.getSessionId());
         request.setTimeout(120000);
+         System.debug(url);
         return h.send(request);
     }
 
@@ -57,8 +110,8 @@ public class LoadCompositeAPIData {
 
         if(error!=null){
             System.debug('Error: ' + error);
-            System.debug('DOWNLOADED Data');
-            System.debug(response_body);
+            // System.debug('DOWNLOADED Data');
+            // System.debug(response_body);
             CalloutException e = new CalloutException( error);
             throw e;
         }
@@ -97,19 +150,25 @@ public class LoadCompositeAPIData {
     }
 }
 
-JSONSObjectLoader loader = new JSONSObjectLoader();
 LoadCompositeAPIData loader = new LoadCompositeAPIData();
 
-// load a single Composite Graph JSON
-loader.loadSingleJson('https://gist.githubusercontent.com/prescod/13302ecbd08fc3fe92db7d6ee4614d25/raw/c88949d2170c7c11f94958ec672ec8b972cc10d4/composite.json');
+// load a single Composite Graph JSON Payload
+loader.loadSingleJsonGraphPayload('https://gist.githubusercontent.com/prescod/13302ecbd08fc3fe92db7d6ee4614d25/raw/c88949d2170c7c11f94958ec672ec8b972cc10d4/composite.json');
 
-// load a set of 3 Composite Graph JSONs
+// load anoter single one slightly less efficiently
+loader.loadJsonSet('https://gist.githubusercontent.com/prescod/ffa992a7218906ab0dcf160b5d755259/raw/f9d40587a2ba9b04275241723637ed571bd55617/Graph%2520Gist');
+
+// load a set of 3 Composite Graph JSONs in a distributed set
 loader.loadJsonSet('https://gist.githubusercontent.com/prescod/6f3aebafde63971d1093549c3bef4e41/raw/8885df2618ece474c196d5d94b594dd2b5961c71/csvw_metadata.json');
+
+// load a single-file bundle of 3 Composite Graph JSONs
+loader.loadJsonSet('https://gist.githubusercontent.com/prescod/6220fa27d8493be954be949c9f57f2b2/raw/b603a4d11ef20f0a30e79260322baa52f969068d/out.bundle.json');
+
 System.debug('SUCCESS! SUCCESS! SUCCESS! SUCCESS! SUCCESS! SUCCESS! SUCCESS! ');
 // experimentally, much more than 15 hits a cumulative
 // maximum time allotted for callout error
 //
 // for (Integer i = 0; i < 15; i++) {
-//     loader.loadSingleJson('https://gist.githubusercontent.com/prescod/13302ecbd08fc3fe92db7d6ee4614d25/raw/c88949d2170c7c11f94958ec672ec8b972cc10d4/composite.json');
+//     loader.loadSingleJsonGraphPayload('https://gist.githubusercontent.com/prescod/13302ecbd08fc3fe92db7d6ee4614d25/raw/c88949d2170c7c11f94958ec672ec8b972cc10d4/composite.json');
 //     System.debug(i);
 // }

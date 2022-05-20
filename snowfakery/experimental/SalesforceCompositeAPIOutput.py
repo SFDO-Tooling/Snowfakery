@@ -20,6 +20,7 @@ import json
 import typing as T
 import datetime
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from snowfakery.output_streams import FileOutputStream, OutputStream
 
@@ -62,6 +63,8 @@ class SalesforceCompositeAPIOutput(FileOutputStream):
         return "@{%s.id}" % target_reference
 
     def close(self, **kwargs) -> T.Optional[T.Sequence[str]]:
+        # NOTE: Could improve loading performance by breaking graphs up
+        # to allow server-side parallelization, but I'd risk locking issues
         data = {"graphs": [{"graphId": "graph", "compositeRequest": self.rows}]}
         self.write(json.dumps(data, indent=2))
         return super().close()
@@ -76,14 +79,19 @@ class Folder(OutputStream):
         if not Path.exists(self.target_path):
             Path.mkdir(self.target_path, exist_ok=True)
         self.recipe_sets = [[]]
+        self.current_batch = []
         self.filenum = 0
         self.filenames = []
 
+    def write_row(self, tablename: str, row_with_references: T.Dict) -> None:
+        self.recipe_sets[-1].append((tablename, row_with_references))
+
     def write_single_row(self, tablename: str, row: T.Dict) -> None:
-        self.recipe_sets[-1].append((tablename, row))
+        assert 0, "Shouldn't be called. write_row should be called instead"
 
     def close(self, **kwargs) -> T.Optional[T.Sequence[str]]:
         self.flush_sets()
+        self.flush_batch()
         table_metadata = [{"url": str(filename)} for filename in self.filenames]
         metadata = {
             "@context": "http://www.w3.org/ns/csvw",
@@ -95,29 +103,55 @@ class Folder(OutputStream):
         return [f"Created {self.target_path}"]
 
     def complete_recipe(self, *args):
-        ready_rows = sum(len(s) for s in self.recipe_sets)
-        if ready_rows > 500:
-            self.flush_sets()
+        self.flush_sets()
         self.recipe_sets.append([])
 
     def flush_sets(self):
-        sets = self.recipe_sets
-        batches = [[]]
-        for set in sets:
-            if len(batches[-1]) + len(set) > 500:
-                batches.append(set.copy())
-            else:
-                batches[-1].extend(set)
-        for batch in batches:
-            if len(batch):
-                self.filenum += 1
-                filename = Path(self.target_path) / f"{self.filenum}.composite.json"
-                self.save_batch(filename, batch)
+        while self.recipe_sets:
+            next_set = self.recipe_sets.pop(0)
+            if len(self.current_batch) + len(next_set) > 500:
+                self.flush_batch()
+            self.current_batch.extend(next_set)
 
-    def save_batch(self, filename, batch):
+    def flush_batch(self):
+        self.filenum += 1
+        filename = Path(self.target_path) / f"{self.filenum}.composite.json"
+
         with open(filename, "w") as open_file, SalesforceCompositeAPIOutput(
             open_file
         ) as out:
             self.filenames.append(filename)
-            for tablename, row in batch:
+            print(len(self.current_batch))
+            for tablename, row in self.current_batch:
                 out.write_row(tablename, row)
+
+        self.current_batch = []
+
+
+class Bundle(FileOutputStream):
+    def __init__(self, file, **kwargs):
+        super().__init__(file, **kwargs)
+        self.tempdir = TemporaryDirectory()
+        self.folder_os = Folder(self.tempdir.name)
+
+    def write_row(self, tablename: str, row_with_references: T.Dict) -> None:
+        self.folder_os.write_row(tablename, row_with_references)
+
+    def write_single_row(self, tablename: str, row: T.Dict) -> None:
+        assert 0, "Shouldn't be called. write_row should be called instead"
+
+    def complete_recipe(self, *args):
+        self.folder_os.complete_recipe()
+
+    def close(self):
+        self.folder_os.close()
+        data = self.organize_bundle()
+        self.write(json.dumps(data, indent=2))
+        self.tempdir.cleanup()
+        return super().close()
+
+    def organize_bundle(self):
+        files = Path(self.tempdir.name).glob("*.composite.json")
+        data = [file.read_text() for file in files]
+        assert data
+        return {"bundle_format": 1, "data": data}
