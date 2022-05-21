@@ -1,0 +1,6 @@
+- object: Contact
+  update_key: email
+  fields:
+    firstname: Annyong
+    lastname: Bluth
+    email: annyong@bluth.com

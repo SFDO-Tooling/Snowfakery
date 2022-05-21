@@ -7,6 +7,7 @@ from io import StringIO
 import pytest
 import yaml
 from sqlalchemy import create_engine
+from vcr.serializers import yamlserializer
 
 try:
     import cumulusci
@@ -124,3 +125,8 @@ def generate_data_with_continuation():
 @pytest.fixture(scope="session")
 def snowfakery_rootdir():
     return Path(__file__).parent.parent
+
+
+@pytest.fixture(scope="session")
+def salesforce_serializer():
+    return yamlserializer

@@ -130,7 +130,7 @@ def generate_data(
     yaml_file: FileLike,
     *,
     parent_application: SnowfakeryApplication = None,  # the parent application
-    user_options: T.Dict[str, str] = None,  # same as --option
+    user_options: T.Dict[str, T.Any] = None,  # same as --option
     dburl: str = None,  # same as --dburl
     dburls=[],  # same as multiple --dburl options
     target_number: T.Tuple = None,  # same as --target-number

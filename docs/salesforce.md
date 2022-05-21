@@ -22,7 +22,7 @@ The easiest way to learn about CumulusCI (and to learn how to
 install it) is with its [Trailhead Trail](https://trailhead.salesforce.com/en/content/learn/trails/build-applications-with-cumulusci).
 
 ```s
-$ cci task run generate_and_load_from_yaml -o generator_yaml examples/salesforce/Contact.recipe.yml -o num_records 300 -o num_records_tablename Contact --org qa
+$ cci task run snowfakery examples/salesforce/Contact.recipe.yml --run-until-recipe-repeated 300 --org qa
 ...
 ```
 
@@ -368,3 +368,7 @@ Files can be used as Salesforce ContentVersions like this:
     FirstPublishLocationId:
       reference: Account
 ```
+
+## Other features
+
+To do updates or upserts in a Salesforce org, refer to the [CumulusCI documentation](https://cumulusci.readthedocs.io/en/stable/data.html#update-data).
