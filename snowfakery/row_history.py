@@ -132,26 +132,6 @@ class RowHistory:
 
         return restricted_loads(first_row[0])
 
-        # def find_first_row(query):
-        #     qr = self.conn.execute(query, (nickname, approx_row_id))
-        #     return next(qr, None)
-
-        # # find the closest nicknamed row
-        # row = find_first_row(
-        #     f'SELECT DATA FROM "{tablename}" WHERE nickname = ? AND id >= ? ORDER BY id LIMIT 1'
-        # )
-
-        # if not row:
-        #     row = find_first_row(
-        #         f'SELECT DATA FROM "{tablename}" WHERE nickname = ? AND id <= ? ORDER BY id DESC LIMIT 1'
-        #     )
-
-        # # TODO: Maybe this case can be provoked by making a recipe that does
-        # #       a forward reference?
-        # assert row, f"Snowfakery bug: No row found for {nickname}: {id}"
-        # data = row[0]
-        # return ObjectRow(tablename, restricted_loads(data))
-
 
 def _make_history_table(conn, tablename):
     """Make a history table"""

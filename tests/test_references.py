@@ -5,7 +5,7 @@ import pytest
 
 from snowfakery.data_generator import generate
 from test_parse_samples import find_row
-from snowfakery.data_gen_exceptions import DataGenError
+from snowfakery.data_gen_exceptions import DataGenError, DataGenSyntaxError
 from snowfakery.api import StoppingCriteria
 
 simple_parent = """                     #1
@@ -431,6 +431,23 @@ class TestRandomReferencesOriginal:
         assert generated_rows.row_values(10, "A_ref") == "A(8)"
         assert generated_rows.row_values(11, "A_ref") == "A(3)"
 
+    def test_random_reference_alernate_syntax(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 10                   #4
+      - object: B                   #5
+        count: 2                    #6
+        fields:                     #7
+            A_ref:                  #8
+              random_reference:     #9
+                to: A               #10
+    """
+        with mock.patch("snowfakery.row_history.randint") as randint:
+            randint.side_effect = [8, 3]
+            generate(StringIO(yaml))
+        assert generated_rows.row_values(10, "A_ref") == "A(8)"
+        assert generated_rows.row_values(11, "A_ref") == "A(3)"
+
     def test_random_reference_local(self, generated_rows):
         yaml = """                  #1
       - object: A                   #2
@@ -498,6 +515,19 @@ class TestRandomReferencesOriginal:
         with pytest.raises(DataGenError) as e:
             generate(StringIO(yaml))
         assert "Scope must be" in str(e)
+
+    def test_random_reference__type_error(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 10                   #4
+      - object: B                   #5
+        count: 2                    #6
+        fields:                     #7
+            A_ref:                  #8
+              random_reference:  5   #9
+    """
+        with pytest.raises(DataGenSyntaxError):
+            generate(StringIO(yaml))
 
 
 class TestRandomReferencesNew:
@@ -683,3 +713,70 @@ class TestRandomReferencesNew:
             generate(StringIO(yaml))
         assert generated_rows.table_values("B", 1, "A_ref") == "A(2)"
         assert generated_rows.table_values("B", 2, "A_ref") == "A(1)"
+
+    def test_random_reference__properties(self, generated_rows):
+        yaml = """
+              - object: GrandParent
+                fields:
+                  name: Pappy
+
+              - object: Parent
+                fields:
+                  parent:
+                    reference:
+                      GrandParent
+
+              - object: Child
+                fields:
+                  pa:
+                    random_reference: Parent
+                  paps: ${{pa.parent.name}}
+                """
+        generate(StringIO(yaml))
+        assert generated_rows.table_values("Child", 1, "paps") == "Pappy"
+
+    def test_random_reference__weird_type_properties(self, generated_rows):
+        # unusual types are not serialized and won't be returned
+        yaml = """
+              - plugin: tests.test_custom_plugins_and_providers.EvalPlugin
+              - object: Parent
+                nickname: parent_with_counter
+                fields:
+                  add:
+                    EvalPlugin.add:
+                      - 2
+                      - 3
+
+              - object: Child
+                fields:
+                  pa:
+                    random_reference: parent_with_counter
+                  weird: ${{pa.add}}
+                """
+        generate(StringIO(yaml))
+        assert str(generated_rows.table_values("Child", 1, "weird")).startswith(
+            "Type_Cannot_Be_Used_With_Random_Reference"
+        )
+
+    def test_deep_random_references__by_nickname(self, generated_rows):
+        yaml = """
+              - object: GrandParent
+                nickname: mammy
+                count: 3
+                fields:
+                  name: mammy
+
+              - object: Parent
+                nickname: par
+                fields:
+                  ma:
+                    random_reference: mammy
+
+              - object: Child
+                fields:
+                  gamma:
+                    random_reference: par
+                  mamma_name: ${{gamma.ma.name}}
+                """
+        generate(StringIO(yaml))
+        assert generated_rows.table_values("Child", 1, "mamma_name") == "mammy"

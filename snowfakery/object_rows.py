@@ -81,11 +81,8 @@ class LazyLoadedObjectReference(ObjectReference):
         self.sql_tablename = sql_tablename
         self.id = id
 
-    def __reduce__(self) -> tuple:
-        return (self.__class__, tuple(self.__dict__.values()))
-
     def __getattr__(self, attrname):
-        if attrname.endswith("__"):
+        if attrname.endswith("__"):  # pragma: no cover
             raise AttributeError(attrname)
         if self._data is None:
             row_history = RowHistoryCV.get()
