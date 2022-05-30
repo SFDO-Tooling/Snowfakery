@@ -1,3 +1,5 @@
+""" Benchmarking tool for the RowHistory backing database"""
+
 from snowfakery.row_history import RowHistory
 from time import time
 

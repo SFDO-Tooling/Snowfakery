@@ -33,9 +33,10 @@ class RowHistory:
     def save_row(self, tablename: str, nickname: T.Optional[str], row: dict):
         """Save a row to temporary storage"""
         row_id = row["id"]
-        if tablename not in self.table_counters:  # newly discovered table
-            _make_history_table(self.conn, tablename)
-            self.table_counters[tablename] = 0
+
+        self._ensure_history_table_exists(tablename)
+
+        # keep track of highest ID
         self.table_counters[tablename] = row_id
 
         if nickname and nickname not in self.nicknames_to_tables:
@@ -104,7 +105,6 @@ class RowHistory:
             # nickname rows cannot be lazy-loaded because we need to do a real
             # query to get the 'real id' anyhow
 
-            # the rand_id is just an approximation in this case
             data = self.load_nicknamed_row(tablename, nickname, rand_id)
             return ObjectRow(tablename, data)
         else:
@@ -135,6 +135,11 @@ class RowHistory:
         ), f"Something went wrong: we cannot find {tablename}: {nickname} : {nickname_id}"
 
         return restricted_loads(first_row[0])
+
+    def _ensure_history_table_exists(self, tablename):
+        if tablename not in self.table_counters:  # newly discovered table
+            _make_history_table(self.conn, tablename)
+            self.table_counters[tablename] = 0
 
 
 def _make_history_table(conn, tablename):
