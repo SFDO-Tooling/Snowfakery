@@ -758,6 +758,27 @@ class TestRandomReferencesNew:
             "Type_Cannot_Be_Used_With_Random_Reference"
         )
 
+    def test_deep_random_references__by_tablename(self, generated_rows):
+        yaml = """
+              - object: GrandParent
+                count: 3
+                fields:
+                  name: mammy
+
+              - object: Parent
+                fields:
+                  ma:
+                    random_reference: GrandParent
+
+              - object: Child
+                fields:
+                  gamma:
+                    random_reference: Parent
+                  mamma_name: ${{gamma.ma.name}}
+                """
+        generate(StringIO(yaml))
+        assert generated_rows.table_values("Child", 1, "mamma_name") == "mammy"
+
     def test_deep_random_references__by_nickname(self, generated_rows):
         yaml = """
               - object: GrandParent
