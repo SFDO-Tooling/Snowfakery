@@ -3,7 +3,6 @@ import random
 from functools import lru_cache
 from datetime import date, datetime
 import dateutil.parser
-import warnings
 from dateutil.relativedelta import relativedelta
 from ast import literal_eval
 
@@ -279,18 +278,10 @@ class StandardFuncs(SnowfakeryPlugin):
 
             See the docs for more info.
             """
-
-            # TODO: move this code
-            if scope == "prior-and-current-iterations":
-                warnings.warn("Global scope is an experimental feature.")
-            elif scope != "current-iteration":
-                raise DataGenError(
-                    f"Scope must be 'prior-and-current-iterations' or 'current-iteration' not {scope}",
-                    None,
-                    None,
-                )
             if unique:
+                # next feature to implement
                 raise NotImplementedError()
+
             return self.context.interpreter.row_history.random_row_reference(
                 to, scope, unique
             )

@@ -1,16 +1,12 @@
-import copyreg
-import io
 import typing as T
 import sqlite3
-import pickle
 from random import randint
 from copy import deepcopy
 from snowfakery.object_rows import (
-    NicknameSlot,
     ObjectRow,
-    ObjectReference,
     LazyLoadedObjectReference,
 )
+from snowfakery.utils.pickle import restricted_dumps, restricted_loads
 from snowfakery import data_gen_exceptions as exc
 import warnings
 
@@ -19,7 +15,7 @@ import warnings
 
 
 class RowHistory:
-    """Remember tables that might be random_reference'd."""
+    """Remember tables that might be random_reference'd in a database."""
 
     already_warned = False
 
@@ -58,7 +54,7 @@ class RowHistory:
         # "join" across multiple tables would have other costs (even if done lazily).
         # For now this seems best and simplest.
         # The data de-dupling algorithm would be slightly complex and slow.
-        data = _restricted_dumps(row)
+        data = restricted_dumps(row)
         self.conn.execute(
             f'INSERT INTO "{tablename}" VALUES (?, ?, ?, ?)',
             (row["id"], nickname, nickname_id, data),
@@ -66,7 +62,15 @@ class RowHistory:
 
     def random_row_reference(self, name: str, scope: str, unique: bool):
         """Find a random row and load it"""
-        # TODO implement "unique" with LCG
+        if scope not in ("prior-and-current-iterations", "current-iteration"):
+            raise exc.DataGenError(
+                f"Scope must be 'prior-and-current-iterations' or 'current-iteration' not {scope}",
+                None,
+                None,
+            )
+
+        # Next Step: implement "unique" with a Linear Congruent Generator
+
         if name in self.nicknames_to_tables:
             nickname = name
             tablename = self.nicknames_to_tables[nickname]
@@ -137,7 +141,6 @@ def _make_history_table(conn, tablename):
     """Make a history table"""
 
     c = conn.cursor()
-    # c.execute(f'DROP TABLE IF EXISTS "{tablename}"')
     c.execute(
         f'CREATE TABLE "{tablename}" (id INTEGER NOT NULL UNIQUE , nickname VARCHAR, nickname_id INTEGER, data VARCHAR NOT NULL)'
     )
@@ -146,49 +149,3 @@ def _make_history_table(conn, tablename):
     c.execute(
         f'CREATE UNIQUE INDEX "{tablename}_nickname_id" ON "{tablename}" (nickname, nickname_id);'
     )
-
-
-_DISPATCH_TABLE = copyreg.dispatch_table.copy()
-_DISPATCH_TABLE[NicknameSlot] = lambda n: (
-    ObjectReference,
-    (n._tablename, n.allocated_id),
-)
-
-
-def _restricted_dumps(data):
-    """Only allow saving "safe" classes"""
-    outs = io.BytesIO()
-    pickler = pickle.Pickler(outs)
-    pickler.dispatch_table = _DISPATCH_TABLE
-    pickler.dump(data)
-    return outs.getvalue()
-
-
-class Type_Cannot_Be_Used_With_Random_Reference(T.NamedTuple):
-    """This type cannot be unpickled."""
-
-    name: str
-
-
-_SAFE_CLASSES = {
-    ("snowfakery.object_rows", "ObjectRow"),
-    ("snowfakery.object_rows", "ObjectReference"),
-    ("decimal", "Decimal"),
-}
-
-
-class RestrictedUnpickler(pickle.Unpickler):
-    """Safe unpickler with an allowed-list"""
-
-    def find_class(self, module, name):
-        # Only allow safe classes from builtins.
-        if (module, name) in _SAFE_CLASSES:
-            return super().find_class(module, name)
-        else:
-            # Return a "safe" object that does nothing.
-            return lambda *args: Type_Cannot_Be_Used_With_Random_Reference(name)
-
-
-def restricted_loads(s):
-    """Helper function analogous to pickle.loads()."""
-    return RestrictedUnpickler(io.BytesIO(s)).load()
