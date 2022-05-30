@@ -3,7 +3,6 @@ import sqlite3
 from random import randint
 from copy import deepcopy
 from snowfakery.object_rows import (
-    ObjectRow,
     LazyLoadedObjectReference,
 )
 from snowfakery.utils.pickle import restricted_dumps, restricted_loads
@@ -24,7 +23,7 @@ class RowHistory:
         self.table_counters = {}
         self.nickname_counters = {}
         self.reset_locals()
-        self.nicknames_to_tables = {}
+        self.tablename_for_nickname = {}
 
     def reset_locals(self):
         """Reset the minimum count that counts as "local" """
@@ -39,14 +38,8 @@ class RowHistory:
         # keep track of highest ID
         self.table_counters[tablename] = row_id
 
-        if nickname and nickname not in self.nicknames_to_tables:
-            self.nicknames_to_tables[nickname] = tablename
-            nickname_table = self.nickname_counters.setdefault(tablename, {})
-            nickname_table[nickname] = 0
-
         if nickname:
-            self.nickname_counters[tablename][nickname] += 1
-            nickname_id = self.nickname_counters[tablename][nickname]
+            nickname_id = self._get_nickname_id(tablename, nickname)
         else:
             nickname_id = None
 
@@ -58,7 +51,7 @@ class RowHistory:
         data = restricted_dumps(row)
         self.conn.execute(
             f'INSERT INTO "{tablename}" VALUES (?, ?, ?, ?)',
-            (row["id"], nickname, nickname_id, data),
+            (row_id, nickname, nickname_id, data),
         )
 
     def random_row_reference(self, name: str, scope: str, unique: bool):
@@ -72,9 +65,9 @@ class RowHistory:
 
         # Next Step: implement "unique" with a Linear Congruent Generator
 
-        if name in self.nicknames_to_tables:
+        if name in self.tablename_for_nickname:
             nickname = name
-            tablename = self.nicknames_to_tables[nickname]
+            tablename = self.tablename_for_nickname[nickname]
         else:
             nickname = None
             tablename = name
@@ -99,18 +92,15 @@ class RowHistory:
         if max_id <= min_id:
             min_id = 1
 
-        rand_id = randint(min_id, max_id)
-
         if nickname:
-            # nickname rows cannot be lazy-loaded because we need to do a real
-            # query to get the 'real id' anyhow
-
-            data = self.load_nicknamed_row(tablename, nickname, rand_id)
-            return ObjectRow(tablename, data)
+            # find a random nickname'd row by its nickname_id
+            nickname_id = randint(min_id, max_id)
+            row_id = self.find_row_id_for_nickname_id(tablename, nickname, nickname_id)
         else:
-            # if nickname is not specified, we don't need to read anything
-            # from DB until a property is asked for.
-            return LazyLoadedObjectReference(tablename, rand_id, tablename)
+            # find a random row
+            row_id = randint(min_id, max_id)
+
+        return LazyLoadedObjectReference(tablename, row_id, tablename)
 
     def load_row(self, tablename: str, row_id: int):
         """Load a row from the DB by row_id/object_id"""
@@ -123,10 +113,12 @@ class RowHistory:
 
         return restricted_loads(first_row[0])
 
-    def load_nicknamed_row(self, tablename: str, nickname: str, nickname_id: int):
-        """Find a nicknamed row by its nickname_id"""
+    def find_row_id_for_nickname_id(
+        self, tablename: str, nickname: str, nickname_id: int
+    ):
+        #     """Find a nicknamed row by its nickname_id"""
         qr = self.conn.execute(
-            f'SELECT DATA FROM "{tablename}" WHERE nickname=? AND nickname_id=?',
+            f'SELECT id FROM "{tablename}" WHERE nickname=? AND nickname_id=?',
             (nickname, nickname_id),
         )
         first_row = next(qr, None)
@@ -134,12 +126,21 @@ class RowHistory:
             first_row
         ), f"Something went wrong: we cannot find {tablename}: {nickname} : {nickname_id}"
 
-        return restricted_loads(first_row[0])
+        return first_row[0]
 
     def _ensure_history_table_exists(self, tablename):
         if tablename not in self.table_counters:  # newly discovered table
             _make_history_table(self.conn, tablename)
             self.table_counters[tablename] = 0
+
+    def _get_nickname_id(self, tablename: str, nickname: str):
+        """Get a unique auto-incrementing identifier for a new row"""
+        if nickname not in self.tablename_for_nickname:
+            self.tablename_for_nickname[nickname] = tablename
+            self.nickname_counters[(tablename, nickname)] = 0
+
+        self.nickname_counters[(tablename, nickname)] += 1
+        return self.nickname_counters[(tablename, nickname)]
 
 
 def _make_history_table(conn, tablename):
