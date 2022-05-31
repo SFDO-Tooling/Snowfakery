@@ -1,6 +1,7 @@
 """ Benchmarking tool for the RowHistory backing database"""
 
 from snowfakery.row_history import RowHistory
+from snowfakery.object_rows import RowHistoryCV
 from time import time
 
 COUNT = 200_000
@@ -8,6 +9,7 @@ COUNT = 200_000
 
 def main(count):
     rh: RowHistory = RowHistory()
+    RowHistoryCV.set(rh)
     start = time()
     for i in range(0, COUNT, 4):
         rh.save_row(
@@ -56,11 +58,12 @@ def main(count):
     start = time()
     for i in range(0, COUNT):
         rh.load_row("table", i)
-        rh.load_nicknamed_row("table", "Nicknamed", i)
-        rh.load_nicknamed_row("table", "Nicknamed2", i)
-        rh.load_nicknamed_row("table", "Sparse", i)
+        assert rh.random_row_reference("table", "current-iteration", False).blah
+        assert rh.random_row_reference("Nicknamed", "current-iteration", False).blah
+        assert rh.random_row_reference("Nicknamed2", "current-iteration", False).blah
+        assert rh.random_row_reference("Sparse", "current-iteration", False).blah
     end = time()
-    print(end - start)
+    print("Loaded", end - start)
 
 
 main(COUNT)

@@ -645,6 +645,27 @@ class TestRandomReferencesNew:
         generate(StringIO(yaml))
         assert generated_rows.table_values("B", 2, "A_ref") == "A(1)"
 
+    def test_random_reference_to_nickname_sparse(self, generated_rows):
+        yaml = """
+      - object: A
+        count: 5
+      - object: A
+        nickname: nicky
+        count: 2
+        fields:
+            name: nicky
+      - object: A
+        count: 5
+      - object: B
+        count: 3
+        fields:
+            nicky_ref:
+              random_reference: nicky
+            nicky_name: ${{nicky_ref.name}}
+    """
+        generate(StringIO(yaml))
+        assert generated_rows.table_values("B", 2, "nicky_name") == "nicky"
+
     def test_forward_random_reference_nickname_fails(self):
         yaml = """
               - object: Child

@@ -68,11 +68,12 @@ class RowHistory:
         if name in self.tablename_for_nickname:
             nickname = name
             tablename = self.tablename_for_nickname[nickname]
+            max_id = self.nickname_counters[nickname]
         else:
             nickname = None
             tablename = name
+            max_id = self.table_counters.get(tablename)
 
-        max_id = self.table_counters.get(tablename)
         if not max_id:
             raise exc.DataGenError(
                 f"There is no table or nickname `{tablename}` at this point in the recipe."
@@ -137,10 +138,10 @@ class RowHistory:
         """Get a unique auto-incrementing identifier for a new row"""
         if nickname not in self.tablename_for_nickname:
             self.tablename_for_nickname[nickname] = tablename
-            self.nickname_counters[(tablename, nickname)] = 0
+            self.nickname_counters[nickname] = 0
 
-        self.nickname_counters[(tablename, nickname)] += 1
-        return self.nickname_counters[(tablename, nickname)]
+        self.nickname_counters[nickname] += 1
+        return self.nickname_counters[nickname]
 
 
 def _make_history_table(conn, tablename):
