@@ -547,7 +547,7 @@ class RuntimeContext:
                     tablename, fieldvalue._tablename, fieldname
                 )
         history_tables = self.interpreter.tables_to_keep_history_for
-        should_save = (
+        should_save: bool = (
             (tablename in history_tables)
             or (nickname in history_tables)
             or SAVE_EVERYTHING
@@ -663,6 +663,7 @@ def evaluate_function(func, args: Sequence, kwargs: Mapping, context):
 
 
 def find_tables_to_keep_history_for(parse_result: ParseResult) -> T.Set[str]:
+    """Only keep history for certain tables that are actually referred to by random_reference"""
     random_references = parse_result.random_references
     referenced_tables = set(
         get_referent_name(random_reference) for random_reference in random_references
@@ -671,6 +672,7 @@ def find_tables_to_keep_history_for(parse_result: ParseResult) -> T.Set[str]:
 
 
 def get_referent_name(random_reference):
+    """What does this random_reference ref to?"""
     args, kwargs = random_reference.args, random_reference.kwargs
     assert not (args and kwargs)
     if args:

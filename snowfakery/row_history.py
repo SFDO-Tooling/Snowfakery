@@ -9,9 +9,6 @@ from snowfakery.utils.pickle import restricted_dumps, restricted_loads
 from snowfakery import data_gen_exceptions as exc
 import warnings
 
-# TODO:
-#   * test random_reference of nicknames and just_once/nicknames
-
 
 class RowHistory:
     """Remember tables that might be random_reference'd in a database."""
@@ -149,7 +146,7 @@ def _make_history_table(conn, tablename):
 
     c = conn.cursor()
     c.execute(
-        f'CREATE TABLE "{tablename}" (id INTEGER NOT NULL UNIQUE , nickname VARCHAR, nickname_id INTEGER, data VARCHAR NOT NULL)'
+        f'CREATE TABLE "{tablename}" (id INTEGER NOT NULL UNIQUE, nickname VARCHAR, nickname_id INTEGER, data VARCHAR NOT NULL)'
     )
     # helps with sparsely scattered nicknames. Of debatable value. Can speed up benchmarks
     # but hard to see it in real recipes.

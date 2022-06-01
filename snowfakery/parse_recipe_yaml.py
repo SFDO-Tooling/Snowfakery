@@ -41,7 +41,7 @@ class ParseResult:
         tables: Mapping,
         statements: Sequence,
         plugins: Sequence = (),
-        random_references={},
+        random_references: Sequence = (),
         version: int = None,
     ):
         self.options = options
@@ -50,7 +50,7 @@ class ParseResult:
         self.templates = [obj for obj in statements if isinstance(obj, ObjectTemplate)]
         self.plugins = plugins
         self.version = version
-        self.random_references = random_references
+        self.random_references = random_references or []
 
 
 class TableInfo:
