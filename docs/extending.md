@@ -404,7 +404,7 @@ The method will evaluate its argument twice, and stick the two results into a st
 This would output an `OBJ` row with values:
 
 ```python
-  {'id': 1, 'some_value': 'abc : abc', 'some_value_2': '1 : 2'})
+  {'id': 1, 'some_value': 'abc : abc', 'some_value_2': '1 : 2'}
 ```
 
 Occasionally you might write a plugin which needs to evaluate its
