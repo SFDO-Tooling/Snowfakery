@@ -4,11 +4,10 @@ import copyreg
 import io
 import pickle
 import typing as T
-from snowfakery.object_rows import (
-    NicknameSlot,
-    ObjectReference,
-)
 
+import warnings
+
+from snowfakery.object_rows import NicknameSlot, ObjectReference
 
 _DISPATCH_TABLE = copyreg.dispatch_table.copy()
 _DISPATCH_TABLE[NicknameSlot] = lambda n: (
@@ -29,6 +28,7 @@ def restricted_dumps(data):
 class Type_Cannot_Be_Used_With_Random_Reference(T.NamedTuple):
     """This type cannot be unpickled."""
 
+    module: str
     name: str
 
 
@@ -37,11 +37,17 @@ _SAFE_CLASSES = {
     ("snowfakery.object_rows", "ObjectReference"),
     ("snowfakery.object_rows", "LazyLoadedObjectReference"),
     ("decimal", "Decimal"),
+    ("datetime", "date"),
+    ("datetime", "datetime"),
+    ("datetime", "timedelta"),
+    ("datetime", "timezone"),
 }
 
 
 class RestrictedUnpickler(pickle.Unpickler):
     """Safe unpickler with an allowed-list"""
+
+    count = 0
 
     def find_class(self, module, name):
         # Only allow safe classes from builtins.
@@ -49,7 +55,10 @@ class RestrictedUnpickler(pickle.Unpickler):
             return super().find_class(module, name)
         else:
             # Return a "safe" object that does nothing.
-            return lambda *args: Type_Cannot_Be_Used_With_Random_Reference(name)
+            if RestrictedUnpickler.count < 10:
+                warnings.warn(f"Cannot save and refer to {module}, {name}")
+                RestrictedUnpickler.count += 1
+            return lambda *args: Type_Cannot_Be_Used_With_Random_Reference(module, name)
 
 
 def restricted_loads(s):

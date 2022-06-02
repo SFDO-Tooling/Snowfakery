@@ -672,7 +672,7 @@ def find_tables_to_keep_history_for(parse_result: ParseResult) -> T.Set[str]:
 
 
 def get_referent_name(random_reference):
-    """What does this random_reference ref to?"""
+    """What does this random_reference refer to?"""
     args, kwargs = random_reference.args, random_reference.kwargs
     assert not (args and kwargs)
     if args:
