@@ -359,7 +359,7 @@ class Interpreter:
             self.native_types
         )
         self.tables_to_keep_history_for = find_tables_to_keep_history_for(parse_result)
-        self.row_history = RowHistory()
+        self.row_history = RowHistory(globals)
 
         already_saved_ids = set()
 
@@ -483,7 +483,7 @@ class RuntimeContext:
     current_template = None
     local_vars = None
     unique_context_identifier = None
-    recalculate_every_time = False
+    recalculate_every_time = False  # by default, data is recalculated constantly
 
     def __init__(
         self,
@@ -499,6 +499,7 @@ class RuntimeContext:
         self.parent = parent_context
         if self.parent:
             self._plugin_context_vars = self.parent._plugin_context_vars.new_child()
+            # are we in a re-calculate everything context?
             self.recalculate_every_time = parent_context.recalculate_every_time
         else:
             self._plugin_context_vars = ChainMap()

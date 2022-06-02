@@ -448,6 +448,61 @@ class TestRandomReferencesOriginal:
         assert generated_rows.row_values(10, "A_ref") == "A(8)"
         assert generated_rows.row_values(11, "A_ref") == "A(3)"
 
+    def test_random_reference_unique(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 5                   #4
+      - object: B                   #5
+        count: 5                    #6
+        fields:                     #7
+            A_ref:                  #8
+              random_reference:     #9
+                to: A               #10
+                unique: true        #11
+    """
+        generate(StringIO(yaml), reps=5)
+        Bs = generated_rows.table_values("B")
+        # check that A_refs are unique
+        assert len(Bs) == len(set(b["A_ref"] for b in Bs)) == 25
+
+    def test_random_reference_unique__mismatch_count(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 4                   #4
+      - object: B                   #5
+        count: 5                    #6
+        fields:                     #7
+            A_ref:                  #8
+              random_reference:     #9
+                to: A               #10
+                unique: true        #11
+    """
+        generate(StringIO(yaml))
+        assert 0, generated_rows.mock_calls
+
+    def test_random_reference_unique__with_continuation(
+        self, generate_data_with_continuation, generated_rows
+    ):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 10                   #3
+      - object: B                   #4
+        count: 5                    #5
+        fields:                     #6
+            A_ref:                  #7
+              random_reference:     #8
+                to: A               #9
+                unique: true        #10
+    """
+        generate_data_with_continuation(
+            yaml=yaml,
+            target_number=("B", 5),
+            times=3,
+        )
+        Bs = generated_rows.table_values("B")
+        print(Bs)
+        assert len(Bs) == len(set(b["A_ref"] for b in Bs)) == 15
+
     def test_random_reference_local(self, generated_rows):
         yaml = """                  #1
       - object: A                   #2

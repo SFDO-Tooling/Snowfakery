@@ -1,29 +1,33 @@
-import typing as T
 import sqlite3
-from random import randint
-from copy import deepcopy
-from snowfakery.object_rows import (
-    LazyLoadedObjectReference,
-)
-from snowfakery.utils.pickle import restricted_dumps, restricted_loads
-from snowfakery import data_gen_exceptions as exc
+import typing as T
 import warnings
+from copy import deepcopy
+from random import randint
+
+from snowfakery import data_gen_exceptions as exc
+from snowfakery.object_rows import LazyLoadedObjectReference, ObjectReference, ObjectRow
+from snowfakery.plugins import PluginResultIterator
+from snowfakery.utils.pickle import restricted_dumps, restricted_loads
+from snowfakery.utils.randomized_range import UpdatableRandomRange
 
 # TODO:
 #   * test random_reference of nicknames and just_once/nicknames
 
 
+# TODO: Share history data structures with Interpreter Globals so they will
+#       serialized. Nickname_Ids in particular are a new global datastructure
 class RowHistory:
     """Remember tables that might be random_reference'd in a database."""
 
     already_warned = False
 
-    def __init__(self):
+    def __init__(self, globls):
         self.conn = sqlite3.connect("")
-        self.table_counters = {}
+        self.table_counters = dict(globls.transients.orig_used_ids)
         self.nickname_counters = {}
         self.reset_locals()
         self.tablename_for_nickname = {}
+        self.tables_already_created = set()
 
     def reset_locals(self):
         """Reset the minimum count that counts as "local" """
@@ -54,7 +58,7 @@ class RowHistory:
             (row_id, nickname, nickname_id, data),
         )
 
-    def random_row_reference(self, name: str, scope: str, unique: bool):
+    def random_row_reference(self, name: str, scope: str, randint: callable):
         """Find a random row and load it"""
         if scope not in ("prior-and-current-iterations", "current-iteration"):
             raise exc.DataGenError(
@@ -130,9 +134,9 @@ class RowHistory:
         return first_row[0]
 
     def _ensure_history_table_exists(self, tablename):
-        if tablename not in self.table_counters:  # newly discovered table
+        if tablename not in self.tables_already_created:  # newly discovered table
             _make_history_table(self.conn, tablename)
-            self.table_counters[tablename] = 0
+            self.tables_already_created.add(tablename)
 
     def _get_nickname_id(self, tablename: str, nickname: str):
         """Get a unique auto-incrementing identifier for a new row"""
@@ -156,3 +160,53 @@ def _make_history_table(conn, tablename):
     c.execute(
         f'CREATE UNIQUE INDEX "{tablename}_nickname_id" ON "{tablename}" (nickname, nickname_id);'
     )
+
+
+class RandomReferenceContext(PluginResultIterator):
+    # initialize the object's state.
+    rng = None
+
+    def __init__(
+        self,
+        row_history: RowHistory,
+        to: str,
+        scope: str = "current-iteration",
+        unique: bool = False,
+    ):
+        self.row_history = row_history
+        self.to = to
+        self.scope = scope
+        self.unique = unique
+        if unique:
+            self.random_func = self.unique_random
+        else:
+            self.random_func = randint
+
+    def next(self) -> T.Union[ObjectReference, ObjectRow]:
+        return self.row_history.random_row_reference(
+            self.to, self.scope, self.random_func
+        )
+
+    def unique_random(self, a, b):
+        """Goal: use an Uniquifying RNG until all of its values have been
+        used up, then make a new one, with higher values.
+
+        e.g. random_range(1,5) then random_range(5, 10)
+
+        The parent might call it like:
+        unique_random(1,2) -> random_range(1,3) -> 2
+        unique_random(1,4) -> random_range(1,3) -> 1
+        unique_random(1,6) -> random_range(3,7) -> 5  # reset
+        unique_random(1,8) -> random_range(3,7) -> 3
+        unique_random(1,10) -> random_range(3,7) -> 4
+        unique_random(1,12) -> random_range(3,7) -> 6
+        unique_random(1,14) -> random_range(7,14) -> 13 # reset
+        ...
+        """
+        b += 1  # randint uses top-inclusive semantics,
+        # random_range uses top-exclusive semantics
+        if self.rng is None:
+            self.rng = UpdatableRandomRange(a, b)
+        else:
+            self.rng.set_new_range(a, b)
+        return next(self.rng)
