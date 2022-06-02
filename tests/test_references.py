@@ -822,3 +822,29 @@ class TestRandomReferencesNew:
                 """
         generate(StringIO(yaml))
         assert generated_rows.table_values("Child", 1, "mamma_name") == "mammy"
+
+    def test_random_reference__with_continuation(
+        self, generate_data_with_continuation, generated_rows
+    ):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 10                   #3
+      - object: B                   #4
+        count: 5                    #5
+        fields:                     #6
+            A_ref:                  #7
+              random_reference:     #8
+                to: A               #9
+    """
+        generate_data_with_continuation(
+            yaml=yaml,
+            target_number=("B", 5),
+            times=3,
+        )
+
+        def parseref(reference):
+            return int(reference.split("(")[1].strip(")"))
+
+        last_five_Bs = generated_rows.table_values("B")[-5:]
+        referenced_As = [parseref(b["A_ref"]) for b in last_five_Bs]
+        assert all(a >= 20 for a in referenced_As), referenced_As

@@ -359,7 +359,7 @@ class Interpreter:
             self.native_types
         )
         self.tables_to_keep_history_for = find_tables_to_keep_history_for(parse_result)
-        self.row_history = RowHistory()
+        self.row_history = RowHistory(globals.transients.orig_used_ids)
 
         already_saved_ids = set()
 
