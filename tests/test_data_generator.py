@@ -147,3 +147,16 @@ persistent_nicknames: {}
             """
         with pytest.raises(exc.DataGenSyntaxError):
             generate(StringIO(yaml))
+
+    def test_duplicate_names_fail(self):
+        yaml = """
+            - object: obj
+            - object: obj2
+              nickname: obj
+            """
+        # with pytest.raises(exc.DataGenSyntaxError):
+        with pytest.warns(
+            UserWarning,
+            match="Should not reuse names as both nickname and table name:",
+        ):
+            generate(StringIO(yaml))

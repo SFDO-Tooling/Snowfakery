@@ -259,8 +259,13 @@ class ObjectTemplate:
 
         self._generate_fields(context, row)
 
+        context.remember_row(
+            self.tablename,
+            self.nickname,
+            row,
+        )
+
         with self.exception_handling("Cannot write row"):
-            self.register_row_intertable_references(row, context)
             if not self.tablename.startswith("__"):
                 output_stream.write_row(self.tablename, context.filter_row_values(row))
 
@@ -286,16 +291,6 @@ class ObjectTemplate:
                 self.filename,
                 self.line_num,
             )
-
-    def register_row_intertable_references(
-        self, row: dict, context: RuntimeContext
-    ) -> None:
-        """Before serializing we need to convert objects to flat ID integers."""
-        for fieldname, fieldvalue in row.items():
-            if isinstance(fieldvalue, (ObjectRow, ObjectReference)):
-                context.register_intertable_reference(
-                    self.tablename, fieldvalue._tablename, fieldname
-                )
 
     def execute(
         self, interp: Interpreter, context: RuntimeContext, continuing: bool

@@ -44,6 +44,9 @@ def generated_rows(request):
             else:  # return a single field
                 return [row[field] for row in mockobj._index[tablename]]
         else:  # return data from just one row
+            # implement Python's "index from the back" semantics
+            if index == -1:
+                index = len(mockobj._index[tablename])
             index = index - 1  # use 1-based indexing like Snowfakery does
             if field:  # return just one field
                 return mockobj._index[tablename][index][field]

@@ -41,6 +41,7 @@ class ParseResult:
         tables: Mapping,
         statements: Sequence,
         plugins: Sequence = (),
+        random_references: Sequence = (),
         version: int = None,
     ):
         self.options = options
@@ -49,6 +50,7 @@ class ParseResult:
         self.templates = [obj for obj in statements if isinstance(obj, ObjectTemplate)]
         self.plugins = plugins
         self.version = version
+        self.random_references = random_references or []
 
 
 class TableInfo:
@@ -99,6 +101,7 @@ class ParseContext:
         self.options = []
         self.table_infos = {}
         self.parser_macros_plugins = {}
+        self.random_references = []
 
     def line_num(self, obj=None) -> Dict:
         if not obj:
@@ -232,7 +235,10 @@ def parse_structured_value(name: str, field: Dict, context: ParseContext) -> Def
                 raise e
 
     args = parse_structured_value_args(args, context)
-    return StructuredValue(function_name, args, **context.line_num(field))
+    ret = StructuredValue(function_name, args, **context.line_num(field))
+    if function_name == "random_reference":
+        context.random_references.append(ret)  # need to track these for static analysis
+    return ret
 
 
 def parse_field_value(
@@ -797,4 +803,5 @@ def parse_recipe(
         statements,
         plugins=context.plugins,
         version=context.version,
+        random_references=context.random_references,
     )

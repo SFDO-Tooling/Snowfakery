@@ -3,7 +3,6 @@ import random
 from functools import lru_cache
 from datetime import date, datetime
 import dateutil.parser
-import warnings
 from dateutil.relativedelta import relativedelta
 from ast import literal_eval
 
@@ -16,7 +15,7 @@ from .data_gen_exceptions import DataGenError
 
 import snowfakery.data_generator_runtime  # noqa
 from snowfakery.plugins import SnowfakeryPlugin, PluginContext, lazy
-from snowfakery.object_rows import ObjectReference
+from snowfakery.object_rows import ObjectReference, ObjectRow
 from snowfakery.utils.template_utils import StringGenerator
 from snowfakery.standard_plugins.UniqueId import UniqueId
 from snowfakery.fakedata.fake_data_generator import UTCAsRelDelta, _normalize_timezone
@@ -257,7 +256,13 @@ class StandardFuncs(SnowfakeryPlugin):
                 probability = parse_weight_str(self.context, probability)
             return probability or when, pick
 
-        def random_reference(self, tablename: str, scope: str = "current-iteration"):
+        def random_reference(
+            self,
+            to: str,
+            *,
+            scope: str = "current-iteration",
+            unique: bool = False,
+        ) -> Union[ObjectReference, ObjectRow]:
             """Select a random, already-created row from 'sobject'
 
             - object: Owner
@@ -273,29 +278,13 @@ class StandardFuncs(SnowfakeryPlugin):
 
             See the docs for more info.
             """
+            if unique:
+                # next feature to implement
+                raise NotImplementedError()
 
-            globls = self.context.interpreter.globals
-            last_id = globls.transients.last_id_for_table(tablename)
-            if last_id:
-                if scope == "prior-and-current-iterations":
-                    first_id = 1
-                    warnings.warn("Global scope is an experimental feature.")
-                elif scope == "current-iteration":
-                    first_id = globls.first_new_id(tablename)
-                    last_id = max(first_id, last_id)
-                else:
-                    raise DataGenError(
-                        f"Scope must be 'prior-and-current-iterations' or 'current-iteration' not {scope}",
-                        None,
-                        None,
-                    )
-                return ObjectReference(tablename, random.randint(first_id, last_id))
-            elif tablename in globls.transients.nicknamed_objects:
-                raise DataGenError(
-                    "Nicknames cannot be used in random_reference", None, None
-                )
-            else:
-                raise DataGenError(f"There is no table named {tablename}", None, None)
+            return self.context.interpreter.row_history.random_row_reference(
+                to, scope, unique
+            )
 
         @lazy
         def if_(self, *choices: FieldDefinition):

@@ -1,3 +1,5 @@
+"""Runtime objects and algorithms used during the generation of rows."""
+import os
 from collections import defaultdict, ChainMap
 from datetime import date, datetime, timezone
 from contextlib import contextmanager
@@ -12,11 +14,17 @@ import yaml
 
 from .utils.template_utils import FakerTemplateLibrary
 from .utils.yaml_utils import SnowfakeryDumper, hydrate
-
+from .row_history import RowHistory
 from .template_funcs import StandardFuncs
 from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError
 import snowfakery  # noQA
-from snowfakery.object_rows import NicknameSlot, SlotState, ObjectRow
+from snowfakery.object_rows import (
+    NicknameSlot,
+    SlotState,
+    ObjectRow,
+    ObjectReference,
+    RowHistoryCV,
+)
 from snowfakery.plugins import PluginContext, SnowfakeryPlugin, ScalarTypes
 from snowfakery.utils.collections import OrderedSet
 
@@ -26,7 +34,9 @@ ObjectTemplate = "snowfakery.data_generator_runtime_object_model.ObjectTemplate"
 Statement = "snowfakery.data_generator_runtime_object_model.Statement"
 ParseResult = "snowfakery.parse_recipe_yaml.ParseResult"
 
-# Runtime objects and algorithms used during the generation of rows.
+
+# save every single object to history. Useful for testing saving of datatypes
+SAVE_EVERYTHING = os.environ.get("SF_SAVE_EVERYTHING")
 
 
 class StoppingCriteria(NamedTuple):
@@ -348,8 +358,44 @@ class Interpreter:
         self.template_evaluator_factory = JinjaTemplateEvaluatorFactory(
             self.native_types
         )
+        self.tables_to_keep_history_for = find_tables_to_keep_history_for(
+            parse_result, globals.nicknames_and_tables
+        )
+        self.row_history = RowHistory(
+            globals.transients.orig_used_ids,
+            self.tables_to_keep_history_for,
+            self.globals.nicknames_and_tables,
+        )
+        self.resave_objects_from_continuation(globals, self.tables_to_keep_history_for)
+
+    def resave_objects_from_continuation(
+        self, globals: Globals, tables_to_keep_history_for: T.Iterable[str]
+    ):
+        """Re-save just_once objects to the local history cache after resuming a continuation"""
+
+        # deal with objs known by their nicknames
+        relevant_objs = [
+            (obj._tablename, nickname, obj)
+            for nickname, obj in globals.persistent_nicknames.items()
+        ]
+        already_saved = set(obj._id for (_, _, obj) in relevant_objs)
+        # and those known by their tablename, if not already in the list
+        relevant_objs.extend(
+            (tablename, None, obj)
+            for tablename, obj in globals.persistent_objects_by_table.items()
+            if obj._id not in already_saved
+        )
+        # filter out those in tables that are not history-backed
+        relevant_objs = (
+            (table, nick, obj)
+            for (table, nick, obj) in relevant_objs
+            if table in tables_to_keep_history_for
+        )
+        for tablename, nickname, obj in relevant_objs:
+            self.row_history.save_row(tablename, nickname, obj._values)
 
     def execute(self):
+        RowHistoryCV.set(self.row_history)
         self.current_context = RuntimeContext(interpreter=self)
         self.loop_over_templates_until_finished(self.continuing)
         return self.globals
@@ -375,6 +421,7 @@ class Interpreter:
             self.iteration_count += 1
             continuing = True
             self.globals.reset_slots()
+            self.row_history.reset_locals()
 
     def loop_over_templates_once(self, statement_list, continuing: bool):
         for statement in statement_list:
@@ -515,16 +562,25 @@ class RuntimeContext:
         )
         return rc
 
+    def remember_row(self, tablename: str, nickname: T.Optional[str], row: dict):
+        for fieldname, fieldvalue in row.items():
+            if isinstance(fieldvalue, (ObjectRow, ObjectReference)):
+                self.interpreter.globals.register_intertable_reference(
+                    tablename, fieldvalue._tablename, fieldname
+                )
+        history_tables = self.interpreter.tables_to_keep_history_for
+        should_save: bool = (
+            (tablename in history_tables)
+            or (nickname in history_tables)
+            or SAVE_EVERYTHING
+        )
+        if should_save:
+            self.interpreter.row_history.save_row(tablename, nickname, row)
+
     def register_object(self, obj, name: Optional[str], persistent: bool):
         "Keep track of this object in case other objects refer to it."
         self.obj = obj
         self.interpreter.globals.register_object(obj, name, persistent)
-
-    def register_intertable_reference(self, table_name_from, table_name_to, fieldname):
-        "Keep track of a dependency between two tables. e.g. for mapping file generation"
-        self.interpreter.globals.register_intertable_reference(
-            table_name_from, table_name_to, fieldname
-        )
 
     @contextmanager
     def child_context(self, template):
@@ -626,3 +682,33 @@ def evaluate_function(func, args: Sequence, kwargs: Mapping, context):
             for name, arg in kwargs.items()
         }
     return func(*args, **kwargs)
+
+
+def find_tables_to_keep_history_for(
+    parse_result: ParseResult, nicknames_and_tables: T.Dict[str, str]
+) -> T.Set[str]:
+    """Only keep history for certain tables that are actually referred to by random_reference"""
+    random_references = parse_result.random_references
+    referenced_names = set(
+        get_referent_name(random_reference) for random_reference in random_references
+    )
+    # normalize nicknames to their underlying table
+    referenced_tables = set(
+        nicknames_and_tables.get(name, name) for name in referenced_names
+    )
+    return referenced_tables
+
+
+def get_referent_name(random_reference):
+    """What does this random_reference refer to?"""
+    args, kwargs = random_reference.args, random_reference.kwargs
+    assert not (args and kwargs)
+    if args:
+        ret = args[0].definition
+    elif kwargs:
+        ret = kwargs["to"].definition
+    if not isinstance(ret, str):
+        raise DataGenSyntaxError(
+            f"random_reference should only refer to a name, not {ret}"
+        )
+    return ret
