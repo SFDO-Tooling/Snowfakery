@@ -49,6 +49,7 @@ class RowHistory:
 
         if nickname:
             nickname_id = self._get_nickname_id(tablename, nickname)
+            self.table_counters[nickname] = nickname_id
         else:
             nickname_id = None
 
@@ -93,13 +94,17 @@ class RowHistory:
                 warnings.warn("Global scope is an experimental feature.")
                 self.already_warned = True
             min_id = 1
+        elif nickname:
+            # nickname counters are reset every loop, so 1 is the right choice
+            # OR they are just_once in which case 
+            min_id = self.local_counters.get(nickname, 0) + 1
         else:
             min_id = self.local_counters.get(tablename, 0) + 1
         # if no records can be found in this iteration
         # just look through the whole table.
         #
         # This happens usually when you are referring to just_once
-        if max_id <= min_id:
+        if max_id < min_id:
             min_id = 1
 
         if nickname:

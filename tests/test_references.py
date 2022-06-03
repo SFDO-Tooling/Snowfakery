@@ -737,6 +737,28 @@ class TestRandomReferencesNew:
         assert generated_rows.table_values("B", 1, "A_ref") == "A(2)"
         assert generated_rows.table_values("B", 2, "A_ref") == "A(1)"
 
+    def test_random_reference_to_nickname__subsequent_iterations(self, generated_rows):
+        yaml = """
+      - object: A
+        just_once: True
+      - object: A
+      - object: A
+        nickname: nicky
+        fields:
+          name: nicky
+      - object: B
+        count: 2
+        fields:
+            A_ref:
+              random_reference: nicky
+            nameref: ${{A_ref.name}}
+    """
+        with mock.patch("snowfakery.row_history.randint") as randint:
+            randint.side_effect = lambda x,y: x
+            generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 10))
+        assert generated_rows.table_values("B", 10, "A_ref") == "A(11)"
+        assert generated_rows.table_values("B", 10, "nameref") == "nicky"
+
     def test_random_reference__properties(self, generated_rows):
         yaml = """
               - object: GrandParent
