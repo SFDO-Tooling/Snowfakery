@@ -1,13 +1,13 @@
-import typing as T
 import sqlite3
-from random import randint
-from copy import deepcopy
-from snowfakery.object_rows import (
-    LazyLoadedObjectReference,
-)
-from snowfakery.utils.pickle import restricted_dumps, restricted_loads
-from snowfakery import data_gen_exceptions as exc
+import typing as T
 import warnings
+from collections import defaultdict
+from copy import deepcopy
+from random import randint
+
+from snowfakery import data_gen_exceptions as exc
+from snowfakery.object_rows import LazyLoadedObjectReference
+from snowfakery.utils.pickle import restricted_dumps, restricted_loads
 
 
 class RowHistory:
@@ -15,13 +15,26 @@ class RowHistory:
 
     already_warned = False
 
-    def __init__(self, table_counters: T.Mapping):
+    def __init__(
+        self,
+        table_counters: T.Mapping,
+        tables_to_keep_history_for: T.Iterable[str],
+        tablename_for_nickname: T.Mapping[str, str],
+    ):
         self.conn = sqlite3.connect("")
         self.table_counters = dict(table_counters)
-        self.nickname_counters = {}
+        self.nickname_counters = defaultdict(int)
         self.reset_locals()
-        self.tablename_for_nickname = {}
-        self.tables_already_created = set()
+        # the pattern is A -> A means A is a table
+        #                B -> A means B is a nickname and A is a table
+        #
+        self.nickname_to_tablename = {
+            nick: table
+            for nick, table in tablename_for_nickname.items()
+            if table != nick
+        }
+        for table in tables_to_keep_history_for:
+            _make_history_table(self.conn, table)
 
     def reset_locals(self):
         """Reset the minimum count that counts as "local" """
@@ -30,8 +43,6 @@ class RowHistory:
     def save_row(self, tablename: str, nickname: T.Optional[str], row: dict):
         """Save a row to temporary storage"""
         row_id = row["id"]
-
-        self._ensure_history_table_exists(tablename)
 
         # keep track of highest ID
         self.table_counters[tablename] = row_id
@@ -63,9 +74,9 @@ class RowHistory:
 
         # Next Step: implement "unique" with a Linear Congruent Generator
 
-        if name in self.tablename_for_nickname:
+        if name in self.nickname_to_tablename:
             nickname = name
-            tablename = self.tablename_for_nickname[nickname]
+            tablename = self.nickname_to_tablename[nickname]
             max_id = self.nickname_counters[nickname]
         else:
             nickname = None
@@ -74,7 +85,7 @@ class RowHistory:
 
         if not max_id:
             raise exc.DataGenError(
-                f"There is no table or nickname `{tablename}` at this point in the recipe."
+                f"There is no table or nickname `{nickname or tablename}` at this point in the recipe."
             )
 
         if scope == "prior-and-current-iterations":
@@ -127,18 +138,8 @@ class RowHistory:
 
         return first_row[0]
 
-    def _ensure_history_table_exists(self, tablename):
-        if tablename not in self.tables_already_created:  # newly discovered table
-            _make_history_table(self.conn, tablename)
-            self.table_counters[tablename] = 0
-            self.tables_already_created.add(tablename)
-
     def _get_nickname_id(self, tablename: str, nickname: str):
-        """Get a unique auto-incrementing identifier for a new row"""
-        if nickname not in self.tablename_for_nickname:
-            self.tablename_for_nickname[nickname] = tablename
-            self.nickname_counters[nickname] = 0
-
+        """Get a unique auto-incrementing nickname identifier for a new row"""
         self.nickname_counters[nickname] += 1
         return self.nickname_counters[nickname]
 
