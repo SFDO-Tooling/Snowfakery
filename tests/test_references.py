@@ -462,7 +462,25 @@ class TestRandomReferencesOriginal:
                 to: A               #10
                 unique: true        #11
     """
-        generate(StringIO(yaml), reps=5)
+        generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 25))
+        Bs = generated_rows.table_values("B")
+        # check that A_refs are unique
+        assert len(Bs) == len(set(b["A_ref"] for b in Bs)) == 25
+
+    def test_random_reference_unique__nickname(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        nickname: nicky             #3
+        count: 5                   #4
+      - object: B                   #5
+        count: 5                    #6
+        fields:                     #7
+            A_ref:                  #8
+              random_reference:     #9
+                to: nicky           #10
+                unique: true        #11
+    """
+        generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 25))
         Bs = generated_rows.table_values("B")
         # check that A_refs are unique
         assert len(Bs) == len(set(b["A_ref"] for b in Bs)) == 25
@@ -479,8 +497,8 @@ class TestRandomReferencesOriginal:
                 to: A               #10
                 unique: true        #11
     """
-        generate(StringIO(yaml))
-        assert 0, generated_rows.mock_calls
+        with pytest.raises(DataGenError, match="Cannot find an unused `A`"):
+            generate(StringIO(yaml))
 
     def test_random_reference_unique__with_continuation(
         self, generate_data_with_continuation, generated_rows

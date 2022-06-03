@@ -184,9 +184,17 @@ class RandomReferenceContext(PluginResultIterator):
             self.random_func = randint
 
     def next(self) -> T.Union[ObjectReference, ObjectRow]:
-        return self.row_history.random_row_reference(
-            self.to, self.scope, self.random_func
-        )
+        try:
+            return self.row_history.random_row_reference(
+                self.to, self.scope, self.random_func
+            )
+        except StopIteration as e:
+            if self.random_func == self.unique_random:
+                raise exc.DataGenError(
+                    f"Cannot find an unused `{self.to}`` to link to"
+                ) from e
+            else:  # pragma no cover
+                raise e
 
     def unique_random(self, a, b):
         """Goal: use an Uniquifying RNG until all of its values have been
