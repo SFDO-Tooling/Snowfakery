@@ -378,10 +378,12 @@ class Interpreter:
             (obj._tablename, nickname, obj)
             for nickname, obj in globals.persistent_nicknames.items()
         ]
-        # and those known by their tablename
+        already_saved = set(obj._id for (_, _, obj) in relevant_objs)
+        # and those known by their tablename, if not already in the list
         relevant_objs.extend(
             (tablename, None, obj)
             for tablename, obj in globals.persistent_objects_by_table.items()
+            if obj._id not in already_saved
         )
         # filter out those in tables that are not history-backed
         relevant_objs = (
@@ -389,13 +391,8 @@ class Interpreter:
             for (table, nick, obj) in relevant_objs
             if table in tables_to_keep_history_for
         )
-        # and uniqify by id
-        relevant_objs = {
-            obj._id: (table, nick, obj) for (table, nick, obj) in relevant_objs
-        }.values()
-
-        for tablename, nickname, values in relevant_objs:
-            self.row_history.save_row(tablename, nickname, values)
+        for tablename, nickname, obj in relevant_objs:
+            self.row_history.save_row(tablename, nickname, obj._values)
 
     def execute(self):
         RowHistoryCV.set(self.row_history)
