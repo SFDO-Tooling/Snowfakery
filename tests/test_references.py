@@ -1,12 +1,14 @@
+from datetime import date
 from io import StringIO
 from unittest import mock
 
+import dateutil
 import pytest
-
-from snowfakery.data_generator import generate
 from test_parse_samples import find_row
-from snowfakery.data_gen_exceptions import DataGenError, DataGenSyntaxError
+
 from snowfakery.api import StoppingCriteria
+from snowfakery.data_gen_exceptions import DataGenError, DataGenSyntaxError
+from snowfakery.data_generator import generate
 
 simple_parent = """                     #1
 - object: A                             #2
@@ -431,7 +433,7 @@ class TestRandomReferencesOriginal:
         assert generated_rows.row_values(10, "A_ref") == "A(8)"
         assert generated_rows.row_values(11, "A_ref") == "A(3)"
 
-    def test_random_reference_alernate_syntax(self, generated_rows):
+    def test_random_reference_alternate_syntax(self, generated_rows):
         yaml = """                  #1
       - object: A                   #2
         count: 10                   #4
@@ -790,6 +792,28 @@ class TestRandomReferencesNew:
         assert generated_rows.table_values("B", 1, "A_ref") == "A(2)"
         assert generated_rows.table_values("B", 2, "A_ref") == "A(1)"
 
+    def test_random_reference_to_nickname__subsequent_iterations(self, generated_rows):
+        yaml = """
+      - object: A
+        just_once: True
+      - object: A
+      - object: A
+        nickname: nicky
+        fields:
+          name: nicky
+      - object: B
+        count: 2
+        fields:
+            A_ref:
+              random_reference: nicky
+            nameref: ${{A_ref.name}}
+    """
+        with mock.patch("snowfakery.row_history.randint") as randint:
+            randint.side_effect = lambda x, y: x
+            generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 10))
+        assert generated_rows.table_values("B", 10, "A_ref") == "A(11)"
+        assert generated_rows.table_values("B", 10, "nameref") == "nicky"
+
     def test_random_reference__properties(self, generated_rows):
         yaml = """
               - object: GrandParent
@@ -877,3 +901,70 @@ class TestRandomReferencesNew:
                 """
         generate(StringIO(yaml))
         assert generated_rows.table_values("Child", 1, "mamma_name") == "mammy"
+
+    def test_random_reference__with_continuation(
+        self, generate_data_with_continuation, generated_rows
+    ):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 10                   #3
+      - object: B                   #4
+        count: 5                    #5
+        fields:                     #6
+            A_ref:                  #7
+              random_reference:     #8
+                to: A               #9
+    """
+        generate_data_with_continuation(
+            yaml=yaml,
+            target_number=("B", 5),
+            times=3,
+        )
+
+        def parseref(reference):
+            return int(reference.split("(")[1].strip(")"))
+
+        last_five_Bs = generated_rows.table_values("B")[-5:]
+        referenced_As = [parseref(b["A_ref"]) for b in last_five_Bs]
+        assert all(a >= 20 for a in referenced_As), referenced_As
+
+    def test_random_reference_to_objects_with_diverse_types(self, generated_rows):
+        # There is a risk that some weird types will not be serialized
+        # correctly.
+        yaml = """
+      - object: A
+        count: 3
+        nickname: AA
+        fields:
+          date: 2022-01-01
+          date2: ${{today}}
+          date3:
+            date_between:
+              start_date: 2000-01-01
+              end_date: today
+          decimal:
+            fake: latitude
+          datetime1:
+            fake: datetime
+          datetime2: ${{now}}
+      - object: B
+        fields:
+            A_ref:
+              random_reference: AA
+            date1ref: ${{A_ref.date}}
+            date2ref: ${{A_ref.date2}}
+            date3ref: ${{A_ref.date3}}
+            decimalref: ${{A_ref.decimal}}
+            datetime1ref: ${{A_ref.datetime1}}
+            datetime2ref: ${{A_ref.datetime2}}
+    """
+
+        parse_date = dateutil.parser.parse
+
+        generate(StringIO(yaml))
+        assert generated_rows.table_values("B", 1, "date1ref") == "2022-01-01"
+        assert date.fromisoformat(generated_rows.table_values("B", 1, "date2ref"))
+        assert date.fromisoformat(generated_rows.table_values("B", 1, "date3ref"))
+        assert float(generated_rows.table_values("B", 1, "decimalref"))
+        assert parse_date(generated_rows.table_values("B", 1, "datetime1ref"))
+        assert parse_date(generated_rows.table_values("B", 1, "datetime2ref"))

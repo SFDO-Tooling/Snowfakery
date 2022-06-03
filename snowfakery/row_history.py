@@ -1,6 +1,7 @@
 import sqlite3
 import typing as T
 import warnings
+from collections import defaultdict
 from copy import deepcopy
 from random import randint
 
@@ -10,24 +11,32 @@ from snowfakery.plugins import PluginResultIterator
 from snowfakery.utils.pickle import restricted_dumps, restricted_loads
 from snowfakery.utils.randomized_range import UpdatableRandomRange
 
-# TODO:
-#   * test random_reference of nicknames and just_once/nicknames
 
-
-# TODO: Share history data structures with Interpreter Globals so they will
-#       serialized. Nickname_Ids in particular are a new global datastructure
 class RowHistory:
     """Remember tables that might be random_reference'd in a database."""
 
     already_warned = False
 
-    def __init__(self, globls):
+    def __init__(
+        self,
+        table_counters: T.Mapping,
+        tables_to_keep_history_for: T.Iterable[str],
+        tablename_for_nickname: T.Mapping[str, str],
+    ):
         self.conn = sqlite3.connect("")
-        self.table_counters = dict(globls.transients.orig_used_ids)
-        self.nickname_counters = {}
+        self.table_counters = dict(table_counters)
+        self.nickname_counters = defaultdict(int)
         self.reset_locals()
-        self.tablename_for_nickname = {}
-        self.tables_already_created = set()
+        # the pattern is A -> A means A is a table
+        #                B -> A means B is a nickname and A is a table
+        #
+        self.nickname_to_tablename = {
+            nick: table
+            for nick, table in tablename_for_nickname.items()
+            if table != nick
+        }
+        for table in tables_to_keep_history_for:
+            _make_history_table(self.conn, table)
 
     def reset_locals(self):
         """Reset the minimum count that counts as "local" """
@@ -37,13 +46,12 @@ class RowHistory:
         """Save a row to temporary storage"""
         row_id = row["id"]
 
-        self._ensure_history_table_exists(tablename)
-
         # keep track of highest ID
         self.table_counters[tablename] = row_id
 
         if nickname:
             nickname_id = self._get_nickname_id(tablename, nickname)
+            self.table_counters[nickname] = nickname_id
         else:
             nickname_id = None
 
@@ -69,9 +77,9 @@ class RowHistory:
 
         # Next Step: implement "unique" with a Linear Congruent Generator
 
-        if name in self.tablename_for_nickname:
+        if name in self.nickname_to_tablename:
             nickname = name
-            tablename = self.tablename_for_nickname[nickname]
+            tablename = self.nickname_to_tablename[nickname]
             max_id = self.nickname_counters[nickname]
         else:
             nickname = None
@@ -80,7 +88,7 @@ class RowHistory:
 
         if not max_id:
             raise exc.DataGenError(
-                f"There is no table or nickname `{tablename}` at this point in the recipe."
+                f"There is no table or nickname `{nickname or tablename}` at this point in the recipe."
             )
 
         if scope == "prior-and-current-iterations":
@@ -88,13 +96,15 @@ class RowHistory:
                 warnings.warn("Global scope is an experimental feature.")
                 self.already_warned = True
             min_id = 1
+        elif nickname:
+            min_id = self.local_counters.get(nickname, 0) + 1
         else:
             min_id = self.local_counters.get(tablename, 0) + 1
         # if no records can be found in this iteration
         # just look through the whole table.
         #
         # This happens usually when you are referring to just_once
-        if max_id <= min_id:
+        if max_id < min_id:
             min_id = 1
 
         if nickname:
@@ -133,17 +143,8 @@ class RowHistory:
 
         return first_row[0]
 
-    def _ensure_history_table_exists(self, tablename):
-        if tablename not in self.tables_already_created:  # newly discovered table
-            _make_history_table(self.conn, tablename)
-            self.tables_already_created.add(tablename)
-
     def _get_nickname_id(self, tablename: str, nickname: str):
-        """Get a unique auto-incrementing identifier for a new row"""
-        if nickname not in self.tablename_for_nickname:
-            self.tablename_for_nickname[nickname] = tablename
-            self.nickname_counters[nickname] = 0
-
+        """Get a unique auto-incrementing nickname identifier for a new row"""
         self.nickname_counters[nickname] += 1
         return self.nickname_counters[nickname]
 
@@ -153,7 +154,7 @@ def _make_history_table(conn, tablename):
 
     c = conn.cursor()
     c.execute(
-        f'CREATE TABLE "{tablename}" (id INTEGER NOT NULL UNIQUE , nickname VARCHAR, nickname_id INTEGER, data VARCHAR NOT NULL)'
+        f'CREATE TABLE "{tablename}" (id INTEGER NOT NULL UNIQUE, nickname VARCHAR, nickname_id INTEGER, data VARCHAR NOT NULL)'
     )
     # helps with sparsely scattered nicknames. Of debatable value. Can speed up benchmarks
     # but hard to see it in real recipes.

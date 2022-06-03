@@ -358,19 +358,41 @@ class Interpreter:
         self.template_evaluator_factory = JinjaTemplateEvaluatorFactory(
             self.native_types
         )
-        self.tables_to_keep_history_for = find_tables_to_keep_history_for(parse_result)
-        self.row_history = RowHistory(globals)
+        self.tables_to_keep_history_for = find_tables_to_keep_history_for(
+            parse_result, globals.nicknames_and_tables
+        )
+        self.row_history = RowHistory(
+            globals.transients.orig_used_ids,
+            self.tables_to_keep_history_for,
+            self.globals.nicknames_and_tables,
+        )
+        self.resave_objects_from_continuation(globals, self.tables_to_keep_history_for)
 
-        already_saved_ids = set()
+    def resave_objects_from_continuation(
+        self, globals: Globals, tables_to_keep_history_for: T.Iterable[str]
+    ):
+        """Re-save just_once objects to the local history cache after resuming a continuation"""
 
-        for nickname, obj in globals.persistent_nicknames.items():
-            if (obj._tablename, obj._id) not in already_saved_ids:
-                self.row_history.save_row(obj._tablename, nickname, obj._values)
-                already_saved_ids.add((obj._tablename, obj._id))
-
-        for tablename, obj in globals.persistent_objects_by_table.items():
-            if (obj._tablename, obj._id) not in already_saved_ids:
-                self.row_history.save_row(tablename, None, obj._values)
+        # deal with objs known by their nicknames
+        relevant_objs = [
+            (obj._tablename, nickname, obj)
+            for nickname, obj in globals.persistent_nicknames.items()
+        ]
+        already_saved = set(obj._id for (_, _, obj) in relevant_objs)
+        # and those known by their tablename, if not already in the list
+        relevant_objs.extend(
+            (tablename, None, obj)
+            for tablename, obj in globals.persistent_objects_by_table.items()
+            if obj._id not in already_saved
+        )
+        # filter out those in tables that are not history-backed
+        relevant_objs = (
+            (table, nick, obj)
+            for (table, nick, obj) in relevant_objs
+            if table in tables_to_keep_history_for
+        )
+        for tablename, nickname, obj in relevant_objs:
+            self.row_history.save_row(tablename, nickname, obj._values)
 
     def execute(self):
         RowHistoryCV.set(self.row_history)
@@ -548,7 +570,7 @@ class RuntimeContext:
                     tablename, fieldvalue._tablename, fieldname
                 )
         history_tables = self.interpreter.tables_to_keep_history_for
-        should_save = (
+        should_save: bool = (
             (tablename in history_tables)
             or (nickname in history_tables)
             or SAVE_EVERYTHING
@@ -663,15 +685,23 @@ def evaluate_function(func, args: Sequence, kwargs: Mapping, context):
     return func(*args, **kwargs)
 
 
-def find_tables_to_keep_history_for(parse_result: ParseResult) -> T.Set[str]:
+def find_tables_to_keep_history_for(
+    parse_result: ParseResult, nicknames_and_tables: T.Dict[str, str]
+) -> T.Set[str]:
+    """Only keep history for certain tables that are actually referred to by random_reference"""
     random_references = parse_result.random_references
-    referenced_tables = set(
+    referenced_names = set(
         get_referent_name(random_reference) for random_reference in random_references
+    )
+    # normalize nicknames to their underlying table
+    referenced_tables = set(
+        nicknames_and_tables.get(name, name) for name in referenced_names
     )
     return referenced_tables
 
 
 def get_referent_name(random_reference):
+    """What does this random_reference refer to?"""
     args, kwargs = random_reference.args, random_reference.kwargs
     assert not (args and kwargs)
     if args:

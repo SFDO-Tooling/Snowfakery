@@ -28,7 +28,7 @@ class FakeParseResult(ParseResult):
         self.tables = ()
         self.templates = ()
         self.statements = ()
-        self.random_references = {}
+        self.random_references = []
 
 
 def standard_runtime():
