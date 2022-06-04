@@ -6,9 +6,9 @@ from copy import deepcopy
 from random import randint
 
 from snowfakery import data_gen_exceptions as exc
-from snowfakery.object_rows import LazyLoadedObjectReference, ObjectRow
+from snowfakery.object_rows import LazyLoadedObjectReference, ObjectReference, ObjectRow
 from snowfakery.utils.pickle import RestrictedPickler
-from snowfakery.object_rows import NicknameSlot, ObjectReference
+from snowfakery.object_rows import NicknameSlot
 
 
 class RowHistory:
