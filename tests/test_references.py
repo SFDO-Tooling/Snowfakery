@@ -913,32 +913,56 @@ class TestRandomReferencesNew:
         assert parse_date(generated_rows.table_values("B", 1, "datetime1ref"))
         assert parse_date(generated_rows.table_values("B", 1, "datetime2ref"))
 
-    # TODO: Make this work
-    # def test_random_references__nested_1(self, generate_data_with_continuation, generated_rows):
-    #     yaml = """
-    #   - object: Parent
-    #     count: 2
-    #     fields:
-    #       child1:
-    #         - object: Child1
-    #           fields:
-    #             child2:
-    #               - object: Child2
-    #                 fields:
-    #                   name: TheName
-    #   - object: Child3
-    #     fields:
-    #         A_ref:
-    #           random_reference:
-    #             to: Parent
-    #         nested_name:
-    #           ${{A_ref.child1.child2.name}}
-    # """
-    #     generate(StringIO(yaml))
-    #     # generate_data_with_continuation(
-    #     #     yaml=yaml,
-    #     #     target_number=("Parent", 4),
-    #     #     times=1,
-    #     # )
-    #     assert generated_rows.table_values("Child3", 1, "nested_name") == "TheName"
-    #     assert generated_rows.table_values("Child3", -1, "nested_name") == "TheName"
+    def test_random_references__nested(self, generated_rows):
+        yaml = """
+      - object: Parent
+        count: 2
+        fields:
+          child1:
+            - object: Child1
+              fields:
+                child2:
+                  - object: Child2
+                    fields:
+                      name: TheName
+      - object: Child3
+        fields:
+            A_ref:
+              random_reference:
+                to: Parent
+            nested_name:
+              ${{A_ref.child1.child2.name}}
+    """
+        generate(StringIO(yaml))
+        assert generated_rows.table_values("Child3", 1, "nested_name") == "TheName"
+        assert generated_rows.table_values("Child3", -1, "nested_name") == "TheName"
+
+    def test_random_references__nested__with_continuation(
+        self, generate_data_with_continuation, generated_rows
+    ):
+        yaml = """
+      - object: Parent
+        count: 2
+        fields:
+          child1:
+            - object: Child1
+              fields:
+                child2:
+                  - object: Child2
+                    fields:
+                      name: TheName
+      - object: Child3
+        fields:
+            A_ref:
+              random_reference:
+                to: Parent
+            nested_name:
+              ${{A_ref.child1.child2.name}}
+    """
+        generate_data_with_continuation(
+            yaml=yaml,
+            target_number=("Parent", 4),
+            times=1,
+        )
+        assert generated_rows.table_values("Child3", 1, "nested_name") == "TheName"
+        assert generated_rows.table_values("Child3", -1, "nested_name") == "TheName"

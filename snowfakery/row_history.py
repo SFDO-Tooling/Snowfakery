@@ -6,7 +6,7 @@ from copy import deepcopy
 from random import randint
 
 from snowfakery import data_gen_exceptions as exc
-from snowfakery.object_rows import LazyLoadedObjectReference
+from snowfakery.object_rows import LazyLoadedObjectReference, ObjectRow
 from snowfakery.utils.pickle import RestrictedPickler
 from snowfakery.object_rows import NicknameSlot, ObjectReference
 
@@ -167,7 +167,11 @@ _DISPATCH_TABLE = {
     NicknameSlot: lambda n: (
         ObjectReference,
         (n._tablename, n.allocated_id),
-    )
+    ),
+    ObjectRow: lambda v: (
+        ObjectRow,
+        (v._tablename, v._values),
+    ),
 }
 
 _SAFE_CLASSES = {
