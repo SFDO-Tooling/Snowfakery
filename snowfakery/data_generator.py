@@ -95,7 +95,7 @@ def load_continuation_yaml(continuation_file: OpenFileLike):
 def save_continuation_yaml(continuation_data: Globals, continuation_file: OpenFileLike):
     """Save the global interpreter state from Globals into a continuation_file"""
     yaml.dump(
-        continuation_data.__getstate__(),
+        continuation_data,
         continuation_file,
         Dumper=SnowfakeryDumper,
     )

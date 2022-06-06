@@ -27,6 +27,7 @@ from snowfakery.object_rows import (
 )
 from snowfakery.plugins import PluginContext, SnowfakeryPlugin, ScalarTypes
 from snowfakery.utils.collections import OrderedSet
+from snowfakery.utils.yaml_utils import register_for_continuation
 
 OutputStream = "snowfakery.output_streams.OutputStream"
 VariableDefinition = "snowfakery.data_generator_runtime_object_model.VariableDefinition"
@@ -60,6 +61,7 @@ class IdManager:
     def __getitem__(self, table_name: str) -> int:
         return self.last_used_ids[table_name]
 
+    # TODO: Fix this to use the new convention of get_continuation_data
     def __getstate__(self):
         return {"last_used_ids": dict(self.last_used_ids)}
 
@@ -195,21 +197,14 @@ class Globals:
     def first_new_id(self, tablename):
         return self.transients.first_new_id(tablename)
 
-    def __getstate__(self):
-        def serialize_dict_of_object_rows(dct):
-            return {k: v.__getstate__() for k, v in dct.items()}
-
-        persistent_nicknames = serialize_dict_of_object_rows(self.persistent_nicknames)
-        persistent_objects_by_table = serialize_dict_of_object_rows(
-            self.persistent_objects_by_table
-        )
+    def get_continuation_state(self):
         intertable_dependencies = [
             dict(v._asdict()) for v in self.intertable_dependencies
         ]  # converts ordered-dict to dict for Python 3.6 and 3.7
 
         state = {
-            "persistent_nicknames": persistent_nicknames,
-            "persistent_objects_by_table": persistent_objects_by_table,
+            "persistent_nicknames": self.persistent_nicknames,
+            "persistent_objects_by_table": self.persistent_objects_by_table,
             "id_manager": self.id_manager.__getstate__(),
             "today": self.today,
             "nicknames_and_tables": self.nicknames_and_tables,
@@ -242,6 +237,9 @@ class Globals:
             else {}
         )
         self.reset_slots()
+
+
+register_for_continuation(Globals, Globals.get_continuation_state)
 
 
 class JinjaTemplateEvaluatorFactory:
