@@ -7,12 +7,16 @@ import typing as T
 
 import warnings
 
-from snowfakery.object_rows import NicknameSlot, ObjectReference
+from snowfakery.object_rows import NicknameSlot, ObjectReference, ObjectRow
 
 _DISPATCH_TABLE = copyreg.dispatch_table.copy()
 _DISPATCH_TABLE[NicknameSlot] = lambda n: (
     ObjectReference,
     (n._tablename, n.allocated_id),
+)
+_DISPATCH_TABLE[ObjectRow] = lambda v: (
+    ObjectRow,
+    (v._tablename, v._values),
 )
 
 
