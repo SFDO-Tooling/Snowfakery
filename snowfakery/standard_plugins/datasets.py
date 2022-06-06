@@ -17,7 +17,7 @@ from snowfakery.plugins import (
     memorable,
 )
 from snowfakery.utils.files import FileLike, open_file_like
-from snowfakery.utils.yaml_utils import SnowfakeryDumper
+from snowfakery.utils.yaml_utils import SnowfakeryContinuationDumper
 
 
 def _open_db(db_url):
@@ -258,4 +258,4 @@ def chdir(path):
         os.chdir(cwd)
 
 
-SnowfakeryDumper.add_representer(quoted_name, Representer.represent_str)
+SnowfakeryContinuationDumper.add_representer(quoted_name, Representer.represent_str)

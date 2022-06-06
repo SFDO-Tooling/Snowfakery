@@ -13,7 +13,7 @@ from jinja2 import nativetypes
 import yaml
 
 from .utils.template_utils import FakerTemplateLibrary
-from .utils.yaml_utils import SnowfakeryDumper, hydrate
+from .utils.yaml_utils import hydrate
 from .row_history import RowHistory
 from .template_funcs import StandardFuncs
 from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError
@@ -27,6 +27,7 @@ from snowfakery.object_rows import (
 )
 from snowfakery.plugins import PluginContext, SnowfakeryPlugin, ScalarTypes
 from snowfakery.utils.collections import OrderedSet
+from snowfakery.utils.yaml_utils import register_for_continuation
 
 OutputStream = "snowfakery.output_streams.OutputStream"
 VariableDefinition = "snowfakery.data_generator_runtime_object_model.VariableDefinition"
@@ -60,15 +61,13 @@ class IdManager:
     def __getitem__(self, table_name: str) -> int:
         return self.last_used_ids[table_name]
 
-    def __getstate__(self):
+    # TODO: Fix this to use the new convention of get_continuation_data
+    def get_continuation_state(self):
         return {"last_used_ids": dict(self.last_used_ids)}
 
-    def __setstate__(self, state):
+    def restore_from_continuation(self, state):
         self.last_used_ids = defaultdict(lambda: 0, state["last_used_ids"])
         self.start_ids = {name: val + 1 for name, val in self.last_used_ids.items()}
-
-
-SnowfakeryDumper.add_representer(defaultdict, SnowfakeryDumper.represent_dict)
 
 
 class Dependency(NamedTuple):
@@ -195,29 +194,22 @@ class Globals:
     def first_new_id(self, tablename):
         return self.transients.first_new_id(tablename)
 
-    def __getstate__(self):
-        def serialize_dict_of_object_rows(dct):
-            return {k: v.__getstate__() for k, v in dct.items()}
-
-        persistent_nicknames = serialize_dict_of_object_rows(self.persistent_nicknames)
-        persistent_objects_by_table = serialize_dict_of_object_rows(
-            self.persistent_objects_by_table
-        )
+    def get_continuation_state(self):
         intertable_dependencies = [
             dict(v._asdict()) for v in self.intertable_dependencies
         ]  # converts ordered-dict to dict for Python 3.6 and 3.7
 
         state = {
-            "persistent_nicknames": persistent_nicknames,
-            "persistent_objects_by_table": persistent_objects_by_table,
-            "id_manager": self.id_manager.__getstate__(),
+            "persistent_nicknames": self.persistent_nicknames,
+            "persistent_objects_by_table": self.persistent_objects_by_table,
+            "id_manager": self.id_manager.get_continuation_state(),
             "today": self.today,
             "nicknames_and_tables": self.nicknames_and_tables,
             "intertable_dependencies": intertable_dependencies,
         }
         return state
 
-    def __setstate__(self, state):
+    def restore_from_continuation(self, state):
         def deserialize_dict_of_object_rows(dct):
             return {k: hydrate(ObjectRow, v) for k, v in dct.items()}
 
@@ -242,6 +234,9 @@ class Globals:
             else {}
         )
         self.reset_slots()
+
+
+register_for_continuation(Globals, Globals.get_continuation_state)
 
 
 class JinjaTemplateEvaluatorFactory:

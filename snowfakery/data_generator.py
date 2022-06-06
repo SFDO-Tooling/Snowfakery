@@ -19,7 +19,7 @@ from .data_generator_runtime import (
 from .data_gen_exceptions import DataGenError
 from .plugins import SnowfakeryPlugin, PluginOption
 
-from .utils.yaml_utils import SnowfakeryDumper, hydrate
+from .utils.yaml_utils import SnowfakeryContinuationDumper, hydrate
 from snowfakery.standard_plugins.UniqueId import UniqueId
 
 # This tool is essentially a three stage interpreter.
@@ -95,9 +95,9 @@ def load_continuation_yaml(continuation_file: OpenFileLike):
 def save_continuation_yaml(continuation_data: Globals, continuation_file: OpenFileLike):
     """Save the global interpreter state from Globals into a continuation_file"""
     yaml.dump(
-        continuation_data.__getstate__(),
+        continuation_data,
         continuation_file,
-        Dumper=SnowfakeryDumper,
+        Dumper=SnowfakeryContinuationDumper,
     )
 
 

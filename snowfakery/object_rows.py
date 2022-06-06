@@ -2,7 +2,7 @@ from enum import Enum, auto
 
 import yaml
 import snowfakery  # noqa
-from .utils.yaml_utils import SnowfakeryDumper
+from .utils.yaml_utils import register_for_continuation
 from contextvars import ContextVar
 
 IdManager = "snowfakery.data_generator_runtime.IdManager"
@@ -13,10 +13,6 @@ class ObjectRow:
     """Represents a single row
 
     Uses __getattr__ so that the template evaluator can use dot-notation."""
-
-    yaml_loader = yaml.SafeLoader
-    yaml_dumper = SnowfakeryDumper
-    yaml_tag = "!snowfakery_objectrow"
 
     # be careful changing these slots because these objects must be serializable
     # to YAML and JSON
@@ -49,17 +45,26 @@ class ObjectRow:
         except Exception:
             return super().__repr__()
 
-    def __getstate__(self):
+    def get_continuation_state(self):
         """Get the state of this ObjectRow for serialization.
 
         Do not include related ObjectRows because circular
         references in serialization formats cause problems."""
+
+        # If we decided to try to serialize hierarchies, we could
+        # do it like this:
+        #   * keep track of if an object has already been serialized using a
+        #     property of the SnowfakeryContinuationDumper
+        #   * If so, output an ObjectReference instead of an ObjectRow
         values = {k: v for k, v in self._values.items() if not isinstance(v, ObjectRow)}
         return {"_tablename": self._tablename, "_values": values}
 
-    def __setstate__(self, state):
+    def restore_from_continuation(self, state):
         for slot, value in state.items():
             setattr(self, slot, value)
+
+
+register_for_continuation(ObjectRow, ObjectRow.get_continuation_state)
 
 
 class ObjectReference(yaml.YAMLObject):
