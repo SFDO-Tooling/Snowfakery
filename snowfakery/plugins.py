@@ -8,13 +8,11 @@ from unittest.mock import patch
 from functools import wraps
 import typing as T
 
-import yaml
-from yaml.representer import Representer
 from faker.providers import BaseProvider as FakerProvider
 from dateutil.relativedelta import relativedelta
 
 import snowfakery.data_gen_exceptions as exc
-from .utils.yaml_utils import SnowfakeryDumper
+from snowfakery.utils.yaml_utils import register_for_continuation
 from .utils.collections import CaseInsensitiveDict
 
 from numbers import Number
@@ -306,17 +304,7 @@ class PluginResult:
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        _register_for_continuation(cls)
-
-
-def _register_for_continuation(cls):
-    SnowfakeryDumper.add_representer(cls, Representer.represent_object)
-    yaml.SafeLoader.add_constructor(
-        f"tag:yaml.org,2002:python/object/apply:{cls.__module__}.{cls.__name__}",
-        lambda loader, node: cls._from_continuation(
-            loader.construct_mapping(node.value[0])
-        ),
-    )
+        register_for_continuation(cls)
 
 
 class PluginResultIterator(PluginResult):
@@ -372,4 +360,4 @@ class PluginOption:
 
 
 # round-trip PluginResult objects through continuation YAML if needed.
-_register_for_continuation(PluginResult)
+register_for_continuation(PluginResult)
