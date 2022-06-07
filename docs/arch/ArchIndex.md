@@ -57,9 +57,9 @@ So Snowfakery would run it once snapshot the "continuation state" and then fan t
 
 When reading Snowfakery code, you must always think about the lifetime of each data structure:
 
-* Will it survive for a single iteration, like local variables?
-* Will it survive for a single continuation, like the "Interpreter" object?
-* Will it be saved and loaded between continuations, and thus survive 2 or more continuations?
+* Will it survive for a single iteration, like local variables? We call these Transients.
+* Will it survive for a single continuation, like "FakerData" objects? We could call these Interpreter Managed objects.
+* Will it be saved and loaded between continuations, and thus survive across continuations? These are Globals.
 
 ## The Parser
 
@@ -82,6 +82,8 @@ such as:
  * The Row History which is used for allowing randomized access to objects for the `random_reference` feature
  * Plugins and Providers which extend Snowfakery
  * Runtime Object Model objects
+
+On my relatively slow computer it takes 1/25 of a second to initialize an Interpreter from a Recipe once all modules are loaded. It takes about 3/4 of a second to launch an interpreter and load the corre, required modules.
 
 ### The Runtime Object Model
 
@@ -231,4 +233,17 @@ Static analysis of the recipe determines which tables have
 a row history table behind them. Tables which are not
 referenced by `random_reference` do not need a backing
 table.
+
+## Fake Data
+
+Snowfakery gets most of its fake data infrastructure from the Python [faker](https://faker.readthedocs.io/en/master/) project.
+
+All Fake Data is mediated through the [FakeData](https://github.com/SFDO-Tooling/Snowfakery/search?q=%22class+FakeData%22) class. Localized FakeData objects can be constructed for different world regions. There is a method on the `Interpreter` object called `faker_template_library` which creates them lazily.
+
+Snowfakery extends and customizes the set of fake data providers through its [FakeNames](https://github.com/SFDO-Tooling/Snowfakery/search?q=%22class+FakeNames%22) class. For example, Snowfakery's email address provider incorporates the first name and last name of the imaginary person into the email. Snowfakery renames `postcode` to `postalcode` to match Salesforc conventions. Snowfakery adds timezones to date-time fakers.
+
+## Formulas 
+
+Snowfakery `${{formulas}}` are Jinja Templates controlled by a class called the [`JinjaTemplateEvaluatorFactory`](https://github.com/SFDO-Tooling/Snowfakery/search?q=%22class+JinjaTemplateEvaluatorFactory%22). The `Interpreter` object keeps a reference to this class.
+
 
