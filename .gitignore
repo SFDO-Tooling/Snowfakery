@@ -47,5 +47,4 @@ coverage.xml
 .cci
 .sfdx
 /src.orig
-/src
 myvenv
