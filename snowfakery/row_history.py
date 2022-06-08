@@ -193,7 +193,7 @@ class RandomReferenceContext(PluginResultIterator):
                 raise exc.DataGenError(
                     f"Cannot find an unused `{self.to}`` to link to"
                 ) from e
-            else:  # pragma no cover
+            else:  # pragma: no cover
                 raise e
 
     def unique_random(self, a, b):
