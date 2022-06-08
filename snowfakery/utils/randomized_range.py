@@ -6,15 +6,15 @@ import math
 class UpdatableRandomRange:
     def __init__(self, start: int, stop: int = None):
         assert stop > start
-        self.start = start
+        self.min = start
         self._set_new_range_immediately(start, stop)
 
-    def set_new_top(self, new_top: int):
+    def set_new_max(self, new_max: int):
         # do not replace RNG until old one is exhausted
-        assert new_top >= self.cur_stop
-        self.cur_stop = new_top
+        assert new_max >= self.cur_max
+        self.cur_max = new_max
 
-    def set_new_range(self, new_bottom: int, new_top: int):
+    def set_new_range(self, new_min: int, new_max: int):
         """Update the range subject to constraints
 
         There are two modes:
@@ -38,17 +38,17 @@ class UpdatableRandomRange:
         than the old top. This preserves the rule that no value is
         ever produced twice.
         """
-        if new_bottom == self.start:
-            self.set_new_top(new_top)
+        if new_min == self.min:
+            self.set_new_max(new_max)
         else:
-            assert new_bottom >= self.orig_stop, (new_bottom, self.orig_stop)
-            self._set_new_range_immediately(new_bottom, new_top)
+            assert new_min >= self.orig_max, (new_min, self.orig_max)
+            self._set_new_range_immediately(new_min, new_max)
 
-    def _set_new_range_immediately(self, new_bottom: int, new_top: int):
-        assert new_top > new_bottom
-        self.start = new_bottom
-        self.orig_stop = self.cur_stop = new_top
-        self.num_generator = random_range(self.start, self.orig_stop)
+    def _set_new_range_immediately(self, new_min: int, new_max: int):
+        assert new_max > new_min
+        self.min = new_min
+        self.orig_max = self.cur_max = new_max
+        self.num_generator = random_range(self.min, self.orig_max)
 
     def __iter__(self):
         return self
@@ -59,12 +59,12 @@ class UpdatableRandomRange:
         if rv is not None:
             return rv
 
-        if self.cur_stop <= self.orig_stop:
+        if self.cur_max <= self.orig_max:
             raise StopIteration()
 
-        self.start = self.orig_stop
-        self.num_generator = random_range(self.start, self.cur_stop)
-        self.orig_stop = self.cur_stop
+        self.min = self.orig_max
+        self.num_generator = random_range(self.min, self.cur_max)
+        self.orig_max = self.cur_max
         return next(self.num_generator)
 
 

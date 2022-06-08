@@ -66,7 +66,7 @@ class RowHistory:
             (row_id, nickname, nickname_id, data),
         )
 
-    def random_row_reference(self, name: str, scope: str, randint: callable):
+    def random_row_reference(self, name: str, scope: str, randomizer_func: callable):
         """Find a random row and load it"""
         if scope not in ("prior-and-current-iterations", "current-iteration"):
             raise exc.DataGenError(
@@ -109,11 +109,11 @@ class RowHistory:
 
         if nickname:
             # find a random nickname'd row by its nickname_id
-            nickname_id = randint(min_id, max_id)
+            nickname_id = randomizer_func(min_id, max_id)
             row_id = self.find_row_id_for_nickname_id(tablename, nickname, nickname_id)
         else:
             # find a random row
-            row_id = randint(min_id, max_id)
+            row_id = randomizer_func(min_id, max_id)
 
         return LazyLoadedObjectReference(tablename, row_id, tablename)
 
@@ -212,7 +212,7 @@ class RandomReferenceContext(PluginResultIterator):
         unique_random(1,14) -> random_range(7,14) -> 13 # reset
         ...
         """
-        b += 1  # randint uses top-inclusive semantics,
+        b += 1  # randomizer_func uses top-inclusive semantics,
         # random_range uses top-exclusive semantics
         if self.rng is None:
             self.rng = UpdatableRandomRange(a, b)
