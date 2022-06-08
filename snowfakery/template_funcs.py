@@ -261,6 +261,7 @@ class StandardFuncs(SnowfakeryPlugin):
             self,
             to: str,
             *,
+            parent: str = None,
             scope: str = "current-iteration",
             unique: bool = False,
         ) -> "RandomReferenceContext":

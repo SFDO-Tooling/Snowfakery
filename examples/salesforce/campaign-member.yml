@@ -1,0 +1,22 @@
+# Note: Not even close to correct
+
+- object: Campaign
+  count: 5
+  fields:
+    Name: Campaign ${{child_index}}
+- object: Account
+  count: 3
+  fields:
+    name:
+      fake: Name
+  friends:
+    - object: CampaignMember
+      count: 5
+      fields:
+        AccountId:
+          reference: Account
+        CampaignId:
+          random_reference:
+            to: Campaign
+            parent: Account
+            unique: True

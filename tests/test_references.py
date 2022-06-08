@@ -1039,3 +1039,13 @@ class TestRandomReferencesNew:
         )
         assert generated_rows.table_values("Child3", 1, "nested_name") == "TheName"
         assert generated_rows.table_values("Child3", -1, "nested_name") == "TheName"
+
+    def test_random_reference__joins(self, generated_rows):
+        with open("examples/salesforce/campaign-member.yml") as f:
+            generate(f)
+
+        combinations = set()
+        for row in generated_rows.table_values("CampaignMember"):
+            key = row["AccountId"], row["CampaignId"]
+            assert key not in combinations
+            combinations.add(key)
