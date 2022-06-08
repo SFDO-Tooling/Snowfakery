@@ -1046,6 +1046,6 @@ class TestRandomReferencesNew:
 
         combinations = set()
         for row in generated_rows.table_values("CampaignMember"):
-            key = row["AccountId"], row["CampaignId"]
+            key = row["ContactId"], row["CampaignId"]
             assert key not in combinations
             combinations.add(key)

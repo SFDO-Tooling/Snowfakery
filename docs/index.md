@@ -651,7 +651,7 @@ The `parent` parameter clarifies that the scope of the uniqueness is the local C
 Each of the Contacts will have CampaignMembers that point to unique campaigns, like
 this:
 
-```json
+```sh
 Campaign(id=1, Name=Campaign 0)
 Campaign(id=2, Name=Campaign 1)
 Campaign(id=3, Name=Campaign 2)
