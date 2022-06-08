@@ -621,10 +621,31 @@ In the case above, the relationship between Owners and Pets will be one-to-one i
 
 In the case above, it is clear that the scope of the uniqueness should be the Pets, but in the case of join tables, like Salesforce's Campaign Member, this is ambiguous and must be specified like this:
 
-'''yaml
+```yaml
 # examples/salesforce/campaign-member.yml
-
-'''
+- object: Campaign
+  count: 5
+  fields:
+    Name: Campaign ${{child_index}}
+- object: Contact
+  count: 3
+  fields:
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+  friends:
+    - object: CampaignMember
+      count: 5
+      fields:
+        ContactId:
+          reference: Contact
+        CampaignId:
+          random_reference:
+            to: Campaign
+            parent: Contact
+            unique: True
+```
 
 The `parent` parameter clarifies that the scope of the uniqueness is the local Contact.
 Each of the Contacts will have CampaignMembers that point to unique campaigns, like
