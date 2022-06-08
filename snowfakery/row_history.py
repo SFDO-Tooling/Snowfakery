@@ -6,8 +6,10 @@ from copy import deepcopy
 from random import randint
 
 from snowfakery import data_gen_exceptions as exc
-from snowfakery.object_rows import LazyLoadedObjectReference
+from snowfakery.object_rows import LazyLoadedObjectReference, ObjectReference, ObjectRow
+from snowfakery.plugins import PluginResultIterator
 from snowfakery.utils.pickle import restricted_dumps, restricted_loads
+from snowfakery.utils.randomized_range import UpdatableRandomRange
 
 
 class RowHistory:
@@ -64,7 +66,7 @@ class RowHistory:
             (row_id, nickname, nickname_id, data),
         )
 
-    def random_row_reference(self, name: str, scope: str, unique: bool):
+    def random_row_reference(self, name: str, scope: str, randomizer_func: callable):
         """Find a random row and load it"""
         if scope not in ("prior-and-current-iterations", "current-iteration"):
             raise exc.DataGenError(
@@ -95,8 +97,6 @@ class RowHistory:
                 self.already_warned = True
             min_id = 1
         elif nickname:
-            # nickname counters are reset every loop, so 1 is the right choice
-            # OR they are just_once in which case 
             min_id = self.local_counters.get(nickname, 0) + 1
         else:
             min_id = self.local_counters.get(tablename, 0) + 1
@@ -109,11 +109,11 @@ class RowHistory:
 
         if nickname:
             # find a random nickname'd row by its nickname_id
-            nickname_id = randint(min_id, max_id)
+            nickname_id = randomizer_func(min_id, max_id)
             row_id = self.find_row_id_for_nickname_id(tablename, nickname, nickname_id)
         else:
             # find a random row
-            row_id = randint(min_id, max_id)
+            row_id = randomizer_func(min_id, max_id)
 
         return LazyLoadedObjectReference(tablename, row_id, tablename)
 
@@ -161,3 +161,61 @@ def _make_history_table(conn, tablename):
     c.execute(
         f'CREATE UNIQUE INDEX "{tablename}_nickname_id" ON "{tablename}" (nickname, nickname_id);'
     )
+
+
+class RandomReferenceContext(PluginResultIterator):
+    # initialize the object's state.
+    rng = None
+
+    def __init__(
+        self,
+        row_history: RowHistory,
+        to: str,
+        scope: str = "current-iteration",
+        unique: bool = False,
+    ):
+        self.row_history = row_history
+        self.to = to
+        self.scope = scope
+        self.unique = unique
+        if unique:
+            self.random_func = self.unique_random
+        else:
+            self.random_func = randint
+
+    def next(self) -> T.Union[ObjectReference, ObjectRow]:
+        try:
+            return self.row_history.random_row_reference(
+                self.to, self.scope, self.random_func
+            )
+        except StopIteration as e:
+            if self.random_func == self.unique_random:
+                raise exc.DataGenError(
+                    f"Cannot find an unused `{self.to}`` to link to"
+                ) from e
+            else:  # pragma: no cover
+                raise e
+
+    def unique_random(self, a, b):
+        """Goal: use an Uniquifying RNG until all of its values have been
+        used up, then make a new one, with higher values.
+
+        e.g. random_range(1,5) then random_range(5, 10)
+
+        The parent might call it like:
+        unique_random(1,2) -> random_range(1,3) -> 2
+        unique_random(1,4) -> random_range(1,3) -> 1
+        unique_random(1,6) -> random_range(3,7) -> 5  # reset
+        unique_random(1,8) -> random_range(3,7) -> 3
+        unique_random(1,10) -> random_range(3,7) -> 4
+        unique_random(1,12) -> random_range(3,7) -> 6
+        unique_random(1,14) -> random_range(7,14) -> 13 # reset
+        ...
+        """
+        b += 1  # randomizer_func uses top-inclusive semantics,
+        # random_range uses top-exclusive semantics
+        if self.rng is None:
+            self.rng = UpdatableRandomRange(a, b)
+        else:
+            self.rng.set_new_range(a, b)
+        return next(self.rng)

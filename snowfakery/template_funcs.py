@@ -1,24 +1,24 @@
-import sys
 import random
-from functools import lru_cache
+import sys
+from ast import literal_eval
 from datetime import date, datetime
+from functools import lru_cache
+from typing import Any, List, Tuple, Union
+
 import dateutil.parser
 from dateutil.relativedelta import relativedelta
-from ast import literal_eval
-
-from typing import Union, List, Tuple, Any
-
 from faker import Faker
 from faker.providers.date_time import Provider as DateProvider
 
-from .data_gen_exceptions import DataGenError
-
 import snowfakery.data_generator_runtime  # noqa
-from snowfakery.plugins import SnowfakeryPlugin, PluginContext, lazy
-from snowfakery.object_rows import ObjectReference, ObjectRow
-from snowfakery.utils.template_utils import StringGenerator
-from snowfakery.standard_plugins.UniqueId import UniqueId
 from snowfakery.fakedata.fake_data_generator import UTCAsRelDelta, _normalize_timezone
+from snowfakery.object_rows import ObjectReference
+from snowfakery.plugins import PluginContext, SnowfakeryPlugin, lazy, memorable
+from snowfakery.row_history import RandomReferenceContext
+from snowfakery.standard_plugins.UniqueId import UniqueId
+from snowfakery.utils.template_utils import StringGenerator
+
+from .data_gen_exceptions import DataGenError
 
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
 
@@ -256,13 +256,15 @@ class StandardFuncs(SnowfakeryPlugin):
                 probability = parse_weight_str(self.context, probability)
             return probability or when, pick
 
+        @memorable
         def random_reference(
             self,
             to: str,
             *,
+            parent: str = None,
             scope: str = "current-iteration",
             unique: bool = False,
-        ) -> Union[ObjectReference, ObjectRow]:
+        ) -> "RandomReferenceContext":
             """Select a random, already-created row from 'sobject'
 
             - object: Owner
@@ -278,12 +280,8 @@ class StandardFuncs(SnowfakeryPlugin):
 
             See the docs for more info.
             """
-            if unique:
-                # next feature to implement
-                raise NotImplementedError()
-
-            return self.context.interpreter.row_history.random_row_reference(
-                to, scope, unique
+            return RandomReferenceContext(
+                self.context.interpreter.row_history, to, scope, unique
             )
 
         @lazy
