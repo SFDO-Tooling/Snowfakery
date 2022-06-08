@@ -24,6 +24,8 @@ from tempfile import TemporaryDirectory
 
 from snowfakery.output_streams import FileOutputStream, OutputStream
 
+MAX_BATCH_SIZE = 500  # https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/resources_composite_graph_limits.htm
+
 
 class SalesforceCompositeAPIOutput(FileOutputStream):
     """Output stream that generates records for Salesforce's Composite API"""
@@ -77,7 +79,7 @@ class Folder(OutputStream):
         super().__init__(None, **kwargs)
         self.target_path = Path(output_folder)
         if not Path.exists(self.target_path):
-            Path.mkdir(self.target_path, exist_ok=True)
+            Path.mkdir(self.target_path, exist_ok=True)  # pragma: no cover
         self.recipe_sets = [[]]
         self.current_batch = []
         self.filenum = 0
@@ -87,7 +89,9 @@ class Folder(OutputStream):
         self.recipe_sets[-1].append((tablename, row_with_references))
 
     def write_single_row(self, tablename: str, row: T.Dict) -> None:
-        assert 0, "Shouldn't be called. write_row should be called instead"
+        raise NotImplementedError(
+            "Shouldn't be called. write_row should be called instead"
+        )
 
     def close(self, **kwargs) -> T.Optional[T.Sequence[str]]:
         self.flush_sets()
@@ -109,7 +113,7 @@ class Folder(OutputStream):
     def flush_sets(self):
         while self.recipe_sets:
             next_set = self.recipe_sets.pop(0)
-            if len(self.current_batch) + len(next_set) > 500:
+            if len(self.current_batch) + len(next_set) > MAX_BATCH_SIZE:
                 self.flush_batch()
             self.current_batch.extend(next_set)
 
@@ -138,7 +142,9 @@ class Bundle(FileOutputStream):
         self.folder_os.write_row(tablename, row_with_references)
 
     def write_single_row(self, tablename: str, row: T.Dict) -> None:
-        assert 0, "Shouldn't be called. write_row should be called instead"
+        raise NotImplementedError(
+            "Shouldn't be called. write_row should be called instead"
+        )
 
     def complete_recipe(self, *args):
         self.folder_os.complete_recipe()
