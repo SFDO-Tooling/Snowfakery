@@ -1,6 +1,7 @@
 SQLAlchemy
+# Remove this when Faker/Docs building issue is cleared up.
 Faker
-jinja2
+jinja2<3        # until CCI is compatible
 PyYAML
 click
 python-dateutil
@@ -8,4 +9,5 @@ gvgen
 pydantic
 python-baseconv
 requests
-MarkupSafe
+# This whole line should be deleted when Jinja and MarkupSafe are compatible:
+MarkupSafe<2.1.0
