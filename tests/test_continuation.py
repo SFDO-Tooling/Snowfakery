@@ -109,13 +109,23 @@ class TestContinuation:
                         - object: Parent
                           just_once: true
 
+                        - object: Parent2
+                          nickname: xyzzy
+                          just_once: True
+
                         - object: Child
                           fields:
                             parent:
                                 random_reference: Parent
+
+                        - object: Child
+                          fields:
+                            parent:
+                                random_reference: xyzzy
                             """
         generate_twice(yaml_data)
-        assert generated_rows()
+        assert generated_rows.table_values("Child", 1, "parent") == "Parent(1)"
+        assert generated_rows.table_values("Child", 2, "parent") == "Parent2(1)"
 
 
 def generate_twice(yaml):

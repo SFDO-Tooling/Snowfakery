@@ -1,25 +1,24 @@
-import sys
 import random
-from functools import lru_cache
-from datetime import date, datetime
-import dateutil.parser
-import warnings
-from dateutil.relativedelta import relativedelta
+import sys
 from ast import literal_eval
+from datetime import date, datetime
+from functools import lru_cache
+from typing import Any, List, Tuple, Union
 
-from typing import Union, List, Tuple, Any
-
+import dateutil.parser
+from dateutil.relativedelta import relativedelta
 from faker import Faker
 from faker.providers.date_time import Provider as DateProvider
 
-from .data_gen_exceptions import DataGenError
-
 import snowfakery.data_generator_runtime  # noqa
-from snowfakery.plugins import SnowfakeryPlugin, PluginContext, lazy
-from snowfakery.object_rows import ObjectReference
-from snowfakery.utils.template_utils import StringGenerator
-from snowfakery.standard_plugins.UniqueId import UniqueId
 from snowfakery.fakedata.fake_data_generator import UTCAsRelDelta, _normalize_timezone
+from snowfakery.object_rows import ObjectReference
+from snowfakery.plugins import PluginContext, SnowfakeryPlugin, lazy, memorable
+from snowfakery.row_history import RandomReferenceContext
+from snowfakery.standard_plugins.UniqueId import UniqueId
+from snowfakery.utils.template_utils import StringGenerator
+
+from .data_gen_exceptions import DataGenError
 
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
 
@@ -257,7 +256,15 @@ class StandardFuncs(SnowfakeryPlugin):
                 probability = parse_weight_str(self.context, probability)
             return probability or when, pick
 
-        def random_reference(self, tablename: str, scope: str = "current-iteration"):
+        @memorable
+        def random_reference(
+            self,
+            to: str,
+            *,
+            parent: str = None,
+            scope: str = "current-iteration",
+            unique: bool = False,
+        ) -> "RandomReferenceContext":
             """Select a random, already-created row from 'sobject'
 
             - object: Owner
@@ -273,29 +280,9 @@ class StandardFuncs(SnowfakeryPlugin):
 
             See the docs for more info.
             """
-
-            globls = self.context.interpreter.globals
-            last_id = globls.transients.last_id_for_table(tablename)
-            if last_id:
-                if scope == "prior-and-current-iterations":
-                    first_id = 1
-                    warnings.warn("Global scope is an experimental feature.")
-                elif scope == "current-iteration":
-                    first_id = globls.first_new_id(tablename)
-                    last_id = max(first_id, last_id)
-                else:
-                    raise DataGenError(
-                        f"Scope must be 'prior-and-current-iterations' or 'current-iteration' not {scope}",
-                        None,
-                        None,
-                    )
-                return ObjectReference(tablename, random.randint(first_id, last_id))
-            elif tablename in globls.transients.nicknamed_objects:
-                raise DataGenError(
-                    "Nicknames cannot be used in random_reference", None, None
-                )
-            else:
-                raise DataGenError(f"There is no table named {tablename}", None, None)
+            return RandomReferenceContext(
+                self.context.interpreter.row_history, to, scope, unique
+            )
 
         @lazy
         def if_(self, *choices: FieldDefinition):

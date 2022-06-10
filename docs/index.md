@@ -594,10 +594,90 @@ The `random_reference` property creates a reference to a random, existing row fr
       random_reference: Owner
 ```
 
-The selected row can be any one that matches the object type and was already created in the current iteration of the recipe. For example, this previous recipe was executed twenty times (iterations) to generate 200 `Pets` and `Owners`. The selected rows in the first iteration would be one of the first ten `Owners`, and the selected rows in the last iteration would be one of the last ten.
+To create a reference, `random_reference` looks for a row created in the current iteration of the recipe and matching the specified object type or nickname. In the above recipe, each `random_reference` specified in `ownedBy` will point to one of the ten `Owner` objects created in the same iteration. If you iterate over the recipe multiple times, in other words, each `Pet` object will be matched with one of the ten `Owner` objects created during the same iteration.
 
-Snowfakery cannot currently generate a random reference based on a nickname or to a row created in a previous or future iteration of the recipe. If you need these features, contact the Snowfakery team through a GitHub issue.
+If `random_reference` finds no matches in the current iteration, it looks in previous iterations. This can happen, for example, when you try to create a reference to an object created with the `just_once` flag. Snowfakery cannot currently generate a `random_reference` to a row that will be created in a future iteration of a recipe.
 
+#### Unique random references
+
+`random_reference` has a `unique` parameter which ensures that each target row is used only once.
+
+```yaml
+- object: Owner
+  count: 10
+  fields:
+    name:
+      fake: Name
+- object: Pet
+  count: 10
+  fields:
+    ownedBy:
+      random_reference: 
+        to: Owner
+        unique: True
+```
+
+In the case above, the relationship between Owners and Pets will be one-to-one in a random order, rather than a totally random distribution which would tend to have some Owners with multiple pets.
+
+In the case above, it is clear that the scope of the uniqueness should be the Pets, but in the case of join tables, like Salesforce's Campaign Member, this is ambiguous and must be specified like this:
+
+```yaml
+# examples/salesforce/campaign-member.yml
+- object: Campaign
+  count: 5
+  fields:
+    Name: Campaign ${{child_index}}
+- object: Contact
+  count: 3
+  fields:
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+  friends:
+    - object: CampaignMember
+      count: 5
+      fields:
+        ContactId:
+          reference: Contact
+        CampaignId:
+          random_reference:
+            to: Campaign
+            parent: Contact
+            unique: True
+```
+
+The `parent` parameter clarifies that the scope of the uniqueness is the local Contact.
+Each of the Contacts will have CampaignMembers that point to unique campaigns, like
+this:
+
+```sh
+Campaign(id=1, Name=Campaign 0)
+Campaign(id=2, Name=Campaign 1)
+Campaign(id=3, Name=Campaign 2)
+Campaign(id=4, Name=Campaign 3)
+Campaign(id=5, Name=Campaign 4)
+Contact(id=1, FirstName=Catherine, LastName=Hanna)
+CampaignMember(id=1, ContactId=Contact(1), CampaignId=Campaign(2))
+CampaignMember(id=2, ContactId=Contact(1), CampaignId=Campaign(5))
+CampaignMember(id=3, ContactId=Contact(1), CampaignId=Campaign(3))
+CampaignMember(id=4, ContactId=Contact(1), CampaignId=Campaign(4))
+CampaignMember(id=5, ContactId=Contact(1), CampaignId=Campaign(1))
+Contact(id=2, FirstName=Mary, LastName=Valencia)
+CampaignMember(id=6, ContactId=Contact(2), CampaignId=Campaign(1))
+CampaignMember(id=7, ContactId=Contact(2), CampaignId=Campaign(4))
+CampaignMember(id=8, ContactId=Contact(2), CampaignId=Campaign(5))
+CampaignMember(id=9, ContactId=Contact(2), CampaignId=Campaign(2))
+CampaignMember(id=10, ContactId=Contact(2), CampaignId=Campaign(3))
+Contact(id=3, FirstName=Jake, LastName=Mullen)
+CampaignMember(id=11, ContactId=Contact(3), CampaignId=Campaign(1))
+CampaignMember(id=12, ContactId=Contact(3), CampaignId=Campaign(4))
+CampaignMember(id=13, ContactId=Contact(3), CampaignId=Campaign(3))
+CampaignMember(id=14, ContactId=Contact(3), CampaignId=Campaign(5))
+CampaignMember(id=15, ContactId=Contact(3), CampaignId=Campaign(2))
+```
+
+Performance tip: Tables and nicknames that are referred to by `random_reference` are indexed, which makes them slightly slower to generate than normal. This should seldom be a problem in practice, but if you experience performance problems you could switch to a normal reference to see if that improves things.
 ### `fake`
 
 The `fake` function generates fake data. This function is defined further in the [Fake Data Tutorial](fakedata.md)

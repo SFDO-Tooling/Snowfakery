@@ -1,0 +1,30 @@
+- object: Parent
+  count: 3
+  just_once: true
+- object: Parent
+  count: 3
+  just_once: true
+- object: Parent
+  count: 3
+
+- object: Account
+  nickname: CountChocula
+  count: 10_000
+  fields:
+    parent:
+      # reference: Parent
+      random_reference: Parent
+
+- object: Account
+  count: 10_000
+  fields:
+    parent:
+      # reference: Parent
+      random_reference: Parent
+
+- object: Contact
+  count: 1_000
+  fields:
+    AccountId:
+      # reference: Account
+      random_reference: CountChocula

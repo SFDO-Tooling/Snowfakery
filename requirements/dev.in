@@ -2,7 +2,7 @@
 black
 coverage
 coveralls
-mkdocs      # need to change Snowfakery monkey-patching before upgrade
+mkdocs
 mkdocs-exclude-search
 pre-commit
 pytest
@@ -10,7 +10,7 @@ pytest-cov
 typeguard
 faker-microservice
 tox
-tox-gh-actions      # needed for CI only
+tox-gh-actions
 pytest-vcr
 vcrpy
 responses
