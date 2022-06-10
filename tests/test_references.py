@@ -1,8 +1,8 @@
 from datetime import date
 from io import StringIO
 from unittest import mock
-import dateutil
 
+import dateutil
 import pytest
 from test_parse_samples import find_row
 
@@ -416,7 +416,6 @@ class TestReferences:
 
 
 class TestRandomReferencesOriginal:
-    ## For reviewer: These tests were all moved and are not new
     def test_random_reference_simple(self, generated_rows):
         yaml = """                  #1
       - object: A                   #2
@@ -449,6 +448,79 @@ class TestRandomReferencesOriginal:
             generate(StringIO(yaml))
         assert generated_rows.row_values(10, "A_ref") == "A(8)"
         assert generated_rows.row_values(11, "A_ref") == "A(3)"
+
+    def test_random_reference_unique(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 5                   #4
+      - object: B                   #5
+        count: 5                    #6
+        fields:                     #7
+            A_ref:                  #8
+              random_reference:     #9
+                to: A               #10
+                unique: true        #11
+    """
+        generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 25))
+        Bs = generated_rows.table_values("B")
+        # check that A_refs are unique
+        assert len(Bs) == len(set(b["A_ref"] for b in Bs)) == 25
+
+    def test_random_reference_unique__nickname(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        nickname: nicky             #3
+        count: 5                   #4
+      - object: B                   #5
+        count: 5                    #6
+        fields:                     #7
+            A_ref:                  #8
+              random_reference:     #9
+                to: nicky           #10
+                unique: true        #11
+    """
+        generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 25))
+        Bs = generated_rows.table_values("B")
+        # check that A_refs are unique
+        assert len(Bs) == len(set(b["A_ref"] for b in Bs)) == 25
+
+    def test_random_reference_unique__mismatch_count(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 4                   #4
+      - object: B                   #5
+        count: 5                    #6
+        fields:                     #7
+            A_ref:                  #8
+              random_reference:     #9
+                to: A               #10
+                unique: true        #11
+    """
+        with pytest.raises(DataGenError, match="Cannot find an unused `A`"):
+            generate(StringIO(yaml))
+
+    def test_random_reference_unique__with_continuation(
+        self, generate_data_with_continuation, generated_rows
+    ):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 10                   #3
+      - object: B                   #4
+        count: 5                    #5
+        fields:                     #6
+            A_ref:                  #7
+              random_reference:     #8
+                to: A               #9
+                unique: true        #10
+    """
+        generate_data_with_continuation(
+            yaml=yaml,
+            target_number=("B", 5),
+            times=3,
+        )
+        Bs = generated_rows.table_values("B")
+        print(Bs)
+        assert len(Bs) == len(set(b["A_ref"] for b in Bs)) == 15
 
     def test_random_reference_local(self, generated_rows):
         yaml = """                  #1
@@ -754,7 +826,7 @@ class TestRandomReferencesNew:
             nameref: ${{A_ref.name}}
     """
         with mock.patch("snowfakery.row_history.randint") as randint:
-            randint.side_effect = lambda x,y: x
+            randint.side_effect = lambda x, y: x
             generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 10))
         assert generated_rows.table_values("B", 10, "A_ref") == "A(11)"
         assert generated_rows.table_values("B", 10, "nameref") == "nicky"
@@ -913,3 +985,67 @@ class TestRandomReferencesNew:
         assert float(generated_rows.table_values("B", 1, "decimalref"))
         assert parse_date(generated_rows.table_values("B", 1, "datetime1ref"))
         assert parse_date(generated_rows.table_values("B", 1, "datetime2ref"))
+
+    def test_random_references__nested(self, generated_rows):
+        yaml = """
+      - object: Parent
+        count: 2
+        fields:
+          child1:
+            - object: Child1
+              fields:
+                child2:
+                  - object: Child2
+                    fields:
+                      name: TheName
+      - object: Child3
+        fields:
+            A_ref:
+              random_reference:
+                to: Parent
+            nested_name:
+              ${{A_ref.child1.child2.name}}
+    """
+        generate(StringIO(yaml))
+        assert generated_rows.table_values("Child3", 1, "nested_name") == "TheName"
+        assert generated_rows.table_values("Child3", -1, "nested_name") == "TheName"
+
+    def test_random_references__nested__with_continuation(
+        self, generate_data_with_continuation, generated_rows
+    ):
+        yaml = """
+      - object: Parent
+        count: 2
+        fields:
+          child1:
+            - object: Child1
+              fields:
+                child2:
+                  - object: Child2
+                    fields:
+                      name: TheName
+      - object: Child3
+        fields:
+            A_ref:
+              random_reference:
+                to: Parent
+            nested_name:
+              ${{A_ref.child1.child2.name}}
+    """
+        generate_data_with_continuation(
+            yaml=yaml,
+            target_number=("Parent", 4),
+            times=1,
+        )
+        assert generated_rows.table_values("Child3", 1, "nested_name") == "TheName"
+        assert generated_rows.table_values("Child3", -1, "nested_name") == "TheName"
+
+    def test_random_reference__joins(self, generated_rows):
+        with open("examples/salesforce/campaign-member.yml") as f:
+            generate(f)
+
+        combinations = set()
+        for row in generated_rows.table_values("CampaignMember"):
+            key = row["ContactId"], row["CampaignId"]
+            assert key not in combinations
+            combinations.add(key)
