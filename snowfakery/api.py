@@ -32,6 +32,8 @@ OUTPUT_FORMATS = {
     "jpg": "snowfakery.output_streams.ImageOutputStream",
     "ps": "snowfakery.output_streams.ImageOutputStream",
     "dot": "snowfakery.output_streams.GraphvizOutputStream",
+    "datapack": "snowfakery.experimental.DataPack",
+    "apex": "snowfakery.experimental.DataPack.ApexDataPack",
     "json": "snowfakery.output_streams.JSONOutputStream",
     "txt": "snowfakery.output_streams.DebugOutputStream",
     "csv": "snowfakery.output_streams.CSVOutputStream",

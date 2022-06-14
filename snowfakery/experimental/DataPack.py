@@ -1,6 +1,6 @@
 # Use this experimental OutputStream like this:
 
-# snowfakery --output-format snowfakery.experimental.SalesforceCompositeAPIOutput recipe.yml > composite.json
+# snowfakery --output-format snowfakery.experimental.DataPack recipe.yml > composite.json
 #
 # Once you have the file you can make it accessible to Salesforce by uploading it
 # to some form of server. E.g. Github gist, Heroku, etc.
@@ -17,6 +17,8 @@
 # TODO: Add tests
 
 import json
+from logging import warning
+from io import StringIO
 import typing as T
 import datetime
 from pathlib import Path
@@ -46,10 +48,18 @@ class SalesforceCompositeAPIOutput(FileOutputStream):
     def write_single_row(self, tablename: str, row: T.Dict) -> None:
         row_without_id = row.copy()
         del row_without_id["id"]
+        _sf_update_key = row_without_id.pop("_sf_update_key", None)
+        if _sf_update_key:
+            method = "PATCH"
+            url = f"/services/data/v50.0/sobjects/{tablename}/{_sf_update_key}/{row_without_id[_sf_update_key]}"
+        else:
+            method = "POST"
+            url = f"/services/data/v50.0/sobjects/{tablename}/"
+
         values = {
-            "method": "POST",
+            "method": method,
             "referenceId": f"{tablename}_{row['id']}",
-            "url": f"/services/data/v50.0/sobjects/{tablename}",
+            "url": url,
             "body": row_without_id,
         }
         self.rows.append(values)
@@ -62,7 +72,7 @@ class SalesforceCompositeAPIOutput(FileOutputStream):
         target_object_row,
     ) -> T.Union[str, int]:
         target_reference = f"{target_object_row._tablename}_{target_object_row.id}"
-        return "@{%s.id}" % target_reference
+        return "@{%s}" % target_reference
 
     def close(self, **kwargs) -> T.Optional[T.Sequence[str]]:
         # NOTE: Could improve loading performance by breaking graphs up
@@ -85,10 +95,12 @@ class Folder(OutputStream):
         self.filenum = 0
         self.filenames = []
 
-    def write_row(self, tablename: str, row_with_references: T.Dict) -> None:
+    def write_row(
+        self, tablename: str, row_with_references: T.Dict, *args, **kwargs
+    ) -> None:
         self.recipe_sets[-1].append((tablename, row_with_references))
 
-    def write_single_row(self, tablename: str, row: T.Dict) -> None:
+    def write_single_row(self, tablename: str, row: T.Dict, *args, **kwargs) -> None:
         raise NotImplementedError(
             "Shouldn't be called. write_row should be called instead"
         )
@@ -125,23 +137,25 @@ class Folder(OutputStream):
             open_file
         ) as out:
             self.filenames.append(filename)
-            print(len(self.current_batch))
             for tablename, row in self.current_batch:
                 out.write_row(tablename, row)
 
         self.current_batch = []
 
 
-class Bundle(FileOutputStream):
+class DataPack(FileOutputStream):
     def __init__(self, file, **kwargs):
         super().__init__(file, **kwargs)
+        warning("DataPack is an experimental data format")
         self.tempdir = TemporaryDirectory()
         self.folder_os = Folder(self.tempdir.name)
 
-    def write_row(self, tablename: str, row_with_references: T.Dict) -> None:
+    def write_row(
+        self, tablename: str, row_with_references: T.Dict, *args, **kwargs
+    ) -> None:
         self.folder_os.write_row(tablename, row_with_references)
 
-    def write_single_row(self, tablename: str, row: T.Dict) -> None:
+    def write_single_row(self, tablename: str, row: T.Dict, *args, **kwargs) -> None:
         raise NotImplementedError(
             "Shouldn't be called. write_row should be called instead"
         )
@@ -160,4 +174,30 @@ class Bundle(FileOutputStream):
         files = Path(self.tempdir.name).glob("*.composite.json")
         data = [file.read_text() for file in files]
         assert data
-        return {"bundle_format": 1, "data": data}
+        return {"datapack_format": 1, "data": data}
+
+
+class ApexDataPack(FileOutputStream):
+    def __init__(self, file, **kwargs):
+        super().__init__(file, **kwargs)
+        self.data = StringIO()
+        self.datapack = DataPack(self.data)
+
+    def write_row(
+        self, tablename: str, row_with_references: T.Dict, *args, **kwargs
+    ) -> None:
+        self.datapack.write_row(tablename, row_with_references)
+
+    def write_single_row(self, tablename: str, row: T.Dict, *args, **kwargs) -> None:
+        raise NotImplementedError(
+            "Shouldn't be called. write_row should be called instead"
+        )
+
+    def complete_recipe(self, *args):
+        self.datapack.complete_recipe()
+
+    def close(self):
+        self.datapack.close()
+        quoted_data = repr(self.data.getvalue())
+        self.write(f"String json_data = {quoted_data};\n")
+        self.write("LoadCompositeAPIData.loadBundledJsonSet(json_data);\n")
