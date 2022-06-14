@@ -72,7 +72,7 @@ class SalesforceCompositeAPIOutput(FileOutputStream):
         target_object_row,
     ) -> T.Union[str, int]:
         target_reference = f"{target_object_row._tablename}_{target_object_row.id}"
-        return "@{%s}" % target_reference
+        return "@{%s.i}" % target_reference
 
     def close(self, **kwargs) -> T.Optional[T.Sequence[str]]:
         # NOTE: Could improve loading performance by breaking graphs up
