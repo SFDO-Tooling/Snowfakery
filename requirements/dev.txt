@@ -10,7 +10,7 @@ attrs==21.4.0
     #   pytest
 black==22.3.0
     # via -r requirements/dev.in
-certifi==2022.5.18.1
+certifi==2021.10.8
     # via
     #   -r requirements/prod.txt
     #   requests
@@ -25,7 +25,7 @@ click==8.1.3
     #   -r requirements/prod.txt
     #   black
     #   mkdocs
-coverage[toml]==6.4.1
+coverage[toml]==6.3.2
     # via
     #   -r requirements/dev.in
     #   coveralls
@@ -36,13 +36,13 @@ distlib==0.3.4
     # via virtualenv
 docopt==0.6.2
     # via coveralls
-faker==13.12.1
+faker==12.3.3
     # via
     #   -r requirements/prod.txt
     #   faker-microservice
 faker-microservice==2.0.0
     # via -r requirements/dev.in
-filelock==3.7.1
+filelock==3.6.0
     # via
     #   tox
     #   virtualenv
@@ -54,14 +54,14 @@ greenlet==1.1.2
     #   sqlalchemy
 gvgen==1.0
     # via -r requirements/prod.txt
-identify==2.5.1
+identify==2.5.0
     # via pre-commit
 idna==3.3
     # via
     #   -r requirements/prod.txt
     #   requests
     #   yarl
-importlib-metadata==4.11.4
+importlib-metadata==4.11.3
     # via
     #   markdown
     #   mkdocs
@@ -69,21 +69,21 @@ importlib-resources==5.7.1
     # via tox-gh-actions
 iniconfig==1.1.1
     # via pytest
-jinja2==3.1.2
+jinja2==2.11.3
     # via
     #   -r requirements/prod.txt
     #   mkdocs
-jsonschema==4.6.0
+jsonschema==4.5.1
     # via -r requirements/dev.in
 markdown==3.3.7
     # via mkdocs
-markupsafe==2.1.1
+markupsafe==2.0.1
     # via
     #   -r requirements/prod.txt
     #   jinja2
 mergedeep==1.3.4
     # via mkdocs
-mkdocs==1.3.0
+mkdocs==1.2.4
     # via
     #   -r requirements/dev.in
     #   mkdocs-exclude-search
@@ -116,7 +116,7 @@ py==1.11.0
     # via
     #   pytest
     #   tox
-pydantic==1.9.1
+pydantic==1.9.0
     # via -r requirements/prod.txt
 pyparsing==3.0.9
     # via packaging
@@ -152,7 +152,7 @@ requests==2.27.1
     #   -r requirements/prod.txt
     #   coveralls
     #   responses
-responses==0.21.0
+responses==0.20.0
     # via -r requirements/dev.in
 six==1.16.0
     # via
@@ -161,7 +161,7 @@ six==1.16.0
     #   tox
     #   vcrpy
     #   virtualenv
-sqlalchemy==1.4.37
+sqlalchemy==1.4.36
     # via -r requirements/prod.txt
 toml==0.10.2
     # via
@@ -178,7 +178,7 @@ tox==3.25.0
     #   tox-gh-actions
 tox-gh-actions==2.9.1
     # via -r requirements/dev.in
-typeguard==2.13.3
+typeguard==2.10.0
     # via -r requirements/dev.in
 typing-extensions==4.2.0
     # via
@@ -198,7 +198,7 @@ virtualenv==20.14.1
     # via
     #   pre-commit
     #   tox
-watchdog==2.1.8
+watchdog==2.1.7
     # via mkdocs
 wrapt==1.14.1
     # via vcrpy
