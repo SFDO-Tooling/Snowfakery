@@ -5,7 +5,6 @@ project:
         api_version: "50.0"
     dependencies:
         - github: https://github.com/SalesforceFoundation/NPSP
-    source_format: sfdx
 
 sources:
     npsp:
