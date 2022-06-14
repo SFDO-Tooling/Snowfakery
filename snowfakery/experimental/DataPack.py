@@ -77,6 +77,7 @@ class SalesforceCompositeAPIOutput(FileOutputStream):
     def close(self, **kwargs) -> T.Optional[T.Sequence[str]]:
         # NOTE: Could improve loading performance by breaking graphs up
         # to allow server-side parallelization, but I'd risk locking issues
+        assert self.rows
         data = {"graphs": [{"graphId": "graph", "compositeRequest": self.rows}]}
         self.write(json.dumps(data, indent=2))
         return super().close()
@@ -125,6 +126,7 @@ class Folder(OutputStream):
     def flush_sets(self):
         while self.recipe_sets:
             next_set = self.recipe_sets.pop(0)
+            assert len(next_set) <= MAX_BATCH_SIZE
             if len(self.current_batch) + len(next_set) > MAX_BATCH_SIZE:
                 self.flush_batch()
             self.current_batch.extend(next_set)
@@ -137,6 +139,7 @@ class Folder(OutputStream):
             open_file
         ) as out:
             self.filenames.append(filename)
+            assert self.current_batch
             for tablename, row in self.current_batch:
                 out.write_row(tablename, row)
 
@@ -178,6 +181,10 @@ class DataPack(FileOutputStream):
 
 
 class ApexDataPack(FileOutputStream):
+    """Wrap in Anon Apex but note that the amount of data you can load
+    this way is very limited due to limitations of the REST API (used by CCI)
+    and SOAP API (used by sfdx)"""
+
     def __init__(self, file, **kwargs):
         super().__init__(file, **kwargs)
         self.data = StringIO()
