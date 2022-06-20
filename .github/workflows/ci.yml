@@ -103,7 +103,7 @@ jobs:
 
   windows:
     name: Windows ${{ matrix.python-version }}
-    runs-on: windows-latest
+    runs-on: sfdc-windows-latest
     strategy:
       matrix:
         python-version: ["3.9", "3.10"]
