@@ -121,7 +121,8 @@ class TestEmbedding:
            Foo: Foo
         persistent_nicknames: {}
         persistent_objects_by_table: {}
-        today: 2021-04-07"""
+        today: 2021-04-07
+        persistent_random_referenceable_objects: []"""
         )
         generate_continuation_file = StringIO()
         decls = """[{"sf_object": Opportunity, "api": bulk}]"""

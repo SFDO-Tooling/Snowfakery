@@ -36,7 +36,7 @@ ParseResult = "snowfakery.parse_recipe_yaml.ParseResult"
 
 
 # save every single object to history. Useful for testing saving of datatypes
-SAVE_EVERYTHING = os.environ.get("SF_SAVE_EVERYTHING")
+SAVE_EVERYTHING = os.environ.get("SF_SAVE_EVERYTHING", False)
 
 
 class StoppingCriteria(NamedTuple):
@@ -130,6 +130,7 @@ class Globals:
         # They survive iterations and continuations.
         self.persistent_nicknames = {}
         self.persistent_objects_by_table = {}
+        self.persistent_random_referenceable_objects = []
 
         self.id_manager = IdManager()
         self.intertable_dependencies = OrderedSet()
@@ -139,16 +140,25 @@ class Globals:
         self.reset_slots()
 
     def register_object(
-        self, obj: ObjectRow, nickname: Optional[str], persistent_object: bool
+        self,
+        obj: ObjectRow,
+        nickname: Optional[str],
+        persistent_object: bool,
+        random_referenced_object: bool,
     ):
         """Register an object for lookup by object type and (optionally) Nickname"""
         if nickname:
+            # should survive continuations. Somebody will probably `reference:`` it
             if persistent_object:
                 self.persistent_nicknames[nickname] = obj
             else:
                 self.transients.nicknamed_objects[nickname] = obj
         if persistent_object:
             self.persistent_objects_by_table[obj._tablename] = obj
+
+        if persistent_object and random_referenced_object:
+            self.persistent_random_referenceable_objects.append((nickname, obj))
+
         self.transients.last_seen_obj_by_table[obj._tablename] = obj
 
     @property
@@ -214,6 +224,10 @@ class Globals:
             "today": self.today,
             "nicknames_and_tables": self.nicknames_and_tables,
             "intertable_dependencies": intertable_dependencies,
+            "persistent_random_referenceable_objects": [
+                (nn, obj.__getstate__())
+                for (nn, obj) in self.persistent_random_referenceable_objects
+            ],
         }
         return state
 
@@ -233,6 +247,10 @@ class Globals:
         self.intertable_dependencies = OrderedSet(
             Dependency(*dep) for dep in getattr(state, "intertable_dependencies", [])
         )
+        self.persistent_random_referenceable_objects = [
+            (nickname, hydrate(ObjectRow, v))
+            for (nickname, v) in state["persistent_random_referenceable_objects"]
+        ]
 
         self.today = state["today"]
         persistent_objects_by_table = state.get("persistent_objects_by_table")
@@ -373,26 +391,8 @@ class Interpreter:
     ):
         """Re-save just_once objects to the local history cache after resuming a continuation"""
 
-        # deal with objs known by their nicknames
-        relevant_objs = [
-            (obj._tablename, nickname, obj)
-            for nickname, obj in globals.persistent_nicknames.items()
-        ]
-        already_saved = set(obj._id for (_, _, obj) in relevant_objs)
-        # and those known by their tablename, if not already in the list
-        relevant_objs.extend(
-            (tablename, None, obj)
-            for tablename, obj in globals.persistent_objects_by_table.items()
-            if obj._id not in already_saved
-        )
-        # filter out those in tables that are not history-backed
-        relevant_objs = (
-            (table, nick, obj)
-            for (table, nick, obj) in relevant_objs
-            if table in tables_to_keep_history_for
-        )
-        for tablename, nickname, obj in relevant_objs:
-            self.row_history.save_row(tablename, nickname, obj._values)
+        for nickname, obj in globals.persistent_random_referenceable_objects:
+            self.row_history.save_row(obj._tablename, nickname, obj._values)
 
     def execute(self):
         RowHistoryCV.set(self.row_history)
@@ -569,19 +569,25 @@ class RuntimeContext:
                 self.interpreter.globals.register_intertable_reference(
                     tablename, fieldvalue._tablename, fieldname
                 )
+        if self._should_save(tablename, nickname):
+            self.interpreter.row_history.save_row(tablename, nickname, row)
+
+    def _should_save(self, tablename: str, nickname: T.Optional[str]) -> bool:
         history_tables = self.interpreter.tables_to_keep_history_for
-        should_save: bool = (
+        return (
             (tablename in history_tables)
             or (nickname in history_tables)
             or SAVE_EVERYTHING
         )
-        if should_save:
-            self.interpreter.row_history.save_row(tablename, nickname, row)
 
     def register_object(self, obj, name: Optional[str], persistent: bool):
         "Keep track of this object in case other objects refer to it."
         self.obj = obj
-        self.interpreter.globals.register_object(obj, name, persistent)
+        should_save = self._should_save(obj._tablename, name)
+        # `persistent means`: is it `just_once` and therefore might be
+        #   referred to by `reference` in a future iteration
+        # `should_save` means it may be referred to by `random_reference`
+        self.interpreter.globals.register_object(obj, name, persistent, should_save)
 
     @contextmanager
     def child_context(self, template):
