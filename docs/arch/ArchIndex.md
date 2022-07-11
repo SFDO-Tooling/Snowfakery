@@ -8,8 +8,6 @@ The Snowfakery interpreter reads a recipe, translates it into internal data stru
 
 Obviously, Snowfakery architecture will be easier to understand in the context of the language itself, so understanding the syntax is a good first step.
 
-
-
 ## Levels of Looping
 
 Snowfakery recipes are designed to be evaluated over and over again, top to bottom. Each run-through is called
@@ -21,15 +19,15 @@ This is useful for generating chunks of data called _portions_, and then handing
 
 Here is the overall pattern:
 
-| CumulusCI     | Snowfakery  | Data Loader  |
-| ------------- |-------------| -------------|
-| Generate Data | Start       | Wait         |
-| Load Data     | Stop        | Start        |
-| Generate Data | Start       | Stop         |
-| Load Data     | Stop        | Start        |
-| Generate Data | Start       | Stop         |
-| Load Data     | Finish      | Start        |
-| Load Data     | Finished    | Finish       |
+| CumulusCI     | Snowfakery | Data Loader |
+| ------------- | ---------- | ----------- |
+| Generate Data | Start      | Wait        |
+| Load Data     | Stop       | Start       |
+| Generate Data | Start      | Stop        |
+| Load Data     | Stop       | Start       |
+| Generate Data | Start      | Stop        |
+| Load Data     | Finish     | Start       |
+| Load Data     | Finished   | Finish      |
 
 Note that every time you Start and Stop Snowfakery, you generate a whole new Interpreter object, which re-reads the recipe. In some contexts, the new Intepreter object may be in a different process or (theoretically) on a different computer altogether.
 
@@ -57,9 +55,9 @@ So Snowfakery would run it once snapshot the "continuation state" and then fan t
 
 When reading Snowfakery code, you must always think about the lifetime of each data structure:
 
-* Will it survive for a single iteration, like local variables? We call these Transients.
-* Will it survive for a single continuation, like "FakerData" objects? We could call these Interpreter Managed objects.
-* Will it be saved and loaded between continuations, and thus survive across continuations? These are Globals.
+- Will it survive for a single iteration, like local variables? We call these Transients.
+- Will it survive for a single continuation, like "FakerData" objects? We could call these Interpreter Managed objects.
+- Will it be saved and loaded between continuations, and thus survive across continuations? These are Globals.
 
 ## The Parser
 
@@ -76,12 +74,12 @@ is executed once per continuation (or just once if the recipe is not continued).
 The Interpreter mediates access betewen the recipe (represented by the ParseResult) and resources
 such as:
 
- * the Output Stream
- * Global persistent data that survives continuations by being saved to and loaded from YAML
- * Transient persistent data that is discarded and rebuilt (as necessary) after continuation
- * The Row History which is used for allowing randomized access to objects for the `random_reference` feature
- * Plugins and Providers which extend Snowfakery
- * Runtime Object Model objects
+- the Output Stream
+- Global persistent data that survives continuations by being saved to and loaded from YAML
+- Transient persistent data that is discarded and rebuilt (as necessary) after continuation
+- The Row History which is used for allowing randomized access to objects for the `random_reference` feature
+- Plugins and Providers which extend Snowfakery
+- Runtime Object Model objects
 
 On my relatively slow computer it takes 1/25 of a second to initialize an Interpreter from a Recipe once all modules are loaded. It takes about 3/4 of a second to launch an interpreter and load the corre, required modules.
 
@@ -97,8 +95,7 @@ For example, a VariableDefinition represents this structure:
 
 ```
 
-
- An ObjectTemplate represents this one:
+An ObjectTemplate represents this one:
 
 ```
 - object: XXX
@@ -128,12 +125,12 @@ id_manager:
     Contact: 2
     Opportunity: 5
 intertable_dependencies:
-- field_name: AccountId
-  table_name_from: Contact
-  table_name_to: Account
-- field_name: AccountId
-  table_name_from: Opportunity
-  table_name_to: Account
+  - field_name: AccountId
+    table_name_from: Contact
+    table_name_to: Account
+  - field_name: AccountId
+    table_name_from: Opportunity
+    table_name_to: Account
 nicknames_and_tables:
   Account: Account
   Contact: Contact
@@ -173,16 +170,16 @@ today: 2022-06-06
 
 This also shows the contents of the Globals object. Things we track:
 
-* The last used IDs for various Tables, so we don't generate overlapping IDs
-* Inter-table dependencies, so we can generate a CCI mapping file or other output schema that depends on
+- The last used IDs for various Tables, so we don't generate overlapping IDs
+- Inter-table dependencies, so we can generate a CCI mapping file or other output schema that depends on
   relationships
-* Mapping from nicknames to tablenames, with tables own names being registered as nicknames for convenience
-* Data from specific ("persistent") objects which the user asked to be generated just once and may want to refer to again later
-* The current date to allow the `today` function to be consistent even if a process runs across midnight (perhaps we should revisit this)
+- Mapping from nicknames to tablenames, with tables own names being registered as nicknames for convenience
+- Data from specific ("persistent") objects which the user asked to be generated just once and may want to refer to again later
+- The current date to allow the `today` function to be consistent even if a process runs across midnight (perhaps we should revisit this)
 
 ### Transients
 
-If data should be discarded on every iteration (analogous to 'local variables' in a programming language) then it should be stored in the Transients object which is recreated on every iteration. This object is accessible through the Globals but is not saved to YAML. 
+If data should be discarded on every iteration (analogous to 'local variables' in a programming language) then it should be stored in the Transients object which is recreated on every iteration. This object is accessible through the Globals but is not saved to YAML.
 
 ### Row History
 
@@ -190,11 +187,10 @@ RowHistory is a way of keeping track of the contents of a subset of all of the r
 
 There are a few Recipe patterns enabled by the row history:
 
- * `random_reference` lookups to nicknames
- * `random_reference` lookups to objects that have data of interest, such as _another_ `random_reference`
+- `random_reference` lookups to nicknames
+- `random_reference` lookups to objects that have data of interest, such as _another_ `random_reference`
 
-
-Row History data structures survive for as long as a single process/interpreter/continuation. A new 
+Row History data structures survive for as long as a single process/interpreter/continuation. A new
 continuation gets a new Row History, so it is not possible to use Row History to make links across
 continuation boundaries.
 
@@ -215,11 +211,10 @@ Here is the kind of recipe that might blow up memory:
   fields:
     ref:
       random_reference: target
-    name:
-      ${{ref.bloat}}
+    name: ${{ref.bloat}}
 ```
 
-The second object picks from one of a 100M unique strings 
+The second object picks from one of a 100M unique strings
 which are each approx 80M in size. That's a lot of data and
 would quickly blow up memory.
 
@@ -242,8 +237,24 @@ All Fake Data is mediated through the [FakeData](https://github.com/SFDO-Tooling
 
 Snowfakery extends and customizes the set of fake data providers through its [FakeNames](https://github.com/SFDO-Tooling/Snowfakery/search?q=%22class+FakeNames%22) class. For example, Snowfakery's email address provider incorporates the first name and last name of the imaginary person into the email. Snowfakery renames `postcode` to `postalcode` to match Salesforc conventions. Snowfakery adds timezones to date-time fakers.
 
-## Formulas 
+## Formulas
 
 Snowfakery `${{formulas}}` are Jinja Templates controlled by a class called the [`JinjaTemplateEvaluatorFactory`](https://github.com/SFDO-Tooling/Snowfakery/search?q=%22class+JinjaTemplateEvaluatorFactory%22). The `Interpreter` object keeps a reference to this class.
 
+## Continuations
 
+Recall that there are multiple [Levels of Looping](#levels-of-looping). Data which
+survives beyond continutation (process) boundaries lives in continuation files.
+You can see how that works here:
+
+```sh
+$ snowfakery foo.yml --generate-continuation-file /tmp/continue.yml && snowfakery foo.yml --continuation-file /tmp/continue.yml
+
+$ cat /tmp/continue.yml
+```
+
+The contents of `/tmp/continue.yml` are specific to a version of Snowfakery and subject
+to change over time.
+
+In general, it saves the contents of `just_once` objects and recently created
+objects.
