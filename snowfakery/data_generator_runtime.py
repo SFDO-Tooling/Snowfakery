@@ -126,10 +126,16 @@ class Globals:
         today: date = None,
         name_slots: Mapping[str, str] = None,
     ):
-        # these lists start empty and are filled.
-        # They survive iterations and continuations.
+        # all of these properties start empty and are filled.
+        # They all survive iterations and continuations.
+
+        # These two are indexed by name
         self.persistent_nicknames = {}
         self.persistent_objects_by_table = {}
+
+        # Not indexed because it is used only to refresh the RowHistory DB
+        #     after continuation
+        # Otherwise the data is never read or written
         self.persistent_random_referenceable_objects = []
 
         self.id_manager = IdManager()
