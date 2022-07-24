@@ -2,7 +2,7 @@
 black
 coverage
 coveralls
-mkdocs<1.3.0      # need to change Snowfakery monkey-patching before upgrade
+mkdocs<1.4.0      # need to change Snowfakery monkey-patching before upgrade
 mkdocs-exclude-search
 pre-commit
 pytest
