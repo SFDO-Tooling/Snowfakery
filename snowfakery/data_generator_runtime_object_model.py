@@ -408,9 +408,9 @@ class StructuredValue(FieldDefinition):
                 raise AttributeError(
                     f"'{objname}' plugin exposes no attribute '{method}'"
                 )
-            if not func:
+            if not callable(func):
                 raise DataGenNameError(
-                    f"Cannot find definition for: {method} on {objname}",
+                    f"Cannot call '{method}' on '{objname}'",
                     self.filename,
                     self.line_num,
                 )

@@ -53,6 +53,8 @@ class DoubleVisionPlugin(SnowfakeryPlugin):
 
 class WrongTypePlugin(SnowfakeryPlugin):
     class Functions:
+        foo = 5
+
         def return_bad_type(self, value):
             "Evaluates its argument twice into a string"
             return int  # function
@@ -351,6 +353,18 @@ class TestContextVars:
                 WrongTypePlugin.junk: 5  #6
         """
         with pytest.raises(DataGenError) as e:
+            generate_data(StringIO(yaml))
+        assert 6 > e.value.line_num >= 3
+
+    def test_not_callable_attributes(self):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.WrongTypePlugin  # 2
+        - object: B                             #3
+          fields:                               #4
+            foo:                                #5
+                WrongTypePlugin.foo: 5  #6
+        """
+        with pytest.raises(DataGenError, match="Cannot call") as e:
             generate_data(StringIO(yaml))
         assert 6 > e.value.line_num >= 3
 

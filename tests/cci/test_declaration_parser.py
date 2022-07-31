@@ -1,6 +1,6 @@
 from pathlib import Path
 from io import StringIO
-
+import pytest
 from snowfakery.cci_mapping_files.declaration_parser import (
     SObjectRuleDeclaration,
     SObjectRuleDeclarationFile,
@@ -180,3 +180,8 @@ class TestUserChannels:
         assert channels[2].num_generators == 5
         assert channels[3].user == "user_3_org_alias"
         assert channels[3].num_loaders == 11
+
+    def test_user_channel_declarations__bad(self):
+        sample_yaml = Path(__file__).parent / "user_channels_bad.load.yml"
+        with pytest.raises(AssertionError, match="one channel declaration"):
+            SObjectRuleDeclarationFile.parse_from_yaml(sample_yaml).channel_declarations

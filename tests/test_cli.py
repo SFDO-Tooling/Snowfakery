@@ -407,6 +407,19 @@ class TestGenerateFromCLI:
                 standalone_mode=False,
             )
 
+    def test_updates(self, generated_rows):
+        generate_cli.main(
+            [
+                "examples/updates/update_contacts.recipe.yml",
+                "--update-input-file",
+                "examples/datasets/addresses.csv",
+                "--update-passthrough-fields",
+                "Oid",
+            ],
+            standalone_mode=False,
+        )
+        assert len(generated_rows.mock_calls) == 3
+
 
 class TestCLIOptionChecking:
     def test_mapping_file_no_dburl(self):

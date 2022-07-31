@@ -414,6 +414,25 @@ class TestReferences:
         child = generated_rows.table_values("Child", 0)
         assert child["parent1"] == child["parent2"]
 
+    def test_reference_by_id__bad(self, generated_rows):
+        yaml = """
+              - object: Parent
+                nickname: ParentNickname
+                just_once: true
+
+              - object: Child
+                fields:
+                  parent1:
+                    reference: ParentNickname
+                  parent2:
+                    reference:
+                      object: Parent
+                      id: abcd
+                """
+
+        with pytest.raises(DataGenError, match="Cannot interpret `id`"):
+            generate(StringIO(yaml))
+
 
 class TestRandomReferencesOriginal:
     def test_random_reference_simple(self, generated_rows):
