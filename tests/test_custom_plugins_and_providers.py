@@ -61,29 +61,8 @@ class FibIterator(PluginResultIterator):
         self.b = None
 
     def next(self):
-        # import gc
-
-        # for ref in gc.get_referrers(self):
-        #     print(ref, gc.get_referrers(ref))
-        # print(vars(self))
-        # print(self in gc.get_objects())
-        # print_referrers_bredth_first((self,), 0)
         self.a, self.b = self.b, self.a + self.b
         return self.b
-
-
-def print_referrers_bredth_first(path, level):
-    if level > 3:
-        return
-    obj = path[0]
-    parents = tuple(gc.get_referrers(obj))
-    for parent in parents:
-        parts = (parent,) + path
-        print(" -> ".join(repr(part) for part in parts))
-
-    for parent in parents:
-        parts = (parent,) + path
-        print_referrers_bredth_first(parts, level + 1)
 
 
 class DoubleVisionPlugin(SnowfakeryPlugin):
