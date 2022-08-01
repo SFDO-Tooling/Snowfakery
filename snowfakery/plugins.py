@@ -320,6 +320,8 @@ def _register_for_continuation(cls):
 
 
 class PluginResultIterator(PluginResult):
+    closed = False
+
     def __init__(self, repeat):
         self.repeat = repeat
 
@@ -353,7 +355,12 @@ class PluginResultIterator(PluginResult):
 
     def close(self):
         "Subclasses should implement this if they need to clean up resources"
-        pass  # pragma: no cover
+        pass
+
+    def __del__(self):
+        if not self.closed:
+            self.close()
+            self.close = True
 
 
 class PluginOption:

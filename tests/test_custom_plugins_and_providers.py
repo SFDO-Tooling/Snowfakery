@@ -3,9 +3,15 @@ import math
 import operator
 import time
 from base64 import b64decode
+import gc
 
 from snowfakery import SnowfakeryPlugin, lazy
-from snowfakery.plugins import PluginResult, PluginOption, memorable
+from snowfakery.plugins import (
+    PluginResult,
+    PluginOption,
+    PluginResultIterator,
+    memorable,
+)
 
 from snowfakery.data_gen_exceptions import (
     DataGenError,
@@ -39,6 +45,45 @@ class SimpleTestPlugin(SnowfakeryPlugin):
     class Functions:
         def double(self, value):
             return value * 2
+
+        @memorable
+        def fib(self, value):
+            return FibIterator()
+
+
+class FibIterator(PluginResultIterator):
+    def __init__(self):
+        self.a = 1
+        self.b = 1
+
+    def close(self):
+        self.a = None
+        self.b = None
+
+    def next(self):
+        # import gc
+
+        # for ref in gc.get_referrers(self):
+        #     print(ref, gc.get_referrers(ref))
+        # print(vars(self))
+        # print(self in gc.get_objects())
+        # print_referrers_bredth_first((self,), 0)
+        self.a, self.b = self.b, self.a + self.b
+        return self.b
+
+
+def print_referrers_bredth_first(path, level):
+    if level > 3:
+        return
+    obj = path[0]
+    parents = tuple(gc.get_referrers(obj))
+    for parent in parents:
+        parts = (parent,) + path
+        print(" -> ".join(repr(part) for part in parts))
+
+    for parent in parents:
+        parts = (parent,) + path
+        print_referrers_bredth_first(parts, level + 1)
 
 
 class DoubleVisionPlugin(SnowfakeryPlugin):
@@ -414,3 +459,26 @@ class TestContextVars:
         """
         with pytest.warns(UserWarning, match="close"):
             generate_data(StringIO(yaml))
+
+
+class TestPluginResultIterator:
+    @mock.patch(
+        "tests.test_custom_plugins_and_providers.FibIterator.close",
+    )
+    def test_plugin_result_iterator__closes(self, close, generated_rows):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.SimpleTestPlugin
+        - object: OBJ
+          fields:
+            fibnum:
+                SimpleTestPlugin.fib:
+        """
+        # it's better if closing of objects is triggered at a predictable
+        # time by the refcounter instead of by the cyclic GC
+        try:
+            gc.disable()
+            generate_data(StringIO(yaml), target_number=("OBJ", 3))
+            assert generated_rows.table_values("OBJ", field="fibnum") == [2, 3, 5]
+            assert len(close.mock_calls) == 1
+        finally:
+            gc.enable()
