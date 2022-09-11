@@ -62,9 +62,7 @@ idna==3.3
     #   requests
     #   yarl
 importlib-metadata==4.11.3
-    # via
-    #   markdown
-    #   mkdocs
+    # via mkdocs
 importlib-resources==5.7.1
     # via tox-gh-actions
 iniconfig==1.1.1
@@ -164,15 +162,14 @@ six==1.16.0
 sqlalchemy==1.4.36
     # via -r requirements/prod.txt
 toml==0.10.2
-    # via
-    #   pre-commit
-    #   tox
+    # via pre-commit
 tomli==2.0.1
     # via
     #   black
     #   coverage
     #   pytest
-tox==3.25.0
+    #   tox
+tox==3.26.0
     # via
     #   -r requirements/dev.in
     #   tox-gh-actions
@@ -183,7 +180,6 @@ typeguard==2.10.0
 typing-extensions==4.2.0
     # via
     #   -r requirements/prod.txt
-    #   black
     #   pydantic
 urllib3==1.26.9
     # via
@@ -205,6 +201,4 @@ wrapt==1.14.1
 yarl==1.7.2
     # via vcrpy
 zipp==3.8.0
-    # via
-    #   importlib-metadata
-    #   importlib-resources
+    # via importlib-metadata
