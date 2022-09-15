@@ -63,9 +63,13 @@ def parse_datetimespec(d: Union[str, datetime, date]) -> datetime:
     if isinstance(d, datetime):
         return d
     elif isinstance(d, str):
+        if d == "now":
+            return datetime.now()
+        elif d == "today":
+            return datetime.combine(date.today(), datetime.min.time())
         return dateutil.parser.parse(d)
     elif isinstance(d, date):
-        return datetime.combine(date.today(), datetime.min.time())
+        return datetime.combine(d, datetime.min.time())
 
 
 def render_boolean(context: PluginContext, value: FieldDefinition) -> bool:
@@ -125,8 +129,12 @@ class StandardFuncs(SnowfakeryPlugin):
             timezone = _normalize_timezone(timezone)
             if datetimespec:
                 dt = parse_datetimespec(datetimespec)
-            else:
+            elif not (any((year, month, day, hour, minute, second, microsecond))):
                 dt = datetime.now(timezone)
+            else:
+                dt = datetime(
+                    year, month, day, hour, minute, second, microsecond, timezone
+                )
 
             year = year or dt.year
             month = month or dt.month

@@ -119,8 +119,8 @@ class TestFaker:
             past = generated_rows.row_values(0, "past")
             future = generated_rows.row_values(0, "future")
 
-            assert isinstance(past, datetime)
-            assert isinstance(future, datetime)
+            assert datetime.fromisoformat(past)
+            assert datetime.fromisoformat(future)
             assert future > past  # Let's hope the future is greater
 
     def test_datetime_parsing(self, generated_rows):
