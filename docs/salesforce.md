@@ -112,9 +112,14 @@ Perhaps you do not care which Campaign you connect to:
 ```
 
 As you can see, `find_record` looks for a particular record, and returns the first
-one that Salesforce finds. `random_record` looks for an random record out of the
+one that Salesforce finds. The output of `find_record` is cached to reduce
+unnecessary calls to Salesforce, but the precise rules for how long the
+cache lasts are undocumented and may change based on performance testing.
+
+`random_record` looks for an random record out of the
 first 2000 Salesforce finds. The 2000-record scope limit is based on a Salesforce
 limitation and future versions of Snowfakery may incorporate a workaround.
+`random_record` values are never cached.
 
 NOTE: The features we are discussing in this section are for linking to records
 that are in the Salesforce org _before_ the recipe iteration started. These features

@@ -3,7 +3,7 @@ from logging import getLogger
 from tempfile import TemporaryDirectory
 from pathlib import Path
 
-from snowfakery.plugins import ParserMacroPlugin
+from snowfakery.plugins import ParserMacroPlugin, memorable
 from snowfakery.data_generator_runtime_object_model import (
     ObjectTemplate,
     FieldFactory,
@@ -321,6 +321,7 @@ class Salesforce(ParserMacroPlugin, SnowfakeryPlugin, SalesforceConnectionMixin)
         return new_template
 
     class Functions:
+        @memorable
         def ProfileId(self, name):
             query = f"select Id from Profile where Name='{name}'"
             return self.context.plugin.sf_connection.query_single_record(query)
@@ -451,6 +452,7 @@ class SalesforceQuery(SalesforceConnectionMixin, SnowfakeryPlugin):
             # todo: use CompositeParallelSalesforce to cache 200 at a time
             return self._sf_connection.query_single_record(query)
 
+        @memorable
         def find_record(self, *args, fields="Id", where=None, **kwargs):
             """Find a particular record"""
             query_from = self._parse_from_from_args(args, kwargs)
