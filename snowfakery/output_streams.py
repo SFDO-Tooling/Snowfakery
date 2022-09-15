@@ -53,7 +53,7 @@ class OutputStream(ABC):
         int: int,
         float: float,
         datetime.date: noop,
-        datetime.datetime: format_datetime,
+        datetime.datetime: noop,
         type(None): noop,
         bool: int,
         Decimal: str,
@@ -279,6 +279,11 @@ class JSONOutputStream(FileOutputStream):
 
 class SqlDbOutputStream(OutputStream):
     """Output stream for talking to SQL Databases"""
+
+    encoders: Mapping[type, Callable] = {
+        **OutputStream.encoders,
+        datetime.datetime: format_datetime,
+    }
 
     should_close_session = False
 

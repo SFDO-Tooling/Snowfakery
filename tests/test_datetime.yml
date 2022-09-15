@@ -1,3 +1,4 @@
+- snowfakery_version: 3
 - object: Datetimes
   fields:
     from_date_fields: ${{datetime(year=2000, month=1, day=1)}}
@@ -7,9 +8,13 @@
         start_date: today
         end_date: +1y
     from_date: ${{datetime(some_date)}}
-    from_string: 2000-01-01 01:01:01
+    from_string: ${{datetime("2000-01-01 01:01:01")}}
+    from_yaml:
+      datetime: 2000-01-01 01:01:01
     right_now: ${{now}}
     also_right_now: ${{datetime()}}
+    also_also_right_now:
+      datetime: now
     hour: ${{now.hour}}
     minute: ${{now.minute}}
     second: ${{now.second}}

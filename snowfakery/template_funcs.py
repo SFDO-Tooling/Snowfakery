@@ -148,7 +148,7 @@ class StandardFuncs(SnowfakeryPlugin):
                 year, month, day, hour, minute, second, microsecond, tzinfo=timezone
             )
 
-        def date_between(self, *, start_date, end_date):
+        def date_between(self, *, start_date, end_date, timezone=UTCAsRelDelta):
             """A YAML-embeddable function to pick a date between two ranges"""
 
             def try_parse_date(d):
@@ -169,31 +169,24 @@ class StandardFuncs(SnowfakeryPlugin):
                     raise
             # swallow empty range errors per Python conventions
 
-        def datetime_between(self, *, start_date, end_date):
+        def datetime_between(self, *, start_date, end_date, timezone=UTCAsRelDelta):
             """A YAML-embeddable function to pick a datetime between two ranges"""
 
             def try_parse_date(d):
                 if not isinstance(d, str) or not DateProvider.regex.fullmatch(d):
-                    try:
-                        d = self.datetime(d)
-                    except Exception:  # let's hope its something faker can parse
-                        pass
+                    return self.datetime(d)
                 return d
 
             start_date = try_parse_date(start_date)
             end_date = try_parse_date(end_date)
 
-            if start_date == "today":
-                start_date = "now"
-            if end_date == "today":
-                end_date = "now"
+            timezone = _normalize_timezone(timezone)
+            if end_date < start_date:
+                raise DataGenError("End date is before start date")
 
-            try:
-                return self._faker_for_dates.date_time_between(start_date, end_date)
-            except ValueError as e:
-                if "empty range" not in str(e):
-                    raise
-            # swallow empty range errors per Python conventions
+            return self._faker_for_dates.date_time_between(
+                start_date, end_date, tzinfo=timezone
+            )
 
         def i18n_fake(self, locale: str, fake: str):
             # deprecated by still here for backwards compatibility

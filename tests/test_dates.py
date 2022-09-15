@@ -26,7 +26,7 @@ class TestDates:
         """
         generate_data(StringIO(yaml), plugin_options={"snowfakery_version": 3})
         date = generated_rows.table_values("OBJ", 1, "dateplus")
-        assert date == "2022-01-01T00:00:00+00:00"
+        assert str(date) == "2022-01-01 00:00:00+00:00"
 
     def test_date_math__native_types__error(self, generated_rows):
         yaml = """
