@@ -125,6 +125,21 @@ class TestSOQLNoCCI:
         assert fake_sf_client.mock_calls
         assert generated_rows.row_values(0, "AccountId") == "FAKEID0"
 
+    def test_soql_plugin_cache(self, fake_sf_client, generated_rows):
+        yaml = """
+            - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+            - object: Contact
+              count: 5
+              fields:
+                FirstName: Suzy
+                LastName: Salesforce
+                AccountId:
+                    SalesforceQuery.find_record: Account
+        """
+        generate(StringIO(yaml), plugin_options={"org_name": "blah"})
+        assert fake_sf_client.mock_calls
+        assert len(fake_sf_client.mock_calls) == 1, fake_sf_client.mock_calls
+
     def test_soql_plugin_random__orgname_long(self, fake_sf_client, generated_rows):
         yaml = """
             - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
