@@ -141,6 +141,16 @@ class TestFaker:
             assert generated_rows.row_values(0, "empty").year == 1999
             assert values["westerly"].utcoffset().seconds == 8 * 60 * 60
 
+    def test_datetime_between(self, generated_rows):
+        with open("tests/test_fake_datetimes.yml") as yaml:
+            generate(yaml, {}, None)
+            past = generated_rows.row_values(0, "past")
+            future = generated_rows.row_values(0, "future")
+
+            assert isinstance(past, datetime)
+            assert isinstance(future, datetime)
+            assert future > past  # Let's hope the future is greater
+
     def test_datetime_parsing(self, generated_rows):
         with open("tests/test_datetime.yml") as yaml:
             generate(yaml, {}, None)
