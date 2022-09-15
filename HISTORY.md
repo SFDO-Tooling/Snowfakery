@@ -4,6 +4,14 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 3.2
+
+Snowfakery can now do `random_reference` to nicknames. (#639)
+
+Removed some limitations on what Snowfakery can do with objects referenced through `random_reference`, especially using `a.b.c.d` syntax. (#681 and #639)
+
+Add a `unique` feature for `random_reference` (#684)
+
 ## Snowfakery 3.1
 
 When embedded in CumulusCI, Snowfakery can now do SObject Upserts. (#644)
