@@ -1,8 +1,15 @@
 - object: Datetimes
   fields:
-    from_date: ${{datetime(year=2000, month=1, day=1)}}
+    from_date_fields: ${{datetime(year=2000, month=1, day=1)}}
     from_datetime: ${{datetime(year=2000, month=1, day=1, hour=1, minute=1, second=1)}}
+    some_date:
+      date_between:
+        start_date: today
+        end_date: +1y
+    from_date: ${{datetime(some_date)}}
+    from_string: 2000-01-01 01:01:01
     right_now: ${{now}}
+    also_right_now: ${{datetime()}}
     hour: ${{now.hour}}
     minute: ${{now.minute}}
     second: ${{now.second}}

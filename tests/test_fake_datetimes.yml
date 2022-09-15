@@ -1,0 +1,14 @@
+- object: OBJ
+  fields:
+    past:
+      datetime_between:
+        start_date: 1999-12-31 # party like its 1999!!
+        end_date: today
+    future:
+      datetime_between:
+        start_date: today
+        end_date: 2525-01-01 # if man is still alive!!
+    y2k:
+      datetime_between:
+        start_date: 1999-12-31 11:59:00
+        end_date: 2000-01-01 01:01:00

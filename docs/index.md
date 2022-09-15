@@ -612,7 +612,7 @@ If `random_reference` finds no matches in the current iteration, it looks in pre
   count: 10
   fields:
     ownedBy:
-      random_reference: 
+      random_reference:
         to: Owner
         unique: True
 ```
@@ -678,6 +678,7 @@ CampaignMember(id=15, ContactId=Contact(3), CampaignId=Campaign(2))
 ```
 
 Performance tip: Tables and nicknames that are referred to by `random_reference` are indexed, which makes them slightly slower to generate than normal. This should seldom be a problem in practice, but if you experience performance problems you could switch to a normal reference to see if that improves things.
+
 ### `fake`
 
 The `fake` function generates fake data. This function is defined further in the [Fake Data Tutorial](fakedata.md)
@@ -689,7 +690,7 @@ The `date_between` function picks a random date in some date range. For example,
 ```yaml
 - object: OBJ
     fields:
-    date:
+      date:
         date_between:
             start_date: 2000-01-01
             end_date: today
@@ -723,6 +724,30 @@ The `date_between` function can also be used in formulas.
 
 ```yaml
 wedding_date: Our big day is ${{date_between(start_date="2022-01-31", end_date="2022-12-31")}}
+```
+
+### `datetime_between`
+
+`datetime_between` is similar to `date_between` but relates to datetimes.
+
+Some example of datetimes are below:
+
+```yaml
+# tests/test_fake_datetimes.yml
+- object: OBJ
+  fields:
+    past:
+      datetime_between:
+        start_date: 1999-12-31 # party like its 1999!!
+        end_date: today
+    future:
+      datetime_between:
+        start_date: today
+        end_date: 2525-01-01 # if man is still alive!!
+    y2k:
+      datetime_between:
+        start_date: 1999-12-31 11:59:00
+        end_date: 2000-01-01 01:01:00
 ```
 
 ### `random_number`
@@ -1160,15 +1185,23 @@ And these methods:
 #### `datetime`
 
 The `datetime` function can generate
-a new datetime object from year/month/day parts:
+a new datetime object from year/month/day parts, from a string
+or from a date object.
 
 ```yaml
 # tests/test_datetime.yml
 - object: Datetimes
   fields:
-    from_date: ${{datetime(year=2000, month=1, day=1)}}
+    from_date_fields: ${{datetime(year=2000, month=1, day=1)}}
     from_datetime: ${{datetime(year=2000, month=1, day=1, hour=1, minute=1, second=1)}}
+    some_date:
+      date_between:
+        start_date: today
+        end_date: +1y
+    from_date: ${{datetime(some_date)}}
+    from_string: 2000-01-01 01:01:01
     right_now: ${{now}}
+    also_right_now: ${{datetime()}}
     hour: ${{now.hour}}
     minute: ${{now.minute}}
     second: ${{now.second}}

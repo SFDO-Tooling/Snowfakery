@@ -58,6 +58,16 @@ def parse_date(d: Union[str, datetime, date]) -> date:
     return dateutil.parser.parse(d).date()
 
 
+@lru_cache(maxsize=512)
+def parse_datetimespec(d: Union[str, datetime, date]) -> datetime:
+    if isinstance(d, datetime):
+        return d
+    elif isinstance(d, str):
+        return dateutil.parser.parse(d)
+    elif isinstance(d, date):
+        return datetime.combine(date.today(), datetime.min.time())
+
+
 def render_boolean(context: PluginContext, value: FieldDefinition) -> bool:
     val = context.evaluate(value)
     if isinstance(val, str):
@@ -90,16 +100,21 @@ class StandardFuncs(SnowfakeryPlugin):
         ):
             """A YAML-embeddable function to construct a date from strings or integers"""
             if datespec:
+                if any((day, month, year)):
+                    raise DataGenError(
+                        "Should not specify a date specification and also day or month or year."
+                    )
                 return parse_date(datespec)
             else:
                 return date(year, month, day)
 
         def datetime(
             self,
+            datetimespec=None,
             *,
-            year: Union[str, int],
-            month: Union[str, int],
-            day: Union[str, int],
+            year: Union[str, int] = None,
+            month: Union[str, int] = None,
+            day: Union[str, int] = None,
             hour=0,
             minute=0,
             second=0,
@@ -108,6 +123,19 @@ class StandardFuncs(SnowfakeryPlugin):
         ):
             """A YAML-embeddable function to construct a datetime from strings or integers"""
             timezone = _normalize_timezone(timezone)
+            if datetimespec:
+                dt = parse_datetimespec(datetimespec)
+            else:
+                dt = datetime.now(timezone)
+
+            year = year or dt.year
+            month = month or dt.month
+            day = day or dt.day
+            hour = hour or dt.hour
+            minute = minute or dt.minute
+            second = second or dt.second
+            microsecond = microsecond or dt.microsecond
+
             return datetime(
                 year, month, day, hour, minute, second, microsecond, tzinfo=timezone
             )
@@ -128,6 +156,32 @@ class StandardFuncs(SnowfakeryPlugin):
 
             try:
                 return self._faker_for_dates.date_between(start_date, end_date)
+            except ValueError as e:
+                if "empty range" not in str(e):
+                    raise
+            # swallow empty range errors per Python conventions
+
+        def datetime_between(self, *, start_date, end_date):
+            """A YAML-embeddable function to pick a datetime between two ranges"""
+
+            def try_parse_date(d):
+                if not isinstance(d, str) or not DateProvider.regex.fullmatch(d):
+                    try:
+                        d = self.datetime(d)
+                    except Exception:  # let's hope its something faker can parse
+                        pass
+                return d
+
+            start_date = try_parse_date(start_date)
+            end_date = try_parse_date(end_date)
+
+            if start_date == "today":
+                start_date = "now"
+            if end_date == "today":
+                end_date = "now"
+
+            try:
+                return self._faker_for_dates.date_time_between(start_date, end_date)
             except ValueError as e:
                 if "empty range" not in str(e):
                     raise

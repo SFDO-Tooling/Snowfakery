@@ -113,6 +113,23 @@ class TestFaker:
         generate(StringIO(yaml), {}, None)
         assert row_values(write_row_mock, 0, "date") is None
 
+    def test_datetime_between(self, generated_rows):
+        with open("tests/test_fake_datetimes.yml") as yaml:
+            generate(yaml, {}, None)
+            past = generated_rows.row_values(0, "past")
+            future = generated_rows.row_values(0, "future")
+
+            assert isinstance(past, datetime)
+            assert isinstance(future, datetime)
+            assert future > past  # Let's hope the future is greater
+
+    def test_datetime_parsing(self, generated_rows):
+        with open("tests/test_datetime.yml") as yaml:
+            generate(yaml, {}, None)
+            values = generated_rows.table_values("Datetimes")[0]
+            assert values["also_right_now"].startswith("20")
+            assert values["also_right_now"].endswith("+00:00")
+
     @mock.patch(write_row_path)
     def test_months_past(self, write_row_mock):
         yaml = """
