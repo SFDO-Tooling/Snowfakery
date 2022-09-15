@@ -146,7 +146,7 @@ def _normalize_timezone(timezone=None):
     else:
         if not isinstance(timezone, dateutil.relativedelta.relativedelta):
             raise exc.DataGenError(  # pragma: no cover
-                f"Type should be a relativedelta, not {type(timezone)}: {timezone}"
+                f"`timezone` should be a `relativedelta`, not `{type(timezone).__name__}`: {timezone}"
             )
         return datetime.timezone(
             datetime.timedelta(hours=timezone.hours, minutes=timezone.minutes)
