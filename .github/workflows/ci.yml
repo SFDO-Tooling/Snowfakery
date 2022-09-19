@@ -43,6 +43,11 @@ jobs:
     runs-on: sfdc-ubuntu-latest
     steps:
       - uses: "actions/checkout@v2"
+      - run: |
+          git fetch --no-tags origin main
+          git switch main
+          git switch - # switch back to branch under test
+
       - uses: "actions/setup-python@v1"
         with:
           python-version: "3.9"
@@ -55,7 +60,14 @@ jobs:
           python -m pip install cumulusci
 
       - name: Run Tests
-        run: python -m pytest
+        run: |
+          python -m coverage run -m pytest
+          coverage xml
+          coverage report
+          git branch -a
+          diff-cover coverage.xml --fail-under 100 --compare-branch=origin/main --diff-range-notation=.. --show-uncovered --markdown-report coverage.md
+          echo "== Coverage ==" >> $GITHUB_STEP_SUMMARY
+          cat coverage.md >> $GITHUB_STEP_SUMMARY
 
   faker_docs:
     name: Faker Docs
