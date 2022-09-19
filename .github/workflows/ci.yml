@@ -62,11 +62,13 @@ jobs:
       - name: Run Tests
         run: |
           python -m coverage run -m pytest
+
+      - name: Check Coverage
+        run: |
           coverage xml
           coverage report
           git branch -a
           diff-cover coverage.xml --fail-under 100 --compare-branch=origin/main --diff-range-notation=.. --show-uncovered --markdown-report coverage.md
-          echo "== Coverage ==" >> $GITHUB_STEP_SUMMARY
           cat coverage.md >> $GITHUB_STEP_SUMMARY
 
   faker_docs:
