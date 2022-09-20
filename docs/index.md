@@ -10,7 +10,7 @@ Snowfakery can write its output to `stdout`, or any database accessible to SQLAl
 
 ### Installation for Salesforce Users
 
-If you intend to use Snowfakery with Salesforce, we recommend installing CumulusCI, which includes Snowfakery in the installation. To install CumulusCI, follow the steps in the [Get Started](https://cumulusci.readthedocs.io/en/latest/get_started.html) section of the CumulusCI documentation. (Don't forget to install [Python](https://www.python.org/downloads/), too!)
+If you intend to use Snowfakery with Salesforce, we recommend installing CumulusCI, which includes Snowfakery in the installation. To install CumulusCI, follow the steps in the [Get Started](https://cumulusci.readthedocs.io/en/latest/get-started.html) section of the CumulusCI documentation. (Don't forget to install [Python](https://www.python.org/downloads/), too!)
 
 After installation, use the `snowfakery` task command to invoke Snowfakery.
 
