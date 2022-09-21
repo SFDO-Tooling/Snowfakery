@@ -65,6 +65,8 @@ jobs:
         run: |
           coverage xml
           coverage report
+          echo $GITHUB_BASE_REF
+          git diff HEAD..$GITHUB_BASE_REF
           diff-cover coverage.xml --fail-under 100 --compare-branch=$GITHUB_BASE_REF --diff-range-notation=.. --show-uncovered --markdown-report coverage.md
           cat coverage.md >> $GITHUB_STEP_SUMMARY
 
