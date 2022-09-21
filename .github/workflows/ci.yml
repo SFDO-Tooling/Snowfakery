@@ -6,6 +6,7 @@ env:
   COVERALLS_PARALLEL: true
   COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
   SF_MKDOCS_BUILD_LOCALES: "False"
+  BASE_REF: main
 
 jobs:
   test:
@@ -44,7 +45,7 @@ jobs:
     steps:
       - uses: "actions/checkout@v2"
       - run: |
-          git fetch --no-tags origin $GITHUB_BASE_REF:$GITHUB_BASE_REF
+          git fetch --no-tags origin $BASE_REF:$BASE_REF
 
       - uses: "actions/setup-python@v1"
         with:
@@ -65,9 +66,9 @@ jobs:
         run: |
           coverage xml
           coverage report
-          echo $GITHUB_BASE_REF
-          git diff HEAD..$GITHUB_BASE_REF
-          diff-cover coverage.xml --fail-under 100 --compare-branch=$GITHUB_BASE_REF --diff-range-notation=.. --show-uncovered --markdown-report coverage.md
+          echo $BASE_REF
+          git diff HEAD..$BASE_REF
+          diff-cover coverage.xml --fail-under 100 --compare-branch=$BASE_REF --diff-range-notation=.. --show-uncovered --markdown-report coverage.md
           cat coverage.md >> $GITHUB_STEP_SUMMARY
 
   faker_docs:
