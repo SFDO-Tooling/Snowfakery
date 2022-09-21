@@ -44,9 +44,7 @@ jobs:
     steps:
       - uses: "actions/checkout@v2"
       - run: |
-          git fetch --no-tags origin main
-          git switch main
-          git switch - # switch back to branch under test
+          git fetch --no-tags origin $GITHUB_BASE_REF:$GITHUB_BASE_REF
 
       - uses: "actions/setup-python@v1"
         with:
@@ -67,8 +65,7 @@ jobs:
         run: |
           coverage xml
           coverage report
-          git branch -a
-          diff-cover coverage.xml --fail-under 100 --compare-branch=origin/main --diff-range-notation=.. --show-uncovered --markdown-report coverage.md
+          diff-cover coverage.xml --fail-under 100 --compare-branch=$GITHUB_BASE_REF --diff-range-notation=.. --show-uncovered --markdown-report coverage.md
           cat coverage.md >> $GITHUB_STEP_SUMMARY
 
   faker_docs:
