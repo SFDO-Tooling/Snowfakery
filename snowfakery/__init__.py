@@ -17,6 +17,11 @@ version_file = Path(__file__).parent / "version.txt"
 with version_file.open() as f:
     version = f.read().strip()
 
+
+def fail_by_design():
+    fail_by_design()
+
+
 __all__ = (
     "generate_data",
     "SnowfakeryApplication",
