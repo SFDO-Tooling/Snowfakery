@@ -10,7 +10,7 @@ Snowfakery can write its output to `stdout`, or any database accessible to SQLAl
 
 ### Installation for Salesforce Users
 
-If you intend to use Snowfakery with Salesforce, we recommend installing CumulusCI, which includes Snowfakery in the installation. To install CumulusCI, follow the steps in the [Get Started](https://cumulusci.readthedocs.io/en/latest/get_started.html) section of the CumulusCI documentation. (Don't forget to install [Python](https://www.python.org/downloads/), too!)
+If you intend to use Snowfakery with Salesforce, we recommend installing CumulusCI, which includes Snowfakery in the installation. To install CumulusCI, follow the steps in the [Get Started](https://cumulusci.readthedocs.io/en/latest/get-started.html) section of the CumulusCI documentation. (Don't forget to install [Python](https://www.python.org/downloads/), too!)
 
 After installation, use the `snowfakery` task command to invoke Snowfakery.
 
@@ -598,6 +598,8 @@ To create a reference, `random_reference` looks for a row created in the current
 
 If `random_reference` finds no matches in the current iteration, it looks in previous iterations. This can happen, for example, when you try to create a reference to an object created with the `just_once` flag. Snowfakery cannot currently generate a `random_reference` to a row that will be created in a future iteration of a recipe.
 
+Performance tip: Tables and nicknames that are referred to by `random_reference` are indexed, which makes them slightly slower to generate than normal. This should seldom be a problem in practice, but if you experience performance problems you could switch to a normal `reference` to see if that improves things.
+
 #### Unique random references
 
 `random_reference` has a `unique` parameter which ensures that each target row is used only once.
@@ -677,7 +679,10 @@ CampaignMember(id=14, ContactId=Contact(3), CampaignId=Campaign(5))
 CampaignMember(id=15, ContactId=Contact(3), CampaignId=Campaign(2))
 ```
 
-Performance tip: Tables and nicknames that are referred to by `random_reference` are indexed, which makes them slightly slower to generate than normal. This should seldom be a problem in practice, but if you experience performance problems you could switch to a normal reference to see if that improves things.
+Performance tip: Tables and nicknames that are referred to by `random_reference` are indexed, 
+which makes them slightly slower to generate than normal. This should seldom be a problem in
+practice, but if you experience performance problems you could switch to a normal reference to
+see if that improves things.
 
 ### `fake`
 
