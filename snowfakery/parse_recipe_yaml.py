@@ -224,7 +224,7 @@ def parse_structured_value(name: str, field: Dict, context: ParseContext) -> Def
             rc = func(context, args)
             return rc
         except AttributeError:
-            # we'll try to find it a different way bbelow
+            # we'll try to find it a different way below
             pass
 
     args = parse_structured_value_args(args, context)
