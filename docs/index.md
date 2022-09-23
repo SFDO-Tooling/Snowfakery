@@ -679,11 +679,6 @@ CampaignMember(id=14, ContactId=Contact(3), CampaignId=Campaign(5))
 CampaignMember(id=15, ContactId=Contact(3), CampaignId=Campaign(2))
 ```
 
-Performance tip: Tables and nicknames that are referred to by `random_reference` are indexed, 
-which makes them slightly slower to generate than normal. This should seldom be a problem in
-practice, but if you experience performance problems you could switch to a normal reference to
-see if that improves things.
-
 ### `fake`
 
 The `fake` function generates fake data. This function is defined further in the [Fake Data Tutorial](fakedata.md)
@@ -753,6 +748,17 @@ Some example of datetimes are below:
       datetime_between:
         start_date: 1999-12-31 11:59:00
         end_date: 2000-01-01 01:01:00
+    empty:
+      datetime_between:
+        start_date: 1999-12-31 11:59:00
+        end_date: 1999-12-31 11:59:00
+    westerly:
+      datetime_between:
+        start_date: 1999-12-31 11:59:00
+        end_date: 1999-12-31 11:59:00
+        timezone:
+          relativedelta:
+            hours: +8
 ```
 
 ### `random_number`
@@ -1195,6 +1201,7 @@ or from a date object.
 
 ```yaml
 # tests/test_datetime.yml
+- snowfakery_version: 3
 - object: Datetimes
   fields:
     from_date_fields: ${{datetime(year=2000, month=1, day=1)}}
@@ -1204,9 +1211,13 @@ or from a date object.
         start_date: today
         end_date: +1y
     from_date: ${{datetime(some_date)}}
-    from_string: 2000-01-01 01:01:01
+    from_string: ${{datetime("2000-01-01 01:01:01")}}
+    from_yaml:
+      datetime: 2000-01-01 01:01:01
     right_now: ${{now}}
     also_right_now: ${{datetime()}}
+    also_also_right_now:
+      datetime: now
     hour: ${{now.hour}}
     minute: ${{now.minute}}
     second: ${{now.second}}
