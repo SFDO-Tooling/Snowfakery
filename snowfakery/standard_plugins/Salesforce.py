@@ -329,7 +329,6 @@ class Salesforce(ParserMacroPlugin, SnowfakeryPlugin, SalesforceConnectionMixin)
         Profile = ProfileId
 
 
-# TODO: Tests for this class
 class SOQLDatasetImpl(DatasetBase):
     iterator = None
     tempdir = None

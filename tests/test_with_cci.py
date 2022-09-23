@@ -429,7 +429,7 @@ class TestSOQLDatasets:
         with pytest.raises(DataGenError, match="SOQLDataset needs a 'fields' list"):
             generate_data(StringIO(yaml), plugin_options={"org_name": org_config.name})
 
-    def test_dataset_no_from(self, org_config, sf, generated_rows):
+    def test_dataset_no_from__error(self, org_config, sf, generated_rows):
         yaml = """
 - plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
 - object: Contact
@@ -445,3 +445,18 @@ class TestSOQLDatasets:
     def test_config_type_error(self):
         with pytest.raises(TypeError):
             Salesforce.check_orgconfig(None)
+
+    def test_dataset_weird_syntax__error(self, org_config, sf, generated_rows):
+        yaml = """
+- plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
+- object: Contact
+  count: 10
+  fields:
+    __users_from_salesforce:
+      SOQLDataset.shuffle:
+        from: Junk3
+        fields: blah
+        blah: blahblah
+        """
+        with pytest.raises(DataGenError, match="Unknown argument in"):
+            generate_data(StringIO(yaml), plugin_options={"org_name": org_config.name})

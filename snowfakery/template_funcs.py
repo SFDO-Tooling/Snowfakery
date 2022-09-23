@@ -152,8 +152,8 @@ class StandardFuncs(SnowfakeryPlugin):
             elif object:
                 try:
                     id = int(id)
-                except TypeError:
-                    raise DataGenError("Cannot interpret id as integer")
+                except (ValueError, TypeError):
+                    raise DataGenError("Cannot interpret `id` as an integer")
                 return ObjectReference(object, id)
 
         def _reference_from_scalar(self, x: Any):
