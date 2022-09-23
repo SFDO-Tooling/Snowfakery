@@ -169,13 +169,8 @@ class StandardFuncs(SnowfakeryPlugin):
         def datetime_between(self, *, start_date, end_date, timezone=UTCAsRelDelta):
             """A YAML-embeddable function to pick a datetime between two ranges"""
 
-            def try_parse_date(d):
-                if not isinstance(d, str) or not DateProvider.regex.fullmatch(d):
-                    return self.datetime(d)
-                return d
-
-            start_date = try_parse_date(start_date)
-            end_date = try_parse_date(end_date)
+            start_date = self.datetime(start_date)
+            end_date = self.datetime(end_date)
 
             timezone = _normalize_timezone(timezone)
             if end_date < start_date:
