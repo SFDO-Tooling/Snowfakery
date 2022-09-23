@@ -19,7 +19,7 @@
     westerly:
       datetime_between:
         start_date: 1999-12-31 11:59:00
-        end_date: 1999-12-31 11:59:00
+        end_date: now
         timezone:
           relativedelta:
             hours: +8

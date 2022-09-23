@@ -282,7 +282,7 @@ class SqlDbOutputStream(OutputStream):
 
     encoders: Mapping[type, Callable] = {
         **OutputStream.encoders,
-        datetime.datetime: format_datetime,
+        datetime.datetime: format_datetime,  # format into Salesforce-friendly syntax
     }
 
     should_close_session = False

@@ -728,9 +728,9 @@ wedding_date: Our big day is ${{date_between(start_date="2022-01-31", end_date="
 
 ### `datetime_between`
 
-`datetime_between` is similar to `date_between` but relates to datetimes.
+`datetime_between` is similar to `date_between` but relates to [datetimes](#datetime).
 
-Some example of datetimes are below:
+Some example of randomized datetimes:
 
 ```yaml
 # tests/test_fake_datetimes.yml
@@ -755,7 +755,7 @@ Some example of datetimes are below:
     westerly:
       datetime_between:
         start_date: 1999-12-31 11:59:00
-        end_date: 1999-12-31 11:59:00
+        end_date: now
         timezone:
           relativedelta:
             hours: +8
@@ -1199,14 +1199,20 @@ The `datetime` function can generate
 a new datetime object from year/month/day parts, from a string
 or from a date object.
 
+A `datetime` combines both a date and a time into a single value. E.g. 11:03:21 on February 14, 2024. We can express that `datetime` as
+`2024-02-14 11:03:21`
+
+Datetimes default to using the UTC time-zone, but you can control that by
+adding a timezone after a plus sign: `2008-04-25 21:18:29+08:00`
+
 ```yaml
 # tests/test_datetime.yml
 - snowfakery_version: 3
 - object: Datetimes
   fields:
     from_date_fields: ${{datetime(year=2000, month=1, day=1)}}
-    from_datetime: ${{datetime(year=2000, month=1, day=1, hour=1, minute=1, second=1)}}
-    some_date:
+    from_datetime_fields: ${{datetime(year=2000, month=1, day=1, hour=1, minute=1, second=1)}}
+    some_date: # a date, not a datetime, for conversion later
       date_between:
         start_date: today
         end_date: +1y

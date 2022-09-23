@@ -150,9 +150,9 @@ class TestFaker:
             assert values["from_date_fields"].tzinfo == timezone.utc
             assert values["from_date_fields"].second == 0
             # from_datetime: ${{datetime(year=2000, month=1, day=1, hour=1, minute=1, second=1)}}
-            assert values["from_datetime"].year == 2000
-            assert values["from_datetime"].tzinfo == timezone.utc
-            assert values["from_datetime"].second == 1
+            assert values["from_datetime_fields"].year == 2000
+            assert values["from_datetime_fields"].tzinfo == timezone.utc
+            assert values["from_datetime_fields"].second == 1
 
             # from_date: ${{datetime(some_date)}}
             assert values["from_date"].year >= 2022

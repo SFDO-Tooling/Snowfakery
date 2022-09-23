@@ -2,8 +2,8 @@
 - object: Datetimes
   fields:
     from_date_fields: ${{datetime(year=2000, month=1, day=1)}}
-    from_datetime: ${{datetime(year=2000, month=1, day=1, hour=1, minute=1, second=1)}}
-    some_date:
+    from_datetime_fields: ${{datetime(year=2000, month=1, day=1, hour=1, minute=1, second=1)}}
+    some_date: # a date, not a datetime, for conversion later
       date_between:
         start_date: today
         end_date: +1y

@@ -60,6 +60,7 @@ def parse_date(d: Union[str, datetime, date]) -> date:
 
 @lru_cache(maxsize=512)
 def parse_datetimespec(d: Union[str, datetime, date]) -> datetime:
+    """Parse a string, datetime or date into a datetime."""
     if isinstance(d, datetime):
         return d
     elif isinstance(d, str):
@@ -128,25 +129,21 @@ class StandardFuncs(SnowfakeryPlugin):
             """A YAML-embeddable function to construct a datetime from strings or integers"""
             timezone = _normalize_timezone(timezone)
             if datetimespec:
+                if any((day, month, year, hour, minute, second, microsecond)):
+                    raise DataGenError(
+                        "Should not specify a date specification and also other parameters."
+                    )
                 dt = parse_datetimespec(datetimespec)
+                dt = dt.replace(tzinfo=timezone)
             elif not (any((year, month, day, hour, minute, second, microsecond))):
+                # no dt specification provided at all...just use now()
                 dt = datetime.now(timezone)
             else:
                 dt = datetime(
                     year, month, day, hour, minute, second, microsecond, timezone
                 )
 
-            year = year or dt.year
-            month = month or dt.month
-            day = day or dt.day
-            hour = hour or dt.hour
-            minute = minute or dt.minute
-            second = second or dt.second
-            microsecond = microsecond or dt.microsecond
-
-            return datetime(
-                year, month, day, hour, minute, second, microsecond, tzinfo=timezone
-            )
+            return dt
 
         def date_between(self, *, start_date, end_date, timezone=UTCAsRelDelta):
             """A YAML-embeddable function to pick a date between two ranges"""
