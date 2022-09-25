@@ -66,9 +66,7 @@ idna==3.4
     #   requests
     #   yarl
 importlib-metadata==4.12.0
-    # via
-    #   markdown
-    #   mkdocs
+    # via mkdocs
 importlib-resources==5.9.0
     # via tox-gh-actions
 iniconfig==1.1.1
@@ -182,14 +180,13 @@ tox==3.26.0
     # via
     #   -r requirements/dev.in
     #   tox-gh-actions
-tox-gh-actions==2.9.1
+tox-gh-actions==2.10.0
     # via -r requirements/dev.in
 typeguard==2.10.0
     # via -r requirements/dev.in
 typing-extensions==4.3.0
     # via
     #   -r requirements/prod.txt
-    #   black
     #   pydantic
 urllib3==1.26.12
     # via
@@ -211,9 +208,7 @@ wrapt==1.14.1
 yarl==1.8.1
     # via vcrpy
 zipp==3.8.1
-    # via
-    #   importlib-metadata
-    #   importlib-resources
+    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 setuptools==65.3.0
