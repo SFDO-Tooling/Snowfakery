@@ -78,10 +78,10 @@ class OutputStream(ABC):
         return target_object_row.id
 
     def flush(self):
-        pass
+        pass  # pragma: no cover   -- subclasses override
 
     def commit(self):
-        pass
+        pass  # pragma: no cover   -- subclasses override
 
     def cleanup(self, field_name, field_value, sourcetable, row):
         if isinstance(field_value, (ObjectRow, ObjectReference)):
@@ -94,7 +94,7 @@ class OutputStream(ABC):
                     return field_value.simplify()
 
             if not encoder:
-                raise TypeError(
+                raise TypeError(  # pragma: no cover
                     f"No encoder found for {type(field_value)} in {self.__class__.__name__} "
                     f"for {field_name}, {field_value} in {sourcetable}"
                 )
@@ -128,7 +128,7 @@ class OutputStream(ABC):
 
         Return a list of messages to print out.
         """
-        return super().close()
+        raise NotImplementedError()
 
     def __enter__(self, *args):
         return self
@@ -156,8 +156,8 @@ class SmartStream:
         elif stream_or_path is None:
             self.owns_stream = False
             self.stream = sys.stdout
-        else:  # noqa
-            assert False, f"stream_or_path is {stream_or_path}"
+        else:
+            raise AssertionError(f"stream_or_path is {stream_or_path}")
 
     def write(self, data):
         self.stream.write(data)
@@ -288,7 +288,7 @@ class SqlDbOutputStream(OutputStream):
     should_close_session = False
 
     def __init__(self, engine: Engine, mappings: None = None, **kwargs):
-        if mappings:
+        if mappings:  # pragma: no cover  -- should not be triggered.
             warn("Please do not pass mappings argument to __init__", DeprecationWarning)
         self.buffered_rows = defaultdict(list)
         self.table_info = {}
@@ -299,7 +299,7 @@ class SqlDbOutputStream(OutputStream):
 
     @classmethod
     def from_url(cls, db_url: str, mappings: None = None):
-        if mappings:
+        if mappings:  # pragma: no cover  -- should not be triggered.
             warn("Please do not pass mappings argument to from_url", DeprecationWarning)
         engine = create_engine(db_url)
         self = cls(engine)
@@ -332,7 +332,8 @@ class SqlDbOutputStream(OutputStream):
         self.session.flush()
 
     def commit(self):
-        self.flush()
+        if any(self.buffered_rows):
+            self.flush()
         self.session.commit()
 
     def close(self, **kwargs) -> Optional[Sequence[str]]:
@@ -604,4 +605,4 @@ class MultiplexOutputStream(OutputStream):
             stream.close()
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
-        return super().write_single_row(tablename, row)
+        raise NotImplementedError()  # should never be called
