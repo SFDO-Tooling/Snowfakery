@@ -690,7 +690,7 @@ The `date_between` function picks a random date in some date range. For example,
 ```yaml
 - object: OBJ
     fields:
-    date:
+      date:
         date_between:
             start_date: 2000-01-01
             end_date: today
@@ -724,6 +724,41 @@ The `date_between` function can also be used in formulas.
 
 ```yaml
 wedding_date: Our big day is ${{date_between(start_date="2022-01-31", end_date="2022-12-31")}}
+```
+
+### `datetime_between`
+
+`datetime_between` is similar to `date_between` but relates to [datetimes](#datetime).
+
+Some example of randomized datetimes:
+
+```yaml
+# tests/test_fake_datetimes.yml
+- object: OBJ
+  fields:
+    past:
+      datetime_between:
+        start_date: 1999-12-31 # party like its 1999!!
+        end_date: today
+    future:
+      datetime_between:
+        start_date: today
+        end_date: 2525-01-01 # if man is still alive!!
+    y2k:
+      datetime_between:
+        start_date: 1999-12-31 11:59:00
+        end_date: 2000-01-01 01:01:00
+    empty:
+      datetime_between:
+        start_date: 1999-12-31 11:59:00
+        end_date: 1999-12-31 11:59:00
+    westerly:
+      datetime_between:
+        start_date: 1999-12-31 11:59:00
+        end_date: now
+        timezone:
+          relativedelta:
+            hours: +8
 ```
 
 ### `random_number`
@@ -1161,15 +1196,34 @@ And these methods:
 #### `datetime`
 
 The `datetime` function can generate
-a new datetime object from year/month/day parts:
+a new datetime object from year/month/day parts, from a string
+or from a date object.
+
+A `datetime` combines both a date and a time into a single value. E.g. 11:03:21 on February 14, 2024. We can express that `datetime` as
+`2024-02-14 11:03:21`
+
+Datetimes default to using the UTC time-zone, but you can control that by
+adding a timezone after a plus sign: `2008-04-25 21:18:29+08:00`
 
 ```yaml
 # tests/test_datetime.yml
+- snowfakery_version: 3
 - object: Datetimes
   fields:
-    from_date: ${{datetime(year=2000, month=1, day=1)}}
-    from_datetime: ${{datetime(year=2000, month=1, day=1, hour=1, minute=1, second=1)}}
+    from_date_fields: ${{datetime(year=2000, month=1, day=1)}}
+    from_datetime_fields: ${{datetime(year=2000, month=1, day=1, hour=1, minute=1, second=1)}}
+    some_date: # a date, not a datetime, for conversion later
+      date_between:
+        start_date: today
+        end_date: +1y
+    from_date: ${{datetime(some_date)}}
+    from_string: ${{datetime("2000-01-01 01:01:01")}}
+    from_yaml:
+      datetime: 2000-01-01 01:01:01
     right_now: ${{now}}
+    also_right_now: ${{datetime()}}
+    also_also_right_now:
+      datetime: now
     hour: ${{now.hour}}
     minute: ${{now.minute}}
     second: ${{now.second}}
