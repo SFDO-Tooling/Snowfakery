@@ -4,6 +4,16 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 3.3
+
+Snowfakery has a `datetime_between` function (#779)
+
+Date-time values can now be coerced from strings and dates (#779)
+
+Fixes to documentation (thank you @BrettMN) (#727)
+
+`find_record` is now cached so that it only calls into Salesforce once. (#726)
+
 ## Snowfakery 3.2
 
 Snowfakery can now do `random_reference` to nicknames. (#639)
