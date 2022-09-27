@@ -16,3 +16,4 @@ pytest-vcr
 vcrpy
 responses
 jsonschema
+freezegun

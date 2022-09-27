@@ -6,6 +6,7 @@ from datetime import datetime, date
 
 from snowfakery.data_generator import generate
 from snowfakery.data_gen_exceptions import DataGenError
+from snowfakery.template_funcs import parse_date_or_datetime
 
 import pytest
 
@@ -223,6 +224,10 @@ class TestTemplateFuncs:
         """
         generate(StringIO(yaml), {}, None)
         assert write_row.mock_calls[0][1][1]["a"] == "2012-01-01"
+
+    def test_parse_date_or_datetime(self):
+        assert type(parse_date_or_datetime("2012-01-01")) is date
+        assert type(parse_date_or_datetime("2012-01-01T01:01:01")) is datetime
 
     @mock.patch(write_row_path)
     def test_parse_date_from_date_string(self, write_row):

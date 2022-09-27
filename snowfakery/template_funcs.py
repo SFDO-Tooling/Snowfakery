@@ -3,6 +3,7 @@ import sys
 from ast import literal_eval
 from datetime import date, datetime
 from functools import lru_cache
+from datetime import timezone
 from typing import Any, List, Tuple, Union
 
 import dateutil.parser
@@ -62,15 +63,32 @@ def parse_date(d: Union[str, datetime, date]) -> date:
 def parse_datetimespec(d: Union[str, datetime, date]) -> datetime:
     """Parse a string, datetime or date into a datetime."""
     if isinstance(d, datetime):
+        if not d.tzinfo:
+            d = d.replace(tzinfo=timezone.utc)
         return d
     elif isinstance(d, str):
         if d == "now":
-            return datetime.now()
+            return datetime.now(tz=timezone.utc)
         elif d == "today":
-            return datetime.combine(date.today(), datetime.min.time())
-        return dateutil.parser.parse(d)
+            return datetime.combine(
+                date.today(), datetime.min.time(), tzinfo=timezone.utc
+            )
+        d = dateutil.parser.parse(d)
+        if not d.tzinfo:
+            d = d.replace(tzinfo=timezone.utc)
+        return d
     elif isinstance(d, date):
-        return datetime.combine(d, datetime.min.time())
+        return datetime.combine(d, datetime.min.time(), tzinfo=timezone.utc)
+
+
+def parse_date_or_datetime(d: Union[str, datetime, date]) -> Union[date, datetime]:
+    try:
+        rc = parse_date(d)
+        if rc:
+            return rc
+    except Exception:
+        pass
+    return parse_datetimespec(d)
 
 
 def render_boolean(context: PluginContext, value: FieldDefinition) -> bool:

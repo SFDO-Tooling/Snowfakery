@@ -2227,6 +2227,266 @@ output rows as input rows.
 
 To do updates in a Salesforce org, refer to the [CumulusCI documentation](https://cumulusci.readthedocs.io/en/stable/data.html#update-data).
 
+### Faking Scheduled Events
+
+Snowfakery can generate recurring events such as meetings or appointments.
+
+A simple example is scheduling the next ten Halloween Days:
+
+```yaml
+# examples/schedule/halloween.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: ScaryEvent
+  count: 5
+  fields:
+    Name: Halloween
+    Date:
+      Schedule.Event:
+        start_date: 2023-10-31
+        freq: yearly
+```
+
+This will generate [`date`](#date) values like this:
+
+```json
+ScaryEvent(id=1, Name=Halloween, Date=2023-10-31)
+ScaryEvent(id=2, Name=Halloween, Date=2024-10-31)
+ScaryEvent(id=3, Name=Halloween, Date=2025-10-31)
+ScaryEvent(id=4, Name=Halloween, Date=2026-10-31)
+ScaryEvent(id=5, Name=Halloween, Date=2027-10-31)
+```
+
+#### Datetime schedules
+
+By supplying a more precise `start_date`, we can generate
+[`datetime`](#datetime) values instead:
+
+```yaml
+# examples/schedule/haunting.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: ScaryEvent
+  count: 5
+  fields:
+    Name: Halloween
+    DateTime:
+      Schedule.Event:
+        start_date: 2023-10-31 23:59:59.99
+        freq: yearly
+```
+
+Outputs:
+
+```json
+ScaryEvent(id=1, Name=Halloween, DateTime=2023-10-31 23:59:59+00:00)
+ScaryEvent(id=2, Name=Halloween, DateTime=2024-10-31 23:59:59+00:00)
+ScaryEvent(id=3, Name=Halloween, DateTime=2025-10-31 23:59:59+00:00)
+ScaryEvent(id=4, Name=Halloween, DateTime=2026-10-31 23:59:59+00:00)
+ScaryEvent(id=5, Name=Halloween, DateTime=2027-10-31 23:59:59+00:00)
+```
+
+The `+00:00` at the end of each one indicates that it is in the UTC
+timezone, but you can generate values in other timezones by changing
+the timezone of the `start_date`:
+
+```yaml
+# examples/schedule/with_timezone.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: ScaryEvent
+  count: 5
+  fields:
+    Name: Halloween
+    DateTime:
+      Schedule.Event:
+        start_date: 2023-10-31 23:59:59.99+08:00
+        freq: yearly
+```
+
+```
+ScaryEvent(id=1, Name=Halloween, DateTime=2023-10-31 23:59:59+08:00)
+ScaryEvent(id=2, Name=Halloween, DateTime=2024-10-31 23:59:59+08:00)
+ScaryEvent(id=3, Name=Halloween, DateTime=2025-10-31 23:59:59+08:00)
+ScaryEvent(id=4, Name=Halloween, DateTime=2026-10-31 23:59:59+08:00)
+ScaryEvent(id=5, Name=Halloween, DateTime=2027-10-31 23:59:59+08:00)
+```
+
+The `+08:00` means 8 hours behind UTC.
+
+We can also generate schedules with precision of hours, minutes or seconds by
+supplying frequencies of `hourly`, `minutely` or `daily`.
+
+For exaample:
+
+```json
+# examples/schedule/secondly.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: Seconds
+  count: 5
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2023-10-31 10:10:58
+        freq: secondly
+```
+
+Which generates:
+
+```
+Seconds(id=1, DateTime=2023-10-31 10:10:58+00:00)
+Seconds(id=2, DateTime=2023-10-31 10:10:59+00:00)
+Seconds(id=3, DateTime=2023-10-31 10:11:00+00:00)
+Seconds(id=4, DateTime=2023-10-31 10:11:01+00:00)
+Seconds(id=5, DateTime=2023-10-31 10:11:02+00:00)
+```
+
+#### Days of the week
+
+One can use the strings "MO", "TU", "WE", "TH", "FR", "SA", "SU" with the `byweekday`
+parameter to achieve day-of-week schedules like Monday/Wednesday/Friday.
+
+```yaml
+# examples/schedule/monday_wednesday_friday.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: Meeting
+  count: 5
+  fields:
+    Name: MWF Meeting
+    Date:
+      Schedule.Event:
+        start_date: 2023-01-01
+        freq: monthly
+        byweekday: MO, WE, FR
+```
+
+Which outputs:
+
+```json
+Meeting(id=1, Name=MWF Meeting, Date=2023-01-02)
+Meeting(id=2, Name=MWF Meeting, Date=2023-01-04)
+Meeting(id=3, Name=MWF Meeting, Date=2023-01-06)
+Meeting(id=4, Name=MWF Meeting, Date=2023-01-09)
+Meeting(id=5, Name=MWF Meeting, Date=2023-01-11)
+```
+
+#### Intervals
+
+We can schedule event for "every third week" or "every second month" using an
+interval:
+
+```
+# examples/schedule/every_third_week.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: Meeting
+  count: 5
+  fields:
+    Name: Halloween
+    Date:
+      Schedule.Event:
+        start_date: 2023-01-01
+        freq: weekly
+        interval: 3
+```
+
+Which generates:
+
+```
+Meeting(id=1, Name=Halloween, Date=2023-01-01)
+Meeting(id=2, Name=Halloween, Date=2023-01-22)
+Meeting(id=3, Name=Halloween, Date=2023-02-12)
+Meeting(id=4, Name=Halloween, Date=2023-03-05)
+Meeting(id=5, Name=Halloween, Date=2023-03-26)
+```
+
+We can also combine features, for example to get every second Monday:
+
+```yaml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: Meeting
+  count: 5
+  fields:
+    Name: MWF Meeting
+    Date:
+      Schedule.Event:
+        start_date: 2023-01-01
+        freq: weekly
+        interval: 2
+        byweekday: MO
+```
+
+Which generates:
+
+```json
+Meeting(id=1, Name=MWF Meeting, Date=2023-01-09)
+Meeting(id=2, Name=MWF Meeting, Date=2023-01-23)
+Meeting(id=3, Name=MWF Meeting, Date=2023-02-06)
+Meeting(id=4, Name=MWF Meeting, Date=2023-02-20)
+Meeting(id=5, Name=MWF Meeting, Date=2023-03-06)
+```
+
+#### For-each and Until
+
+We can use the `for_each` and `until` features to loop over scheduled events
+and generate the correct number of rows to match them:
+
+```yaml
+# examples/schedule/for_each_date.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+
+- object: Mondays
+  for_each:
+    var: Date
+    value:
+      Schedule.Event:
+        start_date: 2025-01-01
+        freq: weekly
+        until: 2025-03-01
+  fields:
+    Date: ${{Date}}
+```
+
+This would generate this data:
+
+```json
+Mondays(id=1, Date=2025-01-01 00:00:00+00:00)
+Mondays(id=2, Date=2025-01-08 00:00:00+00:00)
+Mondays(id=3, Date=2025-01-15 00:00:00+00:00)
+Mondays(id=4, Date=2025-01-22 00:00:00+00:00)
+Mondays(id=5, Date=2025-01-29 00:00:00+00:00)
+Mondays(id=6, Date=2025-02-05 00:00:00+00:00)
+Mondays(id=7, Date=2025-02-12 00:00:00+00:00)
+Mondays(id=8, Date=2025-02-19 00:00:00+00:00)
+Mondays(id=9, Date=2025-02-26 00:00:00+00:00)
+```
+
+#### Inclusions
+
+You can combine event schedules using a parameter called `include`:
+
+```yaml
+# examples/schedule/for_each_date.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+
+- object: Mondays
+  for_each:
+    var: Date
+    value:
+      Schedule.Event:
+        start_date: 2025-01-01
+        freq: weekly
+        until: 2025-03-01
+  fields:
+    Date: ${{Date}}
+```
+
+#### Exclusions
+
+####
+
+#### Other scheduling references
+
+Snowfakery's event mechanism is based on the
+[iCalendar specification](https://icalendar.org/iCalendar-RFC-5545/3-8-5-3-recurrence-rule.html) and the [`dateutil`](https://dateutil.readthedocs.io/en/stable/rrule.html) library, so some subtleties may be inferred
+from the documentation for those technologies.
+
 ## Use Snowfakery with Salesforce
 
 Snowfakery recipes that generate Salesforce records are like any other Snowfakery recipes, but instead use `SObject` names for the `objects`. There are several examples [in the Snowfakery repository](https://github.com/SFDO-Tooling/Snowfakery/tree/main/examples/salesforce).

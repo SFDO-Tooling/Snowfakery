@@ -297,7 +297,10 @@ class PluginResult:
         return (self.__class__, (dict(self.result),))
 
     def __repr__(self):
-        return f"<{self.__class__} {repr(self.result)}>"
+        try:
+            return f"<{self.__class__} {repr(self.result)}>"
+        except Exception:
+            return f"<{self.__class__}>"
 
     def __str__(self):
         return str(self.result)

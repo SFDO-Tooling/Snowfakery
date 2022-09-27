@@ -1,0 +1,8 @@
+- plugin: snowfakery.standard_plugins.Schedule
+- object: MonthlyEvents
+  count: 10
+  fields:
+    MonthlyEvent:
+      Schedule.Event:
+        start_date: 2025-01-01
+        freq: monthly
