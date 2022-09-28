@@ -10,7 +10,7 @@ attrs==22.1.0
     #   pytest
 black==22.8.0
     # via -r requirements/dev.in
-certifi==2022.9.14
+certifi==2022.9.24
     # via
     #   -r requirements/prod.txt
     #   requests
@@ -34,13 +34,13 @@ coverage[toml]==6.4.4
     #   pytest-cov
 coveralls==3.3.1
     # via -r requirements/dev.in
-diff-cover==6.5.1
+diff-cover==7.0.1
     # via -r requirements/dev.in
 distlib==0.3.6
     # via virtualenv
 docopt==0.6.2
     # via coveralls
-faker==14.2.0
+faker==15.0.0
     # via
     #   -r requirements/prod.txt
     #   faker-microservice
@@ -73,7 +73,7 @@ importlib-resources==5.9.0
     # via tox-gh-actions
 iniconfig==1.1.1
     # via pytest
-jinja2==2.11.3
+jinja2==3.1.2
     # via
     #   -r requirements/prod.txt
     #   diff-cover
@@ -82,7 +82,7 @@ jsonschema==4.16.0
     # via -r requirements/dev.in
 markdown==3.4.1
     # via mkdocs
-markupsafe==2.0.1
+markupsafe==2.1.1
     # via
     #   -r requirements/prod.txt
     #   jinja2
@@ -182,7 +182,7 @@ tox==3.26.0
     # via
     #   -r requirements/dev.in
     #   tox-gh-actions
-tox-gh-actions==2.9.1
+tox-gh-actions==2.10.0
     # via -r requirements/dev.in
 typeguard==2.10.0
     # via -r requirements/dev.in
@@ -216,5 +216,5 @@ zipp==3.8.1
     #   importlib-resources
 
 # The following packages are considered to be unsafe in a requirements file:
-setuptools==65.3.0
+setuptools==65.4.0
     # via nodeenv
