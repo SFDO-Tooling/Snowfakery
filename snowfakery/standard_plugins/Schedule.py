@@ -1,3 +1,4 @@
+import collections
 import re
 import typing as T
 import snowfakery.data_gen_exceptions as exc
@@ -47,25 +48,41 @@ class CalendarRule(PluginResultIterator):
         freq: str,
         start_date=None,
         interval=1,
-        # wkst=None,
         count=None,
         until=None,
-        bysetpos=None,
+        bysetpos=None,  # undocumented feature, for now
         bymonth=None,
         bymonthday=None,
         byyearday=None,
-        byeaster=None,
-        byweekno=None,
+        byeaster=None,  # undocumented feature for now
+        byweekno=None,  # undocumented feature for now
         byweekday=None,
         byhour=None,
         byminute=None,
         bysecond=None,
-        cache=False,
+        cache=False,  # undocumented feature for now
         exclude=None,
         include=None,
+        use_undocumented_features=False,
     ):
-
+        if (not use_undocumented_features) and any(
+            [bysetpos, byeaster, cache, byweekno]
+        ):
+            raise exc.DataGenValueError(
+                "That feature is undocumented and unsupported. "
+                "Use the `use_undocumented_features: True` argument to use it regardless."
+            )
         self._set_start_date(start_date)
+        wkst = rrule_mod.SU  # Standardize on Sunday as start of week globally
+        # Could make this parameterizable if there is demand for it.
+        bysetpos = process_list_of_ints(bysetpos)
+        bymonth = process_list_of_ints(bymonth)
+        bymonthday = process_list_of_ints(bymonthday)
+        byyearday = process_list_of_ints(byyearday)
+        byeaster = process_list_of_ints(byeaster)
+        byhour = process_list_of_ints(byhour)
+        byminute = process_list_of_ints(byminute)
+        bysecond = process_list_of_ints(bysecond)
 
         until = self._set_until(until)
 
@@ -79,14 +96,14 @@ class CalendarRule(PluginResultIterator):
             freq=freq,
             dtstart=self.start_date,
             interval=interval,
-            # wkst=wkst,
+            wkst=wkst,
             count=count,
             until=until,
-            bysetpos=bysetpos,
-            bymonth=bymonth,
+            bysetpos=bysetpos,  # undocumented feature for now
+            bymonth=bymonth,  # undocumented feature for now
             bymonthday=bymonthday,
             byyearday=byyearday,
-            byeaster=byeaster,
+            byeaster=byeaster,  # undocumented feature for now
             byweekno=byweekno,
             byweekday=byweekday,
             byhour=byhour,
@@ -207,9 +224,14 @@ class CalendarRule(PluginResultIterator):
         try:
             freq_str = freq.upper()
             freq = FREQ_STRS[freq_str]
+        except KeyError:
+            raise exc.DataGenError(
+                f"Cannot accept frequency string '{freq}'. Valid strings are {tuple(FREQ_STRS.keys())}"
+            )
+
         except Exception as e:
             raise exc.DataGenError(
-                f"Cannot accept frequency string '{freq}' because {e}"
+                f"Cannot accept frequency string '{freq}' because {repr(e)}"
             )
         if freq in (rrule_mod.HOURLY, rrule_mod.MINUTELY, rrule_mod.SECONDLY):
 
@@ -285,8 +307,8 @@ class Schedule(SnowfakeryPlugin):
             # wkst=None,
             count=None,
             until=None,
-            bysetpos=None,
-            bymonth=None,
+            bysetpos=None,  # undocumented feature for now
+            bymonth=None,  # undocumented feature for now
             bymonthday=None,
             byyearday=None,
             byeaster=None,
@@ -306,8 +328,8 @@ class Schedule(SnowfakeryPlugin):
                 # wkst=wkst,
                 count=count,
                 until=until,
-                bysetpos=bysetpos,
-                bymonth=bymonth,
+                bysetpos=bysetpos,  # No requirement identified yet
+                bymonth=bymonth,  # No requirement id
                 bymonthday=bymonthday,
                 byyearday=byyearday,
                 byeaster=byeaster,
@@ -320,3 +342,19 @@ class Schedule(SnowfakeryPlugin):
                 exclude=exclude,
                 include=include,
             )
+
+
+def process_list_of_ints(val):
+    if val is None:
+        return None
+    elif isinstance(val, int):
+        return [val]
+    elif isinstance(val, str):
+        # TODO: Test what happens if this is a wrong-formatted string
+        return [int(v) for v in val.split(",")]
+    elif isinstance(val, collections.Sequence):
+        return [int(v) for v in val]
+    else:
+        raise exc.DataGenTypeError(
+            f"Expected a number or list of numbers, not {val} ({type(val)})"
+        )

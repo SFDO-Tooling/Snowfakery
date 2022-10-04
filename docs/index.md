@@ -1728,44 +1728,6 @@ Example(id=19, count=9)
 Example(id=20, count=10)
 ```
 
-#### Date Counters for Schedules
-
-Snowfakery can generate incrementing numbers like this:
-
-```yaml
-# examples/counters/simple_date_counter.recipe.yml
-- plugin: snowfakery.standard_plugins.Counters
-- var: EveryTwoWeeks
-  value:
-    Counters.DateCounter:
-      start_date: 2021-01-01
-      step: +2w
-- object: Meetings
-  count: 4
-  fields:
-    Date: ${{EveryTwoWeeks.next}}
-    Topic:
-      fake: catchphrase
-```
-
-This generates:
-
-```json
-Meetings(id=1, Date=2021-01-01, Topic=Innovative dedicated solution)
-Meetings(id=2, Date=2021-01-15, Topic=Open-architected tangible artificial intelligence)
-Meetings(id=3, Date=2021-01-29, Topic=Compatible global definition)
-Meetings(id=4, Date=2021-02-12, Topic=Optimized real-time archive)
-```
-
-The `start_date` can be a particular date in `YYYY-MM-DD` or the word `today`.
-
-The `step` is based on a syntax from the Python Faker library. It can be:
-
-- `+<number>d` : `number` days between steps, e.g. `+10d` (10 days)
-- `+<number>w`: `number` weeks between steps, e.g. `+10w` (70 days)
-- `+<number>M`: `number` months between steps, e.g. `+10M` (304 days)
-- `+<number>y`: `number` years between steps, e.g. `+10y` (3625 days)
-
 ### Recipe Options
 
 Instead of manually entering the exact number of records to create into a template file, pass an `option` (such as numbers, strings, booleans, and so on) to your generator recipe from the command line.
@@ -2248,7 +2210,8 @@ A simple example is scheduling the next ten Halloween Days:
 
 This will generate [`date`](#date) values like this:
 
-```json
+```s
+# examples/schedule/halloween.recipe.out
 ScaryEvent(id=1, Name=Halloween, Date=2023-10-31)
 ScaryEvent(id=2, Name=Halloween, Date=2024-10-31)
 ScaryEvent(id=3, Name=Halloween, Date=2025-10-31)
@@ -2278,7 +2241,8 @@ By supplying a more precise `start_date`, we can generate
 
 Outputs:
 
-```json
+```s
+# examples/schedule/haunting.recipe.out
 ScaryEvent(id=1, Name=Halloween, DateTime=2023-10-31 23:59:59+00:00)
 ScaryEvent(id=2, Name=Halloween, DateTime=2024-10-31 23:59:59+00:00)
 ScaryEvent(id=3, Name=Halloween, DateTime=2025-10-31 23:59:59+00:00)
@@ -2303,7 +2267,8 @@ the timezone of the `start_date`:
         freq: yearly
 ```
 
-```
+```s
+# examples/schedule/with_timezone.recipe.out
 ScaryEvent(id=1, Name=Halloween, DateTime=2023-10-31 23:59:59+08:00)
 ScaryEvent(id=2, Name=Halloween, DateTime=2024-10-31 23:59:59+08:00)
 ScaryEvent(id=3, Name=Halloween, DateTime=2025-10-31 23:59:59+08:00)
@@ -2318,7 +2283,7 @@ supplying frequencies of `hourly`, `minutely` or `daily`.
 
 For exaample:
 
-```json
+```yaml
 # examples/schedule/secondly.recipe.yml
 - plugin: snowfakery.standard_plugins.Schedule
 - object: Seconds
@@ -2332,7 +2297,8 @@ For exaample:
 
 Which generates:
 
-```
+```s
+# examples/schedule/secondly.recipe.out
 Seconds(id=1, DateTime=2023-10-31 10:10:58+00:00)
 Seconds(id=2, DateTime=2023-10-31 10:10:59+00:00)
 Seconds(id=3, DateTime=2023-10-31 10:11:00+00:00)
@@ -2362,6 +2328,7 @@ parameter to achieve day-of-week schedules like Monday/Wednesday/Friday.
 Which outputs:
 
 ```s
+# examples/schedule/monday_wednesday_friday.recipe.out
 Meeting(id=1, Name=MWF Meeting, Date=2023-01-02)
 Meeting(id=2, Name=MWF Meeting, Date=2023-01-04)
 Meeting(id=3, Name=MWF Meeting, Date=2023-01-06)
@@ -2393,6 +2360,7 @@ and so forth.
 Which results in
 
 ```s
+# examples/schedule/monday_wednesday_friday_monthly.recipe.out
 Meeting(id=1, Name=MWF Meeting, Date=2023-01-02)
 Meeting(id=2, Name=MWF Meeting, Date=2023-01-13)
 Meeting(id=3, Name=MWF Meeting, Date=2023-01-25)
@@ -2408,6 +2376,158 @@ Meeting(id=10, Name=MWF Meeting, Date=2023-04-03)
 It makes three dates per month, representing
 the first Monday, the second Friday and the last Wednesday. The dates
 are still in chronological order, so the Wednesday comes last.
+
+#### `bymonthday`
+
+The `bymonthday` feature allows one to generate events matching a particular
+(numerical) day of the month. For example, the first (`bymonthday=1`),
+third (`bymonthday=3`), last (`bymonthday=-1`), second last (`bymonthday=-2`)
+etc.
+
+```yaml
+# examples/schedule/bymonthday.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: ThirdDayOfMonth
+  count: 5
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01
+        freq: monthly
+        bymonthday: 3
+
+- object: FirstAndLastDayOfMonth
+  count: 5
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01
+        freq: monthly
+        bymonthday: 1,-1
+```
+
+This generates:
+
+```s
+# examples/schedule/bymonthday.recipe.out
+ThirdDayOfMonth(id=1, DateTime=2024-01-03)
+ThirdDayOfMonth(id=2, DateTime=2024-02-03)
+ThirdDayOfMonth(id=3, DateTime=2024-03-03)
+ThirdDayOfMonth(id=4, DateTime=2024-04-03)
+ThirdDayOfMonth(id=5, DateTime=2024-05-03)
+FirstAndLastDayOfMonth(id=1, DateTime=2024-01-01)
+FirstAndLastDayOfMonth(id=2, DateTime=2024-01-31)
+FirstAndLastDayOfMonth(id=3, DateTime=2024-02-01)
+FirstAndLastDayOfMonth(id=4, DateTime=2024-02-29)
+FirstAndLastDayOfMonth(id=5, DateTime=2024-03-01)
+```
+
+#### `byyearday`
+
+The `byyearday` feature is similar to the `bymonthday` one.
+
+```yaml
+# examples/schedule/byyearday.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: ThirdDayOfYear
+  count: 5
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01
+        freq: yearly
+        byyearday: 3
+
+- object: ChristmasDayNewYearsEve
+  count: 5
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01
+        freq: yearly
+        byyearday: -7,-1
+```
+
+Which generates:
+
+```s
+# examples/schedule/byyearday.recipe.out
+ThirdDayOfYear(id=1, DateTime=2024-01-03)
+ThirdDayOfYear(id=2, DateTime=2025-01-03)
+ThirdDayOfYear(id=3, DateTime=2026-01-03)
+ThirdDayOfYear(id=4, DateTime=2027-01-03)
+ThirdDayOfYear(id=5, DateTime=2028-01-03)
+ChristmasDayNewYearsEve(id=1, DateTime=2024-12-25)
+ChristmasDayNewYearsEve(id=2, DateTime=2024-12-31)
+ChristmasDayNewYearsEve(id=3, DateTime=2025-12-25)
+ChristmasDayNewYearsEve(id=4, DateTime=2025-12-31)
+ChristmasDayNewYearsEve(id=5, DateTime=2026-12-25)
+```
+
+#### `byhour`, `byminute`, `bysecond`
+
+The `byhour`, `byminute` and `bysecond` features work similarly to the features
+above, but with datetimes. The numbers used must be positive integers.
+
+```yaml
+# examples/schedule/bytimes.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: Hours
+  count: 5
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01T12:01:01
+        freq: hourly
+        byhour: 0,2,4 # early morning hours
+
+- object: Minutes
+  count: 10
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01T12:01:01
+        freq: minutely
+        byminute: 1,2,3 # first few minutes of each hour
+
+- object: Seconds
+  count: 10
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01T12:01:01
+        freq: secondly
+        bysecond: 1, 2, 3 # first few seconds of each minute
+```
+
+```s
+# examples/schedule/bytimes.recipe.out
+Hours(id=1, DateTime=2024-01-02 00:01:01+00:00)
+Hours(id=2, DateTime=2024-01-02 02:01:01+00:00)
+Hours(id=3, DateTime=2024-01-02 04:01:01+00:00)
+Hours(id=4, DateTime=2024-01-03 00:01:01+00:00)
+Hours(id=5, DateTime=2024-01-03 02:01:01+00:00)
+Minutes(id=1, DateTime=2024-01-01 12:01:01+00:00)
+Minutes(id=2, DateTime=2024-01-01 12:02:01+00:00)
+Minutes(id=3, DateTime=2024-01-01 12:03:01+00:00)
+Minutes(id=4, DateTime=2024-01-01 13:01:01+00:00)
+Minutes(id=5, DateTime=2024-01-01 13:02:01+00:00)
+Minutes(id=6, DateTime=2024-01-01 13:03:01+00:00)
+Minutes(id=7, DateTime=2024-01-01 14:01:01+00:00)
+Minutes(id=8, DateTime=2024-01-01 14:02:01+00:00)
+Minutes(id=9, DateTime=2024-01-01 14:03:01+00:00)
+Minutes(id=10, DateTime=2024-01-01 15:01:01+00:00)
+Seconds(id=1, DateTime=2024-01-01 12:01:01+00:00)
+Seconds(id=2, DateTime=2024-01-01 12:01:02+00:00)
+Seconds(id=3, DateTime=2024-01-01 12:01:03+00:00)
+Seconds(id=4, DateTime=2024-01-01 12:02:01+00:00)
+Seconds(id=5, DateTime=2024-01-01 12:02:02+00:00)
+Seconds(id=6, DateTime=2024-01-01 12:02:03+00:00)
+Seconds(id=7, DateTime=2024-01-01 12:03:01+00:00)
+Seconds(id=8, DateTime=2024-01-01 12:03:02+00:00)
+Seconds(id=9, DateTime=2024-01-01 12:03:03+00:00)
+Seconds(id=10, DateTime=2024-01-01 12:04:01+00:00)
+```
 
 #### Intervals
 
@@ -2431,6 +2551,7 @@ interval:
 Which generates:
 
 ```s
+# examples/schedule/every_third_week.recipe.out
 Meeting(id=1, Name=Halloween, Date=2023-01-01)
 Meeting(id=2, Name=Halloween, Date=2023-01-22)
 Meeting(id=3, Name=Halloween, Date=2023-02-12)
@@ -2441,11 +2562,11 @@ Meeting(id=5, Name=Halloween, Date=2023-03-26)
 We can also combine features, for example to get every second Monday:
 
 ```yaml
+# examples/schedule/every_other_monday.recipe.yml
 - plugin: snowfakery.standard_plugins.Schedule
 - object: Meeting
   count: 5
   fields:
-    Name: MWF Meeting
     Date:
       Schedule.Event:
         start_date: 2023-01-01
@@ -2457,11 +2578,12 @@ We can also combine features, for example to get every second Monday:
 Which generates:
 
 ```s
-Meeting(id=1, Name=MWF Meeting, Date=2023-01-09)
-Meeting(id=2, Name=MWF Meeting, Date=2023-01-23)
-Meeting(id=3, Name=MWF Meeting, Date=2023-02-06)
-Meeting(id=4, Name=MWF Meeting, Date=2023-02-20)
-Meeting(id=5, Name=MWF Meeting, Date=2023-03-06)
+# examples/schedule/every_other_monday.recipe.out
+Meeting(id=1, Date=2023-01-02)
+Meeting(id=2, Date=2023-01-16)
+Meeting(id=3, Date=2023-01-30)
+Meeting(id=4, Date=2023-02-13)
+Meeting(id=5, Date=2023-02-27)
 ```
 
 #### For-each and Until
@@ -2488,6 +2610,7 @@ and generate the correct number of rows to match them:
 This would generate this data:
 
 ```s
+# examples/schedule/for_each_date.recipe.out
 Mondays(id=1, Date=2025-01-01 00:00:00+00:00)
 Mondays(id=2, Date=2025-01-08 00:00:00+00:00)
 Mondays(id=3, Date=2025-01-15 00:00:00+00:00)
@@ -2503,7 +2626,7 @@ Mondays(id=9, Date=2025-02-26 00:00:00+00:00)
 
 You can combine event schedules using a parameter called `include`.
 
-Includes can either simple dates or other schedules:
+Includes can be either simple dates or other schedules:
 
 ```yaml
 # examples/schedule/inclusions.recipe.yml

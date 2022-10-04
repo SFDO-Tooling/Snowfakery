@@ -1,8 +1,10 @@
+from pathlib import Path
 from snowfakery.data_generator import generate
 from io import StringIO
 from datetime import date, datetime, timezone
 import pytest
 import snowfakery.data_gen_exceptions as exc
+from snowfakery.output_streams import DebugOutputStream
 
 
 def dt(*args):
@@ -260,7 +262,7 @@ def test_second_count(generated_rows):
     ], vals
 
 
-def test_second_monday_wednesday_friday(generated_rows):
+def test_every_other_monday_wednesday_friday(generated_rows):
     with open("examples/schedule/monday_wednesday_friday.recipe.yml") as yaml:
         generate(yaml)
     vals = generated_rows.table_values("Meeting", field="Date")
@@ -420,3 +422,31 @@ def test_by_weekday_offsets(generated_rows):
         date(2023, 3, 29),
         date(2023, 4, 3),
     ]
+
+
+infiles = [
+    "examples/schedule/halloween.recipe.yml",
+    "examples/schedule/haunting.recipe.yml",
+    "examples/schedule/with_timezone.recipe.yml",
+    "examples/schedule/secondly.recipe.yml",
+    "examples/schedule/monday_wednesday_friday.recipe.yml",
+    "examples/schedule/monday_wednesday_friday_monthly.recipe.yml",
+    "examples/schedule/bymonthday.recipe.yml",
+    "examples/schedule/byyearday.recipe.yml",
+    "examples/schedule/bytimes.recipe.yml",
+    "examples/schedule/every_third_week.recipe.yml",
+    "examples/schedule/every_other_monday.recipe.yml",
+    "examples/schedule/for_each_date.recipe.yml",
+    "examples/schedule/inclusions.recipe.yml",
+    "examples/schedule/deep_inclusions.yml",
+    "examples/schedule/exclusions_no_May.recipe.yml",
+    "examples/schedule/exclusions_no_summer.recipe.yml",
+]
+
+
+@pytest.mark.parametrize("filename", infiles)
+def test_example_files(filename):
+    f = StringIO()
+    with open(filename) as yaml:
+        generate(yaml, output_stream=DebugOutputStream(f))
+    assert f.getvalue() == Path(filename.replace(".yml", ".out")).read_text()
