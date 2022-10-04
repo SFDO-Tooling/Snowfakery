@@ -278,7 +278,14 @@ class ObjectTemplate:
             with self.exception_handling("Problem rendering value"):
                 value = field.generate_value(context)
                 if isinstance(value, PluginResultIterator):
-                    value = value.next()
+                    try:
+                        value = value.next()
+                    except StopIteration:
+                        raise DataGenError(
+                            "Could not generate enough values to create rows",
+                            self.filename,
+                            self.line_num,
+                        )
                 row[field.name] = value
 
                 self._check_type(field, row[field.name], context)

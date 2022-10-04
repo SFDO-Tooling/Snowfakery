@@ -81,16 +81,6 @@ def parse_datetimespec(d: Union[str, datetime, date]) -> datetime:
         return datetime.combine(d, datetime.min.time(), tzinfo=timezone.utc)
 
 
-def parse_date_or_datetime(d: Union[str, datetime, date]) -> Union[date, datetime]:
-    try:
-        rc = parse_date(d)
-        if rc:
-            return rc
-    except Exception:
-        pass
-    return parse_datetimespec(d)
-
-
 def render_boolean(context: PluginContext, value: FieldDefinition) -> bool:
     val = context.evaluate(value)
     if isinstance(val, str):

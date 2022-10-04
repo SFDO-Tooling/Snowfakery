@@ -142,7 +142,7 @@ class CalendarRule(PluginResultIterator):
         elif isinstance(until, date):
             until = datetime.combine(until, self.start_date.time(), tzinfo=timezone.utc)
         elif until:
-            raise TypeError(
+            raise exc.DataGenTypeError(
                 f"`until` parameter ({until}) is of unexpected type {until}"
             )
 
@@ -221,8 +221,7 @@ class CalendarRule(PluginResultIterator):
         return freq
 
     def _normalize_weekday(self, byweekday: T.Optional[str]):
-        if not byweekday:
-            return None
+        assert byweekday
 
         if isinstance(byweekday, str):
             weekdays = byweekday.split(",")
@@ -253,15 +252,15 @@ class CalendarRule(PluginResultIterator):
         return dayconst
 
     def _split_weekday(self, day) -> T.Tuple[str, int]:
-        parts = re.match(r"(?P<weekday>\w+)\((?P<offset>.+)\)", day)
+        parts = re.match(r"\s*(?P<weekday>\w+)\((?P<offset>.+)\)\s*", day)
         if not parts:
             raise exc.DataGenSyntaxError(f"Cannot understand {day}")
         weekday = parts["weekday"]
         offset = parts["offset"]
         try:
             offset = int(offset)
-        except TypeError:
-            raise exc.DataGenTypeError(f"Cannot interpret {offset}")
+        except ValueError:
+            raise exc.DataGenTypeError(f"Cannot interpret {offset} as a number")
         return weekday, offset
 
     def __iter__(self):

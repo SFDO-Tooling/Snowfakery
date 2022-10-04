@@ -1,6 +1,6 @@
 - plugin: snowfakery.standard_plugins.Schedule
-- object: DeepInclusions
-  count: 10
+- object: TheEvent
+  count: 15
   fields:
     MonthlyEvent:
       Schedule.Event:
@@ -10,7 +10,7 @@
           Schedule.Event:
             count: 3
             freq: monthly
-            start_date: 2027-01-01
+            start_date: 2027-03-01
             include:
               Schedule.Event:
                 count: 5

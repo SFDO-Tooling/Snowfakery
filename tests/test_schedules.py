@@ -58,8 +58,8 @@ def test_inclusions(generated_rows):
     ]
 
 
-def test_exclusions(generated_rows):
-    sample = "examples/schedule/exclusions.recipe.yml"
+def test_exclusions_simple(generated_rows):
+    sample = "examples/schedule/exclusions_no_May.recipe.yml"
     with open(sample) as f:
         generate(f)
     vals = generated_rows.table_values("MonthlyEventsExceptMay", field="MonthlyEvent")
@@ -74,7 +74,15 @@ def test_exclusions(generated_rows):
         date(2025, 10, 1),
         date(2025, 11, 1),
         date(2025, 12, 1),
+        date(2026, 1, 1),
+        date(2026, 2, 1),
     ]
+
+
+def test_exclusions_complex(generated_rows):
+    sample = "examples/schedule/exclusions_no_summer.recipe.yml"
+    with open(sample) as f:
+        generate(f)
 
     vals = generated_rows.table_values(
         "MonthlyEventsExceptSummer", field="MonthlyEvent"
@@ -262,4 +270,153 @@ def test_second_monday_wednesday_friday(generated_rows):
         date(2023, 1, 6),
         date(2023, 1, 9),
         date(2023, 1, 11),
+    ]
+
+
+def test_not_enough_dates():
+    yaml = """
+    - plugin: snowfakery.standard_plugins.Schedule
+    - object: FrequentEvent
+      count: 4
+      fields:
+        DateTime:
+            Schedule.Event:
+                start_date: 2000-01-01
+                freq: Weekly
+                count: 3
+    """
+    with pytest.raises(exc.DataGenError, match="Could not generate enough values"):
+        generate(StringIO(yaml))
+
+
+def test_parse_until_string__datetime(generated_rows):
+    yaml = """
+    - plugin: snowfakery.standard_plugins.Schedule
+    - object: FrequentEvent
+      count: 2
+      fields:
+        DateTime:
+            Schedule.Event:
+                start_date: 2000-01-01
+                freq: Weekly
+                until: "2000-01-20T12:12:01"
+    """
+    generate(StringIO(yaml))
+    vals = generated_rows.table_values("FrequentEvent", field="DateTime")
+    assert vals == [date(2000, 1, 1), date(2000, 1, 8)]
+
+
+def test_parse_until_string__date(generated_rows):
+    yaml = """
+    - plugin: snowfakery.standard_plugins.Schedule
+    - object: FrequentEvent
+      count: 2
+      fields:
+        DateTime:
+            Schedule.Event:
+                start_date: 2000-01-01
+                freq: Weekly
+                until: "2000-01-20"
+    """
+    generate(StringIO(yaml))
+    vals = generated_rows.table_values("FrequentEvent", field="DateTime")
+    assert vals == [date(2000, 1, 1), date(2000, 1, 8)]
+
+
+def test_parse_until__wrong_type(disable_typeguard):
+    yaml = """
+    - plugin: snowfakery.standard_plugins.Schedule
+    - object: FrequentEvent
+      count: 2
+      fields:
+        DateTime:
+            Schedule.Event:
+                start_date: 2000-01-01
+                freq: Weekly
+                until: True
+    """
+    with pytest.raises(exc.DataGenTypeError, match="True"):
+        generate(StringIO(yaml))
+
+
+def test_parse_byweekday__wrong_type(disable_typeguard):
+    yaml = """
+    - plugin: snowfakery.standard_plugins.Schedule
+    - object: FrequentEvent
+      count: 2
+      fields:
+        DateTime:
+            Schedule.Event:
+                start_date: 2000-01-01
+                freq: Weekly
+                byweekday: True
+    """
+    with pytest.raises(exc.DataGenTypeError, match="True"):
+        generate(StringIO(yaml))
+
+
+def test_parse_byweekday__wrong_string(disable_typeguard):
+    yaml = """
+    - plugin: snowfakery.standard_plugins.Schedule
+    - object: FrequentEvent
+      count: 2
+      fields:
+        DateTime:
+            Schedule.Event:
+                start_date: 2000-01-01
+                freq: Weekly
+                byweekday: JAN,FEB,MAR
+    """
+    with pytest.raises(exc.DataGenTypeError, match="JAN"):
+        generate(StringIO(yaml))
+
+
+def test_parse_byweekday__wrong_string__2(disable_typeguard):
+    yaml = """
+    - plugin: snowfakery.standard_plugins.Schedule
+    - object: FrequentEvent
+      count: 2
+      fields:
+        DateTime:
+            Schedule.Event:
+                start_date: 2000-01-01
+                freq: Weekly
+                byweekday: I_1Z_A_HA$0R(ABCDE)
+    """
+    with pytest.raises(exc.DataGenSyntaxError, match=r"I_1Z_A_HA"):
+        generate(StringIO(yaml))
+
+
+def test_parse_byweekday__bad_offset(disable_typeguard):
+    yaml = """
+    - plugin: snowfakery.standard_plugins.Schedule
+    - object: FrequentEvent
+      count: 2
+      fields:
+        DateTime:
+            Schedule.Event:
+                start_date: 2000-01-01
+                freq: Weekly
+                byweekday: MO(ABCDE)
+    """
+    with pytest.raises(exc.DataGenTypeError, match="ABCDE"):
+        generate(StringIO(yaml))
+
+
+def test_by_weekday_offsets(generated_rows):
+    with open("examples/schedule/monday_wednesday_friday_monthly.recipe.yml") as f:
+        generate(f)
+    vals = generated_rows.table_values("Meeting", field="Date")
+    print(vals)
+    assert vals == [
+        date(2023, 1, 2),
+        date(2023, 1, 13),
+        date(2023, 1, 25),
+        date(2023, 2, 6),
+        date(2023, 2, 10),
+        date(2023, 2, 22),
+        date(2023, 3, 6),
+        date(2023, 3, 10),
+        date(2023, 3, 29),
+        date(2023, 4, 3),
     ]

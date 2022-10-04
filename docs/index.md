@@ -2256,6 +2256,8 @@ ScaryEvent(id=4, Name=Halloween, Date=2026-10-31)
 ScaryEvent(id=5, Name=Halloween, Date=2027-10-31)
 ```
 
+Scheduled events are always output in chronological order.
+
 #### Datetime schedules
 
 By supplying a more precise `start_date`, we can generate
@@ -2353,13 +2355,13 @@ parameter to achieve day-of-week schedules like Monday/Wednesday/Friday.
     Date:
       Schedule.Event:
         start_date: 2023-01-01
-        freq: monthly
+        freq: weekly
         byweekday: MO, WE, FR
 ```
 
 Which outputs:
 
-```json
+```s
 Meeting(id=1, Name=MWF Meeting, Date=2023-01-02)
 Meeting(id=2, Name=MWF Meeting, Date=2023-01-04)
 Meeting(id=3, Name=MWF Meeting, Date=2023-01-06)
@@ -2367,12 +2369,52 @@ Meeting(id=4, Name=MWF Meeting, Date=2023-01-09)
 Meeting(id=5, Name=MWF Meeting, Date=2023-01-11)
 ```
 
+`byweekday` has another useful feature. We can use it with a month or
+year frequency to get the first, second, third, last, etc. instance of
+a date in that period.
+
+```yaml
+# examples/schedule/monday_wednesday_friday_monthly.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: Meeting
+  count: 10
+  fields:
+    Name: MWF Meeting
+    Date:
+      Schedule.Event:
+        start_date: 2023-01-01
+        freq: monthly
+        byweekday: MO(+1), WE(-1), FR(+2)
+```
+
+Note the use of `-1` to mean "last occurrence". `-2` would be second last
+and so forth.
+
+Which results in
+
+```s
+Meeting(id=1, Name=MWF Meeting, Date=2023-01-02)
+Meeting(id=2, Name=MWF Meeting, Date=2023-01-13)
+Meeting(id=3, Name=MWF Meeting, Date=2023-01-25)
+Meeting(id=4, Name=MWF Meeting, Date=2023-02-06)
+Meeting(id=5, Name=MWF Meeting, Date=2023-02-10)
+Meeting(id=6, Name=MWF Meeting, Date=2023-02-22)
+Meeting(id=7, Name=MWF Meeting, Date=2023-03-06)
+Meeting(id=8, Name=MWF Meeting, Date=2023-03-10)
+Meeting(id=9, Name=MWF Meeting, Date=2023-03-29)
+Meeting(id=10, Name=MWF Meeting, Date=2023-04-03)
+```
+
+It makes three dates per month, representing
+the first Monday, the second Friday and the last Wednesday. The dates
+are still in chronological order, so the Wednesday comes last.
+
 #### Intervals
 
-We can schedule event for "every third week" or "every second month" using an
+We can schedule events for "every third week" or "every second month" using an
 interval:
 
-```
+```yaml
 # examples/schedule/every_third_week.recipe.yml
 - plugin: snowfakery.standard_plugins.Schedule
 - object: Meeting
@@ -2388,7 +2430,7 @@ interval:
 
 Which generates:
 
-```
+```s
 Meeting(id=1, Name=Halloween, Date=2023-01-01)
 Meeting(id=2, Name=Halloween, Date=2023-01-22)
 Meeting(id=3, Name=Halloween, Date=2023-02-12)
@@ -2414,7 +2456,7 @@ We can also combine features, for example to get every second Monday:
 
 Which generates:
 
-```json
+```s
 Meeting(id=1, Name=MWF Meeting, Date=2023-01-09)
 Meeting(id=2, Name=MWF Meeting, Date=2023-01-23)
 Meeting(id=3, Name=MWF Meeting, Date=2023-02-06)
@@ -2445,7 +2487,7 @@ and generate the correct number of rows to match them:
 
 This would generate this data:
 
-```json
+```s
 Mondays(id=1, Date=2025-01-01 00:00:00+00:00)
 Mondays(id=2, Date=2025-01-08 00:00:00+00:00)
 Mondays(id=3, Date=2025-01-15 00:00:00+00:00)
@@ -2459,25 +2501,109 @@ Mondays(id=9, Date=2025-02-26 00:00:00+00:00)
 
 #### Inclusions
 
-You can combine event schedules using a parameter called `include`:
+You can combine event schedules using a parameter called `include`.
+
+Includes can either simple dates or other schedules:
 
 ```yaml
-# examples/schedule/for_each_date.recipe.yml
+# examples/schedule/inclusions.recipe.yml
 - plugin: snowfakery.standard_plugins.Schedule
 
-- object: Mondays
-  for_each:
-    var: Date
-    value:
+- object: MonthlyEventsPlusValentines
+  count: 10
+  fields:
+    MonthlyEvent:
+      Schedule.Event:
+        start_date: 2025-02-01
+        freq: monthly
+        include: 2025-02-14
+
+- object: MonthlyEventsPlusSeveralNewYears
+  count: 10
+  fields:
+    MonthlyEvent:
+      Schedule.Event:
+        start_date: 2025-02-01
+        freq: monthly
+        include:
+          Schedule.Event:
+            count: 3
+            freq: yearly
+            start_date: 2000-01-01
+```
+
+You can nest `Schedule.Event`s inside of each other to build multi-part
+inclusions.
+
+This complicated example includes yearly events starting
+January 1, Monthly events in 2027 and daily events in December 2028.
+The total number of events that will be created are 15.
+
+```yaml
+# examples/schedule/deep_inclusions.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: TheEvent
+  count: 15
+  fields:
+    MonthlyEvent:
       Schedule.Event:
         start_date: 2025-01-01
-        freq: weekly
-        until: 2025-03-01
-  fields:
-    Date: ${{Date}}
+        freq: yearly
+        include:
+          Schedule.Event:
+            count: 3
+            freq: monthly
+            start_date: 2027-03-01
+            include:
+              Schedule.Event:
+                count: 5
+                freq: daily
+                start_date: 2028-12-01
 ```
 
 #### Exclusions
+
+Exclusions are the opposite of inclusions. They filter out dates
+from their parent schedule. For example, we can filter out
+just the event on May 1, 2025:
+
+```yaml
+# examples/schedule/exclusions_no_May.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: MonthlyEventsExceptMay
+  count: 12
+  fields:
+    MonthlyEvent:
+      Schedule.Event:
+        start_date: 2025-02-01
+        freq: monthly
+        exclude: 2025-05-01
+```
+
+This one filters out the three events from the summer months
+of 2025:
+
+```yaml
+# examples/schedule/exclusions_no_summer.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+
+- object: MonthlyEventsExceptSummer
+  count: 10
+  fields:
+    MonthlyEvent:
+      Schedule.Event:
+        start_date: 2025-02-01
+        freq: monthly
+        exclude:
+          Schedule.Event:
+            start_date: 2025-05-01
+            until: 2025-08-01
+            freq: monthly
+```
+
+Make sure that exclusions use the same timezone as their base schedule, and if
+you are using `datetime`s, make sure that they are exactly aligned down to the
+second or fraction of a second.
 
 ####
 
