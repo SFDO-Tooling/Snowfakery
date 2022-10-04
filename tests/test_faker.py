@@ -113,6 +113,101 @@ class TestFaker:
         generate(StringIO(yaml), {}, None)
         assert row_values(write_row_mock, 0, "date") is None
 
+    def test_non_overlapping_datetimes(self):
+        yaml = """
+        - object: OBJ
+          fields:
+            date:
+                datetime_between:
+                    start_date: today
+                    end_date: 2000-01-01
+        """
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml), {}, None)
+        assert "before" in str(e.value)
+
+    def test_datetime_between(self, generated_rows):
+        with open("tests/test_fake_datetimes.yml") as yaml:
+            generate(yaml, {}, None)
+            values = generated_rows.table_values("OBJ", 0)
+            past = values["past"]
+            future = values["future"]
+
+            assert isinstance(past, datetime)
+            assert past.tzinfo == timezone.utc
+            assert isinstance(future, datetime)
+            assert future.tzinfo == timezone.utc
+            assert future > past  # Let's hope the future is greater
+            assert generated_rows.row_values(0, "empty").year == 1999
+            assert values["westerly"].utcoffset().seconds == 8 * 60 * 60
+
+    def test_datetime_parsing(self, generated_rows):
+        with open("tests/test_datetime.yml") as yaml:
+            generate(yaml, {}, None)
+            values = generated_rows.table_values("Datetimes")[0]
+            # from_date_fields: ${{datetime(year=2000, month=1, day=1)}}
+            assert values["from_date_fields"].year == 2000
+            assert values["from_date_fields"].tzinfo == timezone.utc
+            assert values["from_date_fields"].second == 0
+            # from_datetime: ${{datetime(year=2000, month=1, day=1, hour=1, minute=1, second=1)}}
+            assert values["from_datetime_fields"].year == 2000
+            assert values["from_datetime_fields"].tzinfo == timezone.utc
+            assert values["from_datetime_fields"].second == 1
+
+            # from_date: ${{datetime(some_date)}}
+            assert values["from_date"].year >= 2022
+            assert values["from_date"].tzinfo == timezone.utc
+
+            # from_string: ${{datetime("2000-01-01 01:01:01")}}
+            assert values["from_string"].year == 2000
+            assert values["from_string"].tzinfo == timezone.utc
+            assert values["from_string"].second == 1
+
+            # from_yaml:
+            #   datetime: 2000-01-01 01:01:01
+            assert values["from_yaml"].year == 2000
+            assert values["from_yaml"].tzinfo == timezone.utc
+            assert values["from_yaml"].second == 1
+
+            # right_now: ${{now}}
+            assert values["right_now"].year >= 2022
+            assert values["right_now"].tzinfo == timezone.utc
+            assert values["right_now"].second >= 0
+
+            # also_right_now: ${{datetime()}}
+            assert values["also_right_now"].year >= 2022
+            assert values["also_right_now"].tzinfo == timezone.utc
+            assert values["also_right_now"].second >= 0
+
+            # also_also_right_now:
+            #   datetime: now
+            assert values["also_also_right_now"].year >= 2022
+            assert values["also_also_right_now"].tzinfo == timezone.utc
+            assert values["also_also_right_now"].second >= 0
+
+            # hour: ${{now.hour}}
+            assert isinstance(values["hour"], int)
+
+            # minute: ${{now.minute}}
+            assert isinstance(values["minute"], int)
+
+            # second: ${{now.second}}
+            assert isinstance(values["second"], int)
+
+            # to_date: ${{now.date()}}
+            assert isinstance(values["to_date"], date), date
+
+    def test_bad_date_params(self, generated_rows):
+        yaml = """
+        - object: A
+          fields:
+            d: ${{date("2000-01-01", year=2005)}}
+            """
+        with pytest.raises(exc.DataGenError) as e:
+            generate(StringIO(yaml), {}, None)
+
+        assert "date specification" in str(e.value)
+
     @mock.patch(write_row_path)
     def test_months_past(self, write_row_mock):
         yaml = """
@@ -134,8 +229,8 @@ class TestFaker:
             generate(yaml, plugin_options={"snowfakery_version": snowfakery_version})
 
         for dt in generated_rows.table_values("Contact", field="EmailBouncedDate"):
-            assert "+0" in dt or dt.endswith("Z"), dt
-            assert dateparser.isoparse(dt).tzinfo
+            assert "+0" in str(dt) or str(dt).endswith("Z"), dt
+            assert dateparser.isoparse(str(dt)).tzinfo
 
     @pytest.mark.parametrize("snowfakery_version", (2, 3))
     def test_hidden_fakers(self, snowfakery_version):
@@ -185,7 +280,7 @@ class TestFaker:
             plugin_options={"snowfakery_version": snowfakery_version},
         )
         date = generated_rows.table_values("A", 0, "date")
-        assert dateparser.isoparse(date).tzinfo is None
+        assert dateparser.isoparse(str(date)).tzinfo is None
 
     @pytest.mark.parametrize("snowfakery_version", (2, 3))
     def test_relative_dates(self, generated_rows, snowfakery_version):
@@ -199,14 +294,16 @@ class TestFaker:
         # and then by the time we get here it isn't the future anymore. We'll see if it ever
         # happens in practice
         assert (
-            dateparser.isoparse(generated_rows.table_values("Test", 1, "future")) >= now
-        )
-        assert (
-            dateparser.isoparse(generated_rows.table_values("Test", 1, "future2"))
+            dateparser.isoparse(str(generated_rows.table_values("Test", 1, "future")))
             >= now
         )
         assert (
-            dateparser.isoparse(generated_rows.table_values("Test", 1, "past")) <= now
+            dateparser.isoparse(str(generated_rows.table_values("Test", 1, "future2")))
+            >= now
+        )
+        assert (
+            dateparser.isoparse(str(generated_rows.table_values("Test", 1, "past")))
+            <= now
         )
 
     @mock.patch(write_row_path)
