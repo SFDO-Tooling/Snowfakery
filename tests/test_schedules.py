@@ -204,6 +204,21 @@ def test_bad_frequency():
     assert "frequency" in str(e.value)
 
 
+def test_bad_frequency__wrong_type(disable_typeguard):
+    yaml = """
+    - plugin: snowfakery.standard_plugins.Schedule
+    - object: MinutelyEvents
+      count: 3
+      fields:
+        MinutelyEvent:
+            Schedule.Event:
+                freq: False
+    """
+    with pytest.raises(exc.DataGenError) as e:
+        generate(StringIO(yaml))
+    assert "frequency" in str(e.value)
+
+
 def test_datetime_types_inferred_from_start_date(generated_rows):
     with open("examples/schedule/haunting.recipe.yml") as yaml:
         generate(yaml)
@@ -450,3 +465,53 @@ def test_example_files(filename):
     with open(filename) as yaml:
         generate(yaml, output_stream=DebugOutputStream(f))
     assert f.getvalue() == Path(filename.replace(".yml", ".out")).read_text()
+
+
+def test_undocumented_feature__error():
+    yaml = """
+    - plugin: snowfakery.standard_plugins.Schedule
+    - object: FrequentEvent
+      count: 2
+      fields:
+        DateTime:
+            Schedule.Event:
+                start_date: 2000-01-01
+                freq: Weekly
+                byeaster: MO(ABCDE)
+    """
+
+    with pytest.raises(exc.DataGenValueError, match="use_undocumented_features"):
+        generate(StringIO(yaml))
+
+
+def test_bad_integer_list():
+    yaml = """
+    - plugin: snowfakery.standard_plugins.Schedule
+    - object: Events
+      count: 3
+      fields:
+        Date:
+            Schedule.Event:
+                freq: Monthly
+                bymonth: AAAA,BBBB,C,D
+    """
+    with pytest.raises(exc.DataGenError) as e:
+        generate(StringIO(yaml))
+    assert "AAAA" in str(e.value)
+
+
+def test_bad_integer_list__wrong_type():
+    yaml = """
+    - snowfakery_version: 3
+    - plugin: snowfakery.standard_plugins.Schedule
+    - object: Events
+      count: 3
+      fields:
+        Date:
+            Schedule.Event:
+                freq: Monthly
+                bymonth: ${{today}}
+    """
+    with pytest.raises(exc.DataGenError) as e:
+        generate(StringIO(yaml))
+    assert "Expected a number" in str(e.value)

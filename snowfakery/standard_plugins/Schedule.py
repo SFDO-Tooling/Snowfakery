@@ -1,4 +1,3 @@
-import collections
 import re
 import typing as T
 import snowfakery.data_gen_exceptions as exc
@@ -350,10 +349,7 @@ def process_list_of_ints(val):
     elif isinstance(val, int):
         return [val]
     elif isinstance(val, str):
-        # TODO: Test what happens if this is a wrong-formatted string
         return [int(v) for v in val.split(",")]
-    elif isinstance(val, collections.Sequence):
-        return [int(v) for v in val]
     else:
         raise exc.DataGenTypeError(
             f"Expected a number or list of numbers, not {val} ({type(val)})"
