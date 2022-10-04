@@ -15,15 +15,17 @@ from yaml.error import YAMLError
 from .data_generator_runtime_object_model import (
     ObjectTemplate,
     VariableDefinition,
+    ForEachVariableDefinition,
     FieldFactory,
     SimpleValue,
     StructuredValue,
     Statement,
     Definition,
 )
-
+from snowfakery.standard_plugins.datasets import CSVDatasetLinearIterator
 from snowfakery.plugins import resolve_plugins, LineTracker, ParserMacroPlugin
 import snowfakery.data_gen_exceptions as exc
+from snowfakery.utils.files import FileLike
 
 SHARED_OBJECT = "#SHARED_OBJECT"
 
@@ -34,13 +36,21 @@ TemplateLike = Union[ObjectTemplate, StructuredValue]
 
 class ParseResult:
     def __init__(
-        self, options, tables: Mapping, statements: Sequence, plugins: Sequence = ()
+        self,
+        options,
+        tables: Mapping,
+        statements: Sequence,
+        plugins: Sequence = (),
+        random_references: Sequence = (),
+        version: int = None,
     ):
         self.options = options
         self.tables = tables
         self.statements = statements
         self.templates = [obj for obj in statements if isinstance(obj, ObjectTemplate)]
         self.plugins = plugins
+        self.version = version
+        self.random_references = random_references or []
 
 
 class TableInfo:
@@ -54,6 +64,7 @@ class TableInfo:
         self.name = name
         self.fields = {}
         self.friends = {}
+        self.has_update_keys = False
         self._templates = []
 
     def register(self, template: ObjectTemplate) -> None:
@@ -71,10 +82,12 @@ class TableInfo:
                 if hasattr(friend, "tablename")
             }
         )
+        if template.update_key:
+            self.has_update_keys = True
         self._templates.append(template)
 
     def __repr__(self) -> str:
-        return f"<TableInfo fields={list(self.fields.keys())} friends={list(self.friends.keys())} templates={len(self._templates)}>"
+        return f"<TableInfo name={self.name} fields={list(self.fields.keys())} friends={list(self.friends.keys())} templates={len(self._templates)}>"
 
 
 class ParseContext:
@@ -88,6 +101,7 @@ class ParseContext:
         self.options = []
         self.table_infos = {}
         self.parser_macros_plugins = {}
+        self.random_references = []
 
     def line_num(self, obj=None) -> Dict:
         if not obj:
@@ -106,7 +120,7 @@ class ParseContext:
             my_line_num = self.line_numbers.get(id(obj))
             if my_line_num and my_line_num != SHARED_OBJECT:
                 return my_line_num._asdict()
-        except KeyError:
+        except KeyError:  # pragma: no cover
             pass
 
         assert obj != self.current_parent_object  # check for no infinite loop
@@ -118,10 +132,6 @@ class ParseContext:
         self.current_parent_object = obj
         try:
             yield
-        except exc.DataGenError:
-            raise
-        except Exception as e:
-            raise exc.DataGenSyntaxError(str(e), **self.line_num()) from e
         finally:
             self.current_parent_object = _old_parsed_template
 
@@ -146,24 +156,43 @@ def removeline_numbers(dct: Dict) -> Dict:
     return {i: dct[i] for i in dct if i != "__line__"}
 
 
+def _coerce_to_string(val, context):
+    if isinstance(val, str):
+        return val
+    elif isinstance(val, (int, bool, date)):
+        # a few functions accept keyword arguments that YAML interprets
+        # as types other than string
+        return str(val)
+    else:
+        if val is None:
+            val = "null (None)"
+        raise exc.DataGenSyntaxError(
+            f"Cannot interpret key `{val}`` as string", **context.line_num()
+        )
+
+
 def parse_structured_value_args(
     args, context: ParseContext
 ) -> Union[List, Dict, SimpleValue, StructuredValue, ObjectTemplate]:
     """Structured values can be dicts or lists containing simple values or further structure."""
     if isinstance(args, dict):
+
+        def as_str(name):
+            return _coerce_to_string(name, context)
+
         with context.change_current_parent_object(args):
             return {
-                name: parse_field_value(name, arg, context, False)
+                as_str(name): parse_field_value(as_str(name), arg, context)
                 for name, arg in args.items()
                 if name != "__line__"
             }
     elif isinstance(args, list):
         return [
-            parse_field_value(f"List element {i}", arg, context, False)
+            parse_field_value(f"List element {i}", arg, context)
             for i, arg in enumerate(args)
         ]
     else:
-        return parse_field_value("", args, context, False)
+        return parse_field_value("", args, context)
 
 
 def parse_structured_value(name: str, field: Dict, context: ParseContext) -> Definition:
@@ -194,19 +223,21 @@ def parse_structured_value(name: str, field: Dict, context: ParseContext) -> Def
             func = getattr(plugin, name)
             rc = func(context, args)
             return rc
-        except AttributeError as e:
-            # check if this is a regular runtime function. If so,
-            # fall-through and handle it as if we had never
-            # tried to parse it as a macro plugin
-            if not hasattr(plugin, "Functions") and not hasattr(plugin.Functions, name):
-                raise e
+        except AttributeError:
+            # we'll try to find it a different way below
+            pass
 
     args = parse_structured_value_args(args, context)
-    return StructuredValue(function_name, args, **context.line_num(field))
+    ret = StructuredValue(function_name, args, **context.line_num(field))
+    if function_name == "random_reference":
+        context.random_references.append(ret)  # need to track these for static analysis
+    return ret
 
 
 def parse_field_value(
-    name: str, field, context: ParseContext, allow_structured_values=True
+    name: str,
+    field,
+    context: ParseContext,
 ) -> Union[SimpleValue, StructuredValue, ObjectTemplate]:
     if isinstance(field, (str, Number, date, type(None))):
         return SimpleValue(field, **(context.line_num(field) or context.line_num()))
@@ -218,12 +249,15 @@ def parse_field_value(
     elif isinstance(field, list) and len(field) == 1 and isinstance(field[0], dict):
         # unwrap a list of a single item in this context because it is
         # a mistake and we can infer their real meaning
-        return parse_field_value(name, field[0], context)
-    else:
-        raise exc.DataGenSyntaxError(
-            f"Unknown field {type(field)} type for {name}. Should be a string or 'object': \n {field} ",
-            **(context.line_num(field) or context.line_num()),
+        return parse_field_value(
+            name,
+            field[0],
+            context,
         )
+    # should be unreachable. Every code path to here tests types
+    raise AssertionError(
+        f"Unknown field {type(field)} type for {name}. Should be a string or 'object': \n {field} "
+    )
 
 
 def parse_field(name: str, definition, context: ParseContext) -> FieldFactory:
@@ -237,11 +271,11 @@ def parse_field(name: str, definition, context: ParseContext) -> FieldFactory:
 
 def parse_fields(fields: Dict, context: ParseContext) -> List[FieldFactory]:
     with context.change_current_parent_object(fields):
-        if not isinstance(fields, dict):
-            raise exc.DataGenSyntaxError(
-                "Fields should be a dictionary (should not start with -) ",
-                **context.line_num(),
-            )
+        # Should be unreachable because parser checks first.
+        assert isinstance(
+            fields, dict
+        ), "Fields should be a dictionary (should not start with -) "
+
         return [
             parse_field(name, definition, context)
             for name, definition in fields.items()
@@ -327,12 +361,16 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
             "include": str,
             "nickname": str,
             "just_once": bool,
+            "for_each": dict,
             "count": (str, int, dict),
+            "update_key": str,
         },
         context=context,
     )
     if not context.top_level and parsed_template.just_once:
-        raise exc.DataGenSyntaxError("just_once can only be used at the top level")
+        raise exc.DataGenSyntaxError(
+            "just_once can only be used at the top level", **context.line_num()
+        )
 
     assert yaml_sobj
     with context.change_current_parent_object(yaml_sobj):
@@ -349,6 +387,7 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
         sobj_def["nickname"] = nickname = parsed_template.nickname
         check_identifier(nickname, yaml_sobj, "Nicknames")
         sobj_def["just_once"] = parsed_template.just_once or False
+        sobj_def["update_key"] = parsed_template.update_key or None
         sobj_def["line_num"] = parsed_template.line_num.line_num
         sobj_def["filename"] = parsed_template.line_num.filename
 
@@ -356,6 +395,23 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
 
         if count_expr is not None:
             parse_count_expression(yaml_sobj, sobj_def, context)
+
+        for_each_expr = yaml_sobj.get("for_each")
+        if for_each_expr is not None:
+            # it would be easy to support multiple parallel
+            # for-eaches here and at one point the code did,
+            # but the use-case wasn't obvious so it was removed
+            # after 9bc296a7df. If we get to 2023 without
+            # finding a use-case we can delete this comment.
+
+            # this type should have been checked earlier
+            assert isinstance(
+                for_each_expr, dict
+            ), "`for_each` must evaluate to a variable description"
+            sobj_def["for_each_expr"] = parse_for_each_variable_definition(
+                for_each_expr, context
+            )
+
         new_template = ObjectTemplate(**sobj_def)
         context.register_template(new_template)
         return new_template
@@ -367,11 +423,36 @@ def parse_variable_definition(
     parsed_template: Any = parse_element(
         yaml_sobj,
         "var",
-        {},
-        {
+        mandatory_keys={
             "value": (str, int, dict, list),
         },
-        context,
+        optional_keys={},
+        context=context,
+    )
+
+    assert yaml_sobj
+    with context.change_current_parent_object(yaml_sobj):
+        sobj_def = {}
+        sobj_def["varname"] = parsed_template.var
+        var_def_expr = yaml_sobj.get("value")
+        sobj_def["expression"] = parse_field_value("value", var_def_expr, context)
+        sobj_def["line_num"] = parsed_template.line_num.line_num
+        sobj_def["filename"] = parsed_template.line_num.filename
+        new_def = VariableDefinition(**sobj_def)
+        return new_def
+
+
+def parse_for_each_variable_definition(
+    yaml_sobj: Dict, context: ParseContext
+) -> ForEachVariableDefinition:
+    parsed_template: Any = parse_element(
+        yaml_sobj,
+        "var",
+        optional_keys={},
+        mandatory_keys={
+            "value": (dict, str),
+        },
+        context=context,
     )
 
     assert yaml_sobj
@@ -383,7 +464,7 @@ def parse_variable_definition(
         sobj_def["expression"] = parse_field_value("value", var_def_expr, context)
         sobj_def["line_num"] = parsed_template.line_num.line_num
         sobj_def["filename"] = parsed_template.line_num.filename
-        new_def = VariableDefinition(**sobj_def)
+        new_def = ForEachVariableDefinition(**sobj_def)
         return new_def
 
 
@@ -400,8 +481,10 @@ def parse_statement_list(
             variable_definition = parse_variable_definition(obj, context)
             parsed_statements.append(variable_definition)
         else:
-            assert 0  # pragma: no cover
-
+            keys = [key for key in obj.keys() if not key.startswith("_")]
+            raise exc.DataGenSyntaxError(
+                f"This statement cannot be parsed: {keys}", **context.line_num(obj)
+            )
     return parsed_statements
 
 
@@ -461,14 +544,14 @@ def parse_element(
         for key in dct:
             key_definition = expected_keys.get(key)
             if not key_definition:
-                raise exc.DataGenError(
+                raise exc.DataGenSyntaxError(
                     f"Unexpected key: {key}", **context.line_num(key)
                 )
             else:
                 value = dct[key]
                 if not isinstance(value, key_definition):
-                    raise exc.DataGenError(
-                        f"Expected `{key}` to be of type {key_definition} instead of {type(value)}.",
+                    raise exc.DataGenSyntaxError(
+                        f"Expected `{key}` to be of type {key_definition} instead of `{type(value).__name__}`.",
                         **context.line_num(dct),
                     )
                 else:
@@ -529,12 +612,14 @@ collection_rules = {
     "plugin": "plugin",
     "object": "statement",
     "var": "statement",
+    "snowfakery_version": "snowfakery_version",
 }
 
 
 def categorize_top_level_objects(data: List, context: ParseContext):
     """Look at all of the top-level declarations and categorize them"""
     top_level_collections: Dict = {
+        "snowfakery_version": [],
         "option": [],
         "include_file": [],
         "macro": [],
@@ -546,7 +631,6 @@ def categorize_top_level_objects(data: List, context: ParseContext):
         if not isinstance(obj, dict):
             raise exc.DataGenSyntaxError(
                 f"Top level elements in a data generation template should all be dictionaries, not {obj}",
-                **context.line_num(data),
             )
         obj_category = None
         for declaration, category in collection_rules.items():
@@ -580,11 +664,35 @@ def parse_top_level_elements(path: Path, data: List, context: ParseContext):
     context.plugins.extend(
         resolve_plugins(plugin_specs, search_paths=[plugin_near_recipe])
     )
+    context.version = parse_version(top_level_objects["snowfakery_version"], context)
     statements.extend(top_level_objects["statement"])
     for pluginbase, plugin in context.plugins:
         if pluginbase == ParserMacroPlugin:
             context.parser_macros_plugins[plugin.__name__] = plugin()
     return statements
+
+
+def parse_version(version_declarations: T.List[T.Dict], context: ParseContext):
+    if version_declarations:
+        base_version = version_declarations[0]["snowfakery_version"]
+        mismatched_versions = [
+            obj
+            for obj in version_declarations
+            if obj["snowfakery_version"] != base_version
+        ]
+        if mismatched_versions:
+            with context.change_current_parent_object(version_declarations[1]):
+                raise exc.DataGenSyntaxError(
+                    "Cannot have multiple conflicting versions in the same recipe: ",
+                    **context.line_num(),
+                )
+        if base_version not in (2, 3):
+            with context.change_current_parent_object(version_declarations[0]):
+                raise exc.DataGenSyntaxError(
+                    "Version must be 2 or 3: ",
+                    **context.line_num(),
+                )
+        return base_version
 
 
 def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
@@ -615,9 +723,64 @@ def parse_file(stream: IO[str], context: ParseContext) -> List[Dict]:
     return statements
 
 
-def parse_recipe(stream: IO[str]) -> ParseResult:
+def build_update_recipe(
+    statements: List[Statement],
+    tables: dict,
+    update_input_file: FileLike = None,
+    passthrough_fields: T.Sequence = (),
+) -> List[Statement]:
+    class DataSourceValue(SimpleValue):
+        def __init__(self):
+            self.datasource = CSVDatasetLinearIterator(update_input_file, False)
+
+        def render(self, *args, **kwargs):
+            return self.datasource
+
+    error_message = "Update recipes should have a single object declaration."
+    if len(statements) != 1:
+        raise exc.DataGenSyntaxError(error_message)
+    template = statements[0]
+    if not isinstance(template, ObjectTemplate):
+        raise exc.DataGenSyntaxError(
+            error_message,
+            filename=template.filename,
+            line_num=template.line_num,
+        )
+
+    if template.count_expr:
+        raise exc.DataGenSyntaxError(
+            "Update templates should have no 'count'",
+            filename=template.filename,
+            line_num=template.line_num,
+        )
+
+    template.for_each_expr = ForEachVariableDefinition(
+        "", -1, "input", DataSourceValue()
+    )
+
+    def _make_passthrough_attribute_for_update_recipe(attrname):
+        # the magic numbers are fake line-numbers. They should be irrelevant
+        # but perhaps they will be useful in debugging some future problem
+        field_def = SimpleValue("${{input.%s}}" % attrname, "", -3)
+        new_field = FieldFactory(attrname, field_def, "", -4)
+        tables[template.name].fields[attrname] = new_field
+        return new_field
+
+    template.fields.extend(
+        _make_passthrough_attribute_for_update_recipe(attr)
+        for attr in passthrough_fields
+    )
+
+    return [template]
+
+
+def parse_recipe(
+    stream: IO[str],
+    update_input_file: FileLike = None,
+    update_passthrough_fields: T.Sequence[str] = (),
+) -> ParseResult:
     context = ParseContext()
-    objects = parse_file(stream, context)
+    objects = parse_file(stream, context)  # parse the yaml without semantics
     statements = parse_statement_list(objects, context)
     tables = context.table_infos
     tables = {
@@ -625,5 +788,16 @@ def parse_recipe(stream: IO[str]) -> ParseResult:
         for name, value in context.table_infos.items()
         if not name.startswith("__")
     }
+    if update_input_file:
+        statements = build_update_recipe(
+            statements, tables, update_input_file, update_passthrough_fields
+        )
 
-    return ParseResult(context.options, tables, statements, plugins=context.plugins)
+    return ParseResult(
+        context.options,
+        tables,
+        statements,
+        plugins=context.plugins,
+        version=context.version,
+        random_references=context.random_references,
+    )

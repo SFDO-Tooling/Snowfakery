@@ -1,6 +1,8 @@
 minimum_cumulusci_version: "3.16.0"
 project:
     name: Snowfakery
+    package:
+        api_version: "50.0"
     dependencies:
         - github: https://github.com/SalesforceFoundation/NPSP
 
@@ -126,6 +128,34 @@ flows:
                     generator_yaml: examples/salesforce/person-accounts-plugin.recipe.yml
                     num_records: 5
                     num_records_tablename: User
+
+    test_upserts:
+        steps:
+            1:
+                task: snowfakery
+                options:
+                    recipe: tests/upsert.yml
+                    set_recently_viewed: False
+
+            2:
+                task: query
+                options:
+                    object: Contact
+                    query: "select Id,Email,Name from Contact where LastName='Bluth'"
+                    result_file: /tmp/contacts_before.csv
+
+            3:
+                task: snowfakery
+                options:
+                    recipe: tests/upsert-2.yml
+                    set_recently_viewed: False
+
+            4:
+                task: query
+                options:
+                    object: Contact
+                    query: "select Id,Email,Name from Contact where LastName='Bluth'"
+                    result_file: /tmp/contacts_after.csv
 
 orgs:
     scratch:

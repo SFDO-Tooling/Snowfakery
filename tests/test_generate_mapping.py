@@ -1,18 +1,20 @@
-from pathlib import Path
 from io import StringIO
+from pathlib import Path
 
 import pytest
 
-from snowfakery.data_generator import generate
-from snowfakery.generate_mapping_from_recipe import (
-    mapping_from_recipe_templates,
-    build_dependencies,
-    _table_is_free,
-)
-from snowfakery.data_generator_runtime import Dependency
-from snowfakery.cci_mapping_files.post_processes import add_after_statements
 from snowfakery import data_gen_exceptions as exc
-
+from snowfakery.api import generate_data
+from snowfakery.cci_mapping_files.post_processes import add_after_statements
+from snowfakery.data_generator import generate
+from snowfakery.data_generator_runtime import Dependency
+from snowfakery.generate_mapping_from_recipe import (
+    _table_is_free,
+    build_dependencies,
+    mapping_from_recipe_templates,
+)
+from snowfakery.utils.collections import OrderedSet
+from tests.utils import named_temporary_file_path
 
 try:
     import cumulusci
@@ -195,6 +197,150 @@ class TestGenerateMapping:
         assert mapping["Insert Ref"]["lookups"]["targ"]["table"] == "Target"
 
 
+class TestGenerateMappingOutputOrder:
+    # if there is no order for two tables implied by the dependencies,
+    # use the or in which they appeared in the file
+
+    def test_file_order_is_preserved(self):
+        yaml = """
+            - object: A
+            - object: B
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert A", "Insert B")
+
+    def test_file_order_is_preserved_2(self):
+        yaml = """
+            - object: B
+            - object: A
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert B", "Insert A")
+
+    def test_file_order_is_preserved_recursive_1(self):
+        yaml = """
+            - object: A
+              fields:
+                reference: B
+            - object: B
+              fields:
+                reference: A
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert A", "Insert B")
+
+    def test_file_order_is_preserved_recursive_2(self):
+        yaml = """
+            - object: B
+              fields:
+                reference: A
+            - object: A
+              fields:
+                reference: B
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert B", "Insert A")
+
+    def test_file_order_is_preserved_recursive_2_groups_1(self):
+        yaml = """
+            - object: B
+              fields:
+                reference: A
+            - object: A
+              fields:
+                reference: B
+            - object: C
+              fields:
+                reference: D
+            - object: D
+              fields:
+                reference: C
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert B", "Insert A", "Insert C", "Insert D")
+
+    def test_file_order_is_preserved_recursive_2_groups_2(self):
+        yaml = """
+            - object: C
+              fields:
+                reference: D
+            - object: D
+              fields:
+                reference: C
+            - object: B
+              fields:
+                reference: A
+            - object: A
+              fields:
+                reference: B
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert C", "Insert D", "Insert B", "Insert A")
+
+    def test_file_order_is_preserved_recursive_2_groups_3(self):
+        yaml = """
+            - object: C
+              fields:
+                reference: A
+            - object: D
+              fields:
+                reference: B
+            - object: B
+              fields:
+                reference: D
+            - object: A
+              fields:
+                reference: C
+              """
+        summary = generate(StringIO(yaml), {}, None)
+        mapping = mapping_from_recipe_templates(summary)
+
+        assert tuple(mapping.keys()) == ("Insert C", "Insert D", "Insert B", "Insert A")
+
+    def test_order_is_predictable_real_world_example(self, generate_in_tmpdir):
+        yaml = """
+        - object: Contact
+        - object: Campaign
+          friends:
+          - object: CampaignMemberStatus
+            fields:
+              CampaignId:
+                reference: Campaign
+          - object: CampaignMemberStatus
+            fields:
+              CampaignId:
+                reference: Campaign
+        - object: CampaignMember
+          fields:
+            ContactId:
+              reference: Contact
+            CampaignId:
+              reference: Campaign
+"""
+        # if this test ever fails it will probably do so in
+        # an intermittent way. Running it in a loop could
+        # make it fail more consistently when you are testing.
+        with generate_in_tmpdir(yaml) as (mapping, db):
+            assert list(mapping.keys()) == [
+                "Insert Contact",
+                "Insert Campaign",
+                "Insert CampaignMemberStatus",
+                "Insert CampaignMember",
+            ], mapping.keys()
+
+
 class TestBuildDependencies:
     def test_build_dependencies_simple(self):
         parent_deps = [
@@ -208,8 +354,8 @@ class TestBuildDependencies:
         deps = parent_deps + child_deps
         inferred_dependencies, _, reference_fields = build_dependencies(deps)
         assert inferred_dependencies == {
-            "parent": set(parent_deps),
-            "child": set(child_deps),
+            "parent": OrderedSet(zip(parent_deps, parent_deps)),
+            "child": OrderedSet(zip(child_deps, child_deps)),
         }
         assert reference_fields == {
             ("parent", "daughter"): "child",
@@ -295,6 +441,18 @@ class TestRecordTypes:
             records = list(db.execute("SELECT * from Case_rt_mapping"))
             assert records == [("Bar", "Bar")], records
             assert mapping["Insert Case"]["fields"]["RecordTypeId"] == "recordtype"
+
+    def test_error__recordtypes(self, generate_in_tmpdir):
+        recipe_data = """
+            - object: Obj
+              fields:
+                RecordType: Bar
+                RecordTypeId: Bar2
+              """
+        with pytest.raises(
+            exc.DataGenError, match="Multiple record type"
+        ), named_temporary_file_path(suffix=".yml") as t:
+            generate_data(StringIO(recipe_data), generate_cci_mapping_file=t)
 
 
 class TestAddAfterStatements:
@@ -448,3 +606,89 @@ class TestPersonAccounts:
             exc.DataGenError, match="`nickname` argument should be a string"
         ):
             generate(StringIO(recipe_data), {}, None)
+
+    def test_recursive_users_and_permission_sets(self, generate_in_tmpdir):
+        recipe_data = """
+        - object: User
+          nickname: manager
+          friends:
+            - object: PermissionSetAssignment
+              fields:
+                AssigneeId:
+                  reference: User
+                PermissionSetId:  XYZZY
+
+            - object: User
+              fields:
+                ManagerId:
+                  reference: manager
+                """
+        with generate_in_tmpdir(recipe_data) as (mapping, db):
+            assert tuple(mapping.keys())[0] == "Insert User"
+
+    def test_upsert(self, generate_in_tmpdir):
+        recipe_data = """
+        - object: User
+          update_key: Name
+          fields:
+            Name: UpdateByNamePerson
+            Username: UpdateByNamePerson@example.com
+        - object: User
+          update_key: Username
+          fields:
+            Name: UpdateByUsernamePerson
+            Username: UpdateByUsernamePerson@example.com
+        - object: User
+          fields:
+            Name: NoUpdatePerson
+            Username: NoUpdatePerson@example.com
+        - object: User
+          update_key: Name
+          fields:
+            Name: UpdateByNamePerson2
+            Username: UpdateByNamePerson2@example.com
+        - object: User
+          update_key: Username
+          fields:
+            Name: UpdateByUsernamePerson2
+            Username: UpdateByUsernamePerson2@example.com
+        - object: User
+          fields:
+            Name: NoUpdatePerson2
+            Username: NoUpdatePerson2@example.com
+        """
+        with generate_in_tmpdir(recipe_data) as (mapping, db):
+            assert mapping == {
+                "Upsert User on Name": {
+                    "sf_object": "User",
+                    "table": "User",
+                    "fields": {"Name": "Name", "Username": "Username"},
+                    "action": "upsert",
+                    "update_key": "Name",
+                    "filters": ["_sf_update_key = 'Name'"],
+                },
+                "Upsert User on Username": {
+                    "sf_object": "User",
+                    "table": "User",
+                    "fields": {"Name": "Name", "Username": "Username"},
+                    "action": "upsert",
+                    "update_key": "Username",
+                    "filters": ["_sf_update_key = 'Username'"],
+                },
+                "Insert User": {
+                    "sf_object": "User",
+                    "table": "User",
+                    "fields": {"Name": "Name", "Username": "Username"},
+                    "filters": ["_sf_update_key = NULL"],
+                },
+            }
+            rows = list(db.execute("select Name, _sf_update_key from User"))
+            print(rows)
+            assert rows == [
+                ("UpdateByNamePerson", "Name"),
+                ("UpdateByUsernamePerson", "Username"),
+                ("NoUpdatePerson", None),
+                ("UpdateByNamePerson2", "Name"),
+                ("UpdateByUsernamePerson2", "Username"),
+                ("NoUpdatePerson2", None),
+            ]

@@ -1,0 +1,12 @@
+- option: FirstName
+
+- object: Contact
+  fields:
+    FirstName: ${{FirstName}}
+    LastName:
+      fake: LastName
+    BillingStreet: ${{input.Number}} ${{input.Street}}
+    BillingCity: ${{input.City}}
+    BillingState: Texas
+    BillingPostalCode: ${{input.Postcode}}
+    BillingCountry: US

@@ -4,7 +4,7 @@ from tempfile import TemporaryDirectory
 from pathlib import Path
 from base64 import b64encode
 
-from snowfakery.plugins import ParserMacroPlugin
+from snowfakery.plugins import ParserMacroPlugin, memorable
 from snowfakery.data_generator_runtime_object_model import (
     ObjectTemplate,
     FieldFactory,
@@ -268,6 +268,7 @@ class Salesforce(ParserMacroPlugin, SnowfakeryPlugin, SalesforceConnectionMixin)
         return sobj, nickname
 
     class Functions:
+        @memorable
         def ProfileId(self, name):
             query = f"select Id from Profile where Name='{name}'"
             return self.context.plugin.sf_connection.query_single_record(query)
@@ -281,8 +282,10 @@ class Salesforce(ParserMacroPlugin, SnowfakeryPlugin, SalesforceConnectionMixin)
                 return b64encode(data.read()).decode("ascii")
 
 
-# TODO: Tests for this class
 class SOQLDatasetImpl(DatasetBase):
+    iterator = None
+    tempdir = None
+
     def __init__(self, plugin, *args, **kwargs):
         from cumulusci.tasks.bulkdata.step import (
             get_query_operation,
@@ -330,8 +333,19 @@ class SOQLDatasetImpl(DatasetBase):
         return self.iterator
 
     def close(self):
-        self.iterator.close()
-        self.tempdir.close()
+        if self.iterator:
+            self.iterator.close()
+            self.iterator = None
+
+        if self.tempdir:
+            self.tempdir.cleanup()
+            self.tempdir = None
+
+    def __del__(self):
+        # in case close was not called
+        # properly, try to do an orderly
+        # cleanup
+        self.close()
 
 
 def create_tempfile_sql_db_iterator(mode, fieldnames, results):
@@ -390,6 +404,7 @@ class SalesforceQuery(SalesforceConnectionMixin, SnowfakeryPlugin):
             # todo: use CompositeParallelSalesforce to cache 200 at a time
             return self._sf_connection.query_single_record(query)
 
+        @memorable
         def find_record(self, *args, fields="Id", where=None, **kwargs):
             """Find a particular record"""
             query_from = self._parse_from_from_args(args, kwargs)

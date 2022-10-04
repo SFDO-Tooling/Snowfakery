@@ -1,0 +1,11 @@
+- object: Sale
+  fields:
+    num_items:
+      random_number:
+        min: 10
+        max: 20
+    per_item_price:
+      random_number:
+        min: 10
+        max: 20
+    message: Thanks for buying ${{num_items}} items @ $${{per_item_price}} each!

@@ -1,5 +1,8 @@
 from io import StringIO
 from unittest import mock
+import pydantic
+
+from datetime import datetime, date
 
 from snowfakery.data_generator import generate
 from snowfakery.data_gen_exceptions import DataGenError
@@ -241,6 +244,30 @@ class TestTemplateFuncs:
         generate(StringIO(yaml), {}, None)
         assert write_row.mock_calls[0][1][1]["a"] == "2012-01-01"
 
+    def test_now_variable(self, generated_rows):
+        yaml = """
+        - object : A
+          fields:
+            a: ${{now}}
+            b: ${{now}}
+        """
+        generate(StringIO(yaml), {}, None)
+        assert datetime.fromisoformat(generated_rows.table_values("A", 0, "a"))
+        assert datetime.fromisoformat(generated_rows.table_values("A", 0, "b"))
+
+    @mock.patch("snowfakery.data_generator_runtime.datetime")
+    def test_now_calls_datetime_now(self, datetime):
+        now = datetime.now = mock.Mock()
+        yaml = """
+        - object : A
+          fields:
+            a: ${{now}}
+            b: ${{now}}
+            c: ${{now}}
+        """
+        generate(StringIO(yaml))
+        assert len(now.mock_calls) == 3
+
     @mock.patch(write_row_path)
     def test_old_syntax(self, write_row):
         yaml = """
@@ -405,3 +432,33 @@ class TestTemplateFuncs:
                 {"id": 5, "EndDate": 1, "DateSupplied": "Yes"},
             ),
         ]
+
+    def test_random_choice_nonstring_keys(self, generated_rows):
+        with open("tests/random_choice.yml") as yaml:
+            generate(yaml)
+        result = generated_rows.table_values("foo", 0)
+
+        class ResultModel(pydantic.BaseModel):
+            id: int
+            bool: bool
+            date: date
+
+        assert ResultModel(**result)
+
+    def test_random_choice_wrong_type_keys(self, generated_rows):
+        with open("tests/bad_random_choice_keys.yml") as yaml:
+            with pytest.raises(DataGenError) as e:
+                generate(yaml)
+        assert "null" in str(e.value)
+
+    def test_debug(self, capsys):
+        yaml = """
+        - object : A
+          fields:
+            a: ${{debug("XYZZY")}}
+            b: ${{debug(420)}}
+        """
+        generate(StringIO(yaml))
+        stderr = capsys.readouterr().err
+        assert "XYZZY" in stderr
+        assert "420" in stderr

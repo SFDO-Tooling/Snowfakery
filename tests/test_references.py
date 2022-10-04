@@ -1,12 +1,14 @@
+from datetime import date
 from io import StringIO
 from unittest import mock
 
+import dateutil
 import pytest
-
-from snowfakery.data_generator import generate
 from test_parse_samples import find_row
-from snowfakery.data_gen_exceptions import DataGenError
+
 from snowfakery.api import StoppingCriteria
+from snowfakery.data_gen_exceptions import DataGenError, DataGenSyntaxError
+from snowfakery.data_generator import generate
 
 simple_parent = """                     #1
 - object: A                             #2
@@ -358,105 +360,6 @@ class TestReferences:
             mock.call("A", {"id": 6, "B_ref": "B(1)"}),
         ]
 
-    def test_random_reference_simple(self, generated_rows):
-        yaml = """                  #1
-      - object: A                   #2
-        count: 10                   #4
-      - object: B                   #5
-        count: 2                    #6
-        fields:                     #7
-            A_ref:                  #8
-              random_reference: A   #9
-    """
-        with mock.patch("random.randint") as randint:
-            randint.side_effect = [8, 3]
-            generate(StringIO(yaml))
-        assert generated_rows.row_values(10, "A_ref") == "A(8)"
-        assert generated_rows.row_values(11, "A_ref") == "A(3)"
-
-    def test_random_reference_local(self, generated_rows):
-        yaml = """                  #1
-      - object: A                   #2
-        count: 10                   #4
-      - object: B                   #5
-        fields:                     #7
-            A_ref:                  #8
-              random_reference:     #9
-                tablename: A        #10
-                scope: current-iteration        #11
-    """
-        with mock.patch("random.randint") as randint:
-            randint.side_effect = [8, 12]
-            generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 2))
-            assert randint.mock_calls == [mock.call(1, 10), mock.call(11, 20)]
-        assert generated_rows.table_values("B", 2, "A_ref") == "A(12)"
-
-    def test_random_reference_global(self, generated_rows):
-        # undocumented experimental feature!
-        yaml = """                  #1
-      - object: A                   #2
-        count: 10                   #4
-      - object: B                   #5
-        count: 2                    #6
-        fields:                     #7
-            A_ref:                  #8
-              random_reference:
-                tablename: A   #9
-                scope: prior-and-current-iterations
-    """
-        with mock.patch("random.randint") as randint, mock.patch(
-            "warnings.warn"
-        ) as warn:
-            randint.side_effect = [8, 3, 8, 3]
-            generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 4))
-        assert generated_rows.row_values(22, "A_ref") == "A(8)"
-        assert generated_rows.row_values(23, "A_ref") == "A(3)"
-        assert "experimental" in str(warn.mock_calls)
-
-    def test_random_reference_missing_table(self):
-        yaml = """                  #1
-      - object: A                   #2
-        count: 2                    #3
-        fields:                     #4
-            A_ref:                  #5
-              random_reference:
-                tablename: B
-    """
-        with pytest.raises(DataGenError) as e:
-            generate(StringIO(yaml))
-        assert "There is no table named B" in str(e)
-
-    def test_random_reference_wrong_scope(self):
-        # undocumented experimental feature!
-        yaml = """                  #1
-      - object: A                   #2
-      - object: B                   #3
-        count: 2                    #4
-        fields:                     #5
-            A_ref:                  #6
-              random_reference:
-                tablename: A
-                scope: xyzzy
-    """
-        with pytest.raises(DataGenError) as e:
-            generate(StringIO(yaml))
-        assert "Scope must be" in str(e)
-
-    def test_random_reference_to_nickname(self):
-        # undocumented experimental feature!
-        yaml = """
-      - object: A
-        nickname: AA
-      - object: B
-        count: 2
-        fields:
-            A_ref:
-              random_reference: AA
-    """
-        with pytest.raises(DataGenError) as e:
-            generate(StringIO(yaml))
-        assert "nickname" in str(e).lower()
-
     def test_reference_unknown_object(self):
         yaml = """
         - object: B
@@ -490,3 +393,678 @@ class TestReferences:
         with pytest.raises(DataGenError) as e:
             generate(StringIO(yaml))
         assert "can't get reference to object" in str(e).lower()
+
+    def test_reference_by_id(self, generated_rows):
+        yaml = """
+              - object: Parent
+                nickname: ParentNickname
+                just_once: true
+
+              - object: Child
+                fields:
+                  parent1:
+                    reference: ParentNickname
+                  parent2:
+                    reference:
+                      object: Parent
+                      id: 1
+                """
+
+        generate(StringIO(yaml))
+        child = generated_rows.table_values("Child", 0)
+        assert child["parent1"] == child["parent2"]
+
+    def test_reference_by_id__bad(self, generated_rows):
+        yaml = """
+              - object: Parent
+                nickname: ParentNickname
+                just_once: true
+
+              - object: Child
+                fields:
+                  parent1:
+                    reference: ParentNickname
+                  parent2:
+                    reference:
+                      object: Parent
+                      id: abcd
+                """
+
+        with pytest.raises(DataGenError, match="Cannot interpret `id`"):
+            generate(StringIO(yaml))
+
+
+class TestRandomReferencesOriginal:
+    def test_random_reference_simple(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 10                   #4
+      - object: B                   #5
+        count: 2                    #6
+        fields:                     #7
+            A_ref:                  #8
+              random_reference: A   #9
+    """
+        with mock.patch("snowfakery.row_history.randint") as randint:
+            randint.side_effect = [8, 3]
+            generate(StringIO(yaml))
+        assert generated_rows.row_values(10, "A_ref") == "A(8)"
+        assert generated_rows.row_values(11, "A_ref") == "A(3)"
+
+    def test_random_reference_alternate_syntax(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 10                   #4
+      - object: B                   #5
+        count: 2                    #6
+        fields:                     #7
+            A_ref:                  #8
+              random_reference:     #9
+                to: A               #10
+    """
+        with mock.patch("snowfakery.row_history.randint") as randint:
+            randint.side_effect = [8, 3]
+            generate(StringIO(yaml))
+        assert generated_rows.row_values(10, "A_ref") == "A(8)"
+        assert generated_rows.row_values(11, "A_ref") == "A(3)"
+
+    def test_random_reference_unique(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 5                   #4
+      - object: B                   #5
+        count: 5                    #6
+        fields:                     #7
+            A_ref:                  #8
+              random_reference:     #9
+                to: A               #10
+                unique: true        #11
+    """
+        generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 25))
+        Bs = generated_rows.table_values("B")
+        # check that A_refs are unique
+        assert len(Bs) == len(set(b["A_ref"] for b in Bs)) == 25
+
+    def test_random_reference_unique__nickname(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        nickname: nicky             #3
+        count: 5                   #4
+      - object: B                   #5
+        count: 5                    #6
+        fields:                     #7
+            A_ref:                  #8
+              random_reference:     #9
+                to: nicky           #10
+                unique: true        #11
+    """
+        generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 25))
+        Bs = generated_rows.table_values("B")
+        # check that A_refs are unique
+        assert len(Bs) == len(set(b["A_ref"] for b in Bs)) == 25
+
+    def test_random_reference_unique__mismatch_count(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 4                   #4
+      - object: B                   #5
+        count: 5                    #6
+        fields:                     #7
+            A_ref:                  #8
+              random_reference:     #9
+                to: A               #10
+                unique: true        #11
+    """
+        with pytest.raises(DataGenError, match="Cannot find an unused `A`"):
+            generate(StringIO(yaml))
+
+    def test_random_reference_unique__with_continuation(
+        self, generate_data_with_continuation, generated_rows
+    ):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 10                   #3
+      - object: B                   #4
+        count: 5                    #5
+        fields:                     #6
+            A_ref:                  #7
+              random_reference:     #8
+                to: A               #9
+                unique: true        #10
+    """
+        generate_data_with_continuation(
+            yaml=yaml,
+            target_number=("B", 5),
+            times=3,
+        )
+        Bs = generated_rows.table_values("B")
+        print(Bs)
+        assert len(Bs) == len(set(b["A_ref"] for b in Bs)) == 15
+
+    def test_random_reference_local(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 10                   #4
+      - object: B                   #5
+        fields:                     #7
+            A_ref:                  #8
+              random_reference:     #9
+                to: A        #10
+                scope: current-iteration        #11
+    """
+        with mock.patch("snowfakery.row_history.randint") as randint:
+            randint.side_effect = [8, 12]
+            generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 2))
+            assert randint.mock_calls == [mock.call(1, 10), mock.call(11, 20)]
+        assert generated_rows.table_values("B", 2, "A_ref") == "A(12)"
+
+    def test_random_reference_global(self, generated_rows):
+        # undocumented experimental feature!
+        yaml = """                  #1
+      - object: A                   #2
+        count: 10                   #4
+      - object: B                   #5
+        count: 2                    #6
+        fields:                     #7
+            A_ref:                  #8
+              random_reference:
+                to: A   #9
+                scope: prior-and-current-iterations
+    """
+        with mock.patch("snowfakery.row_history.randint") as randint, mock.patch(
+            "warnings.warn"
+        ) as warn:
+            randint.side_effect = [8, 3, 8, 3]
+            generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 4))
+        assert generated_rows.row_values(22, "A_ref") == "A(8)"
+        assert generated_rows.row_values(23, "A_ref") == "A(3)"
+        assert "experimental" in str(warn.mock_calls)
+
+    def test_random_reference_missing_table(self):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 2                    #3
+        fields:                     #4
+            A_ref:                  #5
+              random_reference:
+                to: B
+    """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert "There is no table or nickname `B`" in str(e)
+
+    def test_random_reference_wrong_scope(self):
+        # undocumented experimental feature!
+        yaml = """                  #1
+      - object: A                   #2
+      - object: B                   #3
+        count: 2                    #4
+        fields:                     #5
+            A_ref:                  #6
+              random_reference:
+                to: A
+                scope: xyzzy
+    """
+        with pytest.raises(DataGenError) as e:
+            generate(StringIO(yaml))
+        assert "Scope must be" in str(e)
+
+    def test_random_reference__type_error(self, generated_rows):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 10                   #4
+      - object: B                   #5
+        count: 2                    #6
+        fields:                     #7
+            A_ref:                  #8
+              random_reference:  5   #9
+    """
+        with pytest.raises(DataGenSyntaxError):
+            generate(StringIO(yaml))
+
+
+class TestRandomReferencesNew:
+    # New tests
+
+    def test_random_reference_to_just_once_obj(self, generated_rows):
+        yaml = """
+              - object: Parent
+                just_once: true
+
+              - object: Child
+                fields:
+                  parent:
+                    random_reference: Parent
+                """
+        generate(StringIO(yaml), stopping_criteria=StoppingCriteria("Child", 3))
+        assert len(generated_rows.mock_calls) == 4
+
+    @pytest.mark.parametrize("rand_top", [True, False])
+    def test_random_reference_to_just_once_obj_many(self, generated_rows, rand_top):
+        yaml = """
+              - object: Parent
+                count: 3
+                just_once: true
+              - object: Parent
+                count: 3
+                just_once: true
+
+              - object: Child
+                fields:
+                  parent:
+                    random_reference: Parent
+                """
+
+        def randint_mock(x, y):
+            return y if rand_top else x
+
+        with mock.patch("snowfakery.row_history.randint", randint_mock):
+            generate(StringIO(yaml), stopping_criteria=StoppingCriteria("Child", 2))
+        if rand_top:
+            assert generated_rows.table_values("Child", 1, "parent") == "Parent(6)"
+        else:
+            assert generated_rows.table_values("Child", 1, "parent") == "Parent(1)"
+
+    @pytest.mark.parametrize("rand_top", [True, False])
+    def test_random_reference_to_just_once_obj_and_local(
+        self, generated_rows, rand_top
+    ):
+        yaml = """
+              - object: Parent
+                count: 3
+                just_once: true
+
+              - object: Parent
+                count: 3
+
+              - object: Child
+                fields:
+                  parent:
+                    random_reference: Parent
+                """
+
+        def randint_mock(x, y):
+            return y if rand_top else x
+
+        with mock.patch("snowfakery.row_history.randint", randint_mock):
+            generate(StringIO(yaml), stopping_criteria=StoppingCriteria("Child", 3))
+        FIRST, LAST = 1, -1
+        if rand_top:
+            assert generated_rows.table_values("Child", FIRST, "parent") == "Parent(6)"
+            assert generated_rows.table_values("Child", LAST, "parent") == "Parent(12)"
+        else:  # bottom
+            assert generated_rows.table_values("Child", FIRST, "parent") == "Parent(1)"
+            assert generated_rows.table_values("Child", LAST, "parent") == "Parent(10)"
+
+    @pytest.mark.parametrize("rand_top", [True, False])
+    def test_random_reference_to_just_once_nickname_succeeds(
+        self, generated_rows, rand_top
+    ):
+        yaml = """
+              - object: Parent
+                nickname: ParentNickname
+                count: 3
+                just_once: true
+
+              - object: Child
+                fields:
+                  parent:
+                    random_reference: ParentNickname
+                """
+
+        def randint_mock(x, y):
+            return y if rand_top else x
+
+        with mock.patch("snowfakery.row_history.randint", randint_mock):
+            generate(StringIO(yaml), stopping_criteria=StoppingCriteria("Child", 3))
+        FIRST, LAST = 1, -1
+        if rand_top:
+            assert generated_rows.table_values("Child", FIRST, "parent") == "Parent(3)"
+            assert generated_rows.table_values("Child", LAST, "parent") == "Parent(3)"
+        else:  # bottom
+            assert generated_rows.table_values("Child", FIRST, "parent") == "Parent(1)"
+            assert generated_rows.table_values("Child", LAST, "parent") == "Parent(1)"
+
+    def test_random_reference_to_nickname(self, generated_rows):
+        yaml = """
+      - object: A
+        nickname: AA
+      - object: B
+        count: 2
+        fields:
+            A_ref:
+              random_reference: AA
+    """
+        generate(StringIO(yaml))
+        assert generated_rows.table_values("B", 2, "A_ref") == "A(1)"
+
+    def test_random_reference_to_nickname_sparse(self, generated_rows):
+        yaml = """
+      - object: A
+        count: 5
+      - object: A
+        nickname: nicky
+        count: 2
+        fields:
+            name: nicky
+      - object: A
+        count: 5
+      - object: B
+        count: 3
+        fields:
+            nicky_ref:
+              random_reference: nicky
+            nicky_name: ${{nicky_ref.name}}
+    """
+        generate(StringIO(yaml))
+        assert generated_rows.table_values("B", 2, "nicky_name") == "nicky"
+
+    def test_forward_random_reference_nickname_fails(self):
+        yaml = """
+              - object: Child
+                fields:
+                  parent1:
+                    random_reference: ParentNickname
+
+              - object: Parent
+                count: 10
+                nickname: ParentNickname
+                """
+        with pytest.raises(
+            DataGenError,
+            match="There is no table or nickname `ParentNickname` at this point in the recipe.",
+        ):
+            generate(StringIO(yaml))
+
+    def test_forward_random_reference_object_fails(self):
+        yaml = """
+              - object: Child
+                fields:
+                  parent1:
+                    random_reference: Parent
+
+              - object: Parent
+                count: 10
+                """
+        with pytest.raises(
+            DataGenError,
+            match="There is no table or nickname `Parent` at this point in the recipe.",
+        ):
+            generate(StringIO(yaml))
+
+    def test_random_reference_to_just_once_object(self, generated_rows):
+        yaml = """
+      - object: A
+        count: 3
+        just_once: True
+      - object: B
+        count: 2
+        fields:
+            A_ref:
+              random_reference: A
+    """
+        with mock.patch("snowfakery.row_history.randint") as randint:
+            randint.side_effect = [1, 2]
+            generate(StringIO(yaml))
+            assert randint.mock_calls == [mock.call(1, 3), mock.call(1, 3)]
+        assert generated_rows.table_values("B", 1, "A_ref") == "A(1)"
+        assert generated_rows.table_values("B", 2, "A_ref") == "A(2)"
+
+    def test_random_reference_to_just_once_nickname(self, generated_rows):
+        yaml = """
+      - object: A
+        count: 3
+        nickname: AA
+        just_once: True
+      - object: B
+        count: 2
+        fields:
+            A_ref:
+              random_reference: AA
+    """
+        with mock.patch("snowfakery.row_history.randint") as randint:
+            randint.side_effect = [2, 1]
+            generate(StringIO(yaml))
+        assert generated_rows.table_values("B", 1, "A_ref") == "A(2)"
+        assert generated_rows.table_values("B", 2, "A_ref") == "A(1)"
+
+    def test_random_reference_to_nickname__subsequent_iterations(self, generated_rows):
+        yaml = """
+      - object: A
+        just_once: True
+      - object: A
+      - object: A
+        nickname: nicky
+        fields:
+          name: nicky
+      - object: B
+        count: 2
+        fields:
+            A_ref:
+              random_reference: nicky
+            nameref: ${{A_ref.name}}
+    """
+        with mock.patch("snowfakery.row_history.randint") as randint:
+            randint.side_effect = lambda x, y: x
+            generate(StringIO(yaml), stopping_criteria=StoppingCriteria("B", 10))
+        assert generated_rows.table_values("B", 10, "A_ref") == "A(11)"
+        assert generated_rows.table_values("B", 10, "nameref") == "nicky"
+
+    def test_random_reference__properties(self, generated_rows):
+        yaml = """
+              - object: GrandParent
+                fields:
+                  name: Pappy
+
+              - object: Parent
+                fields:
+                  parent:
+                    reference:
+                      GrandParent
+
+              - object: Child
+                fields:
+                  pa:
+                    random_reference: Parent
+                  paps: ${{pa.parent.name}}
+                """
+        generate(StringIO(yaml))
+        assert generated_rows.table_values("Child", 1, "paps") == "Pappy"
+
+    def test_random_reference__weird_type_properties(self, generated_rows):
+        # unusual types are not serialized and won't be returned
+        yaml = """
+              - plugin: tests.test_custom_plugins_and_providers.EvalPlugin
+              - object: Parent
+                nickname: parent_with_counter
+                fields:
+                  add:
+                    EvalPlugin.add:
+                      - 2
+                      - 3
+
+              - object: Child
+                fields:
+                  pa:
+                    random_reference: parent_with_counter
+                  weird: ${{pa.add}}
+                """
+        generate(StringIO(yaml))
+        assert str(generated_rows.table_values("Child", 1, "weird")).startswith(
+            "Type_Cannot_Be_Used_With_Random_Reference"
+        )
+
+    def test_deep_random_references__by_tablename(self, generated_rows):
+        yaml = """
+              - object: GrandParent
+                count: 3
+                fields:
+                  name: mammy
+
+              - object: Parent
+                fields:
+                  ma:
+                    random_reference: GrandParent
+
+              - object: Child
+                fields:
+                  gamma:
+                    random_reference: Parent
+                  mamma_name: ${{gamma.ma.name}}
+                """
+        generate(StringIO(yaml))
+        assert generated_rows.table_values("Child", 1, "mamma_name") == "mammy"
+
+    def test_deep_random_references__by_nickname(self, generated_rows):
+        yaml = """
+              - object: GrandParent
+                nickname: mammy
+                count: 3
+                fields:
+                  name: mammy
+
+              - object: Parent
+                nickname: par
+                fields:
+                  ma:
+                    random_reference: mammy
+
+              - object: Child
+                fields:
+                  gamma:
+                    random_reference: par
+                  mamma_name: ${{gamma.ma.name}}
+                """
+        generate(StringIO(yaml))
+        assert generated_rows.table_values("Child", 1, "mamma_name") == "mammy"
+
+    def test_random_reference__with_continuation(
+        self, generate_data_with_continuation, generated_rows
+    ):
+        yaml = """                  #1
+      - object: A                   #2
+        count: 10                   #3
+      - object: B                   #4
+        count: 5                    #5
+        fields:                     #6
+            A_ref:                  #7
+              random_reference:     #8
+                to: A               #9
+    """
+        generate_data_with_continuation(
+            yaml=yaml,
+            target_number=("B", 5),
+            times=3,
+        )
+
+        def parseref(reference):
+            return int(reference.split("(")[1].strip(")"))
+
+        last_five_Bs = generated_rows.table_values("B")[-5:]
+        referenced_As = [parseref(b["A_ref"]) for b in last_five_Bs]
+        assert all(a >= 20 for a in referenced_As), referenced_As
+
+    def test_random_reference_to_objects_with_diverse_types(self, generated_rows):
+        # There is a risk that some weird types will not be serialized
+        # correctly.
+        yaml = """
+      - object: A
+        count: 3
+        nickname: AA
+        fields:
+          date: 2022-01-01
+          date2: ${{today}}
+          date3:
+            date_between:
+              start_date: 2000-01-01
+              end_date: today
+          decimal:
+            fake: latitude
+          datetime1:
+            fake: datetime
+          datetime2: ${{now}}
+      - object: B
+        fields:
+            A_ref:
+              random_reference: AA
+            date1ref: ${{A_ref.date}}
+            date2ref: ${{A_ref.date2}}
+            date3ref: ${{A_ref.date3}}
+            decimalref: ${{A_ref.decimal}}
+            datetime1ref: ${{A_ref.datetime1}}
+            datetime2ref: ${{A_ref.datetime2}}
+    """
+
+        parse_date = dateutil.parser.parse
+
+        generate(StringIO(yaml))
+        assert generated_rows.table_values("B", 1, "date1ref") == "2022-01-01"
+        assert date.fromisoformat(generated_rows.table_values("B", 1, "date2ref"))
+        assert date.fromisoformat(generated_rows.table_values("B", 1, "date3ref"))
+        assert float(generated_rows.table_values("B", 1, "decimalref"))
+        assert parse_date(generated_rows.table_values("B", 1, "datetime1ref"))
+        assert parse_date(generated_rows.table_values("B", 1, "datetime2ref"))
+
+    def test_random_references__nested(self, generated_rows):
+        yaml = """
+      - object: Parent
+        count: 2
+        fields:
+          child1:
+            - object: Child1
+              fields:
+                child2:
+                  - object: Child2
+                    fields:
+                      name: TheName
+      - object: Child3
+        fields:
+            A_ref:
+              random_reference:
+                to: Parent
+            nested_name:
+              ${{A_ref.child1.child2.name}}
+    """
+        generate(StringIO(yaml))
+        assert generated_rows.table_values("Child3", 1, "nested_name") == "TheName"
+        assert generated_rows.table_values("Child3", -1, "nested_name") == "TheName"
+
+    def test_random_references__nested__with_continuation(
+        self, generate_data_with_continuation, generated_rows
+    ):
+        yaml = """
+      - object: Parent
+        count: 2
+        fields:
+          child1:
+            - object: Child1
+              fields:
+                child2:
+                  - object: Child2
+                    fields:
+                      name: TheName
+      - object: Child3
+        fields:
+            A_ref:
+              random_reference:
+                to: Parent
+            nested_name:
+              ${{A_ref.child1.child2.name}}
+    """
+        generate_data_with_continuation(
+            yaml=yaml,
+            target_number=("Parent", 4),
+            times=1,
+        )
+        assert generated_rows.table_values("Child3", 1, "nested_name") == "TheName"
+        assert generated_rows.table_values("Child3", -1, "nested_name") == "TheName"
+
+    def test_random_reference__joins(self, generated_rows):
+        with open("examples/salesforce/campaign-member.yml") as f:
+            generate(f)
+
+        combinations = set()
+        for row in generated_rows.table_values("CampaignMember"):
+            key = row["ContactId"], row["CampaignId"]
+            assert key not in combinations
+            combinations.add(key)

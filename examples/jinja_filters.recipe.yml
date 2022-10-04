@@ -1,0 +1,5 @@
+- object: Campaign
+  fields:
+    Name: ${{fake.bs | title}} Campaign
+    UpperCaseName: ${{fake.bs | upper}}
+    LowerCaseName: ${{fake.bs | lower}}

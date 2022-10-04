@@ -119,3 +119,12 @@ class TestMacros:
             generate(StringIO(yaml))
         assert "foo" in str(e.value)
         assert "bar" in str(e.value)
+
+    def test_missing_macros(self, generated_rows):
+        yaml = """
+        - object: Bar
+          include: foo
+        """
+        with pytest.raises(exc.DataGenError, match="Cannot find macro named") as e:
+            generate(StringIO(yaml))
+        assert "foo" in str(e.value)

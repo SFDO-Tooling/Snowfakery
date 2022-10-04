@@ -10,7 +10,7 @@
 - object: Duke
   nickname: Muad'Dib
   fields:
-    nickname: Muad'Dib
+    othername: Muad'Dib
     father:
       reference: Leto I
     mother:

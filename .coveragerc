@@ -8,3 +8,6 @@ exclude_lines =
     pragma: no cover
     @abstract
     raise NotImplementedError
+    raise AssertionError
+    def __repr__
+    def __str__

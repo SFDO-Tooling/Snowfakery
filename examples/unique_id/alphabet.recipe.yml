@@ -1,0 +1,20 @@
+- plugin: snowfakery.standard_plugins.UniqueId
+- var: LargeAlphabetGenerator
+  value:
+    UniqueId.AlphaCodeGenerator:
+      alphabet: 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
+- var: DNAGenerator
+  value:
+    UniqueId.AlphaCodeGenerator:
+      alphabet: ACGT
+- var: NumberGenerator
+  value:
+    UniqueId.AlphaCodeGenerator:
+      alphabet: 0123456789
+
+- object: DemonstrateAlphabets
+  count: 5
+  fields:
+    big_alpha_example: ${{LargeAlphabetGenerator.unique_id}}
+    dna_example: ${{DNAGenerator.unique_id}}
+    num_example: ${{NumberGenerator.unique_id}}

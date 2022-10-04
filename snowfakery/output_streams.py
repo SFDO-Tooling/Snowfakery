@@ -5,9 +5,11 @@ import csv
 import subprocess
 import datetime
 import sys
+from decimal import Decimal
 from pathlib import Path
 from collections import namedtuple, defaultdict
 from typing import Dict, Union, Optional, Mapping, Callable, Sequence
+import typing as T
 from warnings import warn
 
 from sqlalchemy import (
@@ -35,6 +37,11 @@ def noop(x):
     return x
 
 
+def format_datetime(dt: datetime.datetime):
+    """Format into the Salesforce-preferred syntax."""
+    return dt.isoformat(timespec="seconds")
+
+
 class OutputStream(ABC):
     """Common base class for all output streams"""
 
@@ -49,6 +56,7 @@ class OutputStream(ABC):
         datetime.datetime: noop,
         type(None): noop,
         bool: int,
+        Decimal: str,
     }
     uses_folder = False
     uses_path = False
@@ -70,10 +78,10 @@ class OutputStream(ABC):
         return target_object_row.id
 
     def flush(self):
-        pass
+        pass  # pragma: no cover   -- subclasses override
 
     def commit(self):
-        pass
+        pass  # pragma: no cover   -- subclasses override
 
     def cleanup(self, field_name, field_value, sourcetable, row):
         if isinstance(field_value, (ObjectRow, ObjectReference)):
@@ -86,23 +94,18 @@ class OutputStream(ABC):
                     return field_value.simplify()
 
             if not encoder:
-                raise TypeError(
+                raise TypeError(  # pragma: no cover
                     f"No encoder found for {type(field_value)} in {self.__class__.__name__} "
                     f"for {field_name}, {field_value} in {sourcetable}"
                 )
             return encoder(field_value)
 
-    def should_output(self, value):
-        return not value.startswith("__")
-
     def write_row(self, tablename: str, row_with_references: Dict) -> None:
-        should_output = self.should_output
         row_cleaned_up_and_flattened = {
             field_name: self.cleanup(
                 field_name, field_value, tablename, row_with_references
             )
             for field_name, field_value in row_with_references.items()
-            if should_output(field_name)
         }
         self.write_single_row(tablename, row_cleaned_up_and_flattened)
         if self.count % self.flush_limit == 0:
@@ -118,14 +121,14 @@ class OutputStream(ABC):
         """Write a single row to the stream"""
         pass
 
-    def close(self) -> Optional[Sequence[str]]:
+    def close(self, **kwargs) -> Optional[Sequence[str]]:
         """Close any resources the stream opened.
 
         Do not close file handles which were passed in!
 
         Return a list of messages to print out.
         """
-        return super().close()
+        raise NotImplementedError()
 
     def __enter__(self, *args):
         return self
@@ -143,7 +146,7 @@ class SmartStream:
 
     mode = "wt"
 
-    def __init__(self, stream_or_path=None):
+    def __init__(self, stream_or_path=None, **kwargs):
         if hasattr(stream_or_path, "write"):
             self.owns_stream = False
             self.stream = stream_or_path
@@ -153,13 +156,13 @@ class SmartStream:
         elif stream_or_path is None:
             self.owns_stream = False
             self.stream = sys.stdout
-        else:  # noqa
-            assert False, f"stream_or_path is {stream_or_path}"
+        else:
+            raise AssertionError(f"stream_or_path is {stream_or_path}")
 
     def write(self, data):
         self.stream.write(data)
 
-    def close(self):
+    def close(self, **kwargs):
         if self.owns_stream:
             self.stream.close()
             return [f"Generated {self.stream.name}"]
@@ -173,7 +176,7 @@ class FileOutputStream(OutputStream):
         self.write = self.smart_stream.write
         self.stream = self.smart_stream.stream
 
-    def close(self):
+    def close(self, **kwargs):
         return self.smart_stream.close()
 
 
@@ -211,7 +214,7 @@ class CSVOutputStream(OutputStream):
             Path.mkdir(self.target_path, exist_ok=True)
 
     def open_writer(self, table_name, table):
-        file = open(self.target_path / f"{table_name}.csv", "w")
+        file = open(self.target_path / f"{table_name}.csv", "w", newline="")
         writer = csv.DictWriter(file, list(table.fields.keys()) + ["id"])
         writer.writeheader()
         return CSVContext(dictwriter=writer, file=file)
@@ -225,7 +228,7 @@ class CSVOutputStream(OutputStream):
     def write_single_row(self, tablename: str, row: Dict) -> None:
         self.writers[tablename].dictwriter.writerow(row)
 
-    def close(self) -> Optional[Sequence[str]]:
+    def close(self, **kwargs) -> Optional[Sequence[str]]:
         messages = []
         for context in self.writers.values():
             context.file.close()
@@ -250,6 +253,7 @@ class JSONOutputStream(FileOutputStream):
         **OutputStream.encoders,
         datetime.date: str,
         datetime.datetime: str,
+        bool: bool,
     }
     is_text = True
 
@@ -267,7 +271,7 @@ class JSONOutputStream(FileOutputStream):
         values = {"_table": tablename, **row}
         self.write(json.dumps(values))
 
-    def close(self) -> Optional[Sequence[str]]:
+    def close(self, **kwargs) -> Optional[Sequence[str]]:
         if not self.first_row:
             self.write("]\n")
         return super().close()
@@ -276,10 +280,15 @@ class JSONOutputStream(FileOutputStream):
 class SqlDbOutputStream(OutputStream):
     """Output stream for talking to SQL Databases"""
 
+    encoders: Mapping[type, Callable] = {
+        **OutputStream.encoders,
+        datetime.datetime: format_datetime,  # format into Salesforce-friendly syntax
+    }
+
     should_close_session = False
 
     def __init__(self, engine: Engine, mappings: None = None, **kwargs):
-        if mappings:
+        if mappings:  # pragma: no cover  -- should not be triggered.
             warn("Please do not pass mappings argument to __init__", DeprecationWarning)
         self.buffered_rows = defaultdict(list)
         self.table_info = {}
@@ -290,7 +299,7 @@ class SqlDbOutputStream(OutputStream):
 
     @classmethod
     def from_url(cls, db_url: str, mappings: None = None):
-        if mappings:
+        if mappings:  # pragma: no cover  -- should not be triggered.
             warn("Please do not pass mappings argument to from_url", DeprecationWarning)
         engine = create_engine(db_url)
         self = cls(engine)
@@ -323,10 +332,11 @@ class SqlDbOutputStream(OutputStream):
         self.session.flush()
 
     def commit(self):
-        self.flush()
+        if any(self.buffered_rows):
+            self.flush()
         self.session.commit()
 
-    def close(self) -> Optional[Sequence[str]]:
+    def close(self, **kwargs) -> Optional[Sequence[str]]:
         self.commit()
         self.session.close()
 
@@ -340,14 +350,19 @@ class SqlDbOutputStream(OutputStream):
 
         for tablename, model in self.metadata.tables.items():
             if tablename in inferred_tables:
-                self.table_info[tablename] = TableTuple(
+                table_info = TableTuple(
                     insert_statement=model.insert(bind=self.engine, inline=True),
                     fallback_dict={
                         key: None for key in inferred_tables[tablename].fields.keys()
                     },
                 )
                 # id is special
-                self.table_info[tablename].fallback_dict.setdefault("id", None)
+                table_info.fallback_dict.setdefault("id", None)
+
+                # See create_tables_from_inferred_fields to see what _sf_update_key are for
+                if inferred_tables[tablename].has_update_keys:
+                    table_info.fallback_dict.setdefault("_sf_update_key", None)
+                self.table_info[tablename] = table_info
 
 
 # backwards-compatible name for CCI
@@ -402,7 +417,9 @@ class SqlTextOutputStream(FileOutputStream):
         self.tempdir.cleanup()
 
 
-def create_tables_from_inferred_fields(tables, engine, metadata):
+def create_tables_from_inferred_fields(
+    tables: T.Dict[str, TableInfo], engine, metadata
+):
     """Create tables based on dictionary of tables->field-list."""
     with engine.connect() as conn:
         inspector = inspect(engine)
@@ -420,6 +437,12 @@ def create_tables_from_inferred_fields(tables, engine, metadata):
                 id_column = Column(
                     "id", Integer(), primary_key=True, autoincrement=True
                 )
+
+            # add a column keeping track of what update_key was specified by
+            # the template. This allows multiple templates to have different
+            # update_keys.
+            if table.has_update_keys:
+                columns.append(Column("_sf_update_key", Unicode(255)))
 
             t = Table(table_name, metadata, id_column, *columns)
 
@@ -493,7 +516,7 @@ class GraphvizOutputStream(FileOutputStream):
         )
         self.nodes[tablename, row["id"]] = self.G.newItem(node_name)
 
-    def close(self) -> Optional[Sequence[str]]:
+    def close(self, **kwargs) -> Optional[Sequence[str]]:
         for fieldname, source, target in self.links:
             mylink = self.G.newLink(self.nodes[source], self.nodes[target])
             self.G.propertyAppend(mylink, "label", fieldname)
@@ -539,7 +562,7 @@ class ImageOutputStream(OutputStream):
     def flatten(self, *args, **kwargs):
         return self.gv_os.flatten(*args, **kwargs)
 
-    def close(self) -> Optional[Sequence[str]]:
+    def close(self, **kwargs) -> Optional[Sequence[str]]:
         self.gv_os.close()
         assert self.dotfile.exists()
         rc = self._render(self.dotfile, self.path)
@@ -577,9 +600,9 @@ class MultiplexOutputStream(OutputStream):
         for stream in self.outputstreams:
             stream.write_row(tablename, row_with_references)
 
-    def close(self) -> Optional[Sequence[str]]:
+    def close(self, **kwargs) -> Optional[Sequence[str]]:
         for stream in self.outputstreams:
             stream.close()
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
-        return super().write_single_row(tablename, row)
+        raise NotImplementedError()  # should never be called

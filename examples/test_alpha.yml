@@ -1,0 +1,3 @@
+- object: Example
+  fields:
+    unique_code: ${{unique_alpha_code}}

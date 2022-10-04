@@ -19,9 +19,6 @@ from snowfakery.api import SnowfakeryApplication
 
 from snowfakery.output_streams import DebugOutputStream
 
-from snowfakery.utils.template_utils import FakerTemplateLibrary
-
-ftl = FakerTemplateLibrary([])
 
 line = {"filename": "abc.yml", "line_num": 42}
 
@@ -31,6 +28,7 @@ class FakeParseResult(ParseResult):
         self.tables = ()
         self.templates = ()
         self.statements = ()
+        self.random_references = []
 
 
 def standard_runtime():

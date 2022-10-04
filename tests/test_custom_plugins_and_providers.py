@@ -1,10 +1,12 @@
 from io import StringIO
 import math
 import operator
+import time
 from base64 import b64decode
 
 from snowfakery import SnowfakeryPlugin, lazy
-from snowfakery.plugins import PluginResult
+from snowfakery.plugins import PluginResult, PluginOption, memorable
+
 from snowfakery.data_gen_exceptions import (
     DataGenError,
     DataGenTypeError,
@@ -25,6 +27,15 @@ def row_values(write_row_mock, index, value):
 
 
 class SimpleTestPlugin(SnowfakeryPlugin):
+    allowed_options = [
+        PluginOption(
+            "tests.test_custom_plugins_and_providers.SimpleTestPlugin.option_str", str
+        ),
+        PluginOption(
+            "tests.test_custom_plugins_and_providers.SimpleTestPlugin.option_int", int
+        ),
+    ]
+
     class Functions:
         def double(self, value):
             return value * 2
@@ -42,11 +53,20 @@ class DoubleVisionPlugin(SnowfakeryPlugin):
 
 class WrongTypePlugin(SnowfakeryPlugin):
     class Functions:
+        foo = 5
+
         def return_bad_type(self, value):
             "Evaluates its argument twice into a string"
             return int  # function
 
-        junk = None
+
+class TimeStampPlugin(SnowfakeryPlugin):
+    class Functions:
+        @memorable
+        def constant_time(self, value=None, name=None):
+            "Return the current time and then remember it."
+            time.sleep(0.01)
+            return time.time()
 
 
 class MyEvaluator(PluginResult):
@@ -79,6 +99,14 @@ class EvalPlugin(SnowfakeryPlugin):
             return MyEvaluator(
                 "sub", self.context.evaluate(val1), self.context.evaluate(val2)
             )
+
+
+class DoesNotClosePlugin(SnowfakeryPlugin):
+    close = NotImplemented
+
+    class Functions:
+        def foo(self, a=None):
+            return None
 
 
 class TestCustomFakerProvider:
@@ -200,6 +228,26 @@ class TestCustomPlugin:
         assert rawdata.startswith(b"%PDF-1.3")
         assert b"Helvetica" in rawdata
 
+    def test_option__simple(self, generated_rows):
+        yaml = """-  plugin: tests.test_custom_plugins_and_providers.SimpleTestPlugin"""
+
+        generate_data(StringIO(yaml), plugin_options={"option_str": "AAA"})
+
+    def test_option__unknown(self, generated_rows):
+        yaml = """-  plugin: tests.test_custom_plugins_and_providers.SimpleTestPlugin"""
+
+        generate_data(StringIO(yaml), plugin_options={"option_str": "zzz"})
+
+    def test_option__bad_type(self, generated_rows):
+        yaml = """-  plugin: tests.test_custom_plugins_and_providers.SimpleTestPlugin"""
+        with pytest.raises(DataGenTypeError):
+            generate_data(StringIO(yaml), plugin_options={"option_int": "abcd"})
+
+    def test_option_type_coercion_needed(self, generated_rows):
+        yaml = """-  plugin: tests.test_custom_plugins_and_providers.SimpleTestPlugin"""
+
+        generate_data(StringIO(yaml), plugin_options={"option_int": "5"})
+
 
 class PluginThatNeedsState(SnowfakeryPlugin):
     class Functions:
@@ -307,3 +355,76 @@ class TestContextVars:
         with pytest.raises(DataGenError) as e:
             generate_data(StringIO(yaml))
         assert 6 > e.value.line_num >= 3
+
+    def test_not_callable_attributes(self):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.WrongTypePlugin  # 2
+        - object: B                             #3
+          fields:                               #4
+            foo:                                #5
+                WrongTypePlugin.foo: 5  #6
+        """
+        with pytest.raises(DataGenError, match="Cannot call") as e:
+            generate_data(StringIO(yaml))
+        assert 6 > e.value.line_num >= 3
+
+    def test_memorable_plugin(self, generated_rows):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.TimeStampPlugin
+        - object: B
+          count: 5
+          fields:
+            foo:
+                TimeStampPlugin.constant_time:
+        """
+        generate_data(StringIO(yaml))
+        assert generated_rows.table_values(
+            "B", 1, "foo"
+        ) == generated_rows.table_values("B", 5, "foo")
+
+    def test_memorable_plugin__scopes(self, generated_rows):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.TimeStampPlugin
+        - object: A
+          fields:
+            foo:
+                TimeStampPlugin.constant_time:
+                    value: BLAH
+                    name: A
+        - object: B
+          fields:
+            foo:
+                TimeStampPlugin.constant_time:
+        - object: C
+          fields:
+            foo:
+                TimeStampPlugin.constant_time:
+        - object: D
+          count: 3
+          fields:
+            foo:
+                TimeStampPlugin.constant_time:
+                    name: A
+
+        """
+        generate_data(StringIO(yaml))
+        assert generated_rows.table_values(
+            "A", 1, "foo"
+        ) == generated_rows.table_values("D", 3, "foo")
+        assert generated_rows.table_values(
+            "A", 1, "foo"
+        ) != generated_rows.table_values("B", 1, "foo")
+        assert generated_rows.table_values(
+            "B", 1, "foo"
+        ) != generated_rows.table_values("C", 1, "foo")
+
+    def test_plugin_does_not_close(self):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.DoesNotClosePlugin
+        - object: B
+          fields:
+            foo:
+                DoesNotClosePlugin.foo:
+        """
+        with pytest.warns(UserWarning, match="close"):
+            generate_data(StringIO(yaml))

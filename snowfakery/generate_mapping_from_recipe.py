@@ -5,9 +5,18 @@ from collections import defaultdict
 from snowfakery.data_generator import ExecutionSummary
 from snowfakery.salesforce import find_record_type_column
 from snowfakery.data_generator_runtime import Dependency
+from snowfakery.utils.collections import OrderedSet
+from snowfakery.parse_recipe_yaml import TableInfo
 
 from .cci_mapping_files.declaration_parser import SObjectRuleDeclaration
 from .cci_mapping_files.post_processes import add_after_statements
+
+
+class LoadStep(T.NamedTuple):
+    action: str
+    table_name: str
+    update_key: T.Optional[str]
+    fields: T.Sequence[str]
 
 
 def mapping_from_recipe_templates(
@@ -26,10 +35,35 @@ def mapping_from_recipe_templates(
     table_order = sort_dependencies(
         inferred_dependencies, declared_dependencies, tables
     )
-    mappings = mappings_from_sorted_tables(
-        tables, table_order, reference_fields, declarations
-    )
+    load_steps = load_steps_from_tableinfos(tables, table_order)
+    mappings = mappings_from_load_steps(load_steps, reference_fields, declarations)
     return mappings
+
+
+def load_steps_from_tableinfos(
+    tables: T.Dict[str, TableInfo], table_order: T.List[str]
+) -> T.List[LoadStep]:
+    load_steps = OrderedSet()
+    for table_name, tableinfo in tables.items():
+        for template in tableinfo._templates:
+
+            if template.update_key:
+                action = "upsert"
+            else:
+                action = "insert"
+
+            load_steps.add(
+                LoadStep(
+                    action,
+                    table_name,
+                    template.update_key,
+                    tuple(tableinfo.fields.keys()),
+                )
+            )
+
+    load_steps_as_list = list(load_steps)
+    load_steps_as_list.sort(key=lambda step: table_order.index(step.table_name))
+    return load_steps_as_list
 
 
 def remove_person_contact_id(dependencies, tables):
@@ -58,8 +92,8 @@ def build_dependencies(
         1. a dictionary allowing easy lookup of dependencies by parent table
         2. a dictionary allowing lookups by (tablename, fieldname) pairs
     """
-    inferred_dependencies = defaultdict(set)
-    declared_dependencies = defaultdict(set)
+    inferred_dependencies = defaultdict(OrderedSet)
+    declared_dependencies = defaultdict(OrderedSet)
     reference_fields = {}
     declarations = declarations or ()
 
@@ -83,9 +117,12 @@ def _table_is_free(table_name, dependencies, sorted_tables):
     Look at the unit test test_table_is_free_simple to see some
     usage examples.
     """
-    tables_this_table_depends_upon = dependencies.get(table_name, {}).copy()
+    tables_this_table_depends_upon = dependencies.get(table_name, OrderedSet()).copy()
     for dependency in sorted(tables_this_table_depends_upon):
-        if dependency.table_name_to in sorted_tables:
+        if (
+            dependency.table_name_to in sorted_tables
+            or dependency.table_name_to == table_name
+        ):
             tables_this_table_depends_upon.remove(dependency)
 
     return len(tables_this_table_depends_upon) == 0
@@ -98,11 +135,11 @@ def sort_dependencies(inferred_dependencies, declared_dependencies, tables):
 
     while tables:
         remaining = len(tables)
-        leaf_tables = {
+        leaf_tables = [
             table
             for table in tables
             if _table_is_free(table, dependencies, sorted_tables)
-        }
+        ]
         sorted_tables.extend(leaf_tables)
         tables = [table for table in tables if table not in sorted_tables]
         if len(tables) == remaining:
@@ -119,21 +156,20 @@ def sort_dependencies(inferred_dependencies, declared_dependencies, tables):
     return sorted_tables
 
 
-def mappings_from_sorted_tables(
-    tables: dict,
-    table_order: list,
+def mappings_from_load_steps(
+    load_steps: T.List[LoadStep],
     reference_fields: dict,
     declarations: T.Mapping[str, SObjectRuleDeclaration],
 ):
     """Generate mapping.yml data structures."""
     mappings = {}
-    for table_name in table_order:
-        table = tables[table_name]
-        record_type_col = find_record_type_column(table_name, table.fields.keys())
+    for load_step in load_steps:
+        table_name = load_step.table_name
+        record_type_col = find_record_type_column(table_name, load_step.fields)
 
         fields = {
             fieldname: fieldname
-            for fieldname, fielddef in table.fields.items()
+            for fieldname in load_step.fields
             if (table_name, fieldname) not in reference_fields.keys()
             and fieldname != record_type_col
         }
@@ -145,14 +181,14 @@ def mappings_from_sorted_tables(
                 "table": reference_fields[(table_name, fieldname)],
                 "key_field": fieldname,
             }
-            for fieldname, fielddef in table.fields.items()
+            for fieldname in load_step.fields
             if (table_name, fieldname) in reference_fields.keys()
         }
         if table_name == "PersonContact":
             sf_object = "Contact"
         else:
-            sf_object = table.name
-        mapping = {"sf_object": sf_object, "table": table.name, "fields": fields}
+            sf_object = table_name
+        mapping = {"sf_object": sf_object, "table": table_name, "fields": fields}
         if lookups:
             mapping["lookups"] = lookups
 
@@ -160,7 +196,22 @@ def mappings_from_sorted_tables(
         if sobject_declarations:
             mapping.update(sobject_declarations.as_mapping())
 
-        mappings[f"Insert {table_name}"] = mapping
+        if load_step.update_key:
+            mapping["action"] = "upsert"
+            mapping["update_key"] = load_step.update_key
+            mapping["filters"] = [f"_sf_update_key = '{load_step.update_key}'"]
+            step_name = f"Upsert {table_name} on {load_step.update_key}"
+        else:
+            step_name = f"Insert {table_name}"
+            any_other_loadstep_for_this_table_has_update_key = any(
+                ls
+                for ls in load_steps
+                if (ls.table_name == table_name and ls.update_key)
+            )
+            if any_other_loadstep_for_this_table_has_update_key:
+                mapping["filters"] = ["_sf_update_key = NULL"]
+
+        mappings[step_name] = mapping
 
     add_after_statements(mappings)
     return mappings

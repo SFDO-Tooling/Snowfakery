@@ -6,6 +6,6 @@ class CountUpPlugin(SnowfakeryPlugin):
         all_counters = {}
 
         def counter(self, *args):
-            unique_id = self.context.unique_context_identifier()
+            unique_id = self.context.unique_context_identifier
             self.all_counters[unique_id] = self.all_counters.get(unique_id, 0) + 1
             return self.all_counters[unique_id]

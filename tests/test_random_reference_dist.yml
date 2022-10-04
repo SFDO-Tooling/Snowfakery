@@ -1,0 +1,43 @@
+- var: num_records
+  value: 10_000
+
+- object: __looper
+  count: ${{num_records}}
+  friends:
+    - object: Account
+      nickname: CountChocula
+    - object: Account
+      nickname: CookieMonster
+    - object: Account
+      fields:
+        __junk:
+          if:
+            - choice:
+                when: ${{child_index % 1000 == 0}}
+                pick:
+                  - object: Account
+                    nickname: Sparse
+
+            - choice:
+                pick:
+                  fake: None
+
+- object: __looper
+  count: ${{num_records}}
+  friends:
+    - object: Contact
+      fields:
+        AccountId:
+          random_reference: CountChocula
+    - object: Contact
+      fields:
+        AccountId:
+          random_reference: Account
+    - object: Contact
+      fields:
+        AccountId:
+          random_reference: CookieMonster
+    - object: Contact
+      fields:
+        AccountId:
+          random_reference: Sparse

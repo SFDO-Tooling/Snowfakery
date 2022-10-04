@@ -1,19 +1,32 @@
+"""Runtime objects and algorithms used during the generation of rows."""
+import os
 from collections import defaultdict, ChainMap
-from datetime import date
+from datetime import date, datetime, timezone
 from contextlib import contextmanager
 
 from typing import Optional, Dict, Sequence, Mapping, NamedTuple, Set
+import typing as T
+from warnings import warn
 
 import jinja2
+from jinja2 import nativetypes
 import yaml
 
 from .utils.template_utils import FakerTemplateLibrary
 from .utils.yaml_utils import SnowfakeryDumper, hydrate
-
+from .row_history import RowHistory
 from .template_funcs import StandardFuncs
 from .data_gen_exceptions import DataGenSyntaxError, DataGenNameError
 import snowfakery  # noQA
-from snowfakery.object_rows import NicknameSlot, SlotState, ObjectRow
+from snowfakery.object_rows import (
+    NicknameSlot,
+    SlotState,
+    ObjectRow,
+    ObjectReference,
+    RowHistoryCV,
+)
+from snowfakery.plugins import PluginContext, SnowfakeryPlugin, ScalarTypes
+from snowfakery.utils.collections import OrderedSet
 
 OutputStream = "snowfakery.output_streams.OutputStream"
 VariableDefinition = "snowfakery.data_generator_runtime_object_model.VariableDefinition"
@@ -21,7 +34,9 @@ ObjectTemplate = "snowfakery.data_generator_runtime_object_model.ObjectTemplate"
 Statement = "snowfakery.data_generator_runtime_object_model.Statement"
 ParseResult = "snowfakery.parse_recipe_yaml.ParseResult"
 
-# Runtime objects and algorithms used during the generation of rows.
+
+# save every single object to history. Useful for testing saving of datatypes
+SAVE_EVERYTHING = os.environ.get("SF_SAVE_EVERYTHING")
 
 
 class StoppingCriteria(NamedTuple):
@@ -78,9 +93,6 @@ class Transients:
 
         self.orig_used_ids = id_manager.last_used_ids.copy()
 
-    def first_new_id(self, tablename):
-        return self.orig_used_ids.get(tablename, 0) + 1
-
 
 class Globals:
     """Globally named objects and other aspects of global scope
@@ -110,7 +122,7 @@ class Globals:
         self.persistent_objects_by_table = {}
 
         self.id_manager = IdManager()
-        self.intertable_dependencies = set()
+        self.intertable_dependencies = OrderedSet()
         self.today = today or date.today()
         self.nicknames_and_tables = name_slots or {}
 
@@ -127,8 +139,7 @@ class Globals:
                 self.transients.nicknamed_objects[nickname] = obj
         if persistent_object:
             self.persistent_objects_by_table[obj._tablename] = obj
-        else:
-            self.transients.last_seen_obj_by_table[obj._tablename] = obj
+        self.transients.last_seen_obj_by_table[obj._tablename] = obj
 
     @property
     def object_names(self):
@@ -171,9 +182,6 @@ class Globals:
                 f"Reference{plural} not fulfilled: {','.join(not_filled)}"
             )
 
-    def first_new_id(self, tablename):
-        return self.transients.first_new_id(tablename)
-
     def __getstate__(self):
         def serialize_dict_of_object_rows(dct):
             return {k: v.__getstate__() for k, v in dct.items()}
@@ -209,7 +217,7 @@ class Globals:
         self.nicknames_and_tables = state["nicknames_and_tables"]
         self.id_manager = hydrate(IdManager, state["id_manager"])
 
-        self.intertable_dependencies = set(
+        self.intertable_dependencies = OrderedSet(
             Dependency(*dep) for dep in getattr(state, "intertable_dependencies", [])
         )
 
@@ -224,7 +232,21 @@ class Globals:
 
 
 class JinjaTemplateEvaluatorFactory:
-    def __init__(self):
+    def __init__(self, native_types: bool):
+        if native_types:
+            self.compilers = [
+                nativetypes.NativeEnvironment(
+                    block_start_string="${%",
+                    block_end_string="%}",
+                    variable_start_string="${{",
+                    variable_end_string="}}",
+                )
+            ]
+
+            return
+
+        # TODO: Delete this old code_path when the
+        #       transition to native_types is complete.
         self.compilers = [
             jinja2.Environment(
                 block_start_string="${%",
@@ -265,6 +287,7 @@ class Interpreter:
     """Snowfakery runtime interpreter state."""
 
     current_context: "RuntimeContext" = None
+    iteration_count = 0
 
     def __init__(
         self,
@@ -297,6 +320,9 @@ class Interpreter:
                 f"No template creating {stop_table_name}",
             )
 
+        # make a plugin context for our Faker stuff to act like a plugin
+        self.faker_plugin_context = PluginContext(SnowfakeryPlugin(self))
+
         self.faker_template_libraries = {}
 
         # inject context into the standard functions
@@ -309,16 +335,67 @@ class Interpreter:
 
         self.statements = parse_result.statements
         self.parent_application = parent_application
+        self.instance_states = {}
+        self.filter_row_values = self.filter_row_values_normal
+        snowfakery_version = self.options.get(
+            "snowfakery.standard_plugins.SnowfakeryVersion.snowfakery_version", 2
+        )
+        assert snowfakery_version in (2, 3)
+        self.native_types = snowfakery_version == 3
+        self.template_evaluator_factory = JinjaTemplateEvaluatorFactory(
+            self.native_types
+        )
+        self.tables_to_keep_history_for = find_tables_to_keep_history_for(
+            parse_result, globals.nicknames_and_tables
+        )
+        self.row_history = RowHistory(
+            globals.transients.orig_used_ids,
+            self.tables_to_keep_history_for,
+            self.globals.nicknames_and_tables,
+        )
+        self.resave_objects_from_continuation(globals, self.tables_to_keep_history_for)
+
+    def resave_objects_from_continuation(
+        self, globals: Globals, tables_to_keep_history_for: T.Iterable[str]
+    ):
+        """Re-save just_once objects to the local history cache after resuming a continuation"""
+
+        # deal with objs known by their nicknames
+        relevant_objs = [
+            (obj._tablename, nickname, obj)
+            for nickname, obj in globals.persistent_nicknames.items()
+        ]
+        already_saved = set(obj._id for (_, _, obj) in relevant_objs)
+        # and those known by their tablename, if not already in the list
+        relevant_objs.extend(
+            (tablename, None, obj)
+            for tablename, obj in globals.persistent_objects_by_table.items()
+            if obj._id not in already_saved
+        )
+        # filter out those in tables that are not history-backed
+        relevant_objs = (
+            (table, nick, obj)
+            for (table, nick, obj) in relevant_objs
+            if table in tables_to_keep_history_for
+        )
+        for tablename, nickname, obj in relevant_objs:
+            self.row_history.save_row(tablename, nickname, obj._values)
 
     def execute(self):
+        RowHistoryCV.set(self.row_history)
         self.current_context = RuntimeContext(interpreter=self)
         self.loop_over_templates_until_finished(self.continuing)
         return self.globals
 
     def faker_template_library(self, locale):
+        """Create a faker template library for locale, or retrieve it from a cache"""
         rc = self.faker_template_libraries.get(locale)
         if not rc:
-            rc = FakerTemplateLibrary(self.faker_providers, locale)
+            rc = FakerTemplateLibrary(
+                self.faker_providers,
+                locale,
+                self.faker_plugin_context,
+            )
             self.faker_template_libraries[locale] = rc
         return rc
 
@@ -328,9 +405,10 @@ class Interpreter:
         while not finished:
             self.loop_over_templates_once(self.statements, continuing)
             finished = self.current_context.check_if_finished()
-
+            self.iteration_count += 1
             continuing = True
             self.globals.reset_slots()
+            self.row_history.reset_locals()
 
     def loop_over_templates_once(self, statement_list, continuing: bool):
         for statement in statement_list:
@@ -345,7 +423,61 @@ class Interpreter:
 
     def __exit__(self, *args):
         for plugin in self.plugin_instances.values():
-            plugin.close()
+            try:
+                plugin.close()
+            except Exception as e:
+                warn(f"Could not close {plugin} because {e}")
+
+    def get_contextual_state(
+        self,
+        *,
+        make_state_func: T.Callable,
+        name: T.Union[str, tuple, None] = None,
+        parent: T.Optional[str] = None,
+        reset_every_iteration: bool = False,
+    ):
+        """Get state that is specific to a particular template&plugin
+
+        The first time the template is invoked in a particular context,
+        make_state_func is invoked to generate the state container.
+
+        The next time it is invoked, the state will be returned for reuse
+        and potential modification.
+
+        `name` allows you to reuse the same state among multiple templates.
+        The function should generally expose this to the end-user
+        through an argument called `name`.
+
+        `parent` allows the user to use some specific Object parent as
+        a parent object. The state will be only reused for the lifetime
+        of the parent and then discarded. This should also be
+        user-controlled.
+
+        `reset_every_iteration` is an experimental feature that should
+        not generally be used.
+        """
+        assert not reset_every_iteration
+        current_context = self.current_context
+        uniq_name = name or current_context.unique_context_identifier
+        if parent:
+            parent_obj = current_context.field_vars().get(parent)
+        # elif reset_every_iteration:           # in case we bring back this feature
+        #     parent_obj = self.iteration_count
+        else:
+            parent_obj = None
+        current_parent, value = self.instance_states.get(uniq_name, (None, None))
+        if current_parent != parent_obj or value is None:
+            value = make_state_func()
+            self.instance_states[uniq_name] = [parent_obj, value]
+        return value
+
+    def filter_row_values_normal(self, row: dict):
+        return {k: v for k, v in row.items() if not k.startswith("__")}
+
+    # for future use:
+
+    # def filter_row_values_and_remove_ids(self, row: dict):
+    #     return {k: v for k, v in row.items() if not k.startswith("__") or k == "id"}
 
 
 class RuntimeContext:
@@ -357,8 +489,10 @@ class RuntimeContext:
     but internally its mostly just proxying to other classes."""
 
     obj: Optional[ObjectRow] = None
-    template_evaluator_recipe = JinjaTemplateEvaluatorFactory()
     current_template = None
+    local_vars = None
+    unique_context_identifier = None
+    recalculate_every_time = False  # by default, data is recalculated constantly
 
     def __init__(
         self,
@@ -374,10 +508,17 @@ class RuntimeContext:
         self.parent = parent_context
         if self.parent:
             self._plugin_context_vars = self.parent._plugin_context_vars.new_child()
+            # are we in a re-calculate everything context?
+            self.recalculate_every_time = parent_context.recalculate_every_time
         else:
             self._plugin_context_vars = ChainMap()
         locale = self.variable_definitions().get("snowfakery_locale")
         self.faker_template_library = self.interpreter.faker_template_library(locale)
+        self.local_vars = {}
+
+    @property
+    def filter_row_values(self):
+        return self.interpreter.filter_row_values
 
     # TODO: move this into the interpreter object
     def check_if_finished(self):
@@ -409,16 +550,25 @@ class RuntimeContext:
         )
         return rc
 
+    def remember_row(self, tablename: str, nickname: T.Optional[str], row: dict):
+        for fieldname, fieldvalue in row.items():
+            if isinstance(fieldvalue, (ObjectRow, ObjectReference)):
+                self.interpreter.globals.register_intertable_reference(
+                    tablename, fieldvalue._tablename, fieldname
+                )
+        history_tables = self.interpreter.tables_to_keep_history_for
+        should_save: bool = (
+            (tablename in history_tables)
+            or (nickname in history_tables)
+            or SAVE_EVERYTHING
+        )
+        if should_save:
+            self.interpreter.row_history.save_row(tablename, nickname, row)
+
     def register_object(self, obj, name: Optional[str], persistent: bool):
         "Keep track of this object in case other objects refer to it."
         self.obj = obj
         self.interpreter.globals.register_object(obj, name, persistent)
-
-    def register_intertable_reference(self, table_name_from, table_name_to, fieldname):
-        "Keep track of a dependency between two tables. e.g. for mapping file generation"
-        self.interpreter.globals.register_intertable_reference(
-            table_name_from, table_name_to, fieldname
-        )
 
     @contextmanager
     def child_context(self, template):
@@ -441,7 +591,7 @@ class RuntimeContext:
         return self.interpreter.output_stream
 
     def get_evaluator(self, definition: str):
-        return self.template_evaluator_recipe.get_evaluator(definition)
+        return self.interpreter.template_evaluator_factory.get_evaluator(definition)
 
     @property
     def evaluation_namespace(self):
@@ -454,6 +604,9 @@ class RuntimeContext:
         return self.evaluation_namespace.field_vars()
 
     def context_vars(self, plugin_namespace):
+        """Variables which are inherited by child scopes"""
+        # This looks like a candidate for optimization.
+        # An unconditional object copy seems expensive.
         local_plugin_vars = self._plugin_context_vars.get(plugin_namespace, {}).copy()
         self._plugin_context_vars[plugin_namespace] = local_plugin_vars
         return local_plugin_vars
@@ -479,6 +632,7 @@ class EvaluationNamespace(NamedTuple):
             "child_index": obj._child_index if obj else None,
             "this": obj,
             "today": interpreter.globals.today,
+            "now": datetime.now(timezone.utc),
             "fake": self.runtime_context.faker_template_library,
             "template": self.runtime_context.current_template,
             **interpreter.options,
@@ -498,7 +652,11 @@ class EvaluationNamespace(NamedTuple):
         return {**self.field_funcs(), "fake": self.fake}
 
     def fake(self, name):
-        return str(self.runtime_context.faker_template_library._get_fake_data(name))
+        val = self.runtime_context.faker_template_library._get_fake_data(name)
+        if isinstance(val, ScalarTypes):
+            return val
+        else:
+            return str(val)
 
     def field_vars(self):
         return {**self.simple_field_vars(), **self.field_funcs()}
@@ -511,5 +669,34 @@ def evaluate_function(func, args: Sequence, kwargs: Mapping, context):
             name: arg.render(context) if hasattr(arg, "render") else arg
             for name, arg in kwargs.items()
         }
-    value = func(*args, **kwargs)
-    return value
+    return func(*args, **kwargs)
+
+
+def find_tables_to_keep_history_for(
+    parse_result: ParseResult, nicknames_and_tables: T.Dict[str, str]
+) -> T.Set[str]:
+    """Only keep history for certain tables that are actually referred to by random_reference"""
+    random_references = parse_result.random_references
+    referenced_names = set(
+        get_referent_name(random_reference) for random_reference in random_references
+    )
+    # normalize nicknames to their underlying table
+    referenced_tables = set(
+        nicknames_and_tables.get(name, name) for name in referenced_names
+    )
+    return referenced_tables
+
+
+def get_referent_name(random_reference):
+    """What does this random_reference refer to?"""
+    args, kwargs = random_reference.args, random_reference.kwargs
+    assert not (args and kwargs)
+    if args:
+        ret = args[0].definition
+    elif kwargs:
+        ret = kwargs["to"].definition
+    if not isinstance(ret, str):
+        raise DataGenSyntaxError(
+            f"random_reference should only refer to a name, not {ret}"
+        )
+    return ret

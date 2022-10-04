@@ -61,7 +61,7 @@ Ready to contribute? Here's how to set up Snowfakery for local development.
 Or you could make it outside of the project repo.
 4. Install development requirements::
 
-    $ pip install -r requirements_dev.txt
+    $ make dev-install
 
 5. Install ``pre-commit`` hooks for ``black`` and ``flake8``::
 
@@ -84,7 +84,7 @@ Set SF_MKDOCS_BUILD_LOCALES=False to skip building all locales
 
    or
 
-   $ pytest --cov --cov-report=html
+   $ make coverage
 
 8. Push your changes to GitHub and submit a pull request. The base branch should 
 be a new feature branch that we create to receive the changes (contact us to create 
@@ -153,3 +153,7 @@ tests/	                             Unit tests
 
 
 <img src='docs/images/img6.png' id='PJUACA3lKvf' alt='Architecture Diagram'>
+
+Snowfakery is based upon YAML, but unlike in the canonical YAML model,
+the order of keys does matter in Snowfakery. In particular, the first
+key defines the type of objects in the Snowfakery dialect.

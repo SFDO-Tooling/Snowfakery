@@ -3,8 +3,10 @@ from enum import Enum, auto
 import yaml
 import snowfakery  # noqa
 from .utils.yaml_utils import SnowfakeryDumper
+from contextvars import ContextVar
 
 IdManager = "snowfakery.data_generator_runtime.IdManager"
+RowHistoryCV = ContextVar("RowHistory")
 
 
 class ObjectRow:
@@ -16,6 +18,8 @@ class ObjectRow:
     yaml_dumper = SnowfakeryDumper
     yaml_tag = "!snowfakery_objectrow"
 
+    # be careful changing these slots because these objects must be serializable
+    # to YAML and JSON
     __slots__ = ["_tablename", "_values", "_child_index"]
 
     def __init__(self, tablename, values=(), index=0):
@@ -28,6 +32,13 @@ class ObjectRow:
             return self._values[name]
         except KeyError:
             raise AttributeError(name)
+
+    # prefer this to .id or _values["id"] so we can
+    # one day move away from having "id" in the user's
+    # namespace
+    @property
+    def _id(self):
+        return self._values["id"]
 
     def __str__(self):
         return str(self.id)
@@ -52,9 +63,31 @@ class ObjectRow:
 
 
 class ObjectReference(yaml.YAMLObject):
-    def __init__(self, tablename, id):
+    def __init__(self, tablename: str, id: int):
         self._tablename = tablename
         self.id = id
+
+
+class LazyLoadedObjectReference(ObjectReference):
+    _data = None
+
+    def __init__(
+        self,
+        tablename: str,
+        id: int,
+        sql_tablename: str,
+    ):
+        self._tablename = tablename
+        self.sql_tablename = sql_tablename
+        self.id = id
+
+    def __getattr__(self, attrname):
+        if attrname.endswith("__"):  # pragma: no cover
+            raise AttributeError(attrname)
+        if self._data is None:
+            row_history = RowHistoryCV.get()
+            self._data = row_history.load_row(self.sql_tablename, self.id)
+        return self._data[attrname]
 
 
 class SlotState(Enum):
