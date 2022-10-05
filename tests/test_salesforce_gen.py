@@ -9,13 +9,13 @@ import pytest
 
 class TestSalesforceGen:
     def test_content_version(self, generated_rows):
-        content_version = "examples/salesforce/ContentVersion.recipe.yml"
+        content_version = "examples/base64_file.recipe.yml"
         generate_data(content_version)
-        b64data = generated_rows.table_values("ContentVersion", 0)["VersionData"]
-        rawdata = b64decode(b64data)
-        assert rawdata.startswith(b"%PDF-1.3")
-        assert b"Helvetica" in rawdata
-
+        for i in range(0, 2):
+            b64data = generated_rows.table_values("ContentVersion", i)["VersionData"]
+            rawdata = b64decode(b64data)
+            assert rawdata.startswith(b"%PDF-1.3")
+            assert b"Helvetica" in rawdata
 
 class TestSalesforcePlugin:
     @skip_if_cumulusci_missing

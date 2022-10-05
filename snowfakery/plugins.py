@@ -140,6 +140,10 @@ class PluginContext:
     def current_filename(self):
         return self.interpreter.current_context.current_template.filename
 
+    @property
+    def current_filename(self):
+        return self.interpreter.current_context.current_template.filename
+
 
 def lazy(func: Any) -> Callable:
     """A lazy function is one that expects its arguments to be unparsed"""

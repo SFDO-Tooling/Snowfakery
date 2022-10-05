@@ -1,0 +1,32 @@
+- plugin: snowfakery.standard_plugins.base64.Base64
+- plugin: snowfakery.standard_plugins.file.File
+- plugin: snowfakery.standard_plugins.Salesforce
+- object: Account
+  nickname: FileOwner
+  fields:
+    Name:
+      fake: company
+- object: ContentVersion
+  nickname: FileAttachment
+  fields:
+    Title: Attachment for ${{Account.Name}}
+    PathOnClient: salesforce/example.pdf
+    Description: example.pdf
+    VersionData:
+      Base64.encode:
+        - File.file_data:
+            encoding: binary
+            file: ${{PathOnClient}}
+    FirstPublishLocationId:
+      reference: Account
+- object: ContentVersion
+  nickname: FileAttachment2
+  fields:
+    Title: Attachment for ${{Account.Name}}
+    PathOnClient: salesforce/example.pdf
+    Description: example.pdf
+    VersionData:
+      Salesforce.ContentFile:
+        file: ${{PathOnClient}}
+    FirstPublishLocationId:
+      reference: Account
