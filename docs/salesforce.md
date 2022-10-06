@@ -352,24 +352,21 @@ There is also an alternate syntax which allows nicknaming:
 Files can be used as Salesforce ContentVersions like this:
 
 ```yaml
-- plugin: snowfakery.standard_plugins.base64.Base64
-- plugin: snowfakery.standard_plugins.file.File
+# examples/salesforce/ContentVersion.recipe.yml
+- plugin: snowfakery.standard_plugins.Salesforce
 - object: Account
   nickname: FileOwner
   fields:
     Name:
       fake: company
 - object: ContentVersion
-  nickname: FileAttachment
   fields:
     Title: Attachment for ${{Account.Name}}
     PathOnClient: example.pdf
-    Description: example.pdf
+    Description: The example.pdf file
     VersionData:
-      Base64.encode:
-        - File.file_data:
-            encoding: binary
-            file: ${{PathOnClient}}
+      Salesforce.ContentFile:
+        file: example.pdf
     FirstPublishLocationId:
       reference: Account
 ```
