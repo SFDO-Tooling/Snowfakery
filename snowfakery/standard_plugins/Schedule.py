@@ -177,7 +177,7 @@ class CalendarRule(PluginResultIterator):
         elif not start_date:
             start_date = datetime.now()
             precision = datetime
-        else:
+        else:  # pragma: no cover
             raise TypeError(
                 f"`start_date` ({start_date}) is of unknown type {type(start_date)}"
             )
@@ -257,7 +257,7 @@ class CalendarRule(PluginResultIterator):
                 d2, self.start_date.time(), tzinfo=timezone.utc
             )
             self._process_special_cases(dt, action)
-        else:
+        else:  # pragma: no cover
             raise TypeError(f"Cannot {action} {case}, ({type(case)})")
 
     def _normalize_frequency(self, freq: str):
@@ -403,6 +403,8 @@ def process_list_of_ints(val: SeqOfIntsLike) -> T.Optional[T.List[int]]:
         return [val]
     elif isinstance(val, str):
         return [int(v) for v in val.split(",")]
+    elif isinstance(val, (list, tuple)):
+        return [int(v) for v in val]
     else:
         raise exc.DataGenTypeError(
             f"Expected a number or list of numbers, not {val} ({type(val)})"
