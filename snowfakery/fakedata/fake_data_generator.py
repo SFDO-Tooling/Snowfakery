@@ -164,8 +164,8 @@ class FakeData:
     def __init__(
         self,
         faker_providers: T.Sequence[object],
-        locale: str = None,
-        faker_context: PluginContext = None,
+        locale: T.Optional[str] = None,
+        faker_context: T.Optional[PluginContext] = None,
     ):
         # access to persistent state
         self.faker_context = faker_context

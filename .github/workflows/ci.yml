@@ -36,7 +36,8 @@ jobs:
         run: |
           python setup.py install
           snowbench snowfakery/tools/benchmark_1.yml --num-records 10_000  --num-records-tablename Account --number-of-processes 4
-          snowbench
+          snowbench | tee bench.txt
+          tail -n 7 bench.txt >> $GITHUB_STEP_SUMMARY
 
   with_cci:
     name: With CumulusCI
@@ -68,6 +69,9 @@ jobs:
           git diff HEAD.._remote_main_
           diff-cover coverage.xml --fail-under 100 --compare-branch=_remote_main_ --diff-range-notation=.. --show-uncovered --markdown-report coverage.md
           cat coverage.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Type Check
+        run: pyright
 
   faker_docs:
     name: Faker Docs
