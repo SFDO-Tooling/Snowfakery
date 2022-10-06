@@ -1,0 +1,2 @@
+[tool.pyright]
+include = ["snowfakery/standard_plugins/Schedule.py"]

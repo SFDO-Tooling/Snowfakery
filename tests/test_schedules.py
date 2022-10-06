@@ -500,7 +500,7 @@ def test_bad_integer_list():
     assert "AAAA" in str(e.value)
 
 
-def test_bad_integer_list__wrong_type():
+def test_bad_integer_list__wrong_type(disable_typeguard):
     yaml = """
     - snowfakery_version: 3
     - plugin: snowfakery.standard_plugins.Schedule

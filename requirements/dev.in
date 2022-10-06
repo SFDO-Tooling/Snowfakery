@@ -13,6 +13,7 @@ faker-microservice
 tox
 tox-gh-actions      # needed for CI only
 pytest-vcr
+pyright
 vcrpy
 responses
 jsonschema

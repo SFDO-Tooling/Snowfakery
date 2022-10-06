@@ -17,7 +17,6 @@ from snowfakery.template_funcs import parse_datetimespec, parse_date
 #   E.g. if I exclude very Monday in December, but the "Monday" is Monday at 3:30
 #        and the days are scheduled for 3:31, then the exclusion won't apply.
 
-
 FREQ_STRS = {
     frequency: getattr(rrule_mod, frequency)
     for frequency in [
@@ -37,41 +36,57 @@ WEEKDAYS = {
 }
 
 
-def is_datetime(dt: str):
-    return bool(set(dt).intersection(" TZ"))
+def is_datetime(dt: str) -> bool:
+    """Does a string look like a `datetime`?"""
+    return bool(set(dt).intersection(" TZ+:"))
+
+
+OptionalDateTimeLike = T.Union[str, date, datetime, None]
+SeqOfIntsLike = T.Union[str, int, T.Sequence[int], None]
+CalendarException = T.Union[
+    T.Sequence[T.Union["CalendarRule", OptionalDateTimeLike]],
+    "CalendarRule",
+    OptionalDateTimeLike,
+]
 
 
 class CalendarRule(PluginResultIterator):
+    """Generates calendar events"""
+
+    iterator: T.Any  # Actually T.Union[T.Iterator[date],T.Iterator[ datetime]]
+
     def __init__(
         self,
         freq: str,
-        start_date=None,
-        interval=1,
-        count=None,
-        until=None,
-        bysetpos=None,  # undocumented feature, for now
-        bymonth=None,
-        bymonthday=None,
-        byyearday=None,
-        byeaster=None,  # undocumented feature for now
-        byweekno=None,  # undocumented feature for now
-        byweekday=None,
-        byhour=None,
-        byminute=None,
-        bysecond=None,
-        cache=False,  # undocumented feature for now
-        exclude=None,
-        include=None,
-        use_undocumented_features=False,
+        start_date: OptionalDateTimeLike = None,
+        interval: int = 1,
+        count: T.Optional[int] = None,
+        until: OptionalDateTimeLike = None,
+        bysetpos: SeqOfIntsLike = None,  # undocumented feature, for now
+        bymonth: SeqOfIntsLike = None,
+        bymonthday: SeqOfIntsLike = None,
+        byyearday: SeqOfIntsLike = None,
+        byeaster: SeqOfIntsLike = None,  # undocumented feature for now
+        byweekno: SeqOfIntsLike = None,  # undocumented feature for now
+        byweekday: T.Optional[str] = None,
+        byhour: SeqOfIntsLike = None,
+        byminute: SeqOfIntsLike = None,
+        bysecond: SeqOfIntsLike = None,
+        cache: bool = False,  # undocumented feature for now
+        exclude: CalendarException = None,
+        include: CalendarException = None,
+        use_undocumented_features: bool = False,
     ):
-        if (not use_undocumented_features) and any(
-            [bysetpos, byeaster, cache, byweekno]
-        ):
-            raise exc.DataGenValueError(
-                "That feature is undocumented and unsupported. "
-                "Use the `use_undocumented_features: True` argument to use it regardless."
-            )
-        self._set_start_date(start_date)
+        # Certain features can only be used if you opt-in to use_undocumented_features
+        self._check_undocumented_features(
+            use_undocumented_features, bysetpos, byeaster, cache, byweekno
+        )
+
+        # Normalize and save the start_date
+        self.start_date, precision = self._normalize_start_date(start_date)
+
+        self._set_output_datetype_date_or_datetime(precision)
+
         wkst = rrule_mod.SU  # Standardize on Sunday as start of week globally
         # Could make this parameterizable if there is demand for it.
         bysetpos = process_list_of_ints(bysetpos)
@@ -82,13 +97,16 @@ class CalendarRule(PluginResultIterator):
         byhour = process_list_of_ints(byhour)
         byminute = process_list_of_ints(byminute)
         bysecond = process_list_of_ints(bysecond)
+        byweekno = process_list_of_ints(bysecond)
 
-        until = self._set_until(until)
+        until = self._normalize_until(until)
 
         freq = self._normalize_frequency(freq)
 
         if byweekday:
-            byweekday = self._normalize_weekday(byweekday)
+            byweekday_normalized = self._normalize_weekday(byweekday)
+        else:
+            byweekday_normalized = None
 
         self.ruleset = rruleset(cache)
         self.rrule = rrule(
@@ -104,7 +122,7 @@ class CalendarRule(PluginResultIterator):
             byyearday=byyearday,
             byeaster=byeaster,  # undocumented feature for now
             byweekno=byweekno,
-            byweekday=byweekday,
+            byweekday=byweekday_normalized,
             byhour=byhour,
             byminute=byminute,
             bysecond=bysecond,
@@ -121,34 +139,59 @@ class CalendarRule(PluginResultIterator):
 
         self.iterator = iter(self)
 
-    def _set_start_date(self, start_date):
+    def _check_undocumented_features(
+        self,
+        use_undocumented_features: bool,
+        bysetpos: SeqOfIntsLike,
+        byeaster: SeqOfIntsLike,
+        cache: bool,
+        byweekno: SeqOfIntsLike,
+    ) -> None:
+        """Require opt-in for undocumented features"""
+        if (not use_undocumented_features) and any(
+            [bysetpos, byeaster, cache, byweekno]
+        ):
+            raise exc.DataGenValueError(
+                "That feature is undocumented and unsupported. "
+                "Use the `use_undocumented_features: True` argument to use it regardless."
+            )
+
+    def _normalize_start_date(
+        self, start_date: OptionalDateTimeLike
+    ) -> T.Tuple[datetime, type]:
+        """Normalize the start-date to datetime
+
+        But return a type that keeps track of its original type"""
 
         if isinstance(start_date, str):
-            self.start_date = parse_datetimespec(start_date)
-            assert self.start_date.tzinfo
             precision = datetime if is_datetime(start_date) else date
+            start_date = parse_datetimespec(start_date)
+            assert start_date.tzinfo
         elif isinstance(start_date, datetime):
-            self.start_date = start_date
             precision = datetime
         elif isinstance(start_date, date):
-            self.start_date = datetime.combine(
+            start_date = datetime.combine(
                 start_date, time(hour=0, minute=0, second=0, tzinfo=timezone.utc)
             )
             precision = date
         elif not start_date:
-            self.start_date = datetime.now()
+            start_date = datetime.now()
             precision = datetime
         else:
             raise TypeError(
                 f"`start_date` ({start_date}) is of unknown type {type(start_date)}"
             )
-        if not self.start_date.tzinfo:
-            self.start_date = self.start_date.replace(tzinfo=timezone.utc)
+        if not start_date.tzinfo:
+            start_date = start_date.replace(tzinfo=timezone.utc)
         assert precision in (date, datetime)
 
-        self._set_generate_output(precision)
+        return start_date, precision
 
-    def _set_until(self, until: T.Union[str, date, datetime, None]):
+    def _normalize_until(self, until: OptionalDateTimeLike) -> T.Optional[datetime]:
+        """Normalize until value to datetime or None"""
+        if not until:
+            return None
+
         if isinstance(until, str):
             if is_datetime(until):
                 until = parse_datetimespec(until)
@@ -157,51 +200,49 @@ class CalendarRule(PluginResultIterator):
 
         elif isinstance(until, date):
             until = datetime.combine(until, self.start_date.time(), tzinfo=timezone.utc)
-        elif until:
+
+        else:
             raise exc.DataGenTypeError(
                 f"`until` parameter ({until}) is of unexpected type {until}"
             )
 
-        if until:
-            until = until.replace(tzinfo=timezone.utc)
-        return until
+        return until.replace(tzinfo=timezone.utc)
 
-    def _set_generate_output(self, precision):
+    def _set_output_datetype_date_or_datetime(self, precision: type) -> None:
+        """Depending on the precision requested, generate the right kinds of records"""
         assert precision in (date, datetime)
         if precision is date:
-            self.next = self._next_date
+            self.next = self._next_date  # type: ignore
         elif precision is datetime:
-            self.next = self._next_datetime
+            self.next = self._next_datetime  # type: ignore
         else:  # pragma: no cover
             assert False, "Should be unreachable"
 
-    def _process_special_cases(self, case, action):
+    def _process_special_cases(
+        self,
+        case: CalendarException,
+        action: T.Literal["include", "exclude"],
+    ) -> None:
+        """Process inclusions and exclusions"""
         if action == "exclude":
+            # https://dateutil.readthedocs.io/en/stable/rrule.html#dateutil.rrule.rruleset.exrule
             add_rule = self.ruleset.exrule
+            # https://dateutil.readthedocs.io/en/stable/rrule.html#dateutil.rrule.rruleset.exdate
             add_date = self.ruleset.exdate
         elif action == "include":
+            # https://dateutil.readthedocs.io/en/stable/rrule.html#dateutil.rrule.rruleset.rrule
             add_rule = self.ruleset.rrule
+            # https://dateutil.readthedocs.io/en/stable/rrule.html#dateutil.rrule.rruleset.rdate
             add_date = self.ruleset.rdate
         else:  # pragma: no cover   -   Should be unreachable
             assert action in ("include", "exclude"), "Bad action!"
+            raise NotImplementedError()
 
         if isinstance(case, (list, tuple)):
             for case in case:
                 self._process_special_cases(case, action)
         elif isinstance(case, CalendarRule):
-            # assert (
-            #     not case.compound
-            # ), "Cannot recursively nest rules more than two levels"
-            # subrule = copy(case.rrule)
-            # if self.rrule._freq < HOURLY:
-            #     # Days, weeks, months, years
-            #     subrule._dtstart = datetime.combine(
-            #         case.rrule._dtstart.date(),
-            #         self.start_date.time(),
-            #         tzinfo=timezone.utc,
-            #     )
-            # print("Adding rule", subrule)
-            add_rule(case.ruleset)
+            add_rule(T.cast(T.Any, case.ruleset))
 
         elif isinstance(case, datetime):
             add_date(case)
@@ -211,15 +252,16 @@ class CalendarRule(PluginResultIterator):
                 datetime.combine(d, self.start_date.time(), tzinfo=timezone.utc), action
             )
         elif isinstance(case, str):
-            d: date = parse_date(case)
+            d2: date = parse_date(case)
             dt: datetime = datetime.combine(
-                d, self.start_date.time(), tzinfo=timezone.utc
+                d2, self.start_date.time(), tzinfo=timezone.utc
             )
             self._process_special_cases(dt, action)
         else:
             raise TypeError(f"Cannot {action} {case}, ({type(case)})")
 
-    def _normalize_frequency(self, freq):
+    def _normalize_frequency(self, freq: str):
+        """Normalize frequency string to dateutil type"""
         try:
             freq_str = freq.upper()
             freq = FREQ_STRS[freq_str]
@@ -241,7 +283,10 @@ class CalendarRule(PluginResultIterator):
 
         return freq
 
-    def _normalize_weekday(self, byweekday: T.Optional[str]):
+    def _normalize_weekday(
+        self, byweekday: T.Optional[str]
+    ) -> T.List[rrule_mod.weekday]:
+        """Normalize weekday string to dateutil types"""
         assert byweekday
 
         if isinstance(byweekday, str):
@@ -256,6 +301,7 @@ class CalendarRule(PluginResultIterator):
         return days
 
     def _parse_weekday(self, day):
+        """Parse the weekday syntax like MO(+3) and WE(-2) and create dateutil datatypes"""
         try:
             if "(" in day:
                 day, offset = self._split_weekday(day)
@@ -273,6 +319,7 @@ class CalendarRule(PluginResultIterator):
         return dayconst
 
     def _split_weekday(self, day) -> T.Tuple[str, int]:
+        """Parse the weekday syntax like MO(+3) and WE(-2)"""
         parts = re.match(r"\s*(?P<weekday>\w+)\((?P<offset>.+)\)\s*", day)
         if not parts:
             raise exc.DataGenSyntaxError(f"Cannot understand {day}")
@@ -284,13 +331,19 @@ class CalendarRule(PluginResultIterator):
             raise exc.DataGenTypeError(f"Cannot interpret {offset} as a number")
         return weekday, offset
 
-    def __iter__(self):
+    def __iter__(self) -> T.Union[T.Iterator[datetime], T.Iterator[date]]:
         return iter(self.ruleset)
 
-    def _next_datetime(self):
+    def next(self) -> None:  # pragma: no cover
+        """This method is never called.
+
+        It is replaced at runtime by _next_datetime or _next_date"""
+        raise NotImplementedError()
+
+    def _next_datetime(self) -> datetime:
         return next(self.iterator)
 
-    def _next_date(self):
+    def _next_date(self) -> date:
         val: datetime = next(self.iterator)
         return val.date()
 
@@ -343,7 +396,7 @@ class Schedule(SnowfakeryPlugin):
             )
 
 
-def process_list_of_ints(val):
+def process_list_of_ints(val: SeqOfIntsLike) -> T.Optional[T.List[int]]:
     if val is None:
         return None
     elif isinstance(val, int):
