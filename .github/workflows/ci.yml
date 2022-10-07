@@ -36,8 +36,8 @@ jobs:
         run: |
           python setup.py install
           snowbench snowfakery/tools/benchmark_1.yml --num-records 10_000  --num-records-tablename Account --number-of-processes 4
-          snowbench > bench.txt
-          cat bench.txt >> $GITHUB_STEP_SUMMARY
+          snowbench | tee bench.txt
+          tail -n 7 bench.txt >> $GITHUB_STEP_SUMMARY
 
   with_cci:
     name: With CumulusCI

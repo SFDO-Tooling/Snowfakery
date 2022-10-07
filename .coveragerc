@@ -11,3 +11,5 @@ exclude_lines =
     raise AssertionError
     def __repr__
     def __str__
+    if T.TYPE_CHECKING
+    if TYPE_CHECKING

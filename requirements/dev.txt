@@ -27,7 +27,7 @@ click==8.1.3
     #   -r requirements/prod.txt
     #   black
     #   mkdocs
-coverage[toml]==6.4.4
+coverage[toml]==6.5.0
     # via
     #   -r requirements/dev.in
     #   coveralls
@@ -58,14 +58,14 @@ greenlet==1.1.3
     #   sqlalchemy
 gvgen==1.0
     # via -r requirements/prod.txt
-identify==2.5.5
+identify==2.5.6
     # via pre-commit
 idna==3.4
     # via
     #   -r requirements/prod.txt
     #   requests
     #   yarl
-importlib-metadata==4.12.0
+importlib-metadata==5.0.0
     # via
     #   markdown
     #   mkdocs
@@ -99,7 +99,9 @@ multidict==6.0.2
 mypy-extensions==0.4.3
     # via black
 nodeenv==1.7.0
-    # via pre-commit
+    # via
+    #   pre-commit
+    #   pyright
 packaging==21.3
     # via
     #   mkdocs
@@ -137,7 +139,7 @@ pytest==7.1.3
     #   -r requirements/dev.in
     #   pytest-cov
     #   pytest-vcr
-pytest-cov==3.0.0
+pytest-cov==4.0.0
     # via -r requirements/dev.in
 pytest-vcr==1.0.2
     # via -r requirements/dev.in
@@ -186,7 +188,7 @@ tox==3.26.0
     #   tox-gh-actions
 tox-gh-actions==2.10.0
     # via -r requirements/dev.in
-typeguard==2.10.0
+typeguard==2.13.3
     # via -r requirements/dev.in
 typing-extensions==4.3.0
     # via
@@ -218,5 +220,5 @@ zipp==3.8.1
     #   importlib-resources
 
 # The following packages are considered to be unsafe in a requirements file:
-setuptools==65.4.0
+setuptools==65.4.1
     # via nodeenv
