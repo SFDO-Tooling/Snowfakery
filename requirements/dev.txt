@@ -40,7 +40,7 @@ distlib==0.3.6
     # via virtualenv
 docopt==0.6.2
     # via coveralls
-faker==15.0.0
+faker==15.3.3
     # via
     #   -r requirements/prod.txt
     #   faker-microservice
@@ -66,9 +66,7 @@ idna==3.4
     #   requests
     #   yarl
 importlib-metadata==5.0.0
-    # via
-    #   markdown
-    #   mkdocs
+    # via mkdocs
 importlib-resources==5.10.0
     # via tox-gh-actions
 iniconfig==1.1.1
@@ -179,11 +177,7 @@ toml==0.10.2
     #   pre-commit
     #   responses
 tomli==2.0.1
-    # via
-    #   black
-    #   coverage
-    #   pytest
-    #   tox
+    # via pytest
 tox==3.26.0
     # via
     #   -r requirements/dev.in
@@ -197,7 +191,6 @@ types-toml==0.10.8
 typing-extensions==4.4.0
     # via
     #   -r requirements/prod.txt
-    #   black
     #   pydantic
 urllib3==1.26.12
     # via
@@ -219,9 +212,7 @@ wrapt==1.14.1
 yarl==1.8.1
     # via vcrpy
 zipp==3.9.0
-    # via
-    #   importlib-metadata
-    #   importlib-resources
+    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 setuptools==65.4.1
