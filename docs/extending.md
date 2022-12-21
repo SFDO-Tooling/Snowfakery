@@ -413,7 +413,8 @@ use `context.evaluate_raw()` instead of `context.evaluate()`.
 
 Plugins that require "memory" or "state" are possible using `PluginResult`
 objects or subclasses. Consider a plugin that generates child objects
-that include values that sum up values on child objects to a value specified on a parent:
+that include values that sum up values on child objects to a value specified on a parent (similar to a simple version
+of `Math.random_partition`):
 
 ```yaml
 # examples/sum_child_values.yml

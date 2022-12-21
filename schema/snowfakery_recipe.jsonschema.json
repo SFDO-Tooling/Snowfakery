@@ -61,6 +61,14 @@
             }
           ]
         },
+        "for_each": {
+          "type": "object",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/var"
+            }
+          ]
+        },
         "fields": {
           "type": "object",
           "additionalProperties": true
