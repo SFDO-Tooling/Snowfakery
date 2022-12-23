@@ -3,6 +3,7 @@ import os
 from collections import defaultdict, ChainMap
 from datetime import date, datetime, timezone
 from contextlib import contextmanager
+from random import Random
 
 from typing import Optional, Dict, Sequence, Mapping, NamedTuple, Set
 import typing as T
@@ -300,6 +301,7 @@ class Interpreter:
         snowfakery_plugins: Optional[Mapping[str, callable]] = None,
         faker_providers: Sequence[object] = (),
         continuing=False,
+        seed: Optional[int] = None,
     ):
         self.output_stream = output_stream
         self.options = options or {}
@@ -354,6 +356,7 @@ class Interpreter:
             self.globals.nicknames_and_tables,
         )
         self.resave_objects_from_continuation(globals, self.tables_to_keep_history_for)
+        self.random_number_generator = Random(seed)
 
     def resave_objects_from_continuation(
         self, globals: Globals, tables_to_keep_history_for: T.Iterable[str]

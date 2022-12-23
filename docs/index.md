@@ -1954,7 +1954,7 @@ granularity), `0.05` (nickle), `0.10` (dime), `0.25` (quarter) and
         total: 100
         min: 10
         max: 50
-        step: 0.1
+        step: 0.01
   fields:
     Amount: ${{current_value}}
 ```

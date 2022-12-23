@@ -1,0 +1,10 @@
+- plugin: snowfakery.standard_plugins.Math
+- object: Obj
+  for_each:
+    var: child_value
+    value:
+      Math.random_partition:
+        total: 28
+        step: 0.3
+  fields:
+    Amount: ${{child_value}}

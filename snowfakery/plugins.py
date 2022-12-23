@@ -1,3 +1,4 @@
+from random import Random
 import sys
 
 from typing import Any, Callable, Mapping, Union, NamedTuple, List, Tuple
@@ -141,8 +142,8 @@ class PluginContext:
         return self.interpreter.current_context.current_template.filename
 
     @property
-    def current_filename(self):
-        return self.interpreter.current_context.current_template.filename
+    def random_number_generator(self) -> Random:
+        return self.interpreter.random_number_generator
 
 
 def lazy(func: Any) -> Callable:
