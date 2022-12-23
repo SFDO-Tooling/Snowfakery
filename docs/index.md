@@ -1870,7 +1870,7 @@ it will generate an appropriate number of children with
 values that sum up to match it, using `Math.random_partition`:
 
 ```yaml
-# examples/math_partition_simple.recipe.yml
+# examples/math_partition/math_partition_simple.recipe.yml
 - plugin: snowfakery.standard_plugins.Math
 - object: ParentObject__c
   count: 2
@@ -1919,7 +1919,7 @@ values of `4`, `8`, `12` are valid.
 For example:
 
 ```yaml
-# examples/sum_simple_example.yml
+# examples/math_partition/sum_simple_example.recipe.yml
 - plugin: snowfakery.standard_plugins.Math
 
 - object: Values
@@ -1943,7 +1943,7 @@ granularity), `0.05` (nickle), `0.10` (dime), `0.25` (quarter) and
 `0.50` (half dollars). Other values are not supported.
 
 ```yaml
-# examples/sum_pennies.yml
+# examples/math_partition/sum_pennies.recipe.yml
 - plugin: snowfakery.standard_plugins.Math
 
 - object: Values

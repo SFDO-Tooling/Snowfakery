@@ -10,7 +10,9 @@ REPS = 1
 @pytest.mark.parametrize("seed", [randint(0, 2 ** 32) for r in range(REPS)])
 class TestSummation:
     def test_example(self, generated_rows, seed):
-        generate_data("examples/math_partition_simple.recipe.yml", seed=seed)
+        generate_data(
+            "examples/math_partition/math_partition_simple.recipe.yml", seed=seed
+        )
         parents = generated_rows.table_values("ParentObject__c")
         children = generated_rows.table_values("ChildObject__c")
         assert sum(p["TotalAmount__c"] for p in parents) == sum(
@@ -18,7 +20,7 @@ class TestSummation:
         ), (parents, children)
 
     def test_example_pennies(self, generated_rows, seed):
-        generate_data("examples/sum_pennies.yml", seed=seed)
+        generate_data("examples/math_partition/sum_pennies.recipe.yml", seed=seed)
         objs = generated_rows.table_values("Values")
         assert round(sum(p["Amount"] for p in objs)) == 100, sum(
             p["Amount"] for p in objs
@@ -27,7 +29,9 @@ class TestSummation:
     @pytest.mark.parametrize("step", [0.01, 0.5, 0.1, 0.20, 0.25, 0.50])
     def test_example_pennies_param(self, generated_rows, seed, step: int):
         generate_data(
-            "examples/sum_pennies_param.yml", user_options={"step": step}, seed=1
+            "examples/math_partition/sum_pennies_param.recipe.yml",
+            user_options={"step": step},
+            seed=1,
         )
         objs = generated_rows.table_values("Values")
         assert round(sum(p["Amount"] for p in objs)) == 100, sum(
