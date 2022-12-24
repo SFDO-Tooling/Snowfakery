@@ -1,5 +1,4 @@
 from io import StringIO
-from unittest import mock
 
 
 from snowfakery.data_generator import generate
@@ -15,17 +14,15 @@ structured_values_with_templates = """  #1
 """
 
 
-write_row_path = "snowfakery.output_streams.DebugOutputStream.write_row"
+write_row_path = "snowfakery.output_streams.SimpleFileOutputStream.write_row"
 
 
 class TestStructuredValues:
-    @mock.patch(write_row_path)
     def test_structured_values(self, write_row):
         generate(StringIO(structured_values_with_templates), {}, None)
         assert isinstance(write_row.mock_calls[0][1][1]["B"], int)
         assert 2 <= write_row.mock_calls[0][1][1]["B"] <= 8
 
-    @mock.patch(write_row_path)
     def test_lazy_random_choice(self, write_row):
         yaml = """
         - object : A

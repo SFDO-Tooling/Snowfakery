@@ -10,7 +10,7 @@ from click.utils import LazyFile
 from snowfakery.standard_plugins.SnowfakeryVersion import SnowfakeryVersion
 
 from .data_gen_exceptions import DataGenNameError
-from .output_streams import DebugOutputStream, OutputStream
+from .output_streams import OutputStream, SimpleFileOutputStream
 from .parse_recipe_yaml import parse_recipe
 from .data_generator_runtime import (
     Globals,
@@ -138,7 +138,7 @@ def generate(
     user_options = user_options or {}
 
     # Where are we going to put the rows?
-    output_stream = output_stream or DebugOutputStream()
+    output_stream = output_stream or SimpleFileOutputStream()
 
     # parse the YAML and any it refers to
     parse_result = parse_recipe(

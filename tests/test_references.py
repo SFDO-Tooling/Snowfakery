@@ -53,11 +53,8 @@ reference_from_friend = """             #1
                 reference: A            #7
     """
 
-write_row_path = "snowfakery.output_streams.DebugOutputStream.write_single_row"
-
 
 class TestReferences:
-    @mock.patch(write_row_path)
     def test_simple_parent(self, write_row):
         generate(StringIO(simple_parent), {}, None)
 
@@ -70,7 +67,6 @@ class TestReferences:
         assert f"A({id_a})" == reference_a
         assert f"B({id_b})" == reference_b
 
-    @mock.patch(write_row_path)
     def test_simple_parent_list_child(self, write_row):
         generate(StringIO(simple_parent_list), {}, None)
 
@@ -83,7 +79,6 @@ class TestReferences:
         assert f"A({id_a})" == reference_a
         assert f"B({id_b})" == reference_b
 
-    @mock.patch(write_row_path)
     def test_ancestor_reference(self, write_row):
         generate(StringIO(ancestor_reference), {}, None)
 
@@ -93,7 +88,6 @@ class TestReferences:
         reference_a = c_values["A_ref"]
         assert f"A({id_a})" == reference_a
 
-    @mock.patch(write_row_path)
     def test_reference_from_friend(self, write_row):
         generate(StringIO(reference_from_friend), {}, None)
 
@@ -103,7 +97,6 @@ class TestReferences:
         reference_a = b_values["A_ref"]
         assert f"A({id_a})" == reference_a
 
-    @mock.patch(write_row_path)
     def test_forward_reference(self, write_row):
         yaml = """
         - object: A
@@ -123,7 +116,6 @@ class TestReferences:
         assert a_values["B"] == "B(1)"
         assert b_values["A"] == "A(1)"
 
-    @mock.patch(write_row_path)
     def test_forward_reference__tablename(self, write_row):
         yaml = """
             - object: A
@@ -143,7 +135,6 @@ class TestReferences:
         assert a_values["B"] == "B(1)"
         assert b_values["A"] == "A(1)"
 
-    @mock.patch(write_row_path)
     def test_forward_reference_not_fulfilled(self, write_row):
         yaml = """
         - object: A
@@ -180,7 +171,6 @@ class TestReferences:
             generate(StringIO(yaml), {}, None)
         assert "BBB" in str(e.value)
 
-    @mock.patch(write_row_path)
     def test_forward_references_not_fulfilled__nickname(self, write_row):
         yaml = """
         - object: A

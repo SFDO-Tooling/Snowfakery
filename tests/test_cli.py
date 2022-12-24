@@ -20,11 +20,8 @@ sample_yaml = Path(__file__).parent / "include_parent.yml"
 bad_sample_yaml = Path(__file__).parent / "include_bad_parent.yml"
 sample_accounts_yaml = Path(__file__).parent / "gen_sf_standard_objects.yml"
 
-write_row_path = "snowfakery.output_streams.DebugOutputStream.write_single_row"
-
 
 class TestGenerateFromCLI:
-    @mock.patch(write_row_path)
     def test_simple(self, write_row):
         generate_cli.callback(
             yaml_file=sample_yaml,
@@ -43,7 +40,6 @@ class TestGenerateFromCLI:
         assert eval_arg("5") == 5
         assert eval_arg("abc") == "abc"
 
-    @mock.patch(write_row_path)
     def test_counts(self, write_row):
         generate_cli.callback(
             yaml_file=sample_yaml,
@@ -63,7 +59,6 @@ class TestGenerateFromCLI:
             ),
         ]
 
-    @mock.patch(write_row_path)
     def test_counts_backwards(self, write_row):
         generate_cli.callback(
             yaml_file=sample_yaml,
@@ -83,7 +78,6 @@ class TestGenerateFromCLI:
             ),
         ]
 
-    @mock.patch(write_row_path)
     def test_with_option(self, write_row):
         with pytest.warns(UserWarning):
             generate_cli.callback(
@@ -93,7 +87,6 @@ class TestGenerateFromCLI:
                 generate_cci_mapping_file=None,
             )
 
-    @mock.patch(write_row_path)
     def test_with_bad_dburl(self, write_row):
         with pytest.raises(Exception):
             generate_cli.callback(
@@ -104,11 +97,9 @@ class TestGenerateFromCLI:
                 generate_cci_mapping_file=None,
             )
 
-    @mock.patch(write_row_path)
     def test_with_debug_flags_on(self, write_row):
         generate_cli.callback(yaml_file=sample_yaml, option={}, debug_internals=True)
 
-    @mock.patch(write_row_path)
     def test_exception_with_debug_flags_on(self, write_row):
         with named_temporary_file_path(suffix=".yml") as t:
             with pytest.raises(DataGenError):
@@ -120,7 +111,6 @@ class TestGenerateFromCLI:
                 )
                 assert yaml.safe_load(t)
 
-    @mock.patch(write_row_path)
     def test_exception_with_debug_flags_off(self, write_row):
         with named_temporary_file_path(suffix=".yml") as t:
             with pytest.raises(ClickException):

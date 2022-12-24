@@ -5,11 +5,8 @@ import pytest
 from snowfakery.data_generator import generate
 import snowfakery.data_gen_exceptions as exc
 
-write_row_path = "snowfakery.output_streams.DebugOutputStream.write_row"
-
 
 class TestMacros:
-    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
     def test_field_includes(self, write_row):
         yaml = """
         - macro: standard_foo
@@ -24,7 +21,6 @@ class TestMacros:
         generate(StringIO(yaml))
         assert write_row.mock_calls == [mock.call("foo", {"id": 1, "bar": 5, "baz": 6})]
 
-    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
     def test_friend_includes(self, write_row):
         yaml = """
         - macro: standard_foo
@@ -40,7 +36,6 @@ class TestMacros:
             mock.call("bar", {"id": 1}),
         ]
 
-    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
     def test_field_and_friend_includes(self, write_row):
         yaml = """
         - macro: standard_foo
@@ -61,7 +56,7 @@ class TestMacros:
             mock.call("baz", {"id": 1, "zar": 6}),
         ]
 
-    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
+    @mock.patch("snowfakery.output_streams.SimpleFileOutputStream.write_row")
     def test_friend_includes_and_references(self, write_row):
         yaml = """
         - macro: standard_foo
@@ -79,7 +74,6 @@ class TestMacros:
         assert write_row.mock_calls[1][1][0] == "bar"
         assert write_row.mock_calls[1][1][1]["myfoo"].id == 1
 
-    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
     def test_macros_include_macros(self, write_row):
         yaml = """
         - macro: foo
@@ -99,7 +93,6 @@ class TestMacros:
             "Bar", {"id": 1, "barbar": "BARBAR", "foobar": "FOOBAR"}
         )
 
-    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
     def test_macros_include_themselves(self, write_row):
         yaml = """
         - macro: foo

@@ -6,13 +6,12 @@ import pytest
 from snowfakery.data_generator import generate
 from snowfakery.data_gen_exceptions import DataGenError
 
-write_row_path = "snowfakery.output_streams.DebugOutputStream.write_single_row"
+write_row_path = "snowfakery.output_streams.SimpleFileOutputStream.write_row"
 
 pytest.importorskip("numpy")
 
 
 class TestStatisticalDistributions:
-    @mock.patch(write_row_path)
     def test_random_distribution_normal(self, write_row):
         yaml = """
         - plugin: snowfakery.standard_plugins.statistical_distributions.StatisticalDistributions
@@ -28,7 +27,6 @@ class TestStatisticalDistributions:
         assert len(write_row.mock_calls) == 1
         assert write_row.mock_calls == [mock.call("A", {"id": 1, "b": 3})]
 
-    @mock.patch(write_row_path)
     def test_random_distribution_param_errors(self, write_row):
         yaml = """
         - plugin: snowfakery.standard_plugins.statistical_distributions.StatisticalDistributions
@@ -44,7 +42,6 @@ class TestStatisticalDistributions:
             generate(StringIO(yaml), {}, None)
         assert "lognormal" in str(e.value)
 
-    @mock.patch(write_row_path)
     def test_random_distribution_unknown(self, write_row):
         yaml = """
         - plugin: snowfakery.standard_plugins.statistical_distributions.StatisticalDistributions

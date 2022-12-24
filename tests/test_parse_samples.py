@@ -22,11 +22,10 @@ def find_row(row_type, compare, calls):
             return row_values  # return the args
 
 
-write_row_path = "snowfakery.output_streams.DebugOutputStream.write_row"
+write_row_path = "snowfakery.output_streams.SimpleFileOutputStream.write_row"
 
 
 class TestParseAndOutput:
-    @mock.patch(write_row_path)
     def test_d_and_d(self, write_row):
         with open(dnd_test) as open_yaml_file:
             generate(
@@ -41,7 +40,6 @@ class TestParseAndOutput:
         assert not find_row("Fighter", {"id": 2, "Name": mock.ANY}, calls)
         assert find_row("Paladin", {"id": 1, "Name": mock.ANY}, calls)
 
-    @mock.patch(write_row_path)
     def test_data_imports(self, write_row):
         with open(data_imports) as open_yaml_file:
             generate(open_yaml_file, {"total_data_imports": 4}, None)
@@ -66,7 +64,6 @@ class TestParseAndOutput:
             calls,
         )
 
-    @mock.patch(write_row_path)
     def test_gen_standard_objects(self, write_row):
         with open(standard_objects) as open_yaml_file:
             generate(open_yaml_file, {}, None)
@@ -77,7 +74,6 @@ class TestParseAndOutput:
         assert find_row("Contact", {}, calls)
         assert find_row("Opportunity", {}, calls)
 
-    @mock.patch(write_row_path)
     def test_gen_npsp_standard_objects(self, write_row):
         with open(npsp_standard_objects) as open_yaml_file:
             generate(open_yaml_file, {}, None)
@@ -88,7 +84,6 @@ class TestParseAndOutput:
         assert find_row("Contact", {}, calls)
         assert find_row("Opportunity", {}, calls)
 
-    @mock.patch(write_row_path)
     def test_simple_salesforce(self, write_row):
         with open(simple_salesforce) as open_yaml_file:
             generate(open_yaml_file, {}, None)

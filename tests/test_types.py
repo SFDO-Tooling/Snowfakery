@@ -1,12 +1,10 @@
 import pytest
-from unittest import mock
 from io import StringIO
 
 from snowfakery.data_generator import generate
 
 
 class TestTypes:
-    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
     def test_empty_string(self, write_row):
         yaml = """
             - object: Foo

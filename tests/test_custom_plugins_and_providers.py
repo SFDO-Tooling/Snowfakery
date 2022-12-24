@@ -16,14 +16,11 @@ from snowfakery import generate_data
 
 generate = generate_data
 
-from unittest import mock
 import pytest
 
-write_row_path = "snowfakery.output_streams.DebugOutputStream.write_row"
 
-
-def row_values(write_row_mock, index, value):
-    return write_row_mock.mock_calls[index][1][1][value]
+def row_values(write_row, index, value):
+    return write_row.mock_calls[index][1][1][value]
 
 
 class SimpleTestPlugin(SnowfakeryPlugin):
@@ -110,8 +107,7 @@ class DoesNotClosePlugin(SnowfakeryPlugin):
 
 
 class TestCustomFakerProvider:
-    @mock.patch(write_row_path)
-    def test_custom_faker_provider(self, write_row_mock):
+    def test_custom_faker_provider(self, write_row):
         yaml = """
         - plugin: faker_microservice.Provider
         - object: OBJ
@@ -121,7 +117,7 @@ class TestCustomFakerProvider:
                     microservice
         """
         generate_data(StringIO(yaml))
-        assert row_values(write_row_mock, 0, "service_name")
+        assert row_values(write_row, 0, "service_name")
 
 
 class TestCustomPlugin:
@@ -148,8 +144,7 @@ class TestCustomPlugin:
             generate_data(StringIO(yaml))
         assert "xyzzy" in str(e.value)
 
-    @mock.patch(write_row_path)
-    def test_simple_plugin(self, write_row_mock):
+    def test_simple_plugin(self, write_row):
         yaml = """
         - plugin: tests.test_custom_plugins_and_providers.SimpleTestPlugin
         - object: OBJ
@@ -159,11 +154,10 @@ class TestCustomPlugin:
             six: ${{SimpleTestPlugin.double(3)}}
         """
         generate_data(StringIO(yaml))
-        assert row_values(write_row_mock, 0, "four") == 4
-        assert row_values(write_row_mock, 0, "six") == 6
+        assert row_values(write_row, 0, "four") == 4
+        assert row_values(write_row, 0, "six") == 6
 
-    @mock.patch(write_row_path)
-    def test_constants(self, write_row_mock):
+    def test_constants(self, write_row):
         yaml = """
         - plugin: snowfakery.standard_plugins.Math
         - object: OBJ
@@ -171,10 +165,9 @@ class TestCustomPlugin:
             pi: ${{Math.pi}}
         """
         generate_data(StringIO(yaml))
-        assert row_values(write_row_mock, 0, "pi") == math.pi
+        assert row_values(write_row, 0, "pi") == math.pi
 
-    @mock.patch(write_row_path)
-    def test_math(self, write_row_mock):
+    def test_math(self, write_row):
         yaml = """
         - plugin: snowfakery.standard_plugins.Math
         - object: OBJ
@@ -185,13 +178,12 @@ class TestCustomPlugin:
             min: ${{Math.min(144, 200, 100)}}
         """
         generate_data(StringIO(yaml))
-        assert row_values(write_row_mock, 0, "sqrt") == 12
-        assert row_values(write_row_mock, 0, "max") == 200
-        assert row_values(write_row_mock, 0, "eleven") == 11
-        assert row_values(write_row_mock, 0, "min") == 100
+        assert row_values(write_row, 0, "sqrt") == 12
+        assert row_values(write_row, 0, "max") == 200
+        assert row_values(write_row, 0, "eleven") == 11
+        assert row_values(write_row, 0, "min") == 100
 
-    @mock.patch(write_row_path)
-    def test_math_deconstructed(self, write_row_mock):
+    def test_math_deconstructed(self, write_row):
         yaml = """
         - plugin: snowfakery.standard_plugins.Math
         - object: OBJ
@@ -200,9 +192,8 @@ class TestCustomPlugin:
                 Math.sqrt: ${{Math.min(144, 169)}}
         """
         generate_data(StringIO(yaml))
-        assert row_values(write_row_mock, 0, "twelve") == 12
+        assert row_values(write_row, 0, "twelve") == 12
 
-    @mock.patch(write_row_path)
     def test_stringification(self, write_row):
         yaml = """
         - plugin: tests.test_custom_plugins_and_providers.EvalPlugin
@@ -268,7 +259,6 @@ class PluginThatNeedsState(SnowfakeryPlugin):
 
 
 class TestContextVars:
-    @mock.patch(write_row_path)
     def test_plugin_context_vars(self, write_row):
         yaml = """
         - plugin: tests.test_custom_plugins_and_providers.PluginThatNeedsState
@@ -298,7 +288,6 @@ class TestContextVars:
         assert row_values(write_row, 2, "path") == "ROOT.OBJ3.OBJ4"
         assert row_values(write_row, 3, "path") == "ROOT.OBJ3"
 
-    @mock.patch(write_row_path)
     def test_lazy_with_context(self, write_row):
         yaml = """
         - plugin: tests.test_custom_plugins_and_providers.DoubleVisionPlugin
