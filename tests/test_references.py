@@ -55,11 +55,11 @@ reference_from_friend = """             #1
 
 
 class TestReferences:
-    def test_simple_parent(self, write_row):
+    def test_simple_parent(self, generated_rows):
         generate(StringIO(simple_parent), {}, None)
 
-        a_values = find_row("A", {}, write_row.mock_calls)
-        b_values = find_row("B", {}, write_row.mock_calls)
+        a_values = find_row("A", {}, generated_rows.mock_calls)
+        b_values = find_row("B", {}, generated_rows.mock_calls)
         id_a = a_values["id"]
         reference_b = a_values["B"]
         id_b = b_values["id"]
@@ -67,11 +67,11 @@ class TestReferences:
         assert f"A({id_a})" == reference_a
         assert f"B({id_b})" == reference_b
 
-    def test_simple_parent_list_child(self, write_row):
+    def test_simple_parent_list_child(self, generated_rows):
         generate(StringIO(simple_parent_list), {}, None)
 
-        a_values = find_row("A", {}, write_row.mock_calls)
-        b_values = find_row("B", {}, write_row.mock_calls)
+        a_values = find_row("A", {}, generated_rows.mock_calls)
+        b_values = find_row("B", {}, generated_rows.mock_calls)
         id_a = a_values["id"]
         reference_b = a_values["B"]
         id_b = b_values["id"]
@@ -79,25 +79,25 @@ class TestReferences:
         assert f"A({id_a})" == reference_a
         assert f"B({id_b})" == reference_b
 
-    def test_ancestor_reference(self, write_row):
+    def test_ancestor_reference(self, generated_rows):
         generate(StringIO(ancestor_reference), {}, None)
 
-        a_values = find_row("A", {}, write_row.mock_calls)
-        c_values = find_row("C", {}, write_row.mock_calls)
+        a_values = find_row("A", {}, generated_rows.mock_calls)
+        c_values = find_row("C", {}, generated_rows.mock_calls)
         id_a = a_values["id"]
         reference_a = c_values["A_ref"]
         assert f"A({id_a})" == reference_a
 
-    def test_reference_from_friend(self, write_row):
+    def test_reference_from_friend(self, generated_rows):
         generate(StringIO(reference_from_friend), {}, None)
 
-        a_values = find_row("A", {}, write_row.mock_calls)
-        b_values = find_row("B", {}, write_row.mock_calls)
+        a_values = find_row("A", {}, generated_rows.mock_calls)
+        b_values = find_row("B", {}, generated_rows.mock_calls)
         id_a = a_values["id"]
         reference_a = b_values["A_ref"]
         assert f"A({id_a})" == reference_a
 
-    def test_forward_reference(self, write_row):
+    def test_forward_reference(self, generated_rows):
         yaml = """
         - object: A
           fields:
@@ -111,12 +111,12 @@ class TestReferences:
         """
         generate(StringIO(yaml), {}, None)
 
-        a_values = find_row("A", {}, write_row.mock_calls)
-        b_values = find_row("B", {}, write_row.mock_calls)
+        a_values = find_row("A", {}, generated_rows.mock_calls)
+        b_values = find_row("B", {}, generated_rows.mock_calls)
         assert a_values["B"] == "B(1)"
         assert b_values["A"] == "A(1)"
 
-    def test_forward_reference__tablename(self, write_row):
+    def test_forward_reference__tablename(self, generated_rows):
         yaml = """
             - object: A
               fields:
@@ -130,12 +130,12 @@ class TestReferences:
                     A
               """
         generate(StringIO(yaml), {}, None)
-        a_values = find_row("A", {}, write_row.mock_calls)
-        b_values = find_row("B", {}, write_row.mock_calls)
+        a_values = find_row("A", {}, generated_rows.mock_calls)
+        b_values = find_row("B", {}, generated_rows.mock_calls)
         assert a_values["B"] == "B(1)"
         assert b_values["A"] == "A(1)"
 
-    def test_forward_reference_not_fulfilled(self, write_row):
+    def test_forward_reference_not_fulfilled(self, generated_rows):
         yaml = """
         - object: A
           fields:
@@ -171,7 +171,7 @@ class TestReferences:
             generate(StringIO(yaml), {}, None)
         assert "BBB" in str(e.value)
 
-    def test_forward_references_not_fulfilled__nickname(self, write_row):
+    def test_forward_references_not_fulfilled__nickname(self, generated_rows):
         yaml = """
         - object: A
           fields:

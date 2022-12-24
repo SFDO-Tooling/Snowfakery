@@ -7,15 +7,15 @@ from dateutil import parser as dateparser
 from snowfakery.data_generator import generate
 from snowfakery import data_gen_exceptions as exc
 
-write_row_path = "snowfakery.output_streams.SimpleFileOutputStream.write_row"
+generated_rows_path = "snowfakery.output_streams.SimpleFileOutputStream.generated_rows"
 
 
-def row_values(write_row, index, value):
-    return write_row.mock_calls[index][1][1][value]
+def row_values(generated_rows, index, value):
+    return generated_rows.mock_calls[index][1][1][value]
 
 
 class TestFaker:
-    def test_fake_block_simple(self, write_row):
+    def test_fake_block_simple(self, generated_rows):
         yaml = """
         - object: OBJ
           fields:
@@ -24,9 +24,9 @@ class TestFaker:
                     first_name
         """
         generate(StringIO(yaml), {}, None)
-        assert row_values(write_row, 0, "first_name")
+        assert row_values(generated_rows, 0, "first_name")
 
-    def test_fake_block_simple_oneline(self, write_row):
+    def test_fake_block_simple_oneline(self, generated_rows):
         yaml = """
         - object: OBJ
           fields:
@@ -34,9 +34,9 @@ class TestFaker:
                 fake: first_name
         """
         generate(StringIO(yaml), {}, None)
-        assert row_values(write_row, 0, "first_name")
+        assert row_values(generated_rows, 0, "first_name")
 
-    def test_fake_block_one_param(self, write_row):
+    def test_fake_block_one_param(self, generated_rows):
         yaml = """
         - object: OBJ
           fields:
@@ -45,10 +45,10 @@ class TestFaker:
                     representation: alpha-2
         """
         generate(StringIO(yaml), {})
-        assert len(row_values(write_row, 0, "country")) == 2
+        assert len(row_values(generated_rows, 0, "country")) == 2
 
     @pytest.mark.parametrize("snowfakery_version", (2, 3))
-    def test_fake_inline(self, write_row, snowfakery_version):
+    def test_fake_inline(self, generated_rows, snowfakery_version):
         yaml = """
         - object: OBJ
           fields:
@@ -59,29 +59,29 @@ class TestFaker:
             {},
             plugin_options={"snowfakery_version": snowfakery_version},
         )
-        assert len(row_values(write_row, 0, "country")) == 2
+        assert len(row_values(generated_rows, 0, "country")) == 2
 
-    def test_fake_inline_overrides(self, write_row):
+    def test_fake_inline_overrides(self, generated_rows):
         yaml = """
         - object: OBJ
           fields:
             name: ${{fake.FirstName}} ${{fake.LastName}}
         """
         generate(StringIO(yaml), {}, None)
-        assert len(row_values(write_row, 0, "name").split(" ")) == 2
+        assert len(row_values(generated_rows, 0, "name").split(" ")) == 2
 
-    def test_fake_two_params_flat(self, write_row):
+    def test_fake_two_params_flat(self, generated_rows):
         yaml = """
         - object: OBJ
           fields:
             date: ${{fake.date(pattern="%Y-%m-%d", end_datetime=None)}}
         """
         generate(StringIO(yaml), {}, None)
-        date = row_values(write_row, 0, "date")
-        assert type(date) == str, write_row.mock_calls
+        date = row_values(generated_rows, 0, "date")
+        assert type(date) == str, generated_rows.mock_calls
         assert len(date.split("-")) == 3, date
 
-    def test_fake_two_params_nested(self, write_row):
+    def test_fake_two_params_nested(self, generated_rows):
         yaml = """
         - object: OBJ
           fields:
@@ -91,9 +91,9 @@ class TestFaker:
                     end_date: today
         """
         generate(StringIO(yaml), {}, None)
-        assert row_values(write_row, 0, "date").year
+        assert row_values(generated_rows, 0, "date").year
 
-    def test_non_overlapping_dates(self, write_row):
+    def test_non_overlapping_dates(self, generated_rows):
         yaml = """
         - object: OBJ
           fields:
@@ -103,7 +103,7 @@ class TestFaker:
                     end_date: 2000-01-01
         """
         generate(StringIO(yaml), {}, None)
-        assert row_values(write_row, 0, "date") is None
+        assert row_values(generated_rows, 0, "date") is None
 
     def test_non_overlapping_datetimes(self):
         yaml = """
@@ -200,7 +200,7 @@ class TestFaker:
 
         assert "date specification" in str(e.value)
 
-    def test_months_past(self, write_row):
+    def test_months_past(self, generated_rows):
         yaml = """
         - object: A
           fields:
@@ -210,7 +210,7 @@ class TestFaker:
                 end_date: -3M
         """
         generate(StringIO(yaml), {}, None)
-        the_date = row_values(write_row, 0, "date")
+        the_date = row_values(generated_rows, 0, "date")
         assert (date.today() - the_date).days > 80
         assert (date.today() - the_date).days < 130
 
@@ -297,7 +297,7 @@ class TestFaker:
             <= now
         )
 
-    def test_snowfakery_names(self, write_row):
+    def test_snowfakery_names(self, generated_rows):
         yaml = """
         - object: A
           fields:
@@ -319,14 +319,14 @@ class TestFaker:
               fake: email
         """
         generate(StringIO(yaml), {}, None)
-        assert "_" in row_values(write_row, 0, "un")
-        assert "@" in row_values(write_row, 0, "un2")
-        assert len(row_values(write_row, 0, "alias")) <= 8
-        assert "@example" in row_values(write_row, 0, "email")
-        assert "@" in row_values(write_row, 0, "email2")
-        assert "@" in row_values(write_row, 0, "danger_mail")
+        assert "_" in row_values(generated_rows, 0, "un")
+        assert "@" in row_values(generated_rows, 0, "un2")
+        assert len(row_values(generated_rows, 0, "alias")) <= 8
+        assert "@example" in row_values(generated_rows, 0, "email")
+        assert "@" in row_values(generated_rows, 0, "email2")
+        assert "@" in row_values(generated_rows, 0, "danger_mail")
 
-    def test_fallthrough_to_faker(self, write_row):
+    def test_fallthrough_to_faker(self, generated_rows):
         yaml = """
         - object: A
           fields:
@@ -334,9 +334,9 @@ class TestFaker:
               fake: ssn
         """
         generate(StringIO(yaml), {}, None)
-        assert row_values(write_row, 0, "SSN")
+        assert row_values(generated_rows, 0, "SSN")
 
-    def test_remove_underscores_from_faker(self, write_row):
+    def test_remove_underscores_from_faker(self, generated_rows):
         yaml = """
         - object: A
           fields:
@@ -348,11 +348,11 @@ class TestFaker:
               fake: phone_number
         """
         generate(StringIO(yaml), {}, None)
-        assert set(row_values(write_row, 0, "pn1")).intersection("0123456789")
-        assert set(row_values(write_row, 0, "pn2")).intersection("0123456789")
-        assert set(row_values(write_row, 0, "pn3")).intersection("0123456789")
+        assert set(row_values(generated_rows, 0, "pn1")).intersection("0123456789")
+        assert set(row_values(generated_rows, 0, "pn2")).intersection("0123456789")
+        assert set(row_values(generated_rows, 0, "pn3")).intersection("0123456789")
 
-    def test_faker_kwargs(self, write_row):
+    def test_faker_kwargs(self, generated_rows):
         yaml = """
         - object: A
           fields:
@@ -362,9 +362,9 @@ class TestFaker:
                 max: -1
         """
         generate(StringIO(yaml), {}, None)
-        assert -5 <= row_values(write_row, 0, "neg") <= -1
+        assert -5 <= row_values(generated_rows, 0, "neg") <= -1
 
-    def test_error_handling(self, write_row):
+    def test_error_handling(self, generated_rows):
         yaml = """
         - object: A
           fields:
@@ -376,7 +376,7 @@ class TestFaker:
         assert "xyzzy" in str(e.value)
         assert "fake" in str(e.value)
 
-    def test_did_you_mean(self, write_row):
+    def test_did_you_mean(self, generated_rows):
         yaml = """
         - object: A
           fields:

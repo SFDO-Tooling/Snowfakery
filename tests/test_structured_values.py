@@ -18,12 +18,12 @@ write_row_path = "snowfakery.output_streams.SimpleFileOutputStream.write_row"
 
 
 class TestStructuredValues:
-    def test_structured_values(self, write_row):
+    def test_structured_values(self, generated_rows):
         generate(StringIO(structured_values_with_templates), {}, None)
-        assert isinstance(write_row.mock_calls[0][1][1]["B"], int)
-        assert 2 <= write_row.mock_calls[0][1][1]["B"] <= 8
+        assert isinstance(generated_rows.mock_calls[0][1][1]["B"], int)
+        assert 2 <= generated_rows.mock_calls[0][1][1]["B"] <= 8
 
-    def test_lazy_random_choice(self, write_row):
+    def test_lazy_random_choice(self, generated_rows):
         yaml = """
         - object : A
           fields:
@@ -34,4 +34,4 @@ class TestStructuredValues:
                     - object: E
         """
         generate(StringIO(yaml), {}, None)
-        assert len(write_row.mock_calls) == 2, write_row.mock_calls
+        assert len(generated_rows.mock_calls) == 2, generated_rows.mock_calls

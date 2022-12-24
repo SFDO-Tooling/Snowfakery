@@ -12,7 +12,7 @@ pytest.importorskip("numpy")
 
 
 class TestStatisticalDistributions:
-    def test_random_distribution_normal(self, write_row):
+    def test_random_distribution_normal(self, generated_rows):
         yaml = """
         - plugin: snowfakery.standard_plugins.statistical_distributions.StatisticalDistributions
         - object: A
@@ -24,10 +24,10 @@ class TestStatisticalDistributions:
                 seed: 1
         """
         generate(StringIO(yaml), {}, None)
-        assert len(write_row.mock_calls) == 1
-        assert write_row.mock_calls == [mock.call("A", {"id": 1, "b": 3})]
+        assert len(generated_rows.mock_calls) == 1
+        assert generated_rows.mock_calls == [mock.call("A", {"id": 1, "b": 3})]
 
-    def test_random_distribution_param_errors(self, write_row):
+    def test_random_distribution_param_errors(self, generated_rows):
         yaml = """
         - plugin: snowfakery.standard_plugins.statistical_distributions.StatisticalDistributions
         - object: A
@@ -42,7 +42,7 @@ class TestStatisticalDistributions:
             generate(StringIO(yaml), {}, None)
         assert "lognormal" in str(e.value)
 
-    def test_random_distribution_unknown(self, write_row):
+    def test_random_distribution_unknown(self, generated_rows):
         yaml = """
         - plugin: snowfakery.standard_plugins.statistical_distributions.StatisticalDistributions
         - object: A

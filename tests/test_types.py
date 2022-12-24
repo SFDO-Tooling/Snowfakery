@@ -5,14 +5,14 @@ from snowfakery.data_generator import generate
 
 
 class TestTypes:
-    def test_empty_string(self, write_row):
+    def test_empty_string(self, generated_rows):
         yaml = """
             - object: Foo
               fields:
                 bar: ""
         """
         generate(StringIO(yaml))
-        assert write_row.mock_calls[0][1][1]["bar"] == ""
+        assert generated_rows.mock_calls[0][1][1]["bar"] == ""
 
     def test_zero_prefixed_string(self, generated_rows):
         yaml = """

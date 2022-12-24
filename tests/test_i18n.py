@@ -3,12 +3,12 @@ from io import StringIO
 from snowfakery.data_generator import generate
 
 
-def row_values(write_row, index, value):
-    return write_row.mock_calls[index][1][1][value]
+def row_values(generated_rows, index, value):
+    return generated_rows.mock_calls[index][1][1][value]
 
 
 class Testi18n:
-    def test_i18n(self, write_row):
+    def test_i18n(self, generated_rows):
         yaml = """
         - object: foo
           fields:
@@ -17,4 +17,4 @@ class Testi18n:
                     locale: ja_JP
                     fake: name"""
         generate(StringIO(yaml), {})
-        assert isinstance(row_values(write_row, 0, "japanese_name"), str)
+        assert isinstance(row_values(generated_rows, 0, "japanese_name"), str)

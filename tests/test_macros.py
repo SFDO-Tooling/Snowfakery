@@ -7,7 +7,7 @@ import snowfakery.data_gen_exceptions as exc
 
 
 class TestMacros:
-    def test_field_includes(self, write_row):
+    def test_field_includes(self, generated_rows):
         yaml = """
         - macro: standard_foo
           fields:
@@ -19,9 +19,11 @@ class TestMacros:
             baz: 6
         """
         generate(StringIO(yaml))
-        assert write_row.mock_calls == [mock.call("foo", {"id": 1, "bar": 5, "baz": 6})]
+        assert generated_rows.mock_calls == [
+            mock.call("foo", {"id": 1, "bar": 5, "baz": 6})
+        ]
 
-    def test_friend_includes(self, write_row):
+    def test_friend_includes(self, generated_rows):
         yaml = """
         - macro: standard_foo
           friends:
@@ -31,12 +33,12 @@ class TestMacros:
           include: standard_foo
         """
         generate(StringIO(yaml))
-        assert write_row.mock_calls == [
+        assert generated_rows.mock_calls == [
             mock.call("foo", {"id": 1}),
             mock.call("bar", {"id": 1}),
         ]
 
-    def test_field_and_friend_includes(self, write_row):
+    def test_field_and_friend_includes(self, generated_rows):
         yaml = """
         - macro: standard_foo
           fields:
@@ -51,13 +53,13 @@ class TestMacros:
           include: standard_foo
         """
         generate(StringIO(yaml))
-        assert write_row.mock_calls == [
+        assert generated_rows.mock_calls == [
             mock.call("foo", {"id": 1, "bar": 5}),
             mock.call("baz", {"id": 1, "zar": 6}),
         ]
 
     @mock.patch("snowfakery.output_streams.SimpleFileOutputStream.write_row")
-    def test_friend_includes_and_references(self, write_row):
+    def test_friend_includes_and_references(self, generated_rows):
         yaml = """
         - macro: standard_foo
           friends:
@@ -70,11 +72,11 @@ class TestMacros:
           include: standard_foo
         """
         generate(StringIO(yaml))
-        assert write_row.mock_calls[0] == mock.call("foo", {"id": 1})
-        assert write_row.mock_calls[1][1][0] == "bar"
-        assert write_row.mock_calls[1][1][1]["myfoo"].id == 1
+        assert generated_rows.mock_calls[0] == mock.call("foo", {"id": 1})
+        assert generated_rows.mock_calls[1][1][0] == "bar"
+        assert generated_rows.mock_calls[1][1][1]["myfoo"].id == 1
 
-    def test_macros_include_macros(self, write_row):
+    def test_macros_include_macros(self, generated_rows):
         yaml = """
         - macro: foo
           fields:
@@ -89,11 +91,11 @@ class TestMacros:
           include: bar
         """
         generate(StringIO(yaml))
-        assert write_row.mock_calls[0] == mock.call(
+        assert generated_rows.mock_calls[0] == mock.call(
             "Bar", {"id": 1, "barbar": "BARBAR", "foobar": "FOOBAR"}
         )
 
-    def test_macros_include_themselves(self, write_row):
+    def test_macros_include_themselves(self, generated_rows):
         yaml = """
         - macro: foo
           include: bar

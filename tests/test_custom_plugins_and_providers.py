@@ -19,8 +19,8 @@ generate = generate_data
 import pytest
 
 
-def row_values(write_row, index, value):
-    return write_row.mock_calls[index][1][1][value]
+def row_values(generated_rows, index, value):
+    return generated_rows.mock_calls[index][1][1][value]
 
 
 class SimpleTestPlugin(SnowfakeryPlugin):
@@ -107,7 +107,7 @@ class DoesNotClosePlugin(SnowfakeryPlugin):
 
 
 class TestCustomFakerProvider:
-    def test_custom_faker_provider(self, write_row):
+    def test_custom_faker_provider(self, generated_rows):
         yaml = """
         - plugin: faker_microservice.Provider
         - object: OBJ
@@ -117,7 +117,7 @@ class TestCustomFakerProvider:
                     microservice
         """
         generate_data(StringIO(yaml))
-        assert row_values(write_row, 0, "service_name")
+        assert row_values(generated_rows, 0, "service_name")
 
 
 class TestCustomPlugin:
@@ -144,7 +144,7 @@ class TestCustomPlugin:
             generate_data(StringIO(yaml))
         assert "xyzzy" in str(e.value)
 
-    def test_simple_plugin(self, write_row):
+    def test_simple_plugin(self, generated_rows):
         yaml = """
         - plugin: tests.test_custom_plugins_and_providers.SimpleTestPlugin
         - object: OBJ
@@ -154,10 +154,10 @@ class TestCustomPlugin:
             six: ${{SimpleTestPlugin.double(3)}}
         """
         generate_data(StringIO(yaml))
-        assert row_values(write_row, 0, "four") == 4
-        assert row_values(write_row, 0, "six") == 6
+        assert row_values(generated_rows, 0, "four") == 4
+        assert row_values(generated_rows, 0, "six") == 6
 
-    def test_constants(self, write_row):
+    def test_constants(self, generated_rows):
         yaml = """
         - plugin: snowfakery.standard_plugins.Math
         - object: OBJ
@@ -165,9 +165,9 @@ class TestCustomPlugin:
             pi: ${{Math.pi}}
         """
         generate_data(StringIO(yaml))
-        assert row_values(write_row, 0, "pi") == math.pi
+        assert row_values(generated_rows, 0, "pi") == math.pi
 
-    def test_math(self, write_row):
+    def test_math(self, generated_rows):
         yaml = """
         - plugin: snowfakery.standard_plugins.Math
         - object: OBJ
@@ -178,12 +178,12 @@ class TestCustomPlugin:
             min: ${{Math.min(144, 200, 100)}}
         """
         generate_data(StringIO(yaml))
-        assert row_values(write_row, 0, "sqrt") == 12
-        assert row_values(write_row, 0, "max") == 200
-        assert row_values(write_row, 0, "eleven") == 11
-        assert row_values(write_row, 0, "min") == 100
+        assert row_values(generated_rows, 0, "sqrt") == 12
+        assert row_values(generated_rows, 0, "max") == 200
+        assert row_values(generated_rows, 0, "eleven") == 11
+        assert row_values(generated_rows, 0, "min") == 100
 
-    def test_math_deconstructed(self, write_row):
+    def test_math_deconstructed(self, generated_rows):
         yaml = """
         - plugin: snowfakery.standard_plugins.Math
         - object: OBJ
@@ -192,9 +192,9 @@ class TestCustomPlugin:
                 Math.sqrt: ${{Math.min(144, 169)}}
         """
         generate_data(StringIO(yaml))
-        assert row_values(write_row, 0, "twelve") == 12
+        assert row_values(generated_rows, 0, "twelve") == 12
 
-    def test_stringification(self, write_row):
+    def test_stringification(self, generated_rows):
         yaml = """
         - plugin: tests.test_custom_plugins_and_providers.EvalPlugin
         - object: OBJ
@@ -259,7 +259,7 @@ class PluginThatNeedsState(SnowfakeryPlugin):
 
 
 class TestContextVars:
-    def test_plugin_context_vars(self, write_row):
+    def test_plugin_context_vars(self, generated_rows):
         yaml = """
         - plugin: tests.test_custom_plugins_and_providers.PluginThatNeedsState
         - object: OBJ
@@ -283,12 +283,12 @@ class TestContextVars:
         """
         generate_data(StringIO(yaml))
 
-        assert row_values(write_row, 0, "path") == "ROOT.OBJ1.OBJ2"
-        assert row_values(write_row, 1, "path") == "ROOT.OBJ1"
-        assert row_values(write_row, 2, "path") == "ROOT.OBJ3.OBJ4"
-        assert row_values(write_row, 3, "path") == "ROOT.OBJ3"
+        assert row_values(generated_rows, 0, "path") == "ROOT.OBJ1.OBJ2"
+        assert row_values(generated_rows, 1, "path") == "ROOT.OBJ1"
+        assert row_values(generated_rows, 2, "path") == "ROOT.OBJ3.OBJ4"
+        assert row_values(generated_rows, 3, "path") == "ROOT.OBJ3"
 
-    def test_lazy_with_context(self, write_row):
+    def test_lazy_with_context(self, generated_rows):
         yaml = """
         - plugin: tests.test_custom_plugins_and_providers.DoubleVisionPlugin
         - plugin: tests.test_custom_plugins_and_providers.PluginThatNeedsState
@@ -303,8 +303,8 @@ class TestContextVars:
         """
         generate_data(StringIO(yaml))
 
-        assert row_values(write_row, 0, "some_value") == "abc : abc"
-        assert row_values(write_row, 0, "some_value_2") == "1 : 2"
+        assert row_values(generated_rows, 0, "some_value") == "abc : abc"
+        assert row_values(generated_rows, 0, "some_value_2") == "1 : 2"
 
     def test_weird_types(self):
         yaml = """
