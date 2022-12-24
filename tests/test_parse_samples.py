@@ -22,9 +22,6 @@ def find_row(row_type, compare, calls):
             return row_values  # return the args
 
 
-write_row_path = "snowfakery.output_streams.SimpleFileOutputStream.write_row"
-
-
 class TestParseAndOutput:
     def test_d_and_d(self, generated_rows):
         with open(dnd_test) as open_yaml_file:

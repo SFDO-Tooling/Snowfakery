@@ -132,12 +132,3 @@ def snowfakery_rootdir():
 @pytest.fixture(scope="session")
 def salesforce_serializer():
     return yamlserializer
-
-
-# deprecated...use generated_rows instead
-@pytest.fixture(scope="function")
-def write_row():
-    "Deprecated. Don't use this anymore"
-    write_row_path = "snowfakery.output_streams.SimpleFileOutputStream.write_single_row"
-    with patch(write_row_path) as m:
-        yield m

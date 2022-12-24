@@ -6,8 +6,6 @@ import pytest
 from snowfakery.data_generator import generate
 from snowfakery.data_gen_exceptions import DataGenError
 
-write_row_path = "snowfakery.output_streams.SimpleFileOutputStream.write_row"
-
 pytest.importorskip("numpy")
 
 

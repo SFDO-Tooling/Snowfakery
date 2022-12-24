@@ -14,9 +14,6 @@ structured_values_with_templates = """  #1
 """
 
 
-write_row_path = "snowfakery.output_streams.SimpleFileOutputStream.write_row"
-
-
 class TestStructuredValues:
     def test_structured_values(self, generated_rows):
         generate(StringIO(structured_values_with_templates), {}, None)
