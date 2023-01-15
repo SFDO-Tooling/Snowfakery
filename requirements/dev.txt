@@ -66,9 +66,7 @@ idna==3.4
     #   requests
     #   yarl
 importlib-metadata==5.0.0
-    # via
-    #   markdown
-    #   mkdocs
+    # via mkdocs
 importlib-resources==5.10.0
     # via tox-gh-actions
 iniconfig==1.1.1
@@ -121,9 +119,7 @@ pluggy==1.0.0
 pre-commit==2.20.0
     # via -r requirements/dev.in
 py==1.11.0
-    # via
-    #   pytest
-    #   tox
+    # via tox
 pydantic==1.10.2
     # via -r requirements/prod.txt
 pygments==2.13.0
@@ -134,7 +130,7 @@ pyright==1.1.274
     # via -r requirements/dev.in
 pyrsistent==0.18.1
     # via jsonschema
-pytest==7.1.3
+pytest==7.2.1
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -166,6 +162,8 @@ requests==2.28.1
     #   responses
 responses==0.22.0
     # via -r requirements/dev.in
+setuptools==65.4.1
+    # via nodeenv
 six==1.16.0
     # via
     #   -r requirements/prod.txt
@@ -178,12 +176,6 @@ toml==0.10.2
     # via
     #   pre-commit
     #   responses
-tomli==2.0.1
-    # via
-    #   black
-    #   coverage
-    #   pytest
-    #   tox
 tox==3.26.0
     # via
     #   -r requirements/dev.in
@@ -197,7 +189,6 @@ types-toml==0.10.8
 typing-extensions==4.4.0
     # via
     #   -r requirements/prod.txt
-    #   black
     #   pydantic
 urllib3==1.26.12
     # via
@@ -219,10 +210,4 @@ wrapt==1.14.1
 yarl==1.8.1
     # via vcrpy
 zipp==3.9.0
-    # via
-    #   importlib-metadata
-    #   importlib-resources
-
-# The following packages are considered to be unsafe in a requirements file:
-setuptools==65.4.1
-    # via nodeenv
+    # via importlib-metadata
