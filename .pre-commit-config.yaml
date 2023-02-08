@@ -1,19 +1,19 @@
 default_language_version:
-    python: python3
+  python: python3
 repos:
--   repo: https://github.com/ambv/black
-    rev: 21.4b2
+  - repo: https://github.com/ambv/black
+    rev: 23.1.0
     hooks:
-    - id: black
--   repo: https://github.com/pre-commit/pre-commit-hooks
+      - id: black
+  - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v2.0.0
     hooks:
-    - id: check-merge-conflict
-    - id: flake8
-- repo: local
-  hooks:
-    - id: merge-docs
-      name: Merge examples into docs
-      entry: tools/docs_samples.py
-      language: python
-      files: ".*.md|examples/.*.yml"
+      - id: check-merge-conflict
+      - id: flake8
+  - repo: local
+    hooks:
+      - id: merge-docs
+        name: Merge examples into docs
+        entry: tools/docs_samples.py
+        language: python
+        files: ".*.md|examples/.*.yml"
