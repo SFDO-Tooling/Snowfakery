@@ -22,18 +22,14 @@ def find_row(row_type, compare, calls):
             return row_values  # return the args
 
 
-write_row_path = "snowfakery.output_streams.DebugOutputStream.write_row"
-
-
 class TestParseAndOutput:
-    @mock.patch(write_row_path)
-    def test_d_and_d(self, write_row):
+    def test_d_and_d(self, generated_rows):
         with open(dnd_test) as open_yaml_file:
             generate(
                 open_yaml_file=open_yaml_file,
                 user_options={"num_fighters": 1, "num_druids": 2},
             )
-        calls = write_row.mock_calls
+        calls = generated_rows.mock_calls
         assert find_row("Equipment", {"id": 1}, calls)
         assert find_row("Druid", {"id": 1, "Hit Points": mock.ANY}, calls)
         assert find_row("Druid", {"id": 2, "Hit Points": mock.ANY}, calls)
@@ -41,11 +37,10 @@ class TestParseAndOutput:
         assert not find_row("Fighter", {"id": 2, "Name": mock.ANY}, calls)
         assert find_row("Paladin", {"id": 1, "Name": mock.ANY}, calls)
 
-    @mock.patch(write_row_path)
-    def test_data_imports(self, write_row):
+    def test_data_imports(self, generated_rows):
         with open(data_imports) as open_yaml_file:
             generate(open_yaml_file, {"total_data_imports": 4}, None)
-        calls = write_row.mock_calls
+        calls = generated_rows.mock_calls
         assert find_row(
             "General_Accounting_Unit__c", {"id": 1, "Name": "Scholarship"}, calls
         )
@@ -66,34 +61,31 @@ class TestParseAndOutput:
             calls,
         )
 
-    @mock.patch(write_row_path)
-    def test_gen_standard_objects(self, write_row):
+    def test_gen_standard_objects(self, generated_rows):
         with open(standard_objects) as open_yaml_file:
             generate(open_yaml_file, {}, None)
 
-        calls = write_row.mock_calls
+        calls = generated_rows.mock_calls
 
         assert find_row("Account", {}, calls)
         assert find_row("Contact", {}, calls)
         assert find_row("Opportunity", {}, calls)
 
-    @mock.patch(write_row_path)
-    def test_gen_npsp_standard_objects(self, write_row):
+    def test_gen_npsp_standard_objects(self, generated_rows):
         with open(npsp_standard_objects) as open_yaml_file:
             generate(open_yaml_file, {}, None)
 
-        calls = write_row.mock_calls
+        calls = generated_rows.mock_calls
 
         assert find_row("Account", {}, calls)
         assert find_row("Contact", {}, calls)
         assert find_row("Opportunity", {}, calls)
 
-    @mock.patch(write_row_path)
-    def test_simple_salesforce(self, write_row):
+    def test_simple_salesforce(self, generated_rows):
         with open(simple_salesforce) as open_yaml_file:
             generate(open_yaml_file, {}, None)
 
-        calls = write_row.mock_calls
+        calls = generated_rows.mock_calls
 
         assert find_row("Account", {}, calls)
         assert find_row("Contact", {}, calls)

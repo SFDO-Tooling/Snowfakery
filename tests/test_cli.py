@@ -20,19 +20,16 @@ sample_yaml = Path(__file__).parent / "include_parent.yml"
 bad_sample_yaml = Path(__file__).parent / "include_bad_parent.yml"
 sample_accounts_yaml = Path(__file__).parent / "gen_sf_standard_objects.yml"
 
-write_row_path = "snowfakery.output_streams.DebugOutputStream.write_single_row"
-
 
 class TestGenerateFromCLI:
-    @mock.patch(write_row_path)
-    def test_simple(self, write_row):
+    def test_simple(self, generated_rows):
         generate_cli.callback(
             yaml_file=sample_yaml,
             option={},
             debug_internals=None,
             generate_cci_mapping_file=None,
         )
-        assert write_row.mock_calls == [
+        assert generated_rows.mock_calls == [
             mock.call(
                 "Account",
                 {"id": 1, "name": "Default Company Name", "ShippingCountry": "Canada"},
@@ -43,8 +40,7 @@ class TestGenerateFromCLI:
         assert eval_arg("5") == 5
         assert eval_arg("abc") == "abc"
 
-    @mock.patch(write_row_path)
-    def test_counts(self, write_row):
+    def test_counts(self, generated_rows):
         generate_cli.callback(
             yaml_file=sample_yaml,
             target_number=(2, "Account"),
@@ -52,7 +48,7 @@ class TestGenerateFromCLI:
             debug_internals=None,
             generate_cci_mapping_file=None,
         )
-        assert write_row.mock_calls == [
+        assert generated_rows.mock_calls == [
             mock.call(
                 "Account",
                 {"id": 1, "name": "Default Company Name", "ShippingCountry": "Canada"},
@@ -63,8 +59,7 @@ class TestGenerateFromCLI:
             ),
         ]
 
-    @mock.patch(write_row_path)
-    def test_counts_backwards(self, write_row):
+    def test_counts_backwards(self, generated_rows):
         generate_cli.callback(
             yaml_file=sample_yaml,
             target_number=("Account", 2),
@@ -72,7 +67,7 @@ class TestGenerateFromCLI:
             debug_internals=None,
             generate_cci_mapping_file=None,
         )
-        assert write_row.mock_calls == [
+        assert generated_rows.mock_calls == [
             mock.call(
                 "Account",
                 {"id": 1, "name": "Default Company Name", "ShippingCountry": "Canada"},
@@ -83,8 +78,7 @@ class TestGenerateFromCLI:
             ),
         ]
 
-    @mock.patch(write_row_path)
-    def test_with_option(self, write_row):
+    def test_with_option(self, generated_rows):
         with pytest.warns(UserWarning):
             generate_cli.callback(
                 yaml_file=sample_yaml,
@@ -93,8 +87,7 @@ class TestGenerateFromCLI:
                 generate_cci_mapping_file=None,
             )
 
-    @mock.patch(write_row_path)
-    def test_with_bad_dburl(self, write_row):
+    def test_with_bad_dburl(self, generated_rows):
         with pytest.raises(Exception):
             generate_cli.callback(
                 yaml_file=sample_yaml,
@@ -104,12 +97,10 @@ class TestGenerateFromCLI:
                 generate_cci_mapping_file=None,
             )
 
-    @mock.patch(write_row_path)
-    def test_with_debug_flags_on(self, write_row):
+    def test_with_debug_flags_on(self, generated_rows):
         generate_cli.callback(yaml_file=sample_yaml, option={}, debug_internals=True)
 
-    @mock.patch(write_row_path)
-    def test_exception_with_debug_flags_on(self, write_row):
+    def test_exception_with_debug_flags_on(self, generated_rows):
         with named_temporary_file_path(suffix=".yml") as t:
             with pytest.raises(DataGenError):
                 generate_cli.callback(
@@ -120,8 +111,7 @@ class TestGenerateFromCLI:
                 )
                 assert yaml.safe_load(t)
 
-    @mock.patch(write_row_path)
-    def test_exception_with_debug_flags_off(self, write_row):
+    def test_exception_with_debug_flags_off(self, generated_rows):
         with named_temporary_file_path(suffix=".yml") as t:
             with pytest.raises(ClickException):
                 generate_cli.callback(
