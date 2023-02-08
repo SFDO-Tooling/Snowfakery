@@ -1,0 +1,19 @@
+### This recipe creates reference Account record for PMM data
+# Look at examples/salesforce/Account.recipe.yml for more examples.
+
+# Run this like this:
+
+# cci task run generate_and_load_from_yaml --generator_yaml snowfakery_samples/PMM/pmm_0_Account.recipe.yml --num_records 300 --num_records_tablename Account --org qa
+# snowfakery snowfakery_samples/PMM/pmm_0_Account.recipe.yml --output-format json --output-file src/foo.json
+
+# Set Macro for Household and Organization Record Type
+
+- object: Account
+  count: 3
+  just_once: True
+
+- object: Account
+  just_once: True
+  fields:
+    parent:
+      random_reference: Account

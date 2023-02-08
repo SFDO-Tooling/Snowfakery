@@ -629,15 +629,23 @@ class TestRandomReferencesNew:
     def test_random_reference_to_just_once_obj(self, generated_rows):
         yaml = """
               - object: Parent
+                count: 3
                 just_once: true
+                fields:
+                  name: Poppy
 
               - object: Child
+                count: 5
                 fields:
                   parent:
                     random_reference: Parent
+                  deep_ref: ${{parent.name}}
                 """
         generate(StringIO(yaml), stopping_criteria=StoppingCriteria("Child", 3))
-        assert len(generated_rows.mock_calls) == 4
+        assert len(generated_rows.mock_calls) == 8
+        assert generated_rows.table_values("Child", 1, "deep_ref") == "Poppy"
+        assert generated_rows.table_values("Child", 2, "deep_ref") == "Poppy"
+        assert generated_rows.table_values("Child", 5, "deep_ref") == "Poppy"
 
     @pytest.mark.parametrize("rand_top", [True, False])
     def test_random_reference_to_just_once_obj_many(self, generated_rows, rand_top):

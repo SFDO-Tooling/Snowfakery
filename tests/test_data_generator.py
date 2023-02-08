@@ -64,6 +64,7 @@ id_manager:
 nicknames_and_tables: {}
 today: 2022-11-03
 persistent_nicknames: {}
+persistent_random_referenceable_objects: []
                 """
         generate(
             StringIO(yaml),

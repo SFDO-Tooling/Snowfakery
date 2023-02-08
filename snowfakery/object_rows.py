@@ -74,6 +74,9 @@ class ObjectReference(yaml.YAMLObject):
 
 class LazyLoadedObjectReference(ObjectReference):
     _data = None
+    yaml_loader = yaml.SafeLoader
+    yaml_dumper = SnowfakeryDumper
+    yaml_tag = "!snowfakery_lazyloadedobjectrow"
 
     def __init__(
         self,
@@ -89,9 +92,16 @@ class LazyLoadedObjectReference(ObjectReference):
         if attrname.endswith("__"):  # pragma: no cover
             raise AttributeError(attrname)
         if self._data is None:
-            row_history = RowHistoryCV.get()
-            self._data = row_history.load_row(self.sql_tablename, self.id)
+            self._load_data()
         return self._data[attrname]
+
+    def _load_data(self):
+        row_history = RowHistoryCV.get()
+        self._data = row_history.load_row(self.sql_tablename, self.id)
+
+    def __reduce_ex__(self, *args, **kwargs):
+        self._load_data()
+        return super().__reduce_ex__(*args, **kwargs)
 
 
 class SlotState(Enum):
