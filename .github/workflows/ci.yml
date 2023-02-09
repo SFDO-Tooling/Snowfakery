@@ -56,7 +56,7 @@ jobs:
           python -VV
           python -m pip install --upgrade pip
           pip install -r requirements_dev.txt
-          python -m pip install https://github.com/SFDO-Tooling/CumulusCI/archive/add-pytest-plugins.tar.gz
+          python -m pip install git+https://github.com/SFDO-Tooling/CumulusCI.git@main
 
       - name: Run Tests
         run: |
