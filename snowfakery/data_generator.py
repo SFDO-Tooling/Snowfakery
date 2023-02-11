@@ -1,5 +1,5 @@
 import warnings
-from typing import IO, Tuple, Mapping, List, Dict, TextIO, Union
+from typing import IO, Optional, Tuple, Mapping, List, Dict, TextIO, Union
 import typing as T
 import functools
 
@@ -120,9 +120,9 @@ def process_plugins(plugins: List) -> Tuple[List[object], Mapping[str, object]]:
 
 def generate(
     open_yaml_file: IO[str],
-    user_options: dict = None,
+    user_options: Optional[dict] = None,
     #  *,   TODO: fix test suite so these can be keyword-only arguments
-    output_stream: OutputStream = None,
+    output_stream: Optional[OutputStream] = None,
     parent_application=None,
     *,
     stopping_criteria=None,
