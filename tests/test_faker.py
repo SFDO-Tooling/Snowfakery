@@ -7,8 +7,6 @@ from dateutil import parser as dateparser
 from snowfakery.data_generator import generate
 from snowfakery import data_gen_exceptions as exc
 
-generated_rows_path = "snowfakery.output_streams.SimpleFileOutputStream.generated_rows"
-
 
 def row_values(generated_rows, index, value):
     return generated_rows.mock_calls[index][1][1][value]

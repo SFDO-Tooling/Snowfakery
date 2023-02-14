@@ -58,7 +58,6 @@ class TestMacros:
             mock.call("baz", {"id": 1, "zar": 6}),
         ]
 
-    @mock.patch("snowfakery.output_streams.SimpleFileOutputStream.write_row")
     def test_friend_includes_and_references(self, generated_rows):
         yaml = """
         - macro: standard_foo
@@ -74,7 +73,7 @@ class TestMacros:
         generate(StringIO(yaml))
         assert generated_rows.mock_calls[0] == mock.call("foo", {"id": 1})
         assert generated_rows.mock_calls[1][1][0] == "bar"
-        assert generated_rows.mock_calls[1][1][1]["myfoo"].id == 1
+        assert generated_rows.mock_calls[1][1][1]["myfoo"] == "foo(1)"
 
     def test_macros_include_macros(self, generated_rows):
         yaml = """
