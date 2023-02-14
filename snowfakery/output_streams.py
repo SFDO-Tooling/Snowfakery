@@ -180,8 +180,8 @@ class FileOutputStream(OutputStream):
         return self.smart_stream.close()
 
 
-class DebugOutputStream(FileOutputStream):
-    """Simplified output for debugging Snowfakery files."""
+class SimpleFileOutputStream(FileOutputStream):
+    """Debug-like output, but with raw data fields"""
 
     is_text = True
 
@@ -199,11 +199,27 @@ class DebugOutputStream(FileOutputStream):
         return f"{target_object_row._tablename}({target_object_row.id})"
 
 
+class DebugOutputStream(SimpleFileOutputStream):
+    """Simplified output for debugging Snowfakery files.
+
+    Datetimes are in Salesforce format."""
+
+    encoders: Mapping[type, Callable] = {
+        **SimpleFileOutputStream.encoders,
+        datetime.datetime: format_datetime,  # format into Salesforce-friendly syntax
+    }
+
+
 CSVContext = namedtuple("CSVContext", ["dictwriter", "file"])
 
 
 class CSVOutputStream(OutputStream):
     """Output stream that generates a directory of CSV files."""
+
+    encoders: Mapping[type, Callable] = {
+        **OutputStream.encoders,
+        datetime.datetime: format_datetime,  # format into Salesforce-friendly syntax
+    }
 
     uses_folder = True
 

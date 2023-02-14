@@ -2243,11 +2243,11 @@ Outputs:
 
 ```s
 # examples/schedule/haunting.recipe.out
-ScaryEvent(id=1, Name=Halloween, DateTime=2023-10-31 23:59:59+00:00)
-ScaryEvent(id=2, Name=Halloween, DateTime=2024-10-31 23:59:59+00:00)
-ScaryEvent(id=3, Name=Halloween, DateTime=2025-10-31 23:59:59+00:00)
-ScaryEvent(id=4, Name=Halloween, DateTime=2026-10-31 23:59:59+00:00)
-ScaryEvent(id=5, Name=Halloween, DateTime=2027-10-31 23:59:59+00:00)
+ScaryEvent(id=1, Name=Halloween, DateTime=2023-10-31T23:59:59+00:00)
+ScaryEvent(id=2, Name=Halloween, DateTime=2024-10-31T23:59:59+00:00)
+ScaryEvent(id=3, Name=Halloween, DateTime=2025-10-31T23:59:59+00:00)
+ScaryEvent(id=4, Name=Halloween, DateTime=2026-10-31T23:59:59+00:00)
+ScaryEvent(id=5, Name=Halloween, DateTime=2027-10-31T23:59:59+00:00)
 ```
 
 The `+00:00` at the end of each one indicates that it is in the UTC
@@ -2269,11 +2269,11 @@ the timezone of the `start_date`:
 
 ```s
 # examples/schedule/with_timezone.recipe.out
-ScaryEvent(id=1, Name=Halloween, DateTime=2023-10-31 23:59:59+08:00)
-ScaryEvent(id=2, Name=Halloween, DateTime=2024-10-31 23:59:59+08:00)
-ScaryEvent(id=3, Name=Halloween, DateTime=2025-10-31 23:59:59+08:00)
-ScaryEvent(id=4, Name=Halloween, DateTime=2026-10-31 23:59:59+08:00)
-ScaryEvent(id=5, Name=Halloween, DateTime=2027-10-31 23:59:59+08:00)
+ScaryEvent(id=1, Name=Halloween, DateTime=2023-10-31T23:59:59+08:00)
+ScaryEvent(id=2, Name=Halloween, DateTime=2024-10-31T23:59:59+08:00)
+ScaryEvent(id=3, Name=Halloween, DateTime=2025-10-31T23:59:59+08:00)
+ScaryEvent(id=4, Name=Halloween, DateTime=2026-10-31T23:59:59+08:00)
+ScaryEvent(id=5, Name=Halloween, DateTime=2027-10-31T23:59:59+08:00)
 ```
 
 The `+08:00` means 8 hours behind UTC.
@@ -2299,11 +2299,11 @@ Which generates:
 
 ```s
 # examples/schedule/secondly.recipe.out
-Seconds(id=1, DateTime=2023-10-31 10:10:58+00:00)
-Seconds(id=2, DateTime=2023-10-31 10:10:59+00:00)
-Seconds(id=3, DateTime=2023-10-31 10:11:00+00:00)
-Seconds(id=4, DateTime=2023-10-31 10:11:01+00:00)
-Seconds(id=5, DateTime=2023-10-31 10:11:02+00:00)
+Seconds(id=1, DateTime=2023-10-31T10:10:58+00:00)
+Seconds(id=2, DateTime=2023-10-31T10:10:59+00:00)
+Seconds(id=3, DateTime=2023-10-31T10:11:00+00:00)
+Seconds(id=4, DateTime=2023-10-31T10:11:01+00:00)
+Seconds(id=5, DateTime=2023-10-31T10:11:02+00:00)
 ```
 
 #### Days of the week
@@ -2500,33 +2500,33 @@ above, but with datetimes. The numbers used must be positive integers.
         bysecond: 1, 2, 3 # first few seconds of each minute
 ```
 
-```s
+```json
 # examples/schedule/bytimes.recipe.out
-Hours(id=1, DateTime=2024-01-02 00:01:01+00:00)
-Hours(id=2, DateTime=2024-01-02 02:01:01+00:00)
-Hours(id=3, DateTime=2024-01-02 04:01:01+00:00)
-Hours(id=4, DateTime=2024-01-03 00:01:01+00:00)
-Hours(id=5, DateTime=2024-01-03 02:01:01+00:00)
-Minutes(id=1, DateTime=2024-01-01 12:01:01+00:00)
-Minutes(id=2, DateTime=2024-01-01 12:02:01+00:00)
-Minutes(id=3, DateTime=2024-01-01 12:03:01+00:00)
-Minutes(id=4, DateTime=2024-01-01 13:01:01+00:00)
-Minutes(id=5, DateTime=2024-01-01 13:02:01+00:00)
-Minutes(id=6, DateTime=2024-01-01 13:03:01+00:00)
-Minutes(id=7, DateTime=2024-01-01 14:01:01+00:00)
-Minutes(id=8, DateTime=2024-01-01 14:02:01+00:00)
-Minutes(id=9, DateTime=2024-01-01 14:03:01+00:00)
-Minutes(id=10, DateTime=2024-01-01 15:01:01+00:00)
-Seconds(id=1, DateTime=2024-01-01 12:01:01+00:00)
-Seconds(id=2, DateTime=2024-01-01 12:01:02+00:00)
-Seconds(id=3, DateTime=2024-01-01 12:01:03+00:00)
-Seconds(id=4, DateTime=2024-01-01 12:02:01+00:00)
-Seconds(id=5, DateTime=2024-01-01 12:02:02+00:00)
-Seconds(id=6, DateTime=2024-01-01 12:02:03+00:00)
-Seconds(id=7, DateTime=2024-01-01 12:03:01+00:00)
-Seconds(id=8, DateTime=2024-01-01 12:03:02+00:00)
-Seconds(id=9, DateTime=2024-01-01 12:03:03+00:00)
-Seconds(id=10, DateTime=2024-01-01 12:04:01+00:00)
+Hours(id=1, DateTime=2024-01-02T00:01:01+00:00)
+Hours(id=2, DateTime=2024-01-02T02:01:01+00:00)
+Hours(id=3, DateTime=2024-01-02T04:01:01+00:00)
+Hours(id=4, DateTime=2024-01-03T00:01:01+00:00)
+Hours(id=5, DateTime=2024-01-03T02:01:01+00:00)
+Minutes(id=1, DateTime=2024-01-01T12:01:01+00:00)
+Minutes(id=2, DateTime=2024-01-01T12:02:01+00:00)
+Minutes(id=3, DateTime=2024-01-01T12:03:01+00:00)
+Minutes(id=4, DateTime=2024-01-01T13:01:01+00:00)
+Minutes(id=5, DateTime=2024-01-01T13:02:01+00:00)
+Minutes(id=6, DateTime=2024-01-01T13:03:01+00:00)
+Minutes(id=7, DateTime=2024-01-01T14:01:01+00:00)
+Minutes(id=8, DateTime=2024-01-01T14:02:01+00:00)
+Minutes(id=9, DateTime=2024-01-01T14:03:01+00:00)
+Minutes(id=10, DateTime=2024-01-01T15:01:01+00:00)
+Seconds(id=1, DateTime=2024-01-01T12:01:01+00:00)
+Seconds(id=2, DateTime=2024-01-01T12:01:02+00:00)
+Seconds(id=3, DateTime=2024-01-01T12:01:03+00:00)
+Seconds(id=4, DateTime=2024-01-01T12:02:01+00:00)
+Seconds(id=5, DateTime=2024-01-01T12:02:02+00:00)
+Seconds(id=6, DateTime=2024-01-01T12:02:03+00:00)
+Seconds(id=7, DateTime=2024-01-01T12:03:01+00:00)
+Seconds(id=8, DateTime=2024-01-01T12:03:02+00:00)
+Seconds(id=9, DateTime=2024-01-01T12:03:03+00:00)
+Seconds(id=10, DateTime=2024-01-01T12:04:01+00:00)
 ```
 
 #### Intervals
