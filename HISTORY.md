@@ -4,6 +4,10 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 3.5.0
+
+Snowfakery's Debug and CSV outputs now use the same format that Salesforce prefers. (#778)
+
 ## Snowfakery 3.4.1
 
 Update dependencies.
