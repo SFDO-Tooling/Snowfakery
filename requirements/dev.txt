@@ -48,7 +48,7 @@ docopt==0.6.2
     # via coveralls
 exceptiongroup==1.1.0
     # via pytest
-faker==16.6.1
+faker==17.0.0
     # via
     #   -r requirements/prod.txt
     #   faker-microservice
@@ -66,7 +66,7 @@ greenlet==2.0.2
     #   sqlalchemy
 gvgen==1.0
     # via -r requirements/prod.txt
-identify==2.5.17
+identify==2.5.18
     # via pre-commit
 idna==3.4
     # via
@@ -98,11 +98,11 @@ mkdocs==1.2.4
     # via
     #   -r requirements/dev.in
     #   mkdocs-exclude-search
-mkdocs-exclude-search==0.6.4
+mkdocs-exclude-search==0.6.5
     # via -r requirements/dev.in
 multidict==6.0.4
     # via yarl
-mypy-extensions==0.4.3
+mypy-extensions==1.0.0
     # via black
 nodeenv==1.7.0
     # via
@@ -117,7 +117,7 @@ packaging==23.0
     #   tox
 pathspec==0.11.0
     # via black
-platformdirs==2.6.2
+platformdirs==3.0.0
     # via
     #   black
     #   tox
@@ -127,15 +127,15 @@ pluggy==1.0.0
     #   diff-cover
     #   pytest
     #   tox
-pre-commit==3.0.3
+pre-commit==3.0.4
     # via -r requirements/dev.in
-pydantic==1.10.4
+pydantic==1.10.5
     # via -r requirements/prod.txt
 pygments==2.14.0
     # via diff-cover
 pyproject-api==1.5.0
     # via tox
-pyright==1.1.292
+pyright==1.1.294
     # via -r requirements/dev.in
 pyrsistent==0.19.3
     # via jsonschema
@@ -187,7 +187,7 @@ tomli==2.0.1
     #   pyproject-api
     #   pytest
     #   tox
-tox==4.4.4
+tox==4.4.5
     # via
     #   -r requirements/dev.in
     #   tox-gh-actions
@@ -195,9 +195,9 @@ tox-gh-actions==3.0.0
     # via -r requirements/dev.in
 typeguard==2.13.3
     # via -r requirements/dev.in
-types-toml==0.10.8.2
+types-toml==0.10.8.4
     # via responses
-typing-extensions==4.4.0
+typing-extensions==4.5.0
     # via
     #   -r requirements/prod.txt
     #   black
@@ -211,7 +211,7 @@ vcrpy==4.2.1
     # via
     #   -r requirements/dev.in
     #   pytest-vcr
-virtualenv==20.17.1
+virtualenv==20.19.0
     # via
     #   pre-commit
     #   tox
@@ -221,9 +221,9 @@ wrapt==1.14.1
     # via vcrpy
 yarl==1.8.2
     # via vcrpy
-zipp==3.12.0
+zipp==3.13.0
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
-setuptools==67.1.0
+setuptools==67.3.2
     # via nodeenv
