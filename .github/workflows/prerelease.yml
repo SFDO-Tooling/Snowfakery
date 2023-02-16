@@ -1,0 +1,60 @@
+name: Update Python Dependencies
+
+on: [workflow_dispatch]
+
+jobs:
+  update_dependencies:
+    runs-on: sfdc-ubuntu-latest
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v3
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Set up Python ${{ inputs.python-version }}
+        id: py
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: pip
+          cache-dependency-path: "requirements/*.txt"
+      - name: Update dependencies
+        run: |
+          pip install pip-tools
+          make update-deps
+      - name: Commit dependency changes and open PR
+        run: |
+          export DAY="$(date -I)"
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git switch prerelease || git switch -c prerelease
+          git add requirements/*.txt 
+          git commit -m "$DAY dependency updates (automated)" || true
+          git push
+      - name: Generate release notes
+        id: changelog
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          export DAY="$(date -I)"
+          PREVIOUS_VERSION=$(gh release view --json tagName --jq .tagName)
+          NEXT_VERSION="v$(head -n 1 snowfakery/version.txt)"
+          echo "## $NEXT_VERSION ($(date -I))" > changelog.md
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            /repos/SFDO-Tooling/CumulusCI/releases/generate-notes \
+            -f previous_tag_name=$PREVIOUS_VERSION \
+            -f target_commitish='main' \
+            -f tag_name=$NEXT_VERSION \
+            --jq '.body' | \
+            sed -e 's_\(https.*\/\)\([0-9]*\)$_[#\2](\1\2)_' \
+                -e 's_by @\(.*\) in_by [@\1](https://github.com/\1) in_' >> changelog.md
+          python utility/update-history.py
+          git commit -m "$DAY history updates" || true
+          git push
+
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr view || gh pr create --fill --label 'auto-pr,dependencies'
