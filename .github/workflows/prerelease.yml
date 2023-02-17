@@ -50,6 +50,7 @@ jobs:
             --jq '.body' | \
             sed -e 's_\(https.*\/\)\([0-9]*\)$_[#\2](\1\2)_' \
                 -e 's_by @\(.*\) in_by [@\1](https://github.com/\1) in_' >> changelog.md
+          ls utility/*
           python utility/update-history.py
           git commit -m "$DAY history updates" || true
           git push
