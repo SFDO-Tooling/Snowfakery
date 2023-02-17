@@ -77,7 +77,7 @@ importlib-metadata==6.0.0
     # via
     #   markdown
     #   mkdocs
-importlib-resources==5.10.2
+importlib-resources==5.11.1
     # via jsonschema
 iniconfig==2.0.0
     # via pytest
