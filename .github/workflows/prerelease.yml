@@ -30,7 +30,7 @@ jobs:
           git switch prerelease || git switch -c prerelease
           git add requirements/*.txt 
           git commit -m "$DAY dependency updates (automated)" || true
-          git push --set-upstream prerelease prerelease
+          git push --set-upstream origin prerelease
       - name: Generate and push release notes
         id: changelog
         env:
