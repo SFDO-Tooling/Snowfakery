@@ -1,4 +1,4 @@
-name: Update Python Dependencies
+name: Update Python Dependencies Daily
 
 on: [workflow_dispatch]
 
@@ -22,7 +22,7 @@ jobs:
         run: |
           pip install pip-tools
           make update-deps
-      - name: Commit dependency changes and open PR
+      - name: Commit and push dependency changes
         run: |
           export DAY="$(date -I)"
           git config user.name github-actions
@@ -30,8 +30,8 @@ jobs:
           git switch prerelease || git switch -c prerelease
           git add requirements/*.txt 
           git commit -m "$DAY dependency updates (automated)" || true
-          git push
-      - name: Generate release notes
+          git push -u
+      - name: Generate and push release notes
         id: changelog
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -54,7 +54,8 @@ jobs:
           git commit -m "$DAY history updates" || true
           git push
 
-      - env:
+      - name: Create a PR
+        env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh pr view || gh pr create --fill --label 'auto-pr,dependencies'
