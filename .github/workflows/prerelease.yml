@@ -18,17 +18,19 @@ jobs:
           python-version: ${{ inputs.python-version }}
           cache: pip
           cache-dependency-path: "requirements/*.txt"
-      - name: Update dependencies
-        run: |
-          pip install pip-tools
-          make update-deps
-      - name: Commit and push dependency changes
+      - name: Set up prerelease branch
         run: |
           export DAY="$(date -I)"
           git config user.name github-actions
           git config user.email github-actions@github.com
           git switch prerelease || git switch -c prerelease
-          git add requirements/*.txt 
+      - name: Update dependencies on prerelease branch
+        run: |
+          pip install pip-tools
+          make update-deps
+      - name: Commit changes to prerelease branch
+        run: |
+          git add requirements/*.txt
           git commit -m "$DAY dependency updates (automated)" || true
           git push --set-upstream origin prerelease
       - name: Generate and push release notes
