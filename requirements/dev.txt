@@ -46,8 +46,6 @@ distlib==0.3.6
     # via virtualenv
 docopt==0.6.2
     # via coveralls
-exceptiongroup==1.1.0
-    # via pytest
 faker==17.0.0
     # via
     #   -r requirements/prod.txt
@@ -74,9 +72,7 @@ idna==3.4
     #   requests
     #   yarl
 importlib-metadata==6.0.0
-    # via
-    #   markdown
-    #   mkdocs
+    # via mkdocs
 iniconfig==2.0.0
     # via pytest
 jinja2==3.1.2
@@ -161,6 +157,7 @@ pyyaml==6.0
     #   mkdocs
     #   pre-commit
     #   pyyaml-env-tag
+    #   responses
     #   vcrpy
 pyyaml-env-tag==0.1
     # via mkdocs
@@ -169,7 +166,7 @@ requests==2.28.2
     #   -r requirements/prod.txt
     #   coveralls
     #   responses
-responses==0.22.0
+responses==0.23.1
     # via -r requirements/dev.in
 six==1.16.0
     # via
@@ -178,15 +175,6 @@ six==1.16.0
     #   vcrpy
 sqlalchemy==1.4.46
     # via -r requirements/prod.txt
-toml==0.10.2
-    # via responses
-tomli==2.0.1
-    # via
-    #   black
-    #   coverage
-    #   pyproject-api
-    #   pytest
-    #   tox
 tox==4.4.5
     # via
     #   -r requirements/dev.in
@@ -195,12 +183,11 @@ tox-gh-actions==3.0.0
     # via -r requirements/dev.in
 typeguard==2.13.3
     # via -r requirements/dev.in
-types-toml==0.10.8.4
+types-pyyaml==6.0.12.8
     # via responses
 typing-extensions==4.5.0
     # via
     #   -r requirements/prod.txt
-    #   black
     #   pydantic
 urllib3==1.26.14
     # via
