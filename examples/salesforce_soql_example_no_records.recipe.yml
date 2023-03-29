@@ -1,0 +1,7 @@
+- plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
+- object: Contact
+  fields:
+    FirstName: Suzy
+    LastName: Salesforce
+    AccountId:
+      SalesforceQuery.random_record: Contract

@@ -1,32 +1,35 @@
-from random import randrange
-from logging import getLogger
-from tempfile import TemporaryDirectory
-from pathlib import Path
 from base64 import b64encode
+from logging import getLogger
+from pathlib import Path
+from random import randrange
+from tempfile import TemporaryDirectory
 
-from snowfakery.plugins import ParserMacroPlugin, memorable
+from snowfakery import data_gen_exceptions as exc
+from snowfakery.data_gen_exceptions import (
+    DataGenError,
+    DataGenNameError,
+    DataGenValueError,
+)
 from snowfakery.data_generator_runtime_object_model import (
-    ObjectTemplate,
     FieldFactory,
+    ObjectTemplate,
     SimpleValue,
     StructuredValue,
 )
-from snowfakery import data_gen_exceptions as exc
-
-from snowfakery.plugins import SnowfakeryPlugin, PluginOption, PluginResult
-from snowfakery.data_gen_exceptions import (
-    DataGenNameError,
-    DataGenValueError,
-    DataGenError,
+from snowfakery.output_streams import SqlDbOutputStream
+from snowfakery.parse_recipe_yaml import TableInfo
+from snowfakery.plugins import (
+    ParserMacroPlugin,
+    PluginOption,
+    PluginResult,
+    SnowfakeryPlugin,
+    memorable,
 )
 from snowfakery.standard_plugins.datasets import (
     DatasetBase,
     DatasetPluginBase,
     sql_dataset,
 )
-from snowfakery.output_streams import SqlDbOutputStream
-from snowfakery.parse_recipe_yaml import TableInfo
-
 
 MAX_SALESFORCE_OFFSET = 2000  # Any way around this?
 
@@ -288,8 +291,8 @@ class SOQLDatasetImpl(DatasetBase):
 
     def __init__(self, plugin, *args, **kwargs):
         from cumulusci.tasks.bulkdata.step import (
-            get_query_operation,
             DataOperationStatus,
+            get_query_operation,
         )
 
         self.get_query_operation = get_query_operation
@@ -399,6 +402,10 @@ class SalesforceQuery(SalesforceConnectionMixin, SnowfakeryPlugin):
             count = count_result["totalSize"]
             mx = min(count, MAX_SALESFORCE_OFFSET)
             context_vars["count_query_cache"][count_query] = mx
+            if mx < 1:
+                raise DataGenError(
+                    f"No records found matching {query_from}{where_clause}"
+                )
             rand_offset = randrange(0, mx)
             query = f"SELECT {fields} FROM {query_from}{where_clause} LIMIT 1 OFFSET {rand_offset}"
             # todo: use CompositeParallelSalesforce to cache 200 at a time
