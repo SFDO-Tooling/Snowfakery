@@ -2,8 +2,9 @@ from random import randrange
 from logging import getLogger
 from tempfile import TemporaryDirectory
 from pathlib import Path
+from base64 import b64encode
 
-from snowfakery.plugins import ParserMacroPlugin
+from snowfakery.plugins import ParserMacroPlugin, memorable
 from snowfakery.data_generator_runtime_object_model import (
     ObjectTemplate,
     FieldFactory,
@@ -266,70 +267,25 @@ class Salesforce(ParserMacroPlugin, SnowfakeryPlugin, SalesforceConnectionMixin)
 
         return sobj, nickname
 
-    # FIXME: This code is not documented or tested
-    def ContentFile(self, context, args) -> ObjectTemplate:
-        return {
-            "Base64.encode": [
-                {"File.file_data": {"encoding": "binary", "file": args.get("path")}}
-            ]
-        }
-
-    def PermissionSetAssignments(self, context, args) -> ObjectTemplate:
-        names = args.get("names")
-        if not isinstance(names, str):
-            raise DataGenValueError(
-                f"string `names` not specified for PermissionSetAssignments: {names}"
-            )
-        names = names.split(",")
-        line_info = context.line_num()
-        decls = [self._generate_psa(context, line_info, name) for name in names]
-
-        return ObjectTemplate(
-            "__wrapper_for_permission_sets",
-            filename=line_info["filename"],
-            line_num=line_info["line_num"],
-            friends=decls,
-        )
-
-    def _generate_psa(self, context, line_info, name):
-        fields = {"AssigneeId": ("Use")}
-
-        query = f"PermissionSet where Name = '{name}'"
-
-        fields = [
-            FieldFactory(
-                "PermissionSetId",
-                StructuredValue(
-                    "SalesforceQuery.find_record", {"from": query}, **line_info
-                ),
-                **line_info,
-            ),
-            FieldFactory(
-                "AssigneeId",
-                StructuredValue("reference", ["User"], **line_info),
-                **line_info,
-            ),
-        ]
-
-        new_template = ObjectTemplate(
-            "PermissionSetAssignment",
-            filename=line_info["filename"],
-            line_num=line_info["line_num"],
-            fields=fields,
-        )
-        context.register_template(new_template)
-        return new_template
-
     class Functions:
+        @memorable
         def ProfileId(self, name):
             query = f"select Id from Profile where Name='{name}'"
             return self.context.plugin.sf_connection.query_single_record(query)
 
         Profile = ProfileId
 
+        def ContentFile(self, file: str):
+            template_path = Path(self.context.current_filename).parent
 
-# TODO: Tests for this class
+            with open(template_path / file, "rb") as data:
+                return b64encode(data.read()).decode("ascii")
+
+
 class SOQLDatasetImpl(DatasetBase):
+    iterator = None
+    tempdir = None
+
     def __init__(self, plugin, *args, **kwargs):
         from cumulusci.tasks.bulkdata.step import (
             get_query_operation,
@@ -377,8 +333,19 @@ class SOQLDatasetImpl(DatasetBase):
         return self.iterator
 
     def close(self):
-        self.iterator.close()
-        self.tempdir.close()
+        if self.iterator:
+            self.iterator.close()
+            self.iterator = None
+
+        if self.tempdir:
+            self.tempdir.cleanup()
+            self.tempdir = None
+
+    def __del__(self):
+        # in case close was not called
+        # properly, try to do an orderly
+        # cleanup
+        self.close()
 
 
 def create_tempfile_sql_db_iterator(mode, fieldnames, results):
@@ -437,6 +404,7 @@ class SalesforceQuery(SalesforceConnectionMixin, SnowfakeryPlugin):
             # todo: use CompositeParallelSalesforce to cache 200 at a time
             return self._sf_connection.query_single_record(query)
 
+        @memorable
         def find_record(self, *args, fields="Id", where=None, **kwargs):
             """Find a particular record"""
             query_from = self._parse_from_from_args(args, kwargs)

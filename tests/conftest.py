@@ -2,10 +2,12 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 from contextlib import contextmanager
+from io import StringIO
 
 import pytest
 import yaml
 from sqlalchemy import create_engine
+from vcr.serializers import yamlserializer
 
 try:
     import cumulusci
@@ -26,9 +28,8 @@ def generated_rows(request):
     def row_values(index, value):
         return mockobj.mock_calls[index][1][1][value]
 
-    def table_values(tablename, index, field=None):
+    def table_values(tablename, index=None, field=None):
         """Look up a value from a table."""
-        index = index - 1  # use 1-based indexing like Snowfakery does
 
         # create and cache a dict of table names to lists of rows
         if type(mockobj._index) != dict:
@@ -37,13 +38,23 @@ def generated_rows(request):
                 table = row[1][0]
                 mockobj._index.setdefault(table, []).append(row[1][1])
 
-        if field:  # return just one field
-            return mockobj._index[tablename][index][field]
-        else:  # return a full row
-            return mockobj._index[tablename][index]
+        if index is None:  # return all rows
+            if field is None:  # return full rows
+                return mockobj._index[tablename]
+            else:  # return a single field
+                return [row[field] for row in mockobj._index[tablename]]
+        else:  # return data from just one row
+            # implement Python's "index from the back" semantics
+            if index == -1:
+                index = len(mockobj._index[tablename])
+            index = index - 1  # use 1-based indexing like Snowfakery does
+            if field:  # return just one field
+                return mockobj._index[tablename][index][field]
+            else:  # return a full row
+                return mockobj._index[tablename][index]
 
     with patch(
-        "snowfakery.output_streams.DebugOutputStream.write_single_row"
+        "snowfakery.output_streams.SimpleFileOutputStream.write_single_row"
     ) as mockobj:
         mockobj.row_values = row_values
         mockobj.table_values = table_values
@@ -52,7 +63,9 @@ def generated_rows(request):
 
 @pytest.fixture(scope="function")
 def disable_typeguard():
-    with patch("typeguard.check_argument_types", lambda *args, **kwargs: ...):
+    with patch("typeguard.check_argument_types", lambda *args, **kwargs: ...), patch(
+        "typeguard.check_return_type", lambda *args, **kwargs: ...
+    ):
         yield
 
 
@@ -83,3 +96,39 @@ def generate_in_tmpdir(tmpdir):
             yield mapping, connection
 
     return doit
+
+
+@pytest.fixture(scope="function")
+def generate_data_with_continuation():
+    from snowfakery import generate_data
+
+    def doit(*args, times=3, yaml=None, **kwargs):
+        """Helper function for testing features work with continuation."""
+        old_continuation_file = None
+
+        if yaml:
+            assert not kwargs.get("yaml_file")
+
+        for i in range(times):
+            if yaml:
+                kwargs["yaml_file"] = StringIO(yaml)
+            next_continuation_file = StringIO("w")
+            generate_data(
+                *args,
+                **kwargs,
+                continuation_file=old_continuation_file,
+                generate_continuation_file=next_continuation_file,
+            )
+            old_continuation_file = StringIO(next_continuation_file.getvalue())
+
+    return doit
+
+
+@pytest.fixture(scope="session")
+def snowfakery_rootdir():
+    return Path(__file__).parent.parent
+
+
+@pytest.fixture(scope="session")
+def salesforce_serializer():
+    return yamlserializer

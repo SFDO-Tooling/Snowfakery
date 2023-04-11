@@ -8,29 +8,28 @@ import re
 import sys
 from tests.utils import named_temporary_file_path
 
+import responses
 import yaml
+from requests.exceptions import RequestException
 from click.exceptions import ClickException, BadParameter
 
-from snowfakery.cli import generate_cli, eval_arg, main
+from snowfakery.cli import generate_cli, eval_arg, main, VersionMessage
 from snowfakery.data_gen_exceptions import DataGenError
 
 sample_yaml = Path(__file__).parent / "include_parent.yml"
 bad_sample_yaml = Path(__file__).parent / "include_bad_parent.yml"
 sample_accounts_yaml = Path(__file__).parent / "gen_sf_standard_objects.yml"
 
-write_row_path = "snowfakery.output_streams.DebugOutputStream.write_single_row"
-
 
 class TestGenerateFromCLI:
-    @mock.patch(write_row_path)
-    def test_simple(self, write_row):
+    def test_simple(self, generated_rows):
         generate_cli.callback(
             yaml_file=sample_yaml,
             option={},
             debug_internals=None,
             generate_cci_mapping_file=None,
         )
-        assert write_row.mock_calls == [
+        assert generated_rows.mock_calls == [
             mock.call(
                 "Account",
                 {"id": 1, "name": "Default Company Name", "ShippingCountry": "Canada"},
@@ -41,8 +40,7 @@ class TestGenerateFromCLI:
         assert eval_arg("5") == 5
         assert eval_arg("abc") == "abc"
 
-    @mock.patch(write_row_path)
-    def test_counts(self, write_row):
+    def test_counts(self, generated_rows):
         generate_cli.callback(
             yaml_file=sample_yaml,
             target_number=(2, "Account"),
@@ -50,7 +48,7 @@ class TestGenerateFromCLI:
             debug_internals=None,
             generate_cci_mapping_file=None,
         )
-        assert write_row.mock_calls == [
+        assert generated_rows.mock_calls == [
             mock.call(
                 "Account",
                 {"id": 1, "name": "Default Company Name", "ShippingCountry": "Canada"},
@@ -61,8 +59,7 @@ class TestGenerateFromCLI:
             ),
         ]
 
-    @mock.patch(write_row_path)
-    def test_counts_backwards(self, write_row):
+    def test_counts_backwards(self, generated_rows):
         generate_cli.callback(
             yaml_file=sample_yaml,
             target_number=("Account", 2),
@@ -70,7 +67,7 @@ class TestGenerateFromCLI:
             debug_internals=None,
             generate_cci_mapping_file=None,
         )
-        assert write_row.mock_calls == [
+        assert generated_rows.mock_calls == [
             mock.call(
                 "Account",
                 {"id": 1, "name": "Default Company Name", "ShippingCountry": "Canada"},
@@ -81,8 +78,7 @@ class TestGenerateFromCLI:
             ),
         ]
 
-    @mock.patch(write_row_path)
-    def test_with_option(self, write_row):
+    def test_with_option(self, generated_rows):
         with pytest.warns(UserWarning):
             generate_cli.callback(
                 yaml_file=sample_yaml,
@@ -91,8 +87,7 @@ class TestGenerateFromCLI:
                 generate_cci_mapping_file=None,
             )
 
-    @mock.patch(write_row_path)
-    def test_with_bad_dburl(self, write_row):
+    def test_with_bad_dburl(self, generated_rows):
         with pytest.raises(Exception):
             generate_cli.callback(
                 yaml_file=sample_yaml,
@@ -102,12 +97,10 @@ class TestGenerateFromCLI:
                 generate_cci_mapping_file=None,
             )
 
-    @mock.patch(write_row_path)
-    def test_with_debug_flags_on(self, write_row):
+    def test_with_debug_flags_on(self, generated_rows):
         generate_cli.callback(yaml_file=sample_yaml, option={}, debug_internals=True)
 
-    @mock.patch(write_row_path)
-    def test_exception_with_debug_flags_on(self, write_row):
+    def test_exception_with_debug_flags_on(self, generated_rows):
         with named_temporary_file_path(suffix=".yml") as t:
             with pytest.raises(DataGenError):
                 generate_cli.callback(
@@ -118,8 +111,7 @@ class TestGenerateFromCLI:
                 )
                 assert yaml.safe_load(t)
 
-    @mock.patch(write_row_path)
-    def test_exception_with_debug_flags_off(self, write_row):
+    def test_exception_with_debug_flags_off(self, generated_rows):
         with named_temporary_file_path(suffix=".yml") as t:
             with pytest.raises(ClickException):
                 generate_cli.callback(
@@ -405,6 +397,19 @@ class TestGenerateFromCLI:
                 standalone_mode=False,
             )
 
+    def test_updates(self, generated_rows):
+        generate_cli.main(
+            [
+                "examples/updates/update_contacts.recipe.yml",
+                "--update-input-file",
+                "examples/datasets/addresses.csv",
+                "--update-passthrough-fields",
+                "Oid",
+            ],
+            standalone_mode=False,
+        )
+        assert len(generated_rows.mock_calls) == 3
+
 
 class TestCLIOptionChecking:
     def test_mapping_file_no_dburl(self):
@@ -461,3 +466,64 @@ class TestCLIOptionChecking:
                     ],
                     standalone_mode=False,
                 )
+
+    def test_version_report__current_version(self, capsys, vcr, snowfakery_rootdir):
+        # hand-minimized VCR cassette
+        cassette = (
+            snowfakery_rootdir
+            / "tests/cassettes/ManualEditTestCLIOptionChecking.test_version_report__current_version.yaml"
+        )
+        assert cassette.exists()
+
+        with pytest.raises(SystemExit), mock.patch(
+            "snowfakery.cli.version", "2.0.3"
+        ), vcr.use_cassette(str(cassette)):
+            generate_cli.main(["--version"])
+        captured = capsys.readouterr()
+        assert captured.out.startswith("snowfakery")
+        assert "Python: 3." in captured.out
+        assert "Properly installed" in captured.out
+        assert "You have the latest version of Snowfakery" in captured.out
+
+    def test_version_report__old_version(self, capsys, vcr, snowfakery_rootdir):
+        # hand-minimized VCR cassette
+        cassette = (
+            snowfakery_rootdir
+            / "tests/cassettes/ManualEditTestCLIOptionChecking.test_version_report__current_version.yaml"
+        )
+        assert cassette.exists()
+
+        with pytest.raises(SystemExit), mock.patch(
+            "snowfakery.cli.version", "1.5"
+        ), vcr.use_cassette(str(cassette)):
+            generate_cli.main(["--version"])
+        captured = capsys.readouterr()
+        assert captured.out.startswith("snowfakery")
+        assert "Python: 3." in captured.out
+        assert "Properly installed" in captured.out
+        assert (
+            "An update to Snowfakery is available: 2.0.3" in captured.out
+        ), captured.out
+
+    def test_version_report__error(self, capsys, vcr, snowfakery_rootdir):
+        with pytest.raises(SystemExit), mock.patch(
+            "requests.get", side_effect=RequestException
+        ):
+            generate_cli.main(["--version"])
+        captured = capsys.readouterr()
+        assert "Error checking snowfakery version:" in captured.out
+
+    def test_version_mod__called(self):
+        with pytest.raises(SystemExit), mock.patch.object(
+            VersionMessage, "__mod__", wraps=lambda vars: ""
+        ) as mod:
+            generate_cli.main(["--version"])
+        assert len(mod.mock_calls) == 1
+
+    @responses.activate
+    def test_version__json_corrupt(self, capsys):
+        responses.add("GET", "https://pypi.org/pypi/snowfakery/json", body="}}")
+        with pytest.raises(SystemExit):
+            generate_cli.main(["--version"])
+        captured = capsys.readouterr()
+        assert "Error checking snowfakery version" in captured.out

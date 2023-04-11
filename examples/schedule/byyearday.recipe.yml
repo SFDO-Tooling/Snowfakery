@@ -1,0 +1,18 @@
+- plugin: snowfakery.standard_plugins.Schedule
+- object: ThirdDayOfYear
+  count: 5
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01
+        freq: yearly
+        byyearday: 3
+
+- object: ChristmasDayNewYearsEve
+  count: 5
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01
+        freq: yearly
+        byyearday: -7,-1

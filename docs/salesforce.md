@@ -21,9 +21,8 @@ creates Snowfakery.
 The easiest way to learn about CumulusCI (and to learn how to
 install it) is with its [Trailhead Trail](https://trailhead.salesforce.com/en/content/learn/trails/build-applications-with-cumulusci).
 
-
 ```s
-$ cci task run generate_and_load_from_yaml -o generator_yaml examples/salesforce/Contact.recipe.yml -o num_records 300 -o num_records_tablename Contact --org qa
+$ cci task run snowfakery examples/salesforce/Contact.recipe.yml --run-until-recipe-repeated 300 --org qa
 ...
 ```
 
@@ -50,6 +49,14 @@ $ cci task run generate_opportunities_and_contacts
 $ cci flow run test_everything
 ...
 ```
+
+Snowfakery and CumulusCI infer the order in which sObjects are loaded
+based primarily on which tables have fields that depend on which other
+tables. Tables declared earlier in the recipe are also generally loaded
+before tables declared later. If you need precise control over load
+order, you can control that and many other aspects of the loading process
+(e.g. batch size) with a `load.yml` file as described in the
+[CumulusCI docs](https://cumulusci.readthedocs.io/en/latest/data.html#controlling-the-loading-process).
 
 ## Incorporating Information from Salesforce
 
@@ -105,9 +112,14 @@ Perhaps you do not care which Campaign you connect to:
 ```
 
 As you can see, `find_record` looks for a particular record, and returns the first
-one that Salesforce finds. `random_record` looks for an random record out of the
+one that Salesforce finds. The output of `find_record` is cached to reduce
+unnecessary calls to Salesforce, but the precise rules for how long the
+cache lasts are undocumented and may change based on performance testing.
+
+`random_record` looks for an random record out of the
 first 2000 Salesforce finds. The 2000-record scope limit is based on a Salesforce
 limitation and future versions of Snowfakery may incorporate a workaround.
+`random_record` values are never cached.
 
 NOTE: The features we are discussing in this section are for linking to records
 that are in the Salesforce org _before_ the recipe iteration started. These features
@@ -253,6 +265,28 @@ To specify a Record Type for a record, just put the Record Type’s API Name in 
     RecordType: Organization
 ```
 
+## Profiles
+
+The `Salesforce.ProfileId` function looks up a Profile in
+Salesforce by name and substitutes the ID.
+
+```yaml
+- plugin: snowfakery.standard_plugins.Salesforce
+- object: User
+  fields:
+    Alias: Grace
+    Username:
+      fake: Username
+    LastName: Wong
+    Email: ${{Username}}
+    TimeZoneSidKey: America/Bogota
+    LocaleSidKey: en_US
+    EmailEncodingKey: UTF-8
+    LanguageLocaleKey: en_US
+    ProfileId:
+      Salesforce.ProfileId: Identity User
+```
+
 ## Creating and Referencing Person Accounts
 
 There are several features planned for the Salesforce Plugin, but
@@ -301,7 +335,6 @@ in the `PersonContactId` field.
 There is also an alternate syntax which allows nicknaming:
 
 ```yaml
-...
 - object: Account
   fields:
     PersonContactId:
@@ -319,24 +352,25 @@ There is also an alternate syntax which allows nicknaming:
 Files can be used as Salesforce ContentVersions like this:
 
 ```yaml
-- plugin: snowfakery.standard_plugins.base64.Base64
-- plugin: snowfakery.standard_plugins.file.File
+# examples/salesforce/ContentVersion.recipe.yml
+- plugin: snowfakery.standard_plugins.Salesforce
 - object: Account
   nickname: FileOwner
   fields:
     Name:
       fake: company
 - object: ContentVersion
-  nickname: FileAttachment
   fields:
     Title: Attachment for ${{Account.Name}}
     PathOnClient: example.pdf
-    Description: example.pdf
+    Description: The example.pdf file
     VersionData:
-      Base64.encode:
-        - File.file_data:
-            encoding: binary
-            file: ${{PathOnClient}}
+      Salesforce.ContentFile:
+        file: example.pdf
     FirstPublishLocationId:
       reference: Account
 ```
+
+## Other features
+
+To do updates or upserts in a Salesforce org, refer to the [CumulusCI documentation](https://cumulusci.readthedocs.io/en/stable/data.html#update-data).

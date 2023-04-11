@@ -1,16 +1,22 @@
-from pathlib import Path
-from csv import DictReader
-from contextlib import contextmanager
 import os
+from contextlib import contextmanager, ExitStack
+from csv import DictReader
+from pathlib import Path
 from random import shuffle
 
-from sqlalchemy import create_engine, MetaData
-from sqlalchemy.sql.expression import func, select
+from sqlalchemy import MetaData, create_engine
 from sqlalchemy.sql.elements import quoted_name
-
+from sqlalchemy.sql.expression import func, select
 from yaml.representer import Representer
 
-from snowfakery.plugins import SnowfakeryPlugin, PluginResult
+from snowfakery.data_gen_exceptions import DataGenError, DataGenNameError
+from snowfakery.plugins import (
+    PluginResult,
+    PluginResultIterator,
+    SnowfakeryPlugin,
+    memorable,
+)
+from snowfakery.utils.files import FileLike, open_file_like
 from snowfakery.utils.yaml_utils import SnowfakeryDumper
 
 
@@ -22,7 +28,7 @@ def _open_db(db_url):
     return engine, metadata
 
 
-def sql_dataset(db_url: str, tablename: str = None, mode="linear"):
+def sql_dataset(db_url: str, tablename: str = None, mode="linear", repeat: bool = True):
     "Open the right SQL Dataset iterator based on the params"
     assert db_url
     engine, metadata = _open_db(db_url)
@@ -44,50 +50,37 @@ def sql_dataset(db_url: str, tablename: str = None, mode="linear"):
             f"Database has multiple tables in it and none was selected: {metadata.tables.keys()}"
         )
     if mode == "linear":
-        return SQLDatasetLinearIterator(engine, table)
+        return SQLDatasetLinearIterator(engine, table, repeat)
     elif mode == "shuffle":
-        return SQLDatasetRandomPermutationIterator(engine, table)
-    else:
-        raise NotImplementedError(f"Unknown mode: {mode}")
+        return SQLDatasetRandomPermutationIterator(engine, table, repeat)
+    raise AssertionError(f"Unknown mode: {mode}")
 
 
-class DatasetIteratorBase:
+class DatasetIteratorBase(PluginResultIterator):
     """Base class for Dataset Iterators
 
     Subclasses should implement 'self.restart' which puts an iterator into 'self.results'
     """
 
-    def __next__(self):
-        try:
-            return next(self.results)
-        except StopIteration:
-            self.restart()
-
-    def start(self):
-        "Initialize the iterator in self.results."
-        raise NotImplementedError(f"start method on {self.__class__.__name__}")
-
-    def restart(self):
-        "Restart the iterator by assigning to self.results"
-        self.start()
-
-    def close(self):
-        "Subclasses should implement this if they need to clean up resources"
-        pass  # pragma: no cover
+    def next_result(self):
+        return next(self.results)
 
 
 class SQLDatasetIterator(DatasetIteratorBase):
-    def __init__(self, engine, table):
+    def __init__(self, engine, table, repeat):
         self.connection = engine.connect()
         self.table = table
+        super().__init__(repeat)
         self.start()
 
     def start(self):
         self.results = (
-            PluginResult(dict(row)) for row in self.connection.execute(self.query())
+            DatasetPluginResult(dict(row))
+            for row in self.connection.execute(self.query())
         )
 
     def close(self):
+        self.results = None
         self.connection.close()
 
     def query(self):
@@ -110,18 +103,44 @@ class SQLDatasetRandomPermutationIterator(SQLDatasetIterator):
 
 
 class CSVDatasetLinearIterator(DatasetIteratorBase):
-    def __init__(self, datasource: Path):
-        self.datasource = datasource
-        self.file = open(self.datasource, newline="", encoding="utf-8")
+    def __init__(self, datasource: FileLike, repeat: bool):
+        self.cleanup = ExitStack()
+        # utf-8-sig and newline="" are for Windows
+        self.path, self.file = self.cleanup.enter_context(
+            open_file_like(datasource, "r", newline="", encoding="utf-8-sig")
+        )
+
         self.start()
+        super().__init__(repeat)
 
     def start(self):
         self.file.seek(0)
         d = DictReader(self.file)
-        self.results = (PluginResult(row) for row in d)
+
+        plugin_result = self.plugin_result
+        self.results = (plugin_result(row) for row in d)
 
     def close(self):
-        self.file.close()
+        self.results = None
+        self.cleanup.close()
+
+    def plugin_result(self, row):
+        if None in row:
+            raise DataGenError(
+                f"Your CSV row has more columns than the CSV header:  {row[None]}, {self.path} {self.file}"
+            )
+
+        return DatasetPluginResult(row)
+
+
+class DatasetPluginResult(PluginResult):
+    def __getattr__(self, name):
+        try:
+            return super().__getattr__(name)
+        except KeyError:
+            raise DataGenNameError(
+                f"`{name}` attribute not found. Should be one of {tuple(self.result.keys())}"
+            )
 
 
 class CSVDatasetRandomPermutationIterator(CSVDatasetLinearIterator):
@@ -144,43 +163,24 @@ class CSVDatasetRandomPermutationIterator(CSVDatasetLinearIterator):
     def start(self):
         self.file.seek(0)
         d = DictReader(self.file)
-        rows = [PluginResult(row) for row in d]
+        rows = [DatasetPluginResult(row) for row in d]
         shuffle(rows)
 
         self.results = iter(rows)
+
+    def close(self):
+        self.results = None
 
 
 class DatasetBase:
     def __init__(self, *args, **kwargs):
         self.datasets = {}
 
-    def _iterate(self, plugin, iteration_mode, kwargs):
-        self.context = plugin.context
-        key = self._get_key(kwargs)
-        dataset_instance = self._get_dataset_instance(key, iteration_mode, kwargs)
-        rc = next(dataset_instance, None)
-        if not rc:
-            dataset_instance.start()
-            rc = next(dataset_instance, None)
-
-        assert rc is not None
-        return rc
-
-    def _get_key(self, kwargs):
-        dataset = kwargs.get("dataset")
-        tablename = kwargs.get("table")
-        uniq_name = kwargs.get("name") or self.context.unique_context_identifier()
-        return (dataset, tablename, uniq_name)
-
-    def _get_dataset_instance(self, key, iteration_mode, kwargs):
-        dataset_instance = self.datasets.get(key)
-        if not dataset_instance:
-            filename = self.context.field_vars()["template"].filename
-            assert filename
-            rootpath = Path(filename).parent
-            dataset_instance = self.datasets[key] = self._load_dataset(
-                iteration_mode, rootpath, kwargs
-            )
+    def _get_dataset_instance(self, plugin_context, iteration_mode, kwargs):
+        filename = plugin_context.field_vars()["template"].filename
+        assert filename
+        rootpath = Path(filename).parent
+        dataset_instance = self._load_dataset(iteration_mode, rootpath, kwargs)
         return dataset_instance
 
     def _load_dataset(self, iteration_mode, rootpath, kwargs):
@@ -195,10 +195,11 @@ class FileDataset(DatasetBase):
     def _load_dataset(self, iteration_mode, rootpath, kwargs):
         dataset = kwargs.get("dataset")
         tablename = kwargs.get("table")
+        repeat = kwargs.get("repeat", True)
 
         with chdir(rootpath):
             if "://" in dataset:
-                return sql_dataset(dataset, tablename, iteration_mode)
+                return sql_dataset(dataset, tablename, iteration_mode, repeat)
             else:
                 filename = Path(dataset)
 
@@ -211,18 +212,29 @@ class FileDataset(DatasetBase):
                     )
 
                 if iteration_mode == "linear":
-                    return CSVDatasetLinearIterator(filename)
+                    return CSVDatasetLinearIterator(filename, repeat)
                 elif iteration_mode == "shuffle":
-                    return CSVDatasetRandomPermutationIterator(filename)
+                    return CSVDatasetRandomPermutationIterator(filename, repeat)
 
 
 class DatasetPluginBase(SnowfakeryPlugin):
     class Functions:
+        @memorable
         def iterate(self, **kwargs):
-            return self.context.plugin.dataset_impl._iterate(self, "linear", kwargs)
+            return self.context.plugin.dataset_impl._get_dataset_instance(
+                self.context, "linear", kwargs
+            )
 
+        @memorable
         def shuffle(self, **kwargs):
-            return self.context.plugin.dataset_impl._iterate(self, "shuffle", kwargs)
+            return self.context.plugin.dataset_impl._get_dataset_instance(
+                self.context, "shuffle", kwargs
+            )
+
+    def close(self):
+        if self.dataset_impl:
+            self.dataset_impl.close()
+            self.dataset_impl = None
 
 
 class Dataset(DatasetPluginBase):

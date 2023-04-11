@@ -24,7 +24,7 @@ class TestEmbedding:
             assert dbpath.exists()
 
     def test_arguments(self):
-        with TemporaryDirectory() as t:
+        with TemporaryDirectory() as t, mock.patch("warnings.warn") as w:
             outfile = Path(t) / "foo.txt"
             continuation = Path(t) / "out.yml"
             generate_data(
@@ -40,6 +40,7 @@ class TestEmbedding:
             assert continuation.exists()
             with continuation.open() as f:
                 assert yaml.safe_load(f)
+            assert "num_accounts" in str(w.mock_calls)
 
     def test_continuation_as_open_file(self):
         with TemporaryDirectory() as t:

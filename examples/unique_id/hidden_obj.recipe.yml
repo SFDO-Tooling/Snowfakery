@@ -1,0 +1,14 @@
+- plugin: snowfakery.standard_plugins.Counters
+- object: __MySmallCodeGenerator
+  just_once: True
+  fields:
+    generator:
+      Counters.NumberCounter:
+- object: Example
+  count: 100
+  fields:
+    unique: ${{__MySmallCodeGenerator.generator.next}}
+- object: Example2
+  count: 100
+  fields:
+    unique: ${{__MySmallCodeGenerator.generator.next}}

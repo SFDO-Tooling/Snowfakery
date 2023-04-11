@@ -1,18 +1,19 @@
 name: CI
 
-on: [push]
+on: [push, workflow_dispatch]
 
 env:
   COVERALLS_PARALLEL: true
   COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+  SF_MKDOCS_BUILD_LOCALES: "False"
 
 jobs:
   test:
     name: "Python ${{ matrix.python-version }}"
-    runs-on: ubuntu-latest
+    runs-on: sfdc-ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.6", "3.7", "3.8", "3.9"]
+        python-version: ["3.8", "3.9", "3.10"]
     steps:
       - uses: "actions/checkout@v2"
       - uses: "actions/setup-python@v1"
@@ -23,7 +24,7 @@ jobs:
         run: |
           python -VV
           python -m pip install --upgrade pip
-          make dev-install
+          pip install -r requirements_dev.txt
 
       - name: "Run tox targets for ${{ matrix.python-version }}"
         run: python -m tox
@@ -35,13 +36,17 @@ jobs:
         run: |
           python setup.py install
           snowbench snowfakery/tools/benchmark_1.yml --num-records 10_000  --num-records-tablename Account --number-of-processes 4
-          snowbench
+          snowbench | tee bench.txt
+          tail -n 7 bench.txt >> $GITHUB_STEP_SUMMARY
 
   with_cci:
     name: With CumulusCI
-    runs-on: ubuntu-latest
+    runs-on: sfdc-ubuntu-latest
     steps:
       - uses: "actions/checkout@v2"
+      - run: |
+          git fetch --no-tags origin main:_remote_main_
+
       - uses: "actions/setup-python@v1"
         with:
           python-version: "3.9"
@@ -50,15 +55,27 @@ jobs:
         run: |
           python -VV
           python -m pip install --upgrade pip
-          make dev-install
-          python -m pip install cumulusci
+          pip install -r requirements_dev.txt
+          python -m pip install git+https://github.com/SFDO-Tooling/CumulusCI.git@main
 
       - name: Run Tests
-        run: python -m pytest
+        run: |
+          python -m coverage run -m pytest
+
+      - name: Check Coverage
+        run: |
+          coverage xml
+          coverage report
+          git diff HEAD.._remote_main_
+          diff-cover coverage.xml --fail-under 100 --compare-branch=_remote_main_ --diff-range-notation=.. --show-uncovered --markdown-report coverage.md
+          cat coverage.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Type Check
+        run: pyright
 
   faker_docs:
     name: Faker Docs
-    runs-on: ubuntu-latest
+    runs-on: sfdc-ubuntu-latest
     steps:
       - uses: "actions/checkout@v2"
       - uses: "actions/setup-python@v1"
@@ -68,19 +85,19 @@ jobs:
       - name: Install dependencies
         run: |
           python -VV
-          python -m pip install --upgrade pip pip-tools
-          make dev-install
+          pip install -r requirements_dev.txt
+          # docs build requires a proper install
           python setup.py install
 
       - name: Make Docs
         run: make docs
 
-  windows:
-    name: Windows ${{ matrix.python-version }}
-    runs-on: windows-latest
+  pip:
+    name: "Install from Pip ${{ matrix.python-version }}"
+    runs-on: sfdc-ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.6", "3.9"]
+        python-version: ["3.8", "3.10"]
     steps:
       - uses: "actions/checkout@v2"
       - uses: "actions/setup-python@v1"
@@ -91,7 +108,32 @@ jobs:
         run: |
           python -VV
           python -m pip install --upgrade pip
-          make dev-install
+
+      - name: "Install using pip"
+        run: |
+          pip install .
+
+      - name: "Test installation"
+        run: |
+          python -m snowfakery --version
+
+  windows:
+    name: Windows ${{ matrix.python-version }}
+    runs-on: sfdc-windows-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10"]
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v1"
+        with:
+          python-version: "${{ matrix.python-version }}"
+
+      - name: "Install dependencies"
+        run: |
+          python -VV
+          python -m pip install --upgrade pip
+          pip install -r requirements_dev.txt
 
       - name: Run Tests
         run: python -m pytest
@@ -99,6 +141,6 @@ jobs:
   coveralls_done:
     name: Finalize coveralls
     needs: [test]
-    runs-on: ubuntu-latest
+    runs-on: sfdc-ubuntu-latest
     steps:
       - run: curl -k https://coveralls.io/webhook?repo_token=$COVERALLS_REPO_TOKEN -d "payload[build_num]=$GITHUB_SHA&payload[status]=done"

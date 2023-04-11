@@ -1,13 +1,10 @@
-from pathlib import Path
 import typing as T
-
-from datetime import date
 from collections import defaultdict
+from datetime import date
+from pathlib import Path
 
 import yaml
-
-from typing_extensions import Literal
-from pydantic import BaseModel, validator, Extra
+from pydantic import BaseModel, Extra, validator, PositiveInt
 
 
 class AtomicDecl(T.NamedTuple):
@@ -28,7 +25,7 @@ class AtomicDecl(T.NamedTuple):
 
     sf_object: str
     key: str
-    value: T.Union[T.List, str]
+    value: T.Union[T.List, str, date, int]
     priority: int
     merge_rule: T.Callable  # what to do if two declarations for same val
 
@@ -62,11 +59,11 @@ class MergeRules:
 
 class SObjectRuleDeclaration(BaseModel):
     sf_object: str
-    priority: Literal["low", "medium", "high"] = None
+    priority: T.Literal["low", "medium", "high"] = None
 
-    api: Literal["smart", "rest", "bulk"] = None
+    api: T.Literal["smart", "rest", "bulk"] = None
     batch_size: int = None
-    bulk_mode: Literal["serial", "parallel"] = None
+    bulk_mode: T.Literal["serial", "parallel"] = None
     anchor_date: T.Union[str, date] = None
 
     load_after: str = None
@@ -87,7 +84,12 @@ class SObjectRuleDeclaration(BaseModel):
             return val
 
     def as_mapping(self):
-        rc = {"api": self.api, "bulk_mode": self.bulk_mode}
+        rc = {
+            "api": self.api,
+            "bulk_mode": self.bulk_mode,
+            "batch_size": self.batch_size,
+            "anchor_date": self.anchor_date,
+        }
         return {k: v for k, v in rc.items() if v is not None}
 
 
@@ -100,8 +102,31 @@ MERGE_RULES = {
 }
 
 
+class ChannelDeclaration(BaseModel):
+    "Channel declarations are only of relevance to Salesforce employees"
+    user: str
+    recipe_options: T.Dict[str, T.Any] = None
+    num_generators: PositiveInt = None
+    num_loaders: PositiveInt = None
+
+    class Config:
+        extra = Extra.forbid
+
+
+class ChannelDeclarationList(BaseModel):
+    "Channel declarations are only of relevance to Salesforce employees"
+    user_channels: T.List[ChannelDeclaration]
+
+
+class LoadDeclarationsTuple(T.NamedTuple):
+    sobject_declarations: T.List[SObjectRuleDeclaration]
+    channel_declarations: T.List[
+        ChannelDeclaration
+    ]  # Channel declarations are only of relevance to Salesforce employees
+
+
 class SObjectRuleDeclarationFile(BaseModel):
-    __root__: T.List[SObjectRuleDeclaration]
+    __root__: T.List[T.Union[ChannelDeclarationList, SObjectRuleDeclaration]]
 
     @classmethod
     def parse_from_yaml(cls, f: T.Union[Path, T.TextIO]):
@@ -112,7 +137,24 @@ class SObjectRuleDeclarationFile(BaseModel):
         else:
             data = yaml.safe_load(f)
 
-        return cls.parse_obj(data).__root__
+        sobject_decls = [
+            obj
+            for obj in cls.parse_obj(data).__root__
+            if isinstance(obj, SObjectRuleDeclaration)
+        ]
+        channel_decls = [
+            obj
+            for obj in cls.parse_obj(data).__root__
+            if isinstance(obj, ChannelDeclarationList)
+        ]
+        if len(channel_decls) > 1:
+            raise AssertionError("Only one channel declaration list allowed per file.")
+        elif len(channel_decls) == 1:
+            channels = channel_decls[0].user_channels
+        else:
+            channels = []
+
+        return LoadDeclarationsTuple(sobject_decls, channels)
 
 
 def atomize_decls(decls: T.Sequence[SObjectRuleDeclaration]):

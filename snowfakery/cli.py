@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 from snowfakery.data_gen_exceptions import DataGenError
-
+from snowfakery.utils.versions import check_latest_version
 
 import click
 from snowfakery import version
@@ -23,7 +23,7 @@ class FormatChoice(click.Choice):
 
 def eval_arg(arg):
     if arg.isnumeric():
-        return int(float(arg))
+        return int(arg)
     else:
         return arg
 
@@ -49,6 +49,35 @@ def int_string_tuple(ctx, param, value=None):
                 "This parameter must be of the form 'number Name'. For example '50 Account'"
             )
     return string, number
+
+
+class VersionMessage:
+    "Class that formats itself as a version message when % interpolated"
+
+    def quick_test(self) -> str:
+        from io import StringIO
+
+        yaml = """
+        - object: Status
+          fields:
+            quote: Shiny and new
+        """
+        out = StringIO()
+        generate_data(StringIO(yaml), output_files=[out], output_format="txt")
+        return "Properly installed" if out.getvalue() else "Unknown installation error"
+
+    def __mod__(self, vals) -> str:
+        return "\n".join(
+            (
+                f"snowfakery version {version}",
+                check_latest_version(version).message,
+                "",
+                f"Program: {__file__}",
+                f"Python: {sys.version}",
+                f"Executable: {sys.executable}",
+                f"Installation: {self.quick_test()}",
+            )
+        )
 
 
 @click.command()
@@ -126,7 +155,19 @@ def int_string_tuple(ctx, param, value=None):
     help="Declarations to mix into the generated mapping file",
     multiple=True,
 )
-@click.version_option(version=version, prog_name="snowfakery")
+@click.option(
+    "--update-input-file",
+    type=click.Path(exists=True, readable=True, dir_okay=False),
+    help="Run an update-style recipe on this input CSV",
+)
+@click.option(
+    "--update-passthrough-fields",
+    type=str,
+    help="Pass through these fields from input to output automatically",
+    hidden=True,
+    default=None,
+)
+@click.version_option(version=version, prog_name="snowfakery", message=VersionMessage())
 def generate_cli(
     yaml_file,
     option=(),
@@ -143,6 +184,8 @@ def generate_cli(
     plugin_option=(),
     should_create_cci_record_type_tables=False,
     load_declarations=None,
+    update_input_file=None,
+    update_passthrough_fields=(),  # undocumented feature used mostly for testing
 ):
     """
         Generates records from a YAML file
@@ -163,17 +206,21 @@ def generate_cli(
     """
     output_files = list(output_files) if output_files else []
     validate_options(
-        yaml_file,
-        option,
-        dburls,
-        debug_internals,
-        generate_cci_mapping_file,
-        output_format,
-        output_files,
-        output_folder,
-        target_number,
-        reps,
+        yaml_file=yaml_file,
+        option=option,
+        dburl=dburls,
+        debug_internals=debug_internals,
+        generate_cci_mapping_file=generate_cci_mapping_file,
+        output_format=output_format,
+        output_files=output_files,
+        output_folder=output_folder,
+        target_number=target_number,
+        reps=reps,
     )
+    if update_passthrough_fields:
+        update_passthrough_fields = update_passthrough_fields.split(",")
+    else:
+        update_passthrough_fields = ()
     try:
         user_options = dict(option)
         plugin_options = dict(plugin_option)
@@ -195,6 +242,8 @@ def generate_cli(
             should_create_cci_record_type_tables=should_create_cci_record_type_tables,
             load_declarations=load_declarations,
             plugin_options=plugin_options,
+            update_input_file=update_input_file,
+            update_passthrough_fields=update_passthrough_fields,
         )
     except DataGenError as e:
         if debug_internals:
