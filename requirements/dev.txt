@@ -75,7 +75,6 @@ importlib-metadata==6.3.0
     # via
     #   markdown
     #   mkdocs
-    #   typeguard
 iniconfig==2.0.0
     # via pytest
 jinja2==3.1.2
@@ -191,8 +190,6 @@ tox==4.4.11
     #   tox-gh-actions
 tox-gh-actions==3.1.0
     # via -r requirements/dev.in
-typeguard==3.0.2
-    # via -r requirements/dev.in
 types-pyyaml==6.0.12.9
     # via responses
 typing-extensions==4.5.0
@@ -200,7 +197,6 @@ typing-extensions==4.5.0
     #   -r requirements/prod.txt
     #   black
     #   pydantic
-    #   typeguard
 urllib3==1.26.15
     # via
     #   -r requirements/prod.txt
