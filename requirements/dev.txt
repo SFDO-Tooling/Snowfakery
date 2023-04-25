@@ -5,10 +5,8 @@
 #    pip-compile --allow-unsafe requirements/dev.in
 #
 attrs==22.2.0
-    # via
-    #   jsonschema
-    #   pytest
-black==23.1.0
+    # via jsonschema
+black==23.3.0
     # via -r requirements/dev.in
 cachetools==5.3.0
     # via tox
@@ -22,7 +20,7 @@ chardet==5.1.0
     # via
     #   diff-cover
     #   tox
-charset-normalizer==3.0.1
+charset-normalizer==3.1.0
     # via
     #   -r requirements/prod.txt
     #   requests
@@ -40,21 +38,21 @@ coverage[toml]==6.5.0
     #   pytest-cov
 coveralls==3.3.1
     # via -r requirements/dev.in
-diff-cover==7.4.0
+diff-cover==7.5.0
     # via -r requirements/dev.in
 distlib==0.3.6
     # via virtualenv
 docopt==0.6.2
     # via coveralls
-exceptiongroup==1.1.0
+exceptiongroup==1.1.1
     # via pytest
-faker==17.0.0
+faker==18.4.0
     # via
     #   -r requirements/prod.txt
     #   faker-microservice
 faker-microservice==2.0.0
     # via -r requirements/dev.in
-filelock==3.9.0
+filelock==3.11.0
     # via
     #   tox
     #   virtualenv
@@ -66,14 +64,14 @@ greenlet==2.0.2
     #   sqlalchemy
 gvgen==1.0
     # via -r requirements/prod.txt
-identify==2.5.18
+identify==2.5.22
     # via pre-commit
 idna==3.4
     # via
     #   -r requirements/prod.txt
     #   requests
     #   yarl
-importlib-metadata==6.0.0
+importlib-metadata==6.3.0
     # via
     #   markdown
     #   mkdocs
@@ -86,7 +84,7 @@ jinja2==3.1.2
     #   mkdocs
 jsonschema==4.17.3
     # via -r requirements/dev.in
-markdown==3.4.1
+markdown==3.4.3
     # via mkdocs
 markupsafe==2.1.2
     # via
@@ -115,9 +113,9 @@ packaging==23.0
     #   pyproject-api
     #   pytest
     #   tox
-pathspec==0.11.0
+pathspec==0.11.1
     # via black
-platformdirs==3.0.0
+platformdirs==3.2.0
     # via
     #   black
     #   tox
@@ -127,19 +125,19 @@ pluggy==1.0.0
     #   diff-cover
     #   pytest
     #   tox
-pre-commit==3.0.4
+pre-commit==3.2.2
     # via -r requirements/dev.in
-pydantic==1.10.5
+pydantic==1.10.7
     # via -r requirements/prod.txt
-pygments==2.14.0
+pygments==2.15.0
     # via diff-cover
-pyproject-api==1.5.0
+pyproject-api==1.5.1
     # via tox
-pyright==1.1.294
+pyright==1.1.302
     # via -r requirements/dev.in
 pyrsistent==0.19.3
     # via jsonschema
-pytest==7.2.1
+pytest==7.3.0
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -161,6 +159,7 @@ pyyaml==6.0
     #   mkdocs
     #   pre-commit
     #   pyyaml-env-tag
+    #   responses
     #   vcrpy
 pyyaml-env-tag==0.1
     # via mkdocs
@@ -169,17 +168,15 @@ requests==2.28.2
     #   -r requirements/prod.txt
     #   coveralls
     #   responses
-responses==0.22.0
+responses==0.23.1
     # via -r requirements/dev.in
 six==1.16.0
     # via
     #   -r requirements/prod.txt
     #   python-dateutil
     #   vcrpy
-sqlalchemy==1.4.46
+sqlalchemy==1.4.47
     # via -r requirements/prod.txt
-toml==0.10.2
-    # via responses
 tomli==2.0.1
     # via
     #   black
@@ -187,22 +184,20 @@ tomli==2.0.1
     #   pyproject-api
     #   pytest
     #   tox
-tox==4.4.5
+tox==4.4.11
     # via
     #   -r requirements/dev.in
     #   tox-gh-actions
-tox-gh-actions==3.0.0
+tox-gh-actions==3.1.0
     # via -r requirements/dev.in
-typeguard==2.13.3
-    # via -r requirements/dev.in
-types-toml==0.10.8.4
+types-pyyaml==6.0.12.9
     # via responses
 typing-extensions==4.5.0
     # via
     #   -r requirements/prod.txt
     #   black
     #   pydantic
-urllib3==1.26.14
+urllib3==1.26.15
     # via
     #   -r requirements/prod.txt
     #   requests
@@ -211,19 +206,19 @@ vcrpy==4.2.1
     # via
     #   -r requirements/dev.in
     #   pytest-vcr
-virtualenv==20.19.0
+virtualenv==20.21.0
     # via
     #   pre-commit
     #   tox
-watchdog==2.2.1
+watchdog==3.0.0
     # via mkdocs
-wrapt==1.14.1
+wrapt==1.15.0
     # via vcrpy
 yarl==1.8.2
     # via vcrpy
-zipp==3.13.0
+zipp==3.15.0
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
-setuptools==67.3.2
+setuptools==67.6.1
     # via nodeenv

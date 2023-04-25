@@ -9,7 +9,6 @@ pre-commit
 pyright
 pytest
 pytest-cov
-typeguard
 faker-microservice
 tox
 tox-gh-actions      # needed for CI only
