@@ -338,6 +338,17 @@ class TestSOQLDatasets:
         )
 
     @pytest.mark.vcr()
+    @patch(
+        "cumulusci.tasks.bulkdata.step.DataOperationJobResult.status",
+        "Some error value!",
+    )
+    def test_soql_dataset_error(self, sf, org_config, generated_rows):
+        filename = Path(__file__).parent.parent / "examples/soql_dataset.recipe.yml"
+
+        with pytest.raises(DataGenError):
+            generate_data(filename, plugin_options={"org_name": org_config.name})
+
+    @pytest.mark.vcr()
     def test_soql_dataset_where(self, sf, org_config, generated_rows):
         filename = (
             Path(__file__).parent.parent / "examples/soql_dataset_where.recipe.yml"
