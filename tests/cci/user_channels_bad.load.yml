@@ -1,0 +1,27 @@
+# Channel declarations are only of relevance to Salesforce employees
+- sf_object: Account
+  api: REST
+  priority: high
+
+- sf_object: Opportunity
+  api: bulk
+
+- user_channels:
+    - user: admin_1_org_alias
+    - user: user_1_org_alias
+      recipe_options:
+        a: b
+    - user: user_2_org_alias
+      num_generators: 5
+    - user: user_3_org_alias
+      num_loaders: 11
+
+- user_channels:
+    - user: admin_1_org_alias
+    - user: user_1_org_alias
+      recipe_options:
+        a: b
+    - user: user_2_org_alias
+      num_generators: 5
+    - user: user_3_org_alias
+      num_loaders: 11

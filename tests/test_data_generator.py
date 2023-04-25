@@ -48,8 +48,7 @@ class TestDataGenerator:
             generate(StringIO(yaml), {"qwerty": "EBCDIC"})
         assert "xyzzy" in str(e.value)
 
-    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
-    def test_stopping_criteria_with_startids(self, write_row):
+    def test_stopping_criteria_with_startids(self, generated_rows):
         yaml = """
             - object: foo
               just_once: True
@@ -70,29 +69,27 @@ persistent_nicknames: {}
             continuation_file=StringIO(continuation_yaml),
             stopping_criteria=StoppingCriteria("bar", 3),
         )
-        assert write_row.mock_calls == [
+        assert generated_rows.mock_calls == [
             mock.call("bar", {"id": 1001}),
             mock.call("bar", {"id": 1002}),
             mock.call("bar", {"id": 1003}),
         ]
 
-    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
-    def test_stopping_criteria_and_just_once(self, write_row):
+    def test_stopping_criteria_and_just_once(self, generated_rows):
         yaml = """
         - object: foo
           just_once: True
         - object: bar
         """
         generate(StringIO(yaml), stopping_criteria=StoppingCriteria("bar", 3))
-        assert write_row.mock_calls == [
+        assert generated_rows.mock_calls == [
             mock.call("foo", {"id": 1}),
             mock.call("bar", {"id": 1}),
             mock.call("bar", {"id": 2}),
             mock.call("bar", {"id": 3}),
         ]
 
-    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
-    def test_stops_on_no_progress(self, write_row):
+    def test_stops_on_no_progress(self, generated_rows):
         yaml = """
         - object: foo
           just_once: True
@@ -101,8 +98,7 @@ persistent_nicknames: {}
         with pytest.raises(RuntimeError):
             generate(StringIO(yaml), stopping_criteria=StoppingCriteria("foo", 3))
 
-    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
-    def test_stops_if_criteria_misspelled(self, write_row):
+    def test_stops_if_criteria_misspelled(self, generated_rows):
         yaml = """
         - object: foo
           just_once: True

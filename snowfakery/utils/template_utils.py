@@ -1,4 +1,4 @@
-from typing import Sequence
+import typing as T
 import string
 from snowfakery.fakedata.fake_data_generator import FakeData
 
@@ -46,9 +46,9 @@ class FakerTemplateLibrary:
 
     def __init__(
         self,
-        faker_providers: Sequence[object],
-        locale: str = None,
-        context: PluginContext = None,
+        faker_providers: T.Sequence[object],
+        locale: T.Optional[str] = None,
+        context: T.Optional[PluginContext] = None,
     ):
         self.locale = locale
         self.context = context

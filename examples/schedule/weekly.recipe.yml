@@ -1,0 +1,9 @@
+- plugin: snowfakery.standard_plugins.Schedule
+- object: WeeklyEvents
+  count: 3
+  fields:
+    WeeklyEvent:
+      Schedule.Event:
+        # start_date is optional. Defaults to "today"
+        start_date: 2024-01-01
+        freq: weekly
