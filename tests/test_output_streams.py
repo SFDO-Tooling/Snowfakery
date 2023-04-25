@@ -7,13 +7,14 @@ import csv
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from contextlib import redirect_stdout
+from unittest import mock
 
 
 import pytest
 
 from click.exceptions import ClickException
 
-from sqlalchemy import create_engine
+from sqlalchemy import Column, MetaData, Table, Unicode, create_engine
 
 from snowfakery.output_streams import (
     SqlDbOutputStream,
@@ -99,16 +100,6 @@ class OutputCommonTests(ABC):
         - object: bar
           count: 1
         """
-
-        class MockFlush:
-            def __init__(self, real_flush):
-                self.real_flush = real_flush
-                self.flush_count = 0
-
-            def __call__(self):
-                self.flush_count += 1
-                self.real_flush()
-
         results = self.do_output(yaml)
         assert len(list(results["foo"])) == 15
         assert len(list(results["bar"])) == 1
@@ -147,8 +138,31 @@ class OutputCommonTests(ABC):
             normalize({"id": "2", "b": "2"}),
         )
 
+    def test_auto_flush(self):
+        with mock.patch(
+            "snowfakery.output_streams.OutputStream.flush_limit", 3
+        ), mock.patch(
+            "snowfakery.output_streams.OutputStream.commit_limit", 3
+        ), mock.patch.object(
+            self.cls, "commit", autospec=True
+        ) as flush:
+            yaml = """
+        -   object: foo
+            count: 10
+            fields:
+                a: 1
+        -   object: foo
+            count: 10
+            fields:
+                b: 2
+        """
+            self.do_output(yaml)["foo"]
+            assert len(flush.mock_calls) >= (20 // 3)
+
 
 class TestSqlDbOutputStream(OutputCommonTests):
+    cls = SqlDbOutputStream
+
     def do_output(self, yaml):
         with named_temporary_file_path() as f:
             url = f"sqlite:///{f}"
@@ -173,6 +187,24 @@ class TestSqlDbOutputStream(OutputCommonTests):
         values = self.do_output(yaml)["foo"][0]
         assert values["is_null"] is None
 
+    def test_table_already_exists(self):
+        yaml = """
+        - object: Account
+        """
+        with named_temporary_file_path() as f:
+            url = f"sqlite:///{f}"
+            engine = create_engine(url)
+            metadata = MetaData(bind=engine)
+
+            id_column = Column("id", Unicode(255))
+            t = Table("Account", metadata, id_column)
+            metadata.create_all()
+            t.insert([[5]]).execute()
+
+            with pytest.raises(exc.DataGenError, match="Table already exists"):
+                output_stream = SqlDbOutputStream.from_url(url)
+                generate(StringIO(yaml), {}, output_stream)
+
 
 class JSONTables:
     def __init__(self, json_data, table_names):
@@ -189,6 +221,8 @@ class JSONTables:
 
 
 class TestJSONOutputStream(OutputCommonTests):
+    cls = JSONOutputStream
+
     def do_output(self, yaml):
         with StringIO() as s:
             output_stream = JSONOutputStream(s)
@@ -270,6 +304,8 @@ class TestJSONOutputStream(OutputCommonTests):
 
 
 class TestCSVOutputStream(OutputCommonTests):
+    cls = CSVOutputStream
+
     def do_output(self, yaml):
         with TemporaryDirectory() as t:
             output_stream = CSVOutputStream(Path(t) / "csvoutput")
@@ -327,6 +363,8 @@ class TestCSVOutputStream(OutputCommonTests):
 
 
 class TestSQLTextOutputStream(OutputCommonTests):
+    cls = SqlTextOutputStream
+
     def do_output(self, yaml):
         with named_temporary_file_path() as f:
             path = str(f) + ".sql"

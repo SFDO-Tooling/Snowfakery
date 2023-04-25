@@ -132,7 +132,13 @@ class PluginContext:
         elif hasattr(rc, "simplify"):
             return rc.simplify()
         else:
-            raise f"Cannot simplify {field_definition}. Perhaps should have used evaluate_raw?"
+            raise AssertionError(
+                f"Cannot simplify {field_definition}. Perhaps should have used evaluate_raw?"
+            )
+
+    @property
+    def current_filename(self):
+        return self.interpreter.current_context.current_template.filename
 
     @property
     def current_filename(self):

@@ -54,7 +54,7 @@ def generated_rows(request):
                 return mockobj._index[tablename][index]
 
     with patch(
-        "snowfakery.output_streams.DebugOutputStream.write_single_row"
+        "snowfakery.output_streams.SimpleFileOutputStream.write_single_row"
     ) as mockobj:
         mockobj.row_values = row_values
         mockobj.table_values = table_values
@@ -63,8 +63,9 @@ def generated_rows(request):
 
 @pytest.fixture(scope="function")
 def disable_typeguard():
-    with patch("typeguard.check_argument_types", lambda *args, **kwargs: ...):
-        yield
+    # doesn't really do anything. at some point we can remove it if
+    # typeguard is really gone for good.
+    yield
 
 
 @pytest.fixture(scope="function")

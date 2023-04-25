@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from snowfakery import data_gen_exceptions as exc
+from snowfakery.api import generate_data
 from snowfakery.cci_mapping_files.post_processes import add_after_statements
 from snowfakery.data_generator import generate
 from snowfakery.data_generator_runtime import Dependency
@@ -13,6 +14,7 @@ from snowfakery.generate_mapping_from_recipe import (
     mapping_from_recipe_templates,
 )
 from snowfakery.utils.collections import OrderedSet
+from tests.utils import named_temporary_file_path
 
 try:
     import cumulusci
@@ -439,6 +441,18 @@ class TestRecordTypes:
             records = list(db.execute("SELECT * from Case_rt_mapping"))
             assert records == [("Bar", "Bar")], records
             assert mapping["Insert Case"]["fields"]["RecordTypeId"] == "recordtype"
+
+    def test_error__recordtypes(self, generate_in_tmpdir):
+        recipe_data = """
+            - object: Obj
+              fields:
+                RecordType: Bar
+                RecordTypeId: Bar2
+              """
+        with pytest.raises(
+            exc.DataGenError, match="Multiple record type"
+        ), named_temporary_file_path(suffix=".yml") as t:
+            generate_data(StringIO(recipe_data), generate_cci_mapping_file=t)
 
 
 class TestAddAfterStatements:
