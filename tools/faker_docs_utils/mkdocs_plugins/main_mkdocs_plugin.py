@@ -1,12 +1,12 @@
+from functools import lru_cache
 from pathlib import Path
 import sys
 import os
 from unittest.mock import patch
-from functools import lru_cache
 from logging import Logger
+from faker import Factory
 
 from mkdocs.plugins import BasePlugin
-from faker.factory import Factory
 
 
 class Plugin(BasePlugin):
@@ -35,12 +35,16 @@ class Plugin(BasePlugin):
         logger_patch = patch("logging.Logger.warning", new=new_warning)
 
         # speed up a critical function
+        #
+        #   Disabled due to Faker refactoring. After release can look into
+        #   whether it is still needed.
+        #
         lru_patch = patch(
-            "faker.factory.Factory._get_provider_class",
-            lru_cache(maxsize=10_000)(Factory._get_provider_class),
+            "faker.factory.Factory._find_provider_class",
+            lru_cache(maxsize=10_000)(Factory._find_provider_class),
         )
 
-        with sys_path_patch, lru_patch, logger_patch:
+        with sys_path_patch, logger_patch, lru_patch:
             from tools.faker_docs_utils.faker_markdown import (
                 generate_markdown_for_all_locales,
                 generate_markdown_for_fakers,

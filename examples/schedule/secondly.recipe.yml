@@ -1,0 +1,8 @@
+- plugin: snowfakery.standard_plugins.Schedule
+- object: Seconds
+  count: 5
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2023-10-31 10:10:58
+        freq: secondly

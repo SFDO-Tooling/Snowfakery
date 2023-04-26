@@ -1,0 +1,5 @@
+ScaryEvent(id=1, Name=Halloween, Date=2023-10-31)
+ScaryEvent(id=2, Name=Halloween, Date=2024-10-31)
+ScaryEvent(id=3, Name=Halloween, Date=2025-10-31)
+ScaryEvent(id=4, Name=Halloween, Date=2026-10-31)
+ScaryEvent(id=5, Name=Halloween, Date=2027-10-31)

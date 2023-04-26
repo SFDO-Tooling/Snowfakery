@@ -23,6 +23,9 @@
       },
       {
         "$ref": "#/$defs/option"
+      },
+      {
+        "$ref": "#/$defs/version"
       }
     ]
   },
@@ -41,6 +44,9 @@
         },
         "just_once": {
           "type": "boolean"
+        },
+        "update_key": {
+          "type": "string"
         },
         "count": {
           "anyOf": [
@@ -76,9 +82,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "object"
-      ]
+      "required": ["object"]
     },
     "include_file": {
       "title": "Include File",
@@ -90,9 +94,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "include_file"
-      ]
+      "required": ["include_file"]
     },
     "plugin": {
       "title": "Plugin Declaration",
@@ -104,9 +106,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "plugin"
-      ]
+      "required": ["plugin"]
     },
     "var": {
       "title": "Variable",
@@ -148,10 +148,7 @@
           ]
         }
       },
-      "required": [
-        "var",
-        "value"
-      ]
+      "required": ["var", "value"]
     },
     "option": {
       "title": "Variable",
@@ -193,9 +190,7 @@
           ]
         }
       },
-      "required": [
-        "option"
-      ]
+      "required": ["option"]
     },
     "macro": {
       "title": "Macro",
@@ -226,10 +221,20 @@
             ]
           }
         }
+      }
+    },
+    "version": {
+      "title": "Version Declaration",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "snowfakery_version": {
+          "description": "The Snowfakery version",
+          "type": "integer",
+          "enum": [2, 3]
+        }
       },
-      "required": [
-        "macro"
-      ]
+      "required": ["snowfakery_version"]
     }
   }
 }

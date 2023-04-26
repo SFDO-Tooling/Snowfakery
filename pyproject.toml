@@ -1,0 +1,15 @@
+[tool.pyright]
+include = [
+    "snowfakery/utils/*",
+    "snowfakery/tools/*", 
+    "snowfakery/__init__.py",
+    "snowfakery/__main__.py",
+    "snowfakery/cci_mapping_files/post_processes.py",
+    "snowfakery/data_gen_exceptions.py",
+    "snowfakery/salesforce.py",
+    "snowfakery/standard_plugins/SnowfakeryVersion.py",
+    "snowfakery/standard_plugins/__init__.py",
+    "snowfakery/standard_plugins/base64.py",
+    "snowfakery/object_rows.py",
+    "snowfakery/standard_plugins/Schedule.py",
+]

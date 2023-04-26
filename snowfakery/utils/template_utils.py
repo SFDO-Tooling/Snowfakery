@@ -1,4 +1,4 @@
-from typing import Sequence
+import typing as T
 import string
 from snowfakery.fakedata.fake_data_generator import FakeData
 
@@ -37,15 +37,18 @@ class StringGenerator:
     def __radd__(self, other):
         return str(other) + str(self)
 
+    def render(self):
+        return self.func()
+
 
 class FakerTemplateLibrary:
     """A Jinja template library to add the fake.xyz objects to templates"""
 
     def __init__(
         self,
-        faker_providers: Sequence[object],
-        locale: str = None,
-        context: PluginContext = None,
+        faker_providers: T.Sequence[object],
+        locale: T.Optional[str] = None,
+        context: T.Optional[PluginContext] = None,
     ):
         self.locale = locale
         self.context = context

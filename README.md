@@ -1,4 +1,4 @@
-[![Coverage Status](https://coveralls.io/repos/github/SFDO-Tooling/Snowfakery/badge.svg?branch=master)](https://coveralls.io/github/SFDO-Tooling/Snowfakery?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/SFDO-Tooling/Snowfakery/badge.svg?branch=main)](https://coveralls.io/github/SFDO-Tooling/Snowfakery?branch=main)
 
 # Snowfakery Documentation
 

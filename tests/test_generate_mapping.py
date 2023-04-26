@@ -1,19 +1,20 @@
-from pathlib import Path
 from io import StringIO
+from pathlib import Path
 
 import pytest
 
-from snowfakery.data_generator import generate
-from snowfakery.generate_mapping_from_recipe import (
-    mapping_from_recipe_templates,
-    build_dependencies,
-    _table_is_free,
-)
-from snowfakery.data_generator_runtime import Dependency
-from snowfakery.cci_mapping_files.post_processes import add_after_statements
 from snowfakery import data_gen_exceptions as exc
+from snowfakery.api import generate_data
+from snowfakery.cci_mapping_files.post_processes import add_after_statements
+from snowfakery.data_generator import generate
+from snowfakery.data_generator_runtime import Dependency
+from snowfakery.generate_mapping_from_recipe import (
+    _table_is_free,
+    build_dependencies,
+    mapping_from_recipe_templates,
+)
 from snowfakery.utils.collections import OrderedSet
-
+from tests.utils import named_temporary_file_path
 
 try:
     import cumulusci
@@ -441,6 +442,18 @@ class TestRecordTypes:
             assert records == [("Bar", "Bar")], records
             assert mapping["Insert Case"]["fields"]["RecordTypeId"] == "recordtype"
 
+    def test_error__recordtypes(self, generate_in_tmpdir):
+        recipe_data = """
+            - object: Obj
+              fields:
+                RecordType: Bar
+                RecordTypeId: Bar2
+              """
+        with pytest.raises(
+            exc.DataGenError, match="Multiple record type"
+        ), named_temporary_file_path(suffix=".yml") as t:
+            generate_data(StringIO(recipe_data), generate_cci_mapping_file=t)
+
 
 class TestAddAfterStatements:
     def test_add_after_statements(self):
@@ -612,3 +625,70 @@ class TestPersonAccounts:
                 """
         with generate_in_tmpdir(recipe_data) as (mapping, db):
             assert tuple(mapping.keys())[0] == "Insert User"
+
+    def test_upsert(self, generate_in_tmpdir):
+        recipe_data = """
+        - object: User
+          update_key: Name
+          fields:
+            Name: UpdateByNamePerson
+            Username: UpdateByNamePerson@example.com
+        - object: User
+          update_key: Username
+          fields:
+            Name: UpdateByUsernamePerson
+            Username: UpdateByUsernamePerson@example.com
+        - object: User
+          fields:
+            Name: NoUpdatePerson
+            Username: NoUpdatePerson@example.com
+        - object: User
+          update_key: Name
+          fields:
+            Name: UpdateByNamePerson2
+            Username: UpdateByNamePerson2@example.com
+        - object: User
+          update_key: Username
+          fields:
+            Name: UpdateByUsernamePerson2
+            Username: UpdateByUsernamePerson2@example.com
+        - object: User
+          fields:
+            Name: NoUpdatePerson2
+            Username: NoUpdatePerson2@example.com
+        """
+        with generate_in_tmpdir(recipe_data) as (mapping, db):
+            assert mapping == {
+                "Upsert User on Name": {
+                    "sf_object": "User",
+                    "table": "User",
+                    "fields": {"Name": "Name", "Username": "Username"},
+                    "action": "upsert",
+                    "update_key": "Name",
+                    "filters": ["_sf_update_key = 'Name'"],
+                },
+                "Upsert User on Username": {
+                    "sf_object": "User",
+                    "table": "User",
+                    "fields": {"Name": "Name", "Username": "Username"},
+                    "action": "upsert",
+                    "update_key": "Username",
+                    "filters": ["_sf_update_key = 'Username'"],
+                },
+                "Insert User": {
+                    "sf_object": "User",
+                    "table": "User",
+                    "fields": {"Name": "Name", "Username": "Username"},
+                    "filters": ["_sf_update_key = NULL"],
+                },
+            }
+            rows = list(db.execute("select Name, _sf_update_key from User"))
+            print(rows)
+            assert rows == [
+                ("UpdateByNamePerson", "Name"),
+                ("UpdateByUsernamePerson", "Username"),
+                ("NoUpdatePerson", None),
+                ("UpdateByNamePerson2", "Name"),
+                ("UpdateByUsernamePerson2", "Username"),
+                ("NoUpdatePerson2", None),
+            ]

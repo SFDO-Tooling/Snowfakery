@@ -1,4 +1,3 @@
-from unittest import mock
 from io import StringIO
 
 from snowfakery.data_generator import generate
@@ -36,8 +35,7 @@ class TestContinuation:
         assert generated_rows.row_values(3, "foo_reference") == "foo(1)"
         assert generated_rows.row_values(4, "bar_reference") == "bar(2)"
 
-    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
-    def test_ids_go_up(self, write_row):
+    def test_ids_go_up(self, generated_rows):
         yaml = """
             - object: foo
               count: 5
@@ -49,7 +47,7 @@ class TestContinuation:
             StringIO(yaml), continuation_file=StringIO(continuation_file.getvalue())
         )
 
-        assert write_row.mock_calls[-1][1][1]["id"] == 10
+        assert generated_rows.mock_calls[-1][1][1]["id"] == 10
 
     def test_forward_references_work_after_restart(self, generated_rows):
         yaml = """
@@ -67,8 +65,7 @@ class TestContinuation:
 
         assert generated_rows.table_values("Foo", 2, "bar") == "Bar(2)"
 
-    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
-    def test_faker_dates_work(self, write_row):
+    def test_faker_dates_work(self, generated_rows):
         yaml = """
             - object: foo
               just_once: True
@@ -82,8 +79,7 @@ class TestContinuation:
         generate(StringIO(yaml), generate_continuation_file=continuation_file)
         assert "a_date" in continuation_file.getvalue()
 
-    @mock.patch("snowfakery.output_streams.DebugOutputStream.write_row")
-    def test_circular_references(self, write_row):
+    def test_circular_references(self, generated_rows):
         yaml_data = """
             - object: parent
               nickname: TheParent
@@ -109,13 +105,23 @@ class TestContinuation:
                         - object: Parent
                           just_once: true
 
+                        - object: Parent2
+                          nickname: xyzzy
+                          just_once: True
+
                         - object: Child
                           fields:
                             parent:
                                 random_reference: Parent
+
+                        - object: Child
+                          fields:
+                            parent:
+                                random_reference: xyzzy
                             """
         generate_twice(yaml_data)
-        assert generated_rows()
+        assert generated_rows.table_values("Child", 1, "parent") == "Parent(1)"
+        assert generated_rows.table_values("Child", 2, "parent") == "Parent2(1)"
 
 
 def generate_twice(yaml):

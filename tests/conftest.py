@@ -7,6 +7,7 @@ from io import StringIO
 import pytest
 import yaml
 from sqlalchemy import create_engine
+from vcr.serializers import yamlserializer
 
 try:
     import cumulusci
@@ -43,6 +44,9 @@ def generated_rows(request):
             else:  # return a single field
                 return [row[field] for row in mockobj._index[tablename]]
         else:  # return data from just one row
+            # implement Python's "index from the back" semantics
+            if index == -1:
+                index = len(mockobj._index[tablename])
             index = index - 1  # use 1-based indexing like Snowfakery does
             if field:  # return just one field
                 return mockobj._index[tablename][index][field]
@@ -50,7 +54,7 @@ def generated_rows(request):
                 return mockobj._index[tablename][index]
 
     with patch(
-        "snowfakery.output_streams.DebugOutputStream.write_single_row"
+        "snowfakery.output_streams.SimpleFileOutputStream.write_single_row"
     ) as mockobj:
         mockobj.row_values = row_values
         mockobj.table_values = table_values
@@ -59,8 +63,9 @@ def generated_rows(request):
 
 @pytest.fixture(scope="function")
 def disable_typeguard():
-    with patch("typeguard.check_argument_types", lambda *args, **kwargs: ...):
-        yield
+    # doesn't really do anything. at some point we can remove it if
+    # typeguard is really gone for good.
+    yield
 
 
 @pytest.fixture(scope="function")
@@ -121,3 +126,8 @@ def generate_data_with_continuation():
 @pytest.fixture(scope="session")
 def snowfakery_rootdir():
     return Path(__file__).parent.parent
+
+
+@pytest.fixture(scope="session")
+def salesforce_serializer():
+    return yamlserializer

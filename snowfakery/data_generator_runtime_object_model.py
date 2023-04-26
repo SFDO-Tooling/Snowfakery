@@ -136,6 +136,7 @@ class ObjectTemplate:
         just_once: bool = False,
         fields: Sequence = (),
         friends: Sequence = (),
+        update_key: str = None,
     ):
         self.tablename = tablename
         self.nickname = nickname
@@ -146,6 +147,7 @@ class ObjectTemplate:
         self.fields = fields
         self.friends = friends
         self.for_each_expr = for_each_expr
+        self.update_key = update_key
 
         if count_expr and for_each_expr:
             raise DataGenSyntaxError(
@@ -245,14 +247,25 @@ class ObjectTemplate:
         """Generate an individual row"""
         id = context.generate_id(self.nickname)
         row = {"id": id}
+
+        # add a column keeping track of what update_key was specified by
+        # the template. This allows multiple templates to have different
+        # update_keys.
+        if self.update_key:
+            row["_sf_update_key"] = self.update_key
         sobj = ObjectRow(self.tablename, row, index)
 
         context.register_object(sobj, self.nickname, self.just_once)
 
         self._generate_fields(context, row)
 
+        context.remember_row(
+            self.tablename,
+            self.nickname,
+            row,
+        )
+
         with self.exception_handling("Cannot write row"):
-            self.register_row_intertable_references(row, context)
             if not self.tablename.startswith("__"):
                 output_stream.write_row(self.tablename, context.filter_row_values(row))
 
@@ -265,7 +278,14 @@ class ObjectTemplate:
             with self.exception_handling("Problem rendering value"):
                 value = field.generate_value(context)
                 if isinstance(value, PluginResultIterator):
-                    value = value.next()
+                    try:
+                        value = value.next()
+                    except StopIteration:
+                        raise DataGenError(
+                            "Could not generate enough values to create rows",
+                            self.filename,
+                            self.line_num,
+                        )
                 row[field.name] = value
 
                 self._check_type(field, row[field.name], context)
@@ -278,16 +298,6 @@ class ObjectTemplate:
                 self.filename,
                 self.line_num,
             )
-
-    def register_row_intertable_references(
-        self, row: dict, context: RuntimeContext
-    ) -> None:
-        """Before serializing we need to convert objects to flat ID integers."""
-        for fieldname, fieldvalue in row.items():
-            if isinstance(fieldvalue, (ObjectRow, ObjectReference)):
-                context.register_intertable_reference(
-                    self.tablename, fieldvalue._tablename, fieldname
-                )
 
     def execute(
         self, interp: Interpreter, context: RuntimeContext, continuing: bool
@@ -333,6 +343,8 @@ class SimpleValue(FieldDefinition):
         if evaluator:
             try:
                 val = evaluator(context)
+                if hasattr(val, "render"):
+                    val = val.render()
             except jinja2.exceptions.UndefinedError as e:
                 raise DataGenNameError(e.message, self.filename, self.line_num) from e
             except Exception as e:
@@ -340,7 +352,9 @@ class SimpleValue(FieldDefinition):
         else:
             val = self.definition
         context.unique_context_identifier = old_context_identifier
-        return look_for_number(val) if isinstance(val, str) else val
+        if isinstance(val, str) and not context.interpreter.native_types:
+            val = look_for_number(val)
+        return val
 
     def __repr__(self):
         return f"<{self.__class__.__name__ , self.definition}>"
@@ -401,9 +415,9 @@ class StructuredValue(FieldDefinition):
                 raise AttributeError(
                     f"'{objname}' plugin exposes no attribute '{method}'"
                 )
-            if not func:
+            if not callable(func):
                 raise DataGenNameError(
-                    f"Cannot find definition for: {method} on {objname}",
+                    f"Cannot call '{method}' on '{objname}'",
                     self.filename,
                     self.line_num,
                 )

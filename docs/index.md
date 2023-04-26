@@ -10,7 +10,7 @@ Snowfakery can write its output to `stdout`, or any database accessible to SQLAl
 
 ### Installation for Salesforce Users
 
-If you intend to use Snowfakery with Salesforce, we recommend installing CumulusCI, which includes Snowfakery in the installation. To install CumulusCI, follow the steps in the [Get Started](https://cumulusci.readthedocs.io/en/latest/get_started.html) section of the CumulusCI documentation. (Don't forget to install [Python](https://www.python.org/downloads/), too!)
+If you intend to use Snowfakery with Salesforce, we recommend installing CumulusCI, which includes Snowfakery in the installation. To install CumulusCI, follow the steps in the [Get Started](https://cumulusci.readthedocs.io/en/latest/get-started.html) section of the CumulusCI documentation. (Don't forget to install [Python](https://www.python.org/downloads/), too!)
 
 After installation, from your development environment of choice (e.g. VS Code), create a Snowfakery recipe file in your working directory (with a file extension .yml).  Then, open a terminal and use the `snowfakery` task command to invoke Snowfakery, referencing the file you just created.  Of course, you will want your recipe to include good instructions.  We'll cover that in the rest of this documentation!
 
@@ -595,9 +595,90 @@ The `random_reference` property creates a reference to a random, existing row fr
       random_reference: Owner
 ```
 
-The selected row can be any one that matches the object type and was already created in the current iteration of the recipe. For example, this previous recipe was executed twenty times (iterations) to generate 200 `Pets` and `Owners`. The selected rows in the first iteration would be one of the first ten `Owners`, and the selected rows in the last iteration would be one of the last ten.
+To create a reference, `random_reference` looks for a row created in the current iteration of the recipe and matching the specified object type or nickname. In the above recipe, each `random_reference` specified in `ownedBy` will point to one of the ten `Owner` objects created in the same iteration. If you iterate over the recipe multiple times, in other words, each `Pet` object will be matched with one of the ten `Owner` objects created during the same iteration.
 
-Snowfakery cannot currently generate a random reference based on a nickname or to a row created in a previous or future iteration of the recipe. If you need these features, contact the Snowfakery team through a GitHub issue.
+If `random_reference` finds no matches in the current iteration, it looks in previous iterations. This can happen, for example, when you try to create a reference to an object created with the `just_once` flag. Snowfakery cannot currently generate a `random_reference` to a row that will be created in a future iteration of a recipe.
+
+Performance tip: Tables and nicknames that are referred to by `random_reference` are indexed, which makes them slightly slower to generate than normal. This should seldom be a problem in practice, but if you experience performance problems you could switch to a normal `reference` to see if that improves things.
+
+#### Unique random references
+
+`random_reference` has a `unique` parameter which ensures that each target row is used only once.
+
+```yaml
+- object: Owner
+  count: 10
+  fields:
+    name:
+      fake: Name
+- object: Pet
+  count: 10
+  fields:
+    ownedBy:
+      random_reference:
+        to: Owner
+        unique: True
+```
+
+In the case above, the relationship between Owners and Pets will be one-to-one in a random order, rather than a totally random distribution which would tend to have some Owners with multiple pets.
+
+In the case above, it is clear that the scope of the uniqueness should be the Pets, but in the case of join tables, like Salesforce's Campaign Member, this is ambiguous and must be specified like this:
+
+```yaml
+# examples/salesforce/campaign-member.yml
+- object: Campaign
+  count: 5
+  fields:
+    Name: Campaign ${{child_index}}
+- object: Contact
+  count: 3
+  fields:
+    FirstName:
+      fake: FirstName
+    LastName:
+      fake: LastName
+  friends:
+    - object: CampaignMember
+      count: 5
+      fields:
+        ContactId:
+          reference: Contact
+        CampaignId:
+          random_reference:
+            to: Campaign
+            parent: Contact
+            unique: True
+```
+
+The `parent` parameter clarifies that the scope of the uniqueness is the local Contact.
+Each of the Contacts will have CampaignMembers that point to unique campaigns, like
+this:
+
+```sh
+Campaign(id=1, Name=Campaign 0)
+Campaign(id=2, Name=Campaign 1)
+Campaign(id=3, Name=Campaign 2)
+Campaign(id=4, Name=Campaign 3)
+Campaign(id=5, Name=Campaign 4)
+Contact(id=1, FirstName=Catherine, LastName=Hanna)
+CampaignMember(id=1, ContactId=Contact(1), CampaignId=Campaign(2))
+CampaignMember(id=2, ContactId=Contact(1), CampaignId=Campaign(5))
+CampaignMember(id=3, ContactId=Contact(1), CampaignId=Campaign(3))
+CampaignMember(id=4, ContactId=Contact(1), CampaignId=Campaign(4))
+CampaignMember(id=5, ContactId=Contact(1), CampaignId=Campaign(1))
+Contact(id=2, FirstName=Mary, LastName=Valencia)
+CampaignMember(id=6, ContactId=Contact(2), CampaignId=Campaign(1))
+CampaignMember(id=7, ContactId=Contact(2), CampaignId=Campaign(4))
+CampaignMember(id=8, ContactId=Contact(2), CampaignId=Campaign(5))
+CampaignMember(id=9, ContactId=Contact(2), CampaignId=Campaign(2))
+CampaignMember(id=10, ContactId=Contact(2), CampaignId=Campaign(3))
+Contact(id=3, FirstName=Jake, LastName=Mullen)
+CampaignMember(id=11, ContactId=Contact(3), CampaignId=Campaign(1))
+CampaignMember(id=12, ContactId=Contact(3), CampaignId=Campaign(4))
+CampaignMember(id=13, ContactId=Contact(3), CampaignId=Campaign(3))
+CampaignMember(id=14, ContactId=Contact(3), CampaignId=Campaign(5))
+CampaignMember(id=15, ContactId=Contact(3), CampaignId=Campaign(2))
+```
 
 ### `fake`
 
@@ -610,7 +691,7 @@ The `date_between` function picks a random date in some date range. For example,
 ```yaml
 - object: OBJ
     fields:
-    date:
+      date:
         date_between:
             start_date: 2000-01-01
             end_date: today
@@ -644,6 +725,41 @@ The `date_between` function can also be used in formulas.
 
 ```yaml
 wedding_date: Our big day is ${{date_between(start_date="2022-01-31", end_date="2022-12-31")}}
+```
+
+### `datetime_between`
+
+`datetime_between` is similar to `date_between` but relates to [datetimes](#datetime).
+
+Some example of randomized datetimes:
+
+```yaml
+# tests/test_fake_datetimes.yml
+- object: OBJ
+  fields:
+    past:
+      datetime_between:
+        start_date: 1999-12-31 # party like its 1999!!
+        end_date: today
+    future:
+      datetime_between:
+        start_date: today
+        end_date: 2525-01-01 # if man is still alive!!
+    y2k:
+      datetime_between:
+        start_date: 1999-12-31 11:59:00
+        end_date: 2000-01-01 01:01:00
+    empty:
+      datetime_between:
+        start_date: 1999-12-31 11:59:00
+        end_date: 1999-12-31 11:59:00
+    westerly:
+      datetime_between:
+        start_date: 1999-12-31 11:59:00
+        end_date: now
+        timezone:
+          relativedelta:
+            hours: +8
 ```
 
 ### `random_number`
@@ -782,6 +898,31 @@ Macros can include other macros. In fact, macros are especially powerful if you 
 
 .. note::
 `fields` or `friends` declared in the macros listed later override those listed earlier. `fields` or `friends` declared in the Object Template override those declared in macros.
+
+### Debug
+
+You can use Snowfakery's `debug` function to output values to `stderr` (usually, the command line) for debugging.
+
+The debug function can "wrap" any formula expression and return its value.
+
+```yaml
+# tests/debug.recipe.yml
+- object: Example
+  fields:
+    value1: ${{ debug(399 + 21) / 10 }}
+    value2: ${{ debug((399 + 21) / 10) }}
+    value3:
+      debug:
+        - fake: datetime
+```
+
+In addition to its usual output, this would output:
+
+```txt
+DEBUG - 420 (<class 'int'>)
+DEBUG - 42.0 (<class 'float'>)
+DEBUG - 2017-06-19 22:10:13+00:00 (<class 'datetime.datetime'>)
+```
 
 ## Define Variables
 
@@ -980,7 +1121,38 @@ Contact(id=3, FirstName=Gene, LastName=Wall, DepartmentCode=42Q3XX3N)
 
 #### `today`
 
-The `today` variable returns a date representing the current date. This date does not change chanage during the execution of a single recipe.
+The `today` variable returns a date
+representing the current date. This date
+will not chanage during the execution of
+a single recipe. See the `date` function
+to learn more about this type of object.
+
+#### `now`
+
+The `now` variable returns a [datetime](#datetime)
+representing the current moment. It outputs
+microsecond precision and is in the UTC timezone.
+
+Using this recipe, you can see three different
+ways of outputting the timestamp:
+
+```yaml
+# tests/test_now.yml
+- object: Times
+  fields:
+    current_datetime: ${{now}}
+    current_datetime_as_number: ${{now.timestamp()}}
+    current_datetime_without_microseconds: ${{int(now.timestamp())}}
+```
+
+This would generate field values similar to these:
+
+```yaml
+current_datetime=2022-02-23 15:39:49.513086+00:00, current_datetime_as_number=1645630789.513975, current_datetime_without_microseconds=1645630789
+```
+
+Experimentally, this variable is not guaranteed to return a unique
+value each time, especially on Windows.
 
 #### `fake:` and `fake.`
 
@@ -1010,12 +1182,79 @@ the_date: ${{date("2018-10-30")}}
 another_date: ${{date(year=2018, month=11, day=30)}}
 ```
 
+These objects have the following attributes:
+
+- date.year: the year
+- date.month: between 1 and 12 inclusive.
+- date.day: between 1 and the number of days in the given month of the given year.
+
+And these methods:
+
+- date.weekday(): the day of the week as an integer, where Monday is 0 and Sunday is 6. For example, date(2002, 12, 4).weekday() == 2, a Wednesday.
+- date.isoformat() - string representing the date in ISO 8601 format, YYYY-MM-DD
+- strftime(format) - create a string representing the time under the control of an explicit [format string.](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes)
+
+#### `datetime`
+
+The `datetime` function can generate
+a new datetime object from year/month/day parts, from a string
+or from a date object.
+
+A `datetime` combines both a date and a time into a single value. E.g. 11:03:21 on February 14, 2024. We can express that `datetime` as
+`2024-02-14 11:03:21`
+
+Datetimes default to using the UTC time-zone, but you can control that by
+adding a timezone after a plus sign: `2008-04-25 21:18:29+08:00`
+
+```yaml
+# tests/test_datetime.yml
+- snowfakery_version: 3
+- object: Datetimes
+  fields:
+    from_date_fields: ${{datetime(year=2000, month=1, day=1)}}
+    from_datetime_fields: ${{datetime(year=2000, month=1, day=1, hour=1, minute=1, second=1)}}
+    some_date: # a date, not a datetime, for conversion later
+      date_between:
+        start_date: today
+        end_date: +1y
+    from_date: ${{datetime(some_date)}}
+    from_string: ${{datetime("2000-01-01 01:01:01")}}
+    from_yaml:
+      datetime: 2000-01-01 01:01:01
+    right_now: ${{now}}
+    also_right_now: ${{datetime()}}
+    also_also_right_now:
+      datetime: now
+    hour: ${{now.hour}}
+    minute: ${{now.minute}}
+    second: ${{now.second}}
+    right_now_with_timezone: ${{now.astimezone()}}
+    to_date: ${{now.date()}}
+```
+
+These objects have the following attributes:
+
+- datetime.year: the year
+- datetime.month: between 1 and 12 inclusive.
+- datetime.day: between 1 and the number of days in the given month of the given year.
+- datetime.hour: the hour
+- datetime.minute: the minute
+- datetime.second: the second
+
+And these methods:
+
+- date.weekday(): the day of the week as an integer, where Monday is 0 and Sunday is 6. For example, date(2002, 12, 4).weekday() == 2, a Wednesday.
+- date.isoformat() - string representing the date in ISO 8601 format, YYYY-MM-DD
+- strftime(format) - create a string representing the time under the control of an explicit [format string.](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes)
+- astimezone() - create a timezone-aware datetime for your current timezone
+- date() - convert a datetime into a date.
+
 #### `relativedelta`
 
 The [`relativedelta` function](https://dateutil.readthedocs.io/en/stable/relativedelta.html) from `dateutil` is available for use in calculations. For example:
 
 ```yaml
-${{ date(Date_Established__c) + relativedelta(months=child_index) }}
+${{ date(Date_Established__c) + relativedelta(months=) }}
 ```
 
 Some plugins are also interested in a `template` variable that has an `id` attribute that represents a unique identifier for the current template. Look at
@@ -1490,44 +1729,6 @@ Example(id=19, count=9)
 Example(id=20, count=10)
 ```
 
-#### Date Counters for Schedules
-
-Snowfakery can generate incrementing numbers like this:
-
-```yaml
-# examples/counters/simple_date_counter.recipe.yml
-- plugin: snowfakery.standard_plugins.Counters
-- var: EveryTwoWeeks
-  value:
-    Counters.DateCounter:
-      start_date: 2021-01-01
-      step: +2w
-- object: Meetings
-  count: 4
-  fields:
-    Date: ${{EveryTwoWeeks.next}}
-    Topic:
-      fake: catchphrase
-```
-
-This generates:
-
-```json
-Meetings(id=1, Date=2021-01-01, Topic=Innovative dedicated solution)
-Meetings(id=2, Date=2021-01-15, Topic=Open-architected tangible artificial intelligence)
-Meetings(id=3, Date=2021-01-29, Topic=Compatible global definition)
-Meetings(id=4, Date=2021-02-12, Topic=Optimized real-time archive)
-```
-
-The `start_date` can be a particular date in `YYYY-MM-DD` or the word `today`.
-
-The `step` is based on a syntax from the Python Faker library. It can be:
-
-- `+<number>d` : `number` days between steps, e.g. `+10d` (10 days)
-- `+<number>w`: `number` weeks between steps, e.g. `+10w` (70 days)
-- `+<number>M`: `number` months between steps, e.g. `+10M` (304 days)
-- `+<number>y`: `number` years between steps, e.g. `+10y` (3625 days)
-
 ### Recipe Options
 
 Instead of manually entering the exact number of records to create into a template file, pass an `option` (such as numbers, strings, booleans, and so on) to your generator recipe from the command line.
@@ -1987,11 +2188,596 @@ An update recipe should have a single top-level object with no `count` on it.
 The recipe can take `options` if needed. It will generate the same number of
 output rows as input rows.
 
+To do updates in a Salesforce org, refer to the [CumulusCI documentation](https://cumulusci.readthedocs.io/en/stable/data.html#update-data).
+
+### Faking Scheduled Events
+
+Snowfakery can generate recurring events such as meetings or appointments.
+
+A simple example is scheduling the next ten Halloween Days:
+
+```yaml
+# examples/schedule/halloween.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: ScaryEvent
+  count: 5
+  fields:
+    Name: Halloween
+    Date:
+      Schedule.Event:
+        start_date: 2023-10-31
+        freq: yearly
+```
+
+This will generate [`date`](#date) values like this:
+
+```s
+# examples/schedule/halloween.recipe.out
+ScaryEvent(id=1, Name=Halloween, Date=2023-10-31)
+ScaryEvent(id=2, Name=Halloween, Date=2024-10-31)
+ScaryEvent(id=3, Name=Halloween, Date=2025-10-31)
+ScaryEvent(id=4, Name=Halloween, Date=2026-10-31)
+ScaryEvent(id=5, Name=Halloween, Date=2027-10-31)
+```
+
+Scheduled events are always output in chronological order.
+
+#### Datetime schedules
+
+By supplying a more precise `start_date`, we can generate
+[`datetime`](#datetime) values instead:
+
+```yaml
+# examples/schedule/haunting.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: ScaryEvent
+  count: 5
+  fields:
+    Name: Halloween
+    DateTime:
+      Schedule.Event:
+        start_date: 2023-10-31 23:59:59.99
+        freq: yearly
+```
+
+Outputs:
+
+```s
+# examples/schedule/haunting.recipe.out
+ScaryEvent(id=1, Name=Halloween, DateTime=2023-10-31T23:59:59+00:00)
+ScaryEvent(id=2, Name=Halloween, DateTime=2024-10-31T23:59:59+00:00)
+ScaryEvent(id=3, Name=Halloween, DateTime=2025-10-31T23:59:59+00:00)
+ScaryEvent(id=4, Name=Halloween, DateTime=2026-10-31T23:59:59+00:00)
+ScaryEvent(id=5, Name=Halloween, DateTime=2027-10-31T23:59:59+00:00)
+```
+
+The `+00:00` at the end of each one indicates that it is in the UTC
+timezone, but you can generate values in other timezones by changing
+the timezone of the `start_date`:
+
+```yaml
+# examples/schedule/with_timezone.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: ScaryEvent
+  count: 5
+  fields:
+    Name: Halloween
+    DateTime:
+      Schedule.Event:
+        start_date: 2023-10-31 23:59:59.99+08:00
+        freq: yearly
+```
+
+```s
+# examples/schedule/with_timezone.recipe.out
+ScaryEvent(id=1, Name=Halloween, DateTime=2023-10-31T23:59:59+08:00)
+ScaryEvent(id=2, Name=Halloween, DateTime=2024-10-31T23:59:59+08:00)
+ScaryEvent(id=3, Name=Halloween, DateTime=2025-10-31T23:59:59+08:00)
+ScaryEvent(id=4, Name=Halloween, DateTime=2026-10-31T23:59:59+08:00)
+ScaryEvent(id=5, Name=Halloween, DateTime=2027-10-31T23:59:59+08:00)
+```
+
+The `+08:00` means 8 hours behind UTC.
+
+We can also generate schedules with precision of hours, minutes or seconds by
+supplying frequencies of `hourly`, `minutely` or `daily`.
+
+For exaample:
+
+```yaml
+# examples/schedule/secondly.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: Seconds
+  count: 5
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2023-10-31 10:10:58
+        freq: secondly
+```
+
+Which generates:
+
+```s
+# examples/schedule/secondly.recipe.out
+Seconds(id=1, DateTime=2023-10-31T10:10:58+00:00)
+Seconds(id=2, DateTime=2023-10-31T10:10:59+00:00)
+Seconds(id=3, DateTime=2023-10-31T10:11:00+00:00)
+Seconds(id=4, DateTime=2023-10-31T10:11:01+00:00)
+Seconds(id=5, DateTime=2023-10-31T10:11:02+00:00)
+```
+
+#### Days of the week
+
+One can use the strings "MO", "TU", "WE", "TH", "FR", "SA", "SU" with the `byweekday`
+parameter to achieve day-of-week schedules like Monday/Wednesday/Friday.
+
+```yaml
+# examples/schedule/monday_wednesday_friday.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: Meeting
+  count: 5
+  fields:
+    Name: MWF Meeting
+    Date:
+      Schedule.Event:
+        start_date: 2023-01-01
+        freq: weekly
+        byweekday: MO, WE, FR
+```
+
+Which outputs:
+
+```s
+# examples/schedule/monday_wednesday_friday.recipe.out
+Meeting(id=1, Name=MWF Meeting, Date=2023-01-02)
+Meeting(id=2, Name=MWF Meeting, Date=2023-01-04)
+Meeting(id=3, Name=MWF Meeting, Date=2023-01-06)
+Meeting(id=4, Name=MWF Meeting, Date=2023-01-09)
+Meeting(id=5, Name=MWF Meeting, Date=2023-01-11)
+```
+
+`byweekday` has another useful feature. We can use it with a month or
+year frequency to get the first, second, third, last, etc. instance of
+a date in that period.
+
+```yaml
+# examples/schedule/monday_wednesday_friday_monthly.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: Meeting
+  count: 10
+  fields:
+    Name: MWF Meeting
+    Date:
+      Schedule.Event:
+        start_date: 2023-01-01
+        freq: monthly
+        byweekday: MO(+1), WE(-1), FR(+2)
+```
+
+Note the use of `-1` to mean "last occurrence". `-2` would be second last
+and so forth.
+
+Which results in
+
+```s
+# examples/schedule/monday_wednesday_friday_monthly.recipe.out
+Meeting(id=1, Name=MWF Meeting, Date=2023-01-02)
+Meeting(id=2, Name=MWF Meeting, Date=2023-01-13)
+Meeting(id=3, Name=MWF Meeting, Date=2023-01-25)
+Meeting(id=4, Name=MWF Meeting, Date=2023-02-06)
+Meeting(id=5, Name=MWF Meeting, Date=2023-02-10)
+Meeting(id=6, Name=MWF Meeting, Date=2023-02-22)
+Meeting(id=7, Name=MWF Meeting, Date=2023-03-06)
+Meeting(id=8, Name=MWF Meeting, Date=2023-03-10)
+Meeting(id=9, Name=MWF Meeting, Date=2023-03-29)
+Meeting(id=10, Name=MWF Meeting, Date=2023-04-03)
+```
+
+It makes three dates per month, representing
+the first Monday, the second Friday and the last Wednesday. The dates
+are still in chronological order, so the Wednesday comes last.
+
+#### `bymonthday`
+
+The `bymonthday` feature allows one to generate events matching a particular
+(numerical) day of the month. For example, the first (`bymonthday=1`),
+third (`bymonthday=3`), last (`bymonthday=-1`), second last (`bymonthday=-2`)
+etc.
+
+```yaml
+# examples/schedule/bymonthday.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: ThirdDayOfMonth
+  count: 5
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01
+        freq: monthly
+        bymonthday: 3
+
+- object: FirstAndLastDayOfMonth
+  count: 5
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01
+        freq: monthly
+        bymonthday: 1,-1
+```
+
+This generates:
+
+```s
+# examples/schedule/bymonthday.recipe.out
+ThirdDayOfMonth(id=1, DateTime=2024-01-03)
+ThirdDayOfMonth(id=2, DateTime=2024-02-03)
+ThirdDayOfMonth(id=3, DateTime=2024-03-03)
+ThirdDayOfMonth(id=4, DateTime=2024-04-03)
+ThirdDayOfMonth(id=5, DateTime=2024-05-03)
+FirstAndLastDayOfMonth(id=1, DateTime=2024-01-01)
+FirstAndLastDayOfMonth(id=2, DateTime=2024-01-31)
+FirstAndLastDayOfMonth(id=3, DateTime=2024-02-01)
+FirstAndLastDayOfMonth(id=4, DateTime=2024-02-29)
+FirstAndLastDayOfMonth(id=5, DateTime=2024-03-01)
+```
+
+#### `byyearday`
+
+The `byyearday` feature is similar to the `bymonthday` one.
+
+```yaml
+# examples/schedule/byyearday.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: ThirdDayOfYear
+  count: 5
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01
+        freq: yearly
+        byyearday: 3
+
+- object: ChristmasDayNewYearsEve
+  count: 5
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01
+        freq: yearly
+        byyearday: -7,-1
+```
+
+Which generates:
+
+```s
+# examples/schedule/byyearday.recipe.out
+ThirdDayOfYear(id=1, DateTime=2024-01-03)
+ThirdDayOfYear(id=2, DateTime=2025-01-03)
+ThirdDayOfYear(id=3, DateTime=2026-01-03)
+ThirdDayOfYear(id=4, DateTime=2027-01-03)
+ThirdDayOfYear(id=5, DateTime=2028-01-03)
+ChristmasDayNewYearsEve(id=1, DateTime=2024-12-25)
+ChristmasDayNewYearsEve(id=2, DateTime=2024-12-31)
+ChristmasDayNewYearsEve(id=3, DateTime=2025-12-25)
+ChristmasDayNewYearsEve(id=4, DateTime=2025-12-31)
+ChristmasDayNewYearsEve(id=5, DateTime=2026-12-25)
+```
+
+#### `byhour`, `byminute`, `bysecond`
+
+The `byhour`, `byminute` and `bysecond` features work similarly to the features
+above, but with datetimes. The numbers used must be positive integers.
+
+```yaml
+# examples/schedule/bytimes.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: Hours
+  count: 5
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01T12:01:01
+        freq: hourly
+        byhour: 0,2,4 # early morning hours
+
+- object: Minutes
+  count: 10
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01T12:01:01
+        freq: minutely
+        byminute: 1,2,3 # first few minutes of each hour
+
+- object: Seconds
+  count: 10
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01T12:01:01
+        freq: secondly
+        bysecond: 1, 2, 3 # first few seconds of each minute
+```
+
+```json
+# examples/schedule/bytimes.recipe.out
+Hours(id=1, DateTime=2024-01-02T00:01:01+00:00)
+Hours(id=2, DateTime=2024-01-02T02:01:01+00:00)
+Hours(id=3, DateTime=2024-01-02T04:01:01+00:00)
+Hours(id=4, DateTime=2024-01-03T00:01:01+00:00)
+Hours(id=5, DateTime=2024-01-03T02:01:01+00:00)
+Minutes(id=1, DateTime=2024-01-01T12:01:01+00:00)
+Minutes(id=2, DateTime=2024-01-01T12:02:01+00:00)
+Minutes(id=3, DateTime=2024-01-01T12:03:01+00:00)
+Minutes(id=4, DateTime=2024-01-01T13:01:01+00:00)
+Minutes(id=5, DateTime=2024-01-01T13:02:01+00:00)
+Minutes(id=6, DateTime=2024-01-01T13:03:01+00:00)
+Minutes(id=7, DateTime=2024-01-01T14:01:01+00:00)
+Minutes(id=8, DateTime=2024-01-01T14:02:01+00:00)
+Minutes(id=9, DateTime=2024-01-01T14:03:01+00:00)
+Minutes(id=10, DateTime=2024-01-01T15:01:01+00:00)
+Seconds(id=1, DateTime=2024-01-01T12:01:01+00:00)
+Seconds(id=2, DateTime=2024-01-01T12:01:02+00:00)
+Seconds(id=3, DateTime=2024-01-01T12:01:03+00:00)
+Seconds(id=4, DateTime=2024-01-01T12:02:01+00:00)
+Seconds(id=5, DateTime=2024-01-01T12:02:02+00:00)
+Seconds(id=6, DateTime=2024-01-01T12:02:03+00:00)
+Seconds(id=7, DateTime=2024-01-01T12:03:01+00:00)
+Seconds(id=8, DateTime=2024-01-01T12:03:02+00:00)
+Seconds(id=9, DateTime=2024-01-01T12:03:03+00:00)
+Seconds(id=10, DateTime=2024-01-01T12:04:01+00:00)
+```
+
+#### Intervals
+
+We can schedule events for "every third week" or "every second month" using an
+interval:
+
+```yaml
+# examples/schedule/every_third_week.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: Meeting
+  count: 5
+  fields:
+    Name: Halloween
+    Date:
+      Schedule.Event:
+        start_date: 2023-01-01
+        freq: weekly
+        interval: 3
+```
+
+Which generates:
+
+```s
+# examples/schedule/every_third_week.recipe.out
+Meeting(id=1, Name=Halloween, Date=2023-01-01)
+Meeting(id=2, Name=Halloween, Date=2023-01-22)
+Meeting(id=3, Name=Halloween, Date=2023-02-12)
+Meeting(id=4, Name=Halloween, Date=2023-03-05)
+Meeting(id=5, Name=Halloween, Date=2023-03-26)
+```
+
+We can also combine features, for example to get every second Monday:
+
+```yaml
+# examples/schedule/every_other_monday.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: Meeting
+  count: 5
+  fields:
+    Date:
+      Schedule.Event:
+        start_date: 2023-01-01
+        freq: weekly
+        interval: 2
+        byweekday: MO
+```
+
+Which generates:
+
+```s
+# examples/schedule/every_other_monday.recipe.out
+Meeting(id=1, Date=2023-01-02)
+Meeting(id=2, Date=2023-01-16)
+Meeting(id=3, Date=2023-01-30)
+Meeting(id=4, Date=2023-02-13)
+Meeting(id=5, Date=2023-02-27)
+```
+
+#### For-each and Until
+
+We can use the `for_each` and `until` features to loop over scheduled events
+and generate the correct number of rows to match them:
+
+```yaml
+# examples/schedule/for_each_date.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+
+- object: Mondays
+  for_each:
+    var: Date
+    value:
+      Schedule.Event:
+        start_date: 2025-01-01
+        freq: weekly
+        until: 2025-03-01
+  fields:
+    Date: ${{Date}}
+```
+
+This would generate this data:
+
+```s
+# examples/schedule/for_each_date.recipe.out
+Mondays(id=1, Date=2025-01-01 00:00:00+00:00)
+Mondays(id=2, Date=2025-01-08 00:00:00+00:00)
+Mondays(id=3, Date=2025-01-15 00:00:00+00:00)
+Mondays(id=4, Date=2025-01-22 00:00:00+00:00)
+Mondays(id=5, Date=2025-01-29 00:00:00+00:00)
+Mondays(id=6, Date=2025-02-05 00:00:00+00:00)
+Mondays(id=7, Date=2025-02-12 00:00:00+00:00)
+Mondays(id=8, Date=2025-02-19 00:00:00+00:00)
+Mondays(id=9, Date=2025-02-26 00:00:00+00:00)
+```
+
+#### Inclusions
+
+You can combine event schedules using a parameter called `include`.
+
+Includes can be either simple dates or other schedules:
+
+```yaml
+# examples/schedule/inclusions.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+
+- object: MonthlyEventsPlusValentines
+  count: 10
+  fields:
+    MonthlyEvent:
+      Schedule.Event:
+        start_date: 2025-02-01
+        freq: monthly
+        include: 2025-02-14
+
+- object: MonthlyEventsPlusSeveralNewYears
+  count: 10
+  fields:
+    MonthlyEvent:
+      Schedule.Event:
+        start_date: 2025-02-01
+        freq: monthly
+        include:
+          Schedule.Event:
+            count: 3
+            freq: yearly
+            start_date: 2000-01-01
+```
+
+You can nest `Schedule.Event`s inside of each other to build multi-part
+inclusions.
+
+This complicated example includes yearly events starting
+January 1, Monthly events in 2027 and daily events in December 2028.
+The total number of events that will be created are 15.
+
+```yaml
+# examples/schedule/deep_inclusions.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: TheEvent
+  count: 15
+  fields:
+    MonthlyEvent:
+      Schedule.Event:
+        start_date: 2025-01-01
+        freq: yearly
+        include:
+          Schedule.Event:
+            count: 3
+            freq: monthly
+            start_date: 2027-03-01
+            include:
+              Schedule.Event:
+                count: 5
+                freq: daily
+                start_date: 2028-12-01
+```
+
+#### Exclusions
+
+Exclusions are the opposite of inclusions. They filter out dates
+from their parent schedule. For example, we can filter out
+just the event on May 1, 2025:
+
+```yaml
+# examples/schedule/exclusions_no_May.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+- object: MonthlyEventsExceptMay
+  count: 12
+  fields:
+    MonthlyEvent:
+      Schedule.Event:
+        start_date: 2025-02-01
+        freq: monthly
+        exclude: 2025-05-01
+```
+
+This one filters out the three events from the summer months
+of 2025:
+
+```yaml
+# examples/schedule/exclusions_no_summer.recipe.yml
+- plugin: snowfakery.standard_plugins.Schedule
+
+- object: MonthlyEventsExceptSummer
+  count: 10
+  fields:
+    MonthlyEvent:
+      Schedule.Event:
+        start_date: 2025-02-01
+        freq: monthly
+        exclude:
+          Schedule.Event:
+            start_date: 2025-05-01
+            until: 2025-08-01
+            freq: monthly
+```
+
+Make sure that exclusions use the same timezone as their base schedule, and if
+you are using `datetime`s, make sure that they are exactly aligned down to the
+second or fraction of a second.
+
+####
+
+#### Other scheduling references
+
+Snowfakery's event mechanism is based on the
+[iCalendar specification](https://icalendar.org/iCalendar-RFC-5545/3-8-5-3-recurrence-rule.html) and the [`dateutil`](https://dateutil.readthedocs.io/en/stable/rrule.html) library, so some subtleties may be inferred
+from the documentation for those technologies.
+
 ## Use Snowfakery with Salesforce
 
 Snowfakery recipes that generate Salesforce records are like any other Snowfakery recipes, but instead use `SObject` names for the `objects`. There are several examples [in the Snowfakery repository](https://github.com/SFDO-Tooling/Snowfakery/tree/main/examples/salesforce).
 
 Salesforce-specific patterns and tools are described in [Use Snowfakery with Salesforce](salesforce.md)
+
+### Snowfakery 3
+
+Moving to Snowfakery 3 might require you to make very minor updates to a few recipes. In
+Snowfakery 2, all formulas are evaluated to either a string or
+number. In Snowfakery 3, other types are possible.
+
+In most cases, this will enable things that were previously
+difficult or impossible. For example, this recipe does
+relative date calculations between fields:
+
+```yaml
+- snowfakery_version: 3
+- object: OBJ
+  fields:
+    basedate: ${{datetime(year=2000, month=1, day=1)}}
+    dateplus: ${{basedate + relativedelta(years=22)}}
+```
+
+Note the `snowfakery_version` declaration which triggers the
+Snowfakery 3 interpretation of the recipe. Becauses of this
+interpretation `basedate` is a datetime, rather than a
+string.
+
+In very obscure cases this might cause changes in the meaning
+of a recipe which depended on values being flattened to strings.
+For example, a recipe might append a string to a date, which
+would generate an error in Snowfakery 3.
+
+These errors are expected to be rare, but you can validate your
+own recipes by adding the `snowfakery_version: 3` declaration.
+
+In June of 2022, Snowfakery 3 formula interpretation will
+become the default. You should test all your recipes with
+the `snowfakery_version: 3` declaration before then, so that
+you have time to fix any recipes needed.
 
 ## Appendices
 
@@ -2029,26 +2815,26 @@ Snowfakery is a domain-specific programming language with access to most of the 
       - object: woman
         count: 7
         fields:
-          husband: 
+          husband:
             reference: man
           luggage:
             - object: sack
               count: 7
               fields:
-                holder: 
+                holder:
                   reference: woman
                 contents:
                   - object: cat
                     count: 7
                     fields:
-                      container: 
+                      container:
                         reference: sack
                       offspring:
-                      - object: kit
-                        count: 7
-                        fields:
-                          parent: 
-                            reference: cat
+                        - object: kit
+                          count: 7
+                          fields:
+                            parent:
+                              reference: cat
 - object: stats
   fields:
     num_narrators: ${{ man.id }}

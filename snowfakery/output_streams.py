@@ -5,9 +5,11 @@ import csv
 import subprocess
 import datetime
 import sys
+from decimal import Decimal
 from pathlib import Path
 from collections import namedtuple, defaultdict
 from typing import Dict, Union, Optional, Mapping, Callable, Sequence
+import typing as T
 from warnings import warn
 
 from sqlalchemy import (
@@ -51,9 +53,10 @@ class OutputStream(ABC):
         int: int,
         float: float,
         datetime.date: noop,
-        datetime.datetime: format_datetime,
+        datetime.datetime: noop,
         type(None): noop,
         bool: int,
+        Decimal: str,
     }
     uses_folder = False
     uses_path = False
@@ -75,10 +78,10 @@ class OutputStream(ABC):
         return target_object_row.id
 
     def flush(self):
-        pass
+        pass  # pragma: no cover   -- subclasses override
 
     def commit(self):
-        pass
+        pass  # pragma: no cover   -- subclasses override
 
     def cleanup(self, field_name, field_value, sourcetable, row):
         if isinstance(field_value, (ObjectRow, ObjectReference)):
@@ -91,7 +94,7 @@ class OutputStream(ABC):
                     return field_value.simplify()
 
             if not encoder:
-                raise TypeError(
+                raise TypeError(  # pragma: no cover
                     f"No encoder found for {type(field_value)} in {self.__class__.__name__} "
                     f"for {field_name}, {field_value} in {sourcetable}"
                 )
@@ -125,7 +128,7 @@ class OutputStream(ABC):
 
         Return a list of messages to print out.
         """
-        return super().close()
+        raise NotImplementedError()
 
     def __enter__(self, *args):
         return self
@@ -153,8 +156,8 @@ class SmartStream:
         elif stream_or_path is None:
             self.owns_stream = False
             self.stream = sys.stdout
-        else:  # noqa
-            assert False, f"stream_or_path is {stream_or_path}"
+        else:
+            raise AssertionError(f"stream_or_path is {stream_or_path}")
 
     def write(self, data):
         self.stream.write(data)
@@ -177,8 +180,8 @@ class FileOutputStream(OutputStream):
         return self.smart_stream.close()
 
 
-class DebugOutputStream(FileOutputStream):
-    """Simplified output for debugging Snowfakery files."""
+class SimpleFileOutputStream(FileOutputStream):
+    """Debug-like output, but with raw data fields"""
 
     is_text = True
 
@@ -196,11 +199,27 @@ class DebugOutputStream(FileOutputStream):
         return f"{target_object_row._tablename}({target_object_row.id})"
 
 
+class DebugOutputStream(SimpleFileOutputStream):
+    """Simplified output for debugging Snowfakery files.
+
+    Datetimes are in Salesforce format."""
+
+    encoders: Mapping[type, Callable] = {
+        **SimpleFileOutputStream.encoders,
+        datetime.datetime: format_datetime,  # format into Salesforce-friendly syntax
+    }
+
+
 CSVContext = namedtuple("CSVContext", ["dictwriter", "file"])
 
 
 class CSVOutputStream(OutputStream):
     """Output stream that generates a directory of CSV files."""
+
+    encoders: Mapping[type, Callable] = {
+        **OutputStream.encoders,
+        datetime.datetime: format_datetime,  # format into Salesforce-friendly syntax
+    }
 
     uses_folder = True
 
@@ -250,6 +269,7 @@ class JSONOutputStream(FileOutputStream):
         **OutputStream.encoders,
         datetime.date: str,
         datetime.datetime: str,
+        bool: bool,
     }
     is_text = True
 
@@ -276,10 +296,15 @@ class JSONOutputStream(FileOutputStream):
 class SqlDbOutputStream(OutputStream):
     """Output stream for talking to SQL Databases"""
 
+    encoders: Mapping[type, Callable] = {
+        **OutputStream.encoders,
+        datetime.datetime: format_datetime,  # format into Salesforce-friendly syntax
+    }
+
     should_close_session = False
 
     def __init__(self, engine: Engine, mappings: None = None, **kwargs):
-        if mappings:
+        if mappings:  # pragma: no cover  -- should not be triggered.
             warn("Please do not pass mappings argument to __init__", DeprecationWarning)
         self.buffered_rows = defaultdict(list)
         self.table_info = {}
@@ -290,7 +315,7 @@ class SqlDbOutputStream(OutputStream):
 
     @classmethod
     def from_url(cls, db_url: str, mappings: None = None):
-        if mappings:
+        if mappings:  # pragma: no cover  -- should not be triggered.
             warn("Please do not pass mappings argument to from_url", DeprecationWarning)
         engine = create_engine(db_url)
         self = cls(engine)
@@ -323,7 +348,8 @@ class SqlDbOutputStream(OutputStream):
         self.session.flush()
 
     def commit(self):
-        self.flush()
+        if any(self.buffered_rows):
+            self.flush()
         self.session.commit()
 
     def close(self, **kwargs) -> Optional[Sequence[str]]:
@@ -340,14 +366,19 @@ class SqlDbOutputStream(OutputStream):
 
         for tablename, model in self.metadata.tables.items():
             if tablename in inferred_tables:
-                self.table_info[tablename] = TableTuple(
+                table_info = TableTuple(
                     insert_statement=model.insert(bind=self.engine, inline=True),
                     fallback_dict={
                         key: None for key in inferred_tables[tablename].fields.keys()
                     },
                 )
                 # id is special
-                self.table_info[tablename].fallback_dict.setdefault("id", None)
+                table_info.fallback_dict.setdefault("id", None)
+
+                # See create_tables_from_inferred_fields to see what _sf_update_key are for
+                if inferred_tables[tablename].has_update_keys:
+                    table_info.fallback_dict.setdefault("_sf_update_key", None)
+                self.table_info[tablename] = table_info
 
 
 # backwards-compatible name for CCI
@@ -402,7 +433,9 @@ class SqlTextOutputStream(FileOutputStream):
         self.tempdir.cleanup()
 
 
-def create_tables_from_inferred_fields(tables, engine, metadata):
+def create_tables_from_inferred_fields(
+    tables: T.Dict[str, TableInfo], engine, metadata
+):
     """Create tables based on dictionary of tables->field-list."""
     with engine.connect() as conn:
         inspector = inspect(engine)
@@ -420,6 +453,12 @@ def create_tables_from_inferred_fields(tables, engine, metadata):
                 id_column = Column(
                     "id", Integer(), primary_key=True, autoincrement=True
                 )
+
+            # add a column keeping track of what update_key was specified by
+            # the template. This allows multiple templates to have different
+            # update_keys.
+            if table.has_update_keys:
+                columns.append(Column("_sf_update_key", Unicode(255)))
 
             t = Table(table_name, metadata, id_column, *columns)
 
@@ -582,4 +621,4 @@ class MultiplexOutputStream(OutputStream):
             stream.close()
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
-        return super().write_single_row(tablename, row)
+        raise NotImplementedError()  # should never be called

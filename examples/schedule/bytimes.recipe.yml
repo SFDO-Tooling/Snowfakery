@@ -1,0 +1,27 @@
+- plugin: snowfakery.standard_plugins.Schedule
+- object: Hours
+  count: 5
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01T12:01:01
+        freq: hourly
+        byhour: 0,2,4 # early morning hours
+
+- object: Minutes
+  count: 10
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01T12:01:01
+        freq: minutely
+        byminute: 1,2,3 # first few minutes of each hour
+
+- object: Seconds
+  count: 10
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01T12:01:01
+        freq: secondly
+        bysecond: 1, 2, 3 # first few seconds of each minute

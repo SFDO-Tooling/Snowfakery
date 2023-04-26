@@ -118,7 +118,6 @@ represents the values that would be available to a formula running in the same c
 and `self.context.current_filename` which is the filename of the YAML file being
 processed.
 
-
 ### Plugin Function Return Values
 
 Plugins can return normal Python primitive types, `datetime.date`, `ObjectRow` or `PluginResult` objects. `ObjectRow` objects represent new output records/objects. `PluginResult` objects
@@ -404,7 +403,7 @@ The method will evaluate its argument twice, and stick the two results into a st
 This would output an `OBJ` row with values:
 
 ```python
-  {'id': 1, 'some_value': 'abc : abc', 'some_value_2': '1 : 2'})
+  {'id': 1, 'some_value': 'abc : abc'}
 ```
 
 Occasionally you might write a plugin which needs to evaluate its

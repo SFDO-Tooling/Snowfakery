@@ -1,0 +1,10 @@
+- plugin: snowfakery.standard_plugins.Schedule
+- object: Meeting
+  count: 10
+  fields:
+    Name: MWF Meeting
+    Date:
+      Schedule.Event:
+        start_date: 2023-01-01
+        freq: monthly
+        byweekday: MO(+1), WE(-1), FR(+2)

@@ -1,5 +1,5 @@
 import warnings
-from typing import IO, Tuple, Mapping, List, Dict, TextIO, Union
+from typing import IO, Optional, Tuple, Mapping, List, Dict, TextIO, Union
 import typing as T
 import functools
 
@@ -7,10 +7,15 @@ import yaml
 from faker.providers import BaseProvider as FakerProvider
 from click.utils import LazyFile
 
+from snowfakery.standard_plugins.SnowfakeryVersion import SnowfakeryVersion
+
 from .data_gen_exceptions import DataGenNameError
-from .output_streams import DebugOutputStream, OutputStream
+from .output_streams import OutputStream, SimpleFileOutputStream
 from .parse_recipe_yaml import parse_recipe
-from .data_generator_runtime import Globals, Interpreter
+from .data_generator_runtime import (
+    Globals,
+    Interpreter,
+)
 from .data_gen_exceptions import DataGenError
 from .plugins import SnowfakeryPlugin, PluginOption
 
@@ -115,9 +120,9 @@ def process_plugins(plugins: List) -> Tuple[List[object], Mapping[str, object]]:
 
 def generate(
     open_yaml_file: IO[str],
-    user_options: dict = None,
+    user_options: Optional[dict] = None,
     #  *,   TODO: fix test suite so these can be keyword-only arguments
-    output_stream: OutputStream = None,
+    output_stream: Optional[OutputStream] = None,
     parent_application=None,
     *,
     stopping_criteria=None,
@@ -133,7 +138,7 @@ def generate(
     user_options = user_options or {}
 
     # Where are we going to put the rows?
-    output_stream = output_stream or DebugOutputStream()
+    output_stream = output_stream or SimpleFileOutputStream()
 
     # parse the YAML and any it refers to
     parse_result = parse_recipe(
@@ -143,8 +148,12 @@ def generate(
     faker_providers, snowfakery_plugins = process_plugins(parse_result.plugins)
 
     snowfakery_plugins.setdefault("UniqueId", UniqueId)
+    snowfakery_plugins.setdefault("SnowfakeryVersion", SnowfakeryVersion)
+    plugin_options = plugin_options or {}
+    if parse_result.version:
+        plugin_options["snowfakery_version"] = parse_result.version
 
-    plugin_options = process_plugins_options(snowfakery_plugins, plugin_options or {})
+    plugin_options = process_plugins_options(snowfakery_plugins, plugin_options)
 
     # figure out how it relates to CLI-supplied generation variables
     options, extra_options = merge_options(
@@ -203,7 +212,6 @@ def process_plugins_options(
     e.g. the option name that the user specifies on the CLI or API is just "org_name"
          but we use the long name internally to avoid clashing with the
          user's variable names."""
-
     allowed_options = collect_allowed_plugin_options(tuple(plugins.values()))
     plugin_options = {}
     for option in allowed_options:
@@ -235,11 +243,17 @@ def initialize_globals(continuation_data, templates):
             for template in templates
             if template.nickname
         }
+
+        tablenames = {template.tablename: template.tablename for template in templates}
+
+        reused_names = set(name_slots).intersection(tablenames)
+        if reused_names:
+            warnings.warn(
+                f"Should not reuse names as both nickname and table name: {reused_names}"
+            )
         # table names are sort of nicknames for themselves too, because
         # you can refer to them.
-        name_slots.update(
-            {template.tablename: template.tablename for template in templates}
-        )
+        name_slots.update(tablenames)
 
         globals = Globals(name_slots=name_slots)
 

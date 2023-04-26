@@ -1,0 +1,9 @@
+- plugin: snowfakery.standard_plugins.Schedule
+- object: ScaryEvent
+  count: 5
+  fields:
+    Name: Halloween
+    DateTime:
+      Schedule.Event:
+        start_date: 2023-10-31 23:59:59.99+08:00
+        freq: yearly
