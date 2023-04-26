@@ -1,28 +1,27 @@
-from io import StringIO
+import gc
 import math
 import operator
 import time
 from base64 import b64decode
-import gc
+from io import StringIO
+from unittest import mock
 
-from snowfakery import SnowfakeryPlugin, lazy
+import pytest
+
+from snowfakery import SnowfakeryPlugin, generate_data, lazy
+from snowfakery.data_gen_exceptions import (
+    DataGenError,
+    DataGenImportError,
+    DataGenTypeError,
+)
 from snowfakery.plugins import (
-    PluginResult,
     PluginOption,
+    PluginResult,
     PluginResultIterator,
     memorable,
 )
 
-from snowfakery.data_gen_exceptions import (
-    DataGenError,
-    DataGenTypeError,
-    DataGenImportError,
-)
-from snowfakery import generate_data
-
 generate = generate_data
-
-import pytest
 
 
 def row_values(generated_rows, index, value):
@@ -340,6 +339,7 @@ class TestContextVars:
         """
         with pytest.raises(DataGenError) as e:
             generate_data(StringIO(yaml))
+        assert e.value.line_num
         assert 6 > e.value.line_num >= 3
 
     def test_plugin_paths(self, generated_rows):
@@ -355,6 +355,7 @@ class TestContextVars:
         """
         with pytest.raises(DataGenError) as e:
             generate_data(StringIO(yaml))
+        assert e.value.line_num
         assert 6 > e.value.line_num >= 3
 
     def test_null_attributes(self):
@@ -367,6 +368,7 @@ class TestContextVars:
         """
         with pytest.raises(DataGenError) as e:
             generate_data(StringIO(yaml))
+        assert e.value.line_num
         assert 6 > e.value.line_num >= 3
 
     def test_not_callable_attributes(self):
@@ -379,6 +381,7 @@ class TestContextVars:
         """
         with pytest.raises(DataGenError, match="Cannot call") as e:
             generate_data(StringIO(yaml))
+        assert e.value.line_num
         assert 6 > e.value.line_num >= 3
 
     def test_memorable_plugin(self, generated_rows):
