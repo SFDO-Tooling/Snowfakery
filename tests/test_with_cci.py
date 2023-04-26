@@ -263,7 +263,7 @@ class TestSOQLWithCCI:
         )
         with pytest.raises(
             DataGenError,
-            match=".*AccountId(.|\n)*No records found matching Contract.*",
+            match=".*AccountId(.|\n)*No records found matching .*Hungarian.*",
         ):
             generate_data(filename, plugin_options={"org_name": org_config.name})
 
