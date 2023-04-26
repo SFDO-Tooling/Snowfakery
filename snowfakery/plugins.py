@@ -362,7 +362,7 @@ class PluginResultIterator(PluginResult):
     def __del__(self):
         if not self.closed:
             self.close()
-            self.close = True
+            self.closed = True
 
 
 class PluginOption:
