@@ -63,10 +63,9 @@ def generated_rows(request):
 
 @pytest.fixture(scope="function")
 def disable_typeguard():
-    with patch("typeguard.check_argument_types", lambda *args, **kwargs: ...), patch(
-        "typeguard.check_return_type", lambda *args, **kwargs: ...
-    ):
-        yield
+    # doesn't really do anything. at some point we can remove it if
+    # typeguard is really gone for good.
+    yield
 
 
 @pytest.fixture(scope="function")

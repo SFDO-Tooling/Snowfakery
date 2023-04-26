@@ -6,9 +6,14 @@ from copy import deepcopy
 from random import randint
 
 from snowfakery import data_gen_exceptions as exc
-from snowfakery.object_rows import LazyLoadedObjectReference, ObjectReference, ObjectRow
+from snowfakery.object_rows import (
+    LazyLoadedObjectReference,
+    NicknameSlot,
+    ObjectReference,
+    ObjectRow,
+)
 from snowfakery.plugins import PluginResultIterator
-from snowfakery.utils.pickle import restricted_dumps, restricted_loads
+from snowfakery.utils.pickle import RestrictedPickler
 from snowfakery.utils.randomized_range import UpdatableRandomRange
 
 
@@ -37,6 +42,7 @@ class RowHistory:
         }
         for table in tables_to_keep_history_for:
             _make_history_table(self.conn, table)
+        self.pickler = RestrictedPickler(_DISPATCH_TABLE, _SAFE_CLASSES)
 
     def reset_locals(self):
         """Reset the minimum count that counts as "local" """
@@ -60,7 +66,7 @@ class RowHistory:
         # "join" across multiple tables would have other costs (even if done lazily).
         # For now this seems best and simplest.
         # The data de-dupling algorithm would be slightly complex and slow.
-        data = restricted_dumps(row)
+        data = self.pickler.dumps(row)
         self.conn.execute(
             f'INSERT INTO "{tablename}" VALUES (?, ?, ?, ?)',
             (row_id, nickname, nickname_id, data),
@@ -126,7 +132,7 @@ class RowHistory:
         first_row = next(qr, None)
         assert first_row, f"Something went wrong: we cannot find {tablename}: {row_id}"
 
-        return restricted_loads(first_row[0])
+        return self.pickler.loads(first_row[0])
 
     def find_row_id_for_nickname_id(
         self, tablename: str, nickname: str, nickname_id: int
@@ -161,6 +167,29 @@ def _make_history_table(conn, tablename):
     c.execute(
         f'CREATE UNIQUE INDEX "{tablename}_nickname_id" ON "{tablename}" (nickname, nickname_id);'
     )
+
+
+_DISPATCH_TABLE = {
+    NicknameSlot: lambda n: (
+        ObjectReference,
+        (n._tablename, n.allocated_id),
+    ),
+    ObjectRow: lambda v: (
+        ObjectRow,
+        (v._tablename, v._values),
+    ),
+}
+
+_SAFE_CLASSES = {
+    ("snowfakery.object_rows", "ObjectRow"),
+    ("snowfakery.object_rows", "ObjectReference"),
+    ("snowfakery.object_rows", "LazyLoadedObjectReference"),
+    ("decimal", "Decimal"),
+    ("datetime", "date"),
+    ("datetime", "datetime"),
+    ("datetime", "timedelta"),
+    ("datetime", "timezone"),
+}
 
 
 class RandomReferenceContext(PluginResultIterator):

@@ -60,6 +60,7 @@ class TestReferences:
 
         a_values = find_row("A", {}, generated_rows.mock_calls)
         b_values = find_row("B", {}, generated_rows.mock_calls)
+        assert a_values and b_values
         id_a = a_values["id"]
         reference_b = a_values["B"]
         id_b = b_values["id"]
@@ -72,6 +73,7 @@ class TestReferences:
 
         a_values = find_row("A", {}, generated_rows.mock_calls)
         b_values = find_row("B", {}, generated_rows.mock_calls)
+        assert a_values and b_values
         id_a = a_values["id"]
         reference_b = a_values["B"]
         id_b = b_values["id"]
@@ -84,6 +86,7 @@ class TestReferences:
 
         a_values = find_row("A", {}, generated_rows.mock_calls)
         c_values = find_row("C", {}, generated_rows.mock_calls)
+        assert a_values and c_values
         id_a = a_values["id"]
         reference_a = c_values["A_ref"]
         assert f"A({id_a})" == reference_a
@@ -93,6 +96,7 @@ class TestReferences:
 
         a_values = find_row("A", {}, generated_rows.mock_calls)
         b_values = find_row("B", {}, generated_rows.mock_calls)
+        assert a_values and b_values
         id_a = a_values["id"]
         reference_a = b_values["A_ref"]
         assert f"A({id_a})" == reference_a
@@ -113,6 +117,7 @@ class TestReferences:
 
         a_values = find_row("A", {}, generated_rows.mock_calls)
         b_values = find_row("B", {}, generated_rows.mock_calls)
+        assert a_values and b_values
         assert a_values["B"] == "B(1)"
         assert b_values["A"] == "A(1)"
 
@@ -132,6 +137,7 @@ class TestReferences:
         generate(StringIO(yaml), {}, None)
         a_values = find_row("A", {}, generated_rows.mock_calls)
         b_values = find_row("B", {}, generated_rows.mock_calls)
+        assert a_values and b_values
         assert a_values["B"] == "B(1)"
         assert b_values["A"] == "A(1)"
 
@@ -879,7 +885,9 @@ class TestRandomReferencesNew:
                     random_reference: parent_with_counter
                   weird: ${{pa.add}}
                 """
-        generate(StringIO(yaml))
+        with pytest.warns(UserWarning, match="Cannot save.*"):
+            generate(StringIO(yaml))
+
         assert str(generated_rows.table_values("Child", 1, "weird")).startswith(
             "Type_Cannot_Be_Used_With_Random_Reference"
         )

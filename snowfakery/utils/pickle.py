@@ -7,26 +7,31 @@ import typing as T
 
 import warnings
 
-from snowfakery.object_rows import NicknameSlot, ObjectReference, ObjectRow
 
-_DISPATCH_TABLE = copyreg.dispatch_table.copy()
-_DISPATCH_TABLE[NicknameSlot] = lambda n: (
-    ObjectReference,
-    (n._tablename, n.allocated_id),
-)
-_DISPATCH_TABLE[ObjectRow] = lambda v: (
-    ObjectRow,
-    (v._tablename, v._values),
-)
+DispatchDefinition = T.Callable[[T.Any], T.Tuple[type, T.Tuple]]
 
 
-def restricted_dumps(data):
-    """Only allow saving "safe" classes"""
-    outs = io.BytesIO()
-    pickler = pickle.Pickler(outs)
-    pickler.dispatch_table = _DISPATCH_TABLE
-    pickler.dump(data)
-    return outs.getvalue()
+class RestrictedPickler:
+    def __init__(
+        self,
+        dispatchers: T.Mapping[type, DispatchDefinition],
+        _SAFE_CLASSES: T.Set[T.Tuple[str, str]],
+    ) -> None:
+        self._DISPATCH_TABLE = copyreg.dispatch_table.copy()
+        self._DISPATCH_TABLE.update(dispatchers)
+        self.RestrictedUnpickler = _get_RestrictedUnpicklerClass(_SAFE_CLASSES)
+
+    def dumps(self, data):
+        """Only allow saving "safe" classes"""
+        outs = io.BytesIO()
+        pickler = pickle.Pickler(outs)
+        pickler.dispatch_table = self._DISPATCH_TABLE
+        pickler.dump(data)
+        return outs.getvalue()
+
+    def loads(self, s):
+        """Helper function analogous to pickle.loads()."""
+        return self.RestrictedUnpickler(io.BytesIO(s)).load()
 
 
 class Type_Cannot_Be_Used_With_Random_Reference(T.NamedTuple):
@@ -36,35 +41,24 @@ class Type_Cannot_Be_Used_With_Random_Reference(T.NamedTuple):
     name: str
 
 
-_SAFE_CLASSES = {
-    ("snowfakery.object_rows", "ObjectRow"),
-    ("snowfakery.object_rows", "ObjectReference"),
-    ("snowfakery.object_rows", "LazyLoadedObjectReference"),
-    ("decimal", "Decimal"),
-    ("datetime", "date"),
-    ("datetime", "datetime"),
-    ("datetime", "timedelta"),
-    ("datetime", "timezone"),
-}
+def _get_RestrictedUnpicklerClass(_SAFE_CLASSES):
+    class RestrictedUnpickler(pickle.Unpickler):
+        """Safe unpickler with an allowed-list"""
 
+        count = 0
 
-class RestrictedUnpickler(pickle.Unpickler):
-    """Safe unpickler with an allowed-list"""
+        def find_class(self, module, name):
+            # Only allow safe classes from builtins.
+            if (module, name) in _SAFE_CLASSES:
+                return super().find_class(module, name)
+            else:
+                # warn first 10 times
+                if RestrictedUnpickler.count < 10:
+                    warnings.warn(f"Cannot save and refer to {module}, {name}")
+                    RestrictedUnpickler.count += 1
+                # Return a "safe" object that does nothing.
+                return lambda *args: Type_Cannot_Be_Used_With_Random_Reference(
+                    module, name
+                )
 
-    count = 0
-
-    def find_class(self, module, name):
-        # Only allow safe classes from builtins.
-        if (module, name) in _SAFE_CLASSES:
-            return super().find_class(module, name)
-        else:
-            # Return a "safe" object that does nothing.
-            if RestrictedUnpickler.count < 10:
-                warnings.warn(f"Cannot save and refer to {module}, {name}")
-                RestrictedUnpickler.count += 1
-            return lambda *args: Type_Cannot_Be_Used_With_Random_Reference(module, name)
-
-
-def restricted_loads(s):
-    """Helper function analogous to pickle.loads()."""
-    return RestrictedUnpickler(io.BytesIO(s)).load()
+    return RestrictedUnpickler

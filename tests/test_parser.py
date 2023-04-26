@@ -43,16 +43,26 @@ class TestParseGenerator:
         with pytest.warns(UserWarning, match="Foo.bar.*nickname.*"):
             parse_recipe(StringIO(yamlstr))
 
-    def test_parser__error_structured_value_two_fields(self):
+    def test_parse_alterate_indentations(self):
         yamlstr = """
         - object: Foo
           fields:
-            b:
-              aaa: aaa
-              bbb: bbb
+            npe01__PreferredPhone__c:
+              if:
+                - choice:
+                    when: ${{HomePhone!=NULL}}
+                    pick: Home
+                - choice:
+                    when: ${{MobilePhone!=NULL}}
+                    pick: Mobile
+                - choice:
+                  when: ${{nnpe01__WorkPhone__c!=NULL}}
+                  pick: Work
+                - choice:
+                    pick: NULL
         """
-        with pytest.raises(exc.DataGenSyntaxError, match="Extra keys"):
-            parse_recipe(StringIO(yamlstr))
+        out = parse_recipe(StringIO(yamlstr))
+        assert len(out.templates[0].fields[0].definition.args) == 4
 
     def test_parser__error_structured_value_zero_fields(self):
         yamlstr = """
