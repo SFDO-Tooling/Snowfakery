@@ -1,0 +1,15 @@
+- plugin: snowfakery.standard_plugins.Math
+- option: step
+  default: 0.01
+
+- object: Values
+  for_each:
+    var: current_value
+    value:
+      Math.random_partition:
+        total: 100
+        min: 10
+        max: 50
+        step: ${{step}}
+  fields:
+    Amount: ${{current_value}}

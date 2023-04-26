@@ -1861,6 +1861,108 @@ Or:
     twelve: ${Math.sqrt}
 ```
 
+#### Rolling up numbers: `Math.random_partition`
+
+Sometimes you want a parent object to have a field value which
+is the sum of many child values. Snowfakery allow you to
+specify or randomly generate the parent sum value and then
+it will generate an appropriate number of children with
+values that sum up to match it, using `Math.random_partition`:
+
+```yaml
+# examples/math_partition/math_partition_simple.recipe.yml
+- plugin: snowfakery.standard_plugins.Math
+- object: ParentObject__c
+  count: 2
+  fields:
+    TotalAmount__c:
+      random_number:
+        min: 30
+        max: 90
+  friends:
+    - object: ChildObject__c
+      for_each:
+        var: child_value
+        value:
+          Math.random_partition:
+            total: ${{ParentObject__c.TotalAmount__c}}
+      fields:
+        Amount__c: ${{child_value}}
+```
+
+The `Math.random_partition` function splits up a number.
+So this recipe might spit out the following
+set of parents and children:
+
+```json
+ParentObject__c(id=1, TotalAmount__c=40)
+ChildObject__c(id=1, Amount__c=3)
+ChildObject__c(id=2, Amount__c=1)
+ChildObject__c(id=3, Amount__c=24)
+ChildObject__c(id=4, Amount__c=12)
+ParentObject__c(id=2, TotalAmount__c=83)
+ChildObject__c(id=5, Amount__c=2)
+ChildObject__c(id=6, Amount__c=81)
+```
+
+There are 2 Parent objects created and a random number of
+children per parent.
+
+The `Math.random_partition`function takes argument
+`min`, which is the smallest
+value each part can have, `max`, which is the largest
+possible value, `total` which is what all of the values
+sum up to and `step` which is a number that each value
+must have as a factor. E.g. if `step` is `4` then
+values of `4`, `8`, `12` are valid.
+
+For example:
+
+```yaml
+# examples/math_partition/sum_simple_example.recipe.yml
+- plugin: snowfakery.standard_plugins.Math
+
+- object: Values
+  for_each:
+    var: current_value
+    value:
+      Math.random_partition:
+        total: 100
+        min: 10
+        max: 50
+        step: 5
+  fields:
+    Amount: ${{current_value}}
+```
+
+Which might generate `15,15,25,20,15,10` or `50,50` or `25,50,25`.
+
+If `step` is a number smaller then `1`, then you can generate
+pennies for numeric calculations. Valid values are `0.01` (penny
+granularity), `0.05` (nickle), `0.10` (dime), `0.25` (quarter) and
+`0.50` (half dollars). Other values are not supported.
+
+```yaml
+# examples/math_partition/sum_pennies.recipe.yml
+- plugin: snowfakery.standard_plugins.Math
+
+- object: Values
+  for_each:
+    var: current_value
+    value:
+      Math.random_partition:
+        total: 100
+        min: 10
+        max: 50
+        step: 0.01
+  fields:
+    Amount: ${{current_value}}
+```
+
+It is possible to specify values which are inconsistent.
+When that happens one of the constraints will be
+violated.
+
 ### Advanced Unique IDs with the UniqueId plugin
 
 There is a plugin which gives you more control over the generation of

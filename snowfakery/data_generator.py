@@ -131,6 +131,7 @@ def generate(
     plugin_options: dict = None,
     update_input_file: OpenFileLike = None,
     update_passthrough_fields: T.Sequence[str] = (),
+    seed: T.Optional[int] = None,
 ) -> ExecutionSummary:
     """The main entry point to the package for Python applications."""
     from .api import SnowfakeryApplication
@@ -188,6 +189,7 @@ def generate(
             parse_result=parse_result,
             globals=globls,
             continuing=bool(continuation_data),
+            seed=seed,
         ) as interpreter:
             runtime_context = interpreter.execute()
 

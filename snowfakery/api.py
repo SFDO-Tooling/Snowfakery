@@ -151,6 +151,7 @@ def generate_data(
     update_passthrough_fields: T.Sequence[
         str
     ] = (),  # pass through these fields from input to output
+    seed: T.Optional[int] = None,
 ) -> None:
     stopping_criteria = stopping_criteria_from_target_number(target_number)
     dburls = dburls or ([dburl] if dburl else [])
@@ -193,6 +194,7 @@ def generate_data(
             plugin_options=plugin_options,
             update_input_file=open_update_input_file,
             update_passthrough_fields=update_passthrough_fields,
+            seed=seed,
         )
 
         if open_cci_mapping_file:

@@ -1,0 +1,17 @@
+- plugin: snowfakery.standard_plugins.Math
+- object: ParentObject__c
+  count: 2
+  fields:
+    TotalAmount__c:
+      random_number:
+        min: 30
+        max: 90
+  friends:
+    - object: ChildObject__c
+      for_each:
+        var: child_value
+        value:
+          Math.random_partition:
+            total: ${{ParentObject__c.TotalAmount__c}}
+      fields:
+        Amount__c: ${{child_value}}
