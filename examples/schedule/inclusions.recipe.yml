@@ -1,0 +1,23 @@
+- plugin: snowfakery.standard_plugins.Schedule
+
+- object: MonthlyEventsPlusValentines
+  count: 10
+  fields:
+    MonthlyEvent:
+      Schedule.Event:
+        start_date: 2025-02-01
+        freq: monthly
+        include: 2025-02-14
+
+- object: MonthlyEventsPlusSeveralNewYears
+  count: 10
+  fields:
+    MonthlyEvent:
+      Schedule.Event:
+        start_date: 2025-02-01
+        freq: monthly
+        include:
+          Schedule.Event:
+            count: 3
+            freq: yearly
+            start_date: 2000-01-01

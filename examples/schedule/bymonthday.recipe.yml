@@ -1,0 +1,18 @@
+- plugin: snowfakery.standard_plugins.Schedule
+- object: ThirdDayOfMonth
+  count: 5
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01
+        freq: monthly
+        bymonthday: 3
+
+- object: FirstAndLastDayOfMonth
+  count: 5
+  fields:
+    DateTime:
+      Schedule.Event:
+        start_date: 2024-01-01
+        freq: monthly
+        bymonthday: 1,-1

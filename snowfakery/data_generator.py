@@ -1,5 +1,5 @@
 import warnings
-from typing import IO, Tuple, Mapping, List, Dict, TextIO, Union
+from typing import IO, Optional, Tuple, Mapping, List, Dict, TextIO, Union
 import typing as T
 import functools
 
@@ -10,7 +10,7 @@ from click.utils import LazyFile
 from snowfakery.standard_plugins.SnowfakeryVersion import SnowfakeryVersion
 
 from .data_gen_exceptions import DataGenNameError
-from .output_streams import DebugOutputStream, OutputStream
+from .output_streams import OutputStream, SimpleFileOutputStream
 from .parse_recipe_yaml import parse_recipe
 from .data_generator_runtime import (
     Globals,
@@ -120,9 +120,9 @@ def process_plugins(plugins: List) -> Tuple[List[object], Mapping[str, object]]:
 
 def generate(
     open_yaml_file: IO[str],
-    user_options: dict = None,
+    user_options: Optional[dict] = None,
     #  *,   TODO: fix test suite so these can be keyword-only arguments
-    output_stream: OutputStream = None,
+    output_stream: Optional[OutputStream] = None,
     parent_application=None,
     *,
     stopping_criteria=None,
@@ -138,7 +138,7 @@ def generate(
     user_options = user_options or {}
 
     # Where are we going to put the rows?
-    output_stream = output_stream or DebugOutputStream()
+    output_stream = output_stream or SimpleFileOutputStream()
 
     # parse the YAML and any it refers to
     parse_result = parse_recipe(

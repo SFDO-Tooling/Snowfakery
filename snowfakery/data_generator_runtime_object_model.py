@@ -278,7 +278,14 @@ class ObjectTemplate:
             with self.exception_handling("Problem rendering value"):
                 value = field.generate_value(context)
                 if isinstance(value, PluginResultIterator):
-                    value = value.next()
+                    try:
+                        value = value.next()
+                    except StopIteration:
+                        raise DataGenError(
+                            "Could not generate enough values to create rows",
+                            self.filename,
+                            self.line_num,
+                        )
                 row[field.name] = value
 
                 self._check_type(field, row[field.name], context)
@@ -408,9 +415,9 @@ class StructuredValue(FieldDefinition):
                 raise AttributeError(
                     f"'{objname}' plugin exposes no attribute '{method}'"
                 )
-            if not func:
+            if not callable(func):
                 raise DataGenNameError(
-                    f"Cannot find definition for: {method} on {objname}",
+                    f"Cannot call '{method}' on '{objname}'",
                     self.filename,
                     self.line_num,
                 )

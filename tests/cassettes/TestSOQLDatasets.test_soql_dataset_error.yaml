@@ -1,0 +1,97 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.my.salesforce.com/services/data/vxx.0/limits/recordCount?sObjects=User
+  response:
+    body:
+      string: "{\n  \"sObjects\" : [ {\n    \"count\" : 8,\n    \"name\" : \"User\"\n
+        \ } ]\n}"
+    headers:
+      Content-Type:
+      - application/json;charset=UTF-8
+      Others: Elided
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.my.salesforce.com/services/data/vxx.0/query/?q=SELECT+Id%2C+FirstName%2C+LastName+FROM+User+
+  response:
+    body:
+      string: "{\n  \"totalSize\" : 7,\n  \"done\" : true,\n  \"records\" : [ {\n
+        \   \"attributes\" : {\n      \"type\" : \"User\",\n      \"url\" : \"/services/data/vxx.0/sobjects/User/0058F000002yWXFQA2\"\n
+        \   },\n    \"Id\" : \"0058F000002yWXFQA2\",\n    \"FirstName\" : \"Automated\",\n
+        \   \"LastName\" : \"Process\"\n  }, {\n    \"attributes\" : {\n      \"type\"
+        : \"User\",\n      \"url\" : \"/services/data/vxx.0/sobjects/User/0058F000002yWXLQA2\"\n
+        \   },\n    \"Id\" : \"0058F000002yWXLQA2\",\n    \"FirstName\" : null,\n
+        \   \"LastName\" : \"Data.com Clean\"\n  }, {\n    \"attributes\" : {\n      \"type\"
+        : \"User\",\n      \"url\" : \"/services/data/vxx.0/sobjects/User/0058F000002yWXEQA2\"\n
+        \   },\n    \"Id\" : \"0058F000002yWXEQA2\",\n    \"FirstName\" : \"Integration\",\n
+        \   \"LastName\" : \"User\"\n  }, {\n    \"attributes\" : {\n      \"type\"
+        : \"User\",\n      \"url\" : \"/services/data/vxx.0/sobjects/User/0058F000002yWXJQA2\"\n
+        \   },\n    \"Id\" : \"0058F000002yWXJQA2\",\n    \"FirstName\" : \"Security\",\n
+        \   \"LastName\" : \"User\"\n  }, {\n    \"attributes\" : {\n      \"type\"
+        : \"User\",\n      \"url\" : \"/services/data/vxx.0/sobjects/User/0058F000003AEvIQAW\"\n
+        \   },\n    \"Id\" : \"0058F000003AEvIQAW\",\n    \"FirstName\" : \"User\",\n
+        \   \"LastName\" : \"User\"\n  }, {\n    \"attributes\" : {\n      \"type\"
+        : \"User\",\n      \"url\" : \"/services/data/vxx.0/sobjects/User/0058F000002yWXNQA2\"\n
+        \   },\n    \"Id\" : \"0058F000002yWXNQA2\",\n    \"FirstName\" : null,\n
+        \   \"LastName\" : \"Platform Integration User\"\n  }, {\n    \"attributes\"
+        : {\n      \"type\" : \"User\",\n      \"url\" : \"/services/data/vxx.0/sobjects/User/0058F000002yWXKQA2\"\n
+        \   },\n    \"Id\" : \"0058F000002yWXKQA2\",\n    \"FirstName\" : null,\n
+        \   \"LastName\" : \"Chatter Expert\"\n  } ]\n}"
+    headers:
+      Content-Type:
+      - application/json;charset=UTF-8
+      Others: Elided
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.my.salesforce.com/services/data/vxx.0/limits/recordCount?sObjects=XYZZY
+  response:
+    body:
+      string: "{\n  \"sObjects\" : [ ]\n}"
+    headers:
+      Content-Type:
+      - application/json;charset=UTF-8
+      Others: Elided
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Request-Headers:
+      - Elided
+    method: GET
+    uri: https://orgname.my.salesforce.com/services/data/vxx.0/query/?q=SELECT+Id%2C+FirstName%2C+LastName+FROM+XYZZY+
+  response:
+    body:
+      string: "[ {\n  \"message\" : \"\\nSELECT Id, FirstName, LastName FROM XYZZY\\n
+        \                                   ^\\nERROR at Row:1:Column:37\\nsObject
+        type 'XYZZY' is not supported. If you are attempting to use a custom object,
+        be sure to append the '__c' after the entity name. Please reference your WSDL
+        or the describe call for the appropriate names.\",\n  \"errorCode\" : \"INVALID_TYPE\"\n}
+        ]"
+    headers:
+      Content-Type:
+      - application/json;charset=UTF-8
+      Others: Elided
+    status:
+      code: 400
+      message: Bad Request
+version: 1

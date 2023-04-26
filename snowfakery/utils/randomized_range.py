@@ -4,7 +4,7 @@ import math
 
 
 class UpdatableRandomRange:
-    def __init__(self, start: int, stop: int = None):
+    def __init__(self, start: int, stop: int):
         assert stop > start
         self.min = start
         self._set_new_range_immediately(start, stop)

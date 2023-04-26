@@ -2,16 +2,18 @@
 black
 coverage
 coveralls
+diff-cover
 mkdocs<1.3.0      # need to change Snowfakery monkey-patching before upgrade
 mkdocs-exclude-search
 pre-commit
+pyright
 pytest
 pytest-cov
-typeguard==2.10.0   # do not upgrade until #181 is fixed
 faker-microservice
 tox
 tox-gh-actions      # needed for CI only
 pytest-vcr
+pyright
 vcrpy
 responses
 jsonschema

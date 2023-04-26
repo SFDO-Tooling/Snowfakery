@@ -1,0 +1,13 @@
+- object: target
+  count: 100_000_000
+  fields:
+    name: ${{id}} row
+    bloat: ${{name * 10 ** 7}}
+
+- object: test-random-reference
+  count: 1
+  fields:
+    ref:
+      random_reference: target
+    name:
+      ${{ref.bloat}}

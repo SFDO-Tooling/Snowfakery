@@ -1,0 +1,21 @@
+- snowfakery_version: 3
+- plugin: snowfakery.standard_plugins.Schedule
+
+# This is not a well-documented path to supporting
+# multiple inclusions or exclusions but it does work
+# in a pinch.
+
+- var: inclusion
+  value: |
+    ${{(
+            "2025-02-14",
+            Schedule.Event(count=3, freq="yearly", start_date="2000-01-01"))}}
+
+- object: MonthlyEventsPlusValentinesPlusSeveralNewYears
+  count: 10
+  fields:
+    MonthlyEvent:
+      Schedule.Event:
+        start_date: 2025-02-01
+        freq: monthly
+        include: ${{inclusion}}

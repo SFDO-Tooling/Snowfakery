@@ -26,7 +26,7 @@ class TestDates:
         """
         generate_data(StringIO(yaml), plugin_options={"snowfakery_version": 3})
         date = generated_rows.table_values("OBJ", 1, "dateplus")
-        assert date == "2022-01-01T00:00:00+00:00"
+        assert str(date) == "2022-01-01T00:00:00+00:00"
 
     def test_date_math__native_types__error(self, generated_rows):
         yaml = """
@@ -38,3 +38,14 @@ class TestDates:
         with pytest.raises(exc.DataGenValueError) as e:
             generate_data(StringIO(yaml), plugin_options={"snowfakery_version": 3})
         assert "dateplus" in str(e.value)
+
+    def test_date_time__too_many_params__error(self):
+        yaml = """
+        - object: OBJ
+          fields:
+            basedate: ${{datetime("2022-01-01", year=2000, month=1, day=1)}}
+            dateplus: ${{basedate + "XYZZY"}}
+        """
+        with pytest.raises(exc.DataGenValueError) as e:
+            generate_data(StringIO(yaml), plugin_options={"snowfakery_version": 3})
+        assert "date specification" in str(e.value)

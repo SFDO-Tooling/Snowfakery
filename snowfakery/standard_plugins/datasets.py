@@ -53,8 +53,7 @@ def sql_dataset(db_url: str, tablename: str = None, mode="linear", repeat: bool 
         return SQLDatasetLinearIterator(engine, table, repeat)
     elif mode == "shuffle":
         return SQLDatasetRandomPermutationIterator(engine, table, repeat)
-    else:
-        raise NotImplementedError(f"Unknown mode: {mode}")
+    raise AssertionError(f"Unknown mode: {mode}")
 
 
 class DatasetIteratorBase(PluginResultIterator):
