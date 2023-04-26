@@ -1,3 +1,4 @@
+from io import StringIO
 from tempfile import TemporaryDirectory
 from pathlib import Path
 from unittest.mock import call, ANY
@@ -62,6 +63,34 @@ class TestUpdates:
             update_input_file="examples/datasets/addresses.csv",
         )
         assert generated_rows.mock_calls == _expected_data(ANY, include_oids=False)
+
+    def test_updates_weird_top__level(self):
+        with pytest.raises(
+            DataGenSyntaxError,
+            match="Update recipes should have a single object declaration",
+        ):
+            generate_data(
+                StringIO(
+                    """
+                -   var: A
+                    value: B"""
+                ),
+                update_input_file="examples/datasets/addresses.csv",
+            )
+
+    def test_updates_count_error(self):
+        with pytest.raises(
+            DataGenSyntaxError,
+            match="Update templates should have no 'count'",
+        ):
+            generate_data(
+                StringIO(
+                    """
+                -   object: A
+                    count: 10"""
+                ),
+                update_input_file="examples/datasets/addresses.csv",
+            )
 
 
 def _expected_data(firstname, include_oids=True):

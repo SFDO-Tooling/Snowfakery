@@ -1,11 +1,15 @@
 from enum import Enum, auto
+import typing as T
 
 import yaml
 import snowfakery  # noqa
 from .utils.yaml_utils import SnowfakeryDumper
 from contextvars import ContextVar
 
-IdManager = "snowfakery.data_generator_runtime.IdManager"
+if T.TYPE_CHECKING:
+    from snowfakery.data_generator_runtime import IdManager
+else:
+    IdManager = "snowfakery.data_generator_runtime.IdManager"
 RowHistoryCV = ContextVar("RowHistory")
 
 
@@ -105,7 +109,7 @@ class NicknameSlot(ObjectReference):
 
     _tablename: str
     id_manager: IdManager
-    allocated_id: int = None
+    allocated_id: T.Union[T.Optional[int], SlotState] = None
 
     def __init__(self, tablename: str, id_manager: IdManager):
         self._tablename = tablename

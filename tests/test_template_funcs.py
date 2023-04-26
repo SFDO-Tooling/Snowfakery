@@ -9,16 +9,13 @@ from snowfakery.data_gen_exceptions import DataGenError
 
 import pytest
 
-write_row_path = "snowfakery.output_streams.DebugOutputStream.write_row"
-
 
 def row_values(write_row_mock, index, value):
     return write_row_mock.mock_calls[index][1][1][value]
 
 
 class TestTemplateFuncs:
-    @mock.patch(write_row_path)
-    def test_inline_reference(self, write_row_mock):
+    def test_inline_reference(self, generated_rows):
         yaml = """
         - object: Person
           nickname: daddy
@@ -30,13 +27,12 @@ class TestTemplateFuncs:
             parent2: ${{reference(daddy)}}
         """
         generate(StringIO(yaml), {}, None)
-        assert write_row_mock.mock_calls == [
+        assert generated_rows.mock_calls == [
             mock.call("Person", {"id": 1}),
             mock.call("Person", {"id": 2, "parent": 1, "parent2": mock.ANY}),
         ]
 
-    @mock.patch(write_row_path)
-    def test_unweighted_random_choice_object(self, write_row):
+    def test_unweighted_random_choice_object(self, generated_rows):
         yaml = """
         - object : Task
           fields:
@@ -55,14 +51,13 @@ class TestTemplateFuncs:
         with mock.patch("random.choice", lambda x: x[-1]):
             generate(StringIO(yaml), {}, None)
 
-            assert len(write_row.mock_calls) == 2, write_row.mock_calls
+            assert len(generated_rows.mock_calls) == 2, generated_rows.mock_calls
 
-        assert write_row.mock_calls[0] == mock.call(
+        assert generated_rows.mock_calls[0] == mock.call(
             "Lead", {"id": 1, "FirstName": "Marge", "LastName": "Simpson"}
         )
 
-    @mock.patch(write_row_path)
-    def test_weighted_random_choice(self, write_row):
+    def test_weighted_random_choice(self, generated_rows):
         yaml = """
         - object : A
           fields:
@@ -82,11 +77,10 @@ class TestTemplateFuncs:
                         - object: E
         """
         generate(StringIO(yaml), {}, None)
-        assert len(write_row.mock_calls) == 2, write_row.mock_calls
+        assert len(generated_rows.mock_calls) == 2, generated_rows.mock_calls
         # TODO CHECK MORE
 
-    @mock.patch(write_row_path)
-    def test_weighted_random_choice_strings(self, write_row):
+    def test_weighted_random_choice_strings(self, generated_rows):
         yaml = """
         - object : A
           fields:
@@ -97,10 +91,9 @@ class TestTemplateFuncs:
                     C: 10%
         """
         generate(StringIO(yaml))
-        assert len(write_row.mock_calls) == 1, write_row.mock_calls
+        assert len(generated_rows.mock_calls) == 1, generated_rows.mock_calls
 
-    @mock.patch(write_row_path)
-    def test_weighted_random_choice_strings_computed_percentages(self, write_row):
+    def test_weighted_random_choice_strings_computed_percentages(self, generated_rows):
         yaml = """
         - object : A
           fields:
@@ -112,10 +105,9 @@ class TestTemplateFuncs:
                     C: ${{100 - (__a_percent * 1.5)}}%
         """
         generate(StringIO(yaml))
-        assert len(write_row.mock_calls) == 1, write_row.mock_calls
+        assert len(generated_rows.mock_calls) == 1, generated_rows.mock_calls
 
-    @mock.patch(write_row_path)
-    def test_conditional_is_lazy(self, write_row):
+    def test_conditional_is_lazy(self, generated_rows):
         yaml = """
         - object : A
           fields:
@@ -128,10 +120,9 @@ class TestTemplateFuncs:
                         pick: BBB
         """
         generate(StringIO(yaml), {}, None)
-        assert write_row.mock_calls == [mock.call("A", {"id": 1, "a": "BBB"})]
+        assert generated_rows.mock_calls == [mock.call("A", {"id": 1, "a": "BBB"})]
 
-    @mock.patch(write_row_path)
-    def test_conditional(self, write_row):
+    def test_conditional(self, generated_rows):
         yaml = """
         - object : A
           fields:
@@ -151,12 +142,11 @@ class TestTemplateFuncs:
                         pick: CCC
         """
         generate(StringIO(yaml), {}, None)
-        assert write_row.mock_calls == [
+        assert generated_rows.mock_calls == [
             mock.call("A", {"id": 1, "a": False, "b": True, "c": True, "d": "BBB"})
         ]
 
-    @mock.patch(write_row_path)
-    def test_conditional_error(self, write_row):
+    def test_conditional_error(self, generated_rows):
         yaml = """
         - object : A
           fields:
@@ -172,8 +162,7 @@ class TestTemplateFuncs:
             generate(StringIO(yaml), {}, None)
         assert "when" in str(e.value)
 
-    @mock.patch(write_row_path)
-    def test_conditional_fallthrough(self, write_row):
+    def test_conditional_fallthrough(self, generated_rows):
         yaml = """
         - object : A
           fields:
@@ -186,10 +175,9 @@ class TestTemplateFuncs:
                         pick: BBB
         """
         generate(StringIO(yaml), {}, None)
-        assert write_row.mock_calls == [mock.call("A", {"id": 1, "x": "BBB"})]
+        assert generated_rows.mock_calls == [mock.call("A", {"id": 1, "x": "BBB"})]
 
-    @mock.patch(write_row_path)
-    def test_conditional_nested(self, write_row):
+    def test_conditional_nested(self, generated_rows):
         yaml = """
         - object : A
           fields:
@@ -212,37 +200,34 @@ class TestTemplateFuncs:
                         pick: DDD
         """
         generate(StringIO(yaml), {}, None)
-        assert write_row.mock_calls[0][1][1]["x"] == "CCC"
+        assert generated_rows.mock_calls[0][1][1]["x"] == "CCC"
 
-    @mock.patch(write_row_path)
-    def test_parse_date_from_datetime_string(self, write_row):
+    def test_parse_date_from_datetime_string(self, generated_rows):
         yaml = """
         - object : A
           fields:
             a: ${{date("2012-01-01T00:01")}}
         """
         generate(StringIO(yaml), {}, None)
-        assert write_row.mock_calls[0][1][1]["a"] == "2012-01-01"
+        assert generated_rows.mock_calls[0][1][1]["a"] == "2012-01-01"
 
-    @mock.patch(write_row_path)
-    def test_parse_date_from_date_string(self, write_row):
+    def test_parse_date_from_date_string(self, generated_rows):
         yaml = """
         - object : A
           fields:
             a: ${{date("2012-01-01")}}
         """
         generate(StringIO(yaml), {}, None)
-        assert write_row.mock_calls[0][1][1]["a"] == "2012-01-01"
+        assert generated_rows.mock_calls[0][1][1]["a"] == "2012-01-01"
 
-    @mock.patch(write_row_path)
-    def test_date_from_datetime(self, write_row):
+    def test_date_from_datetime(self, generated_rows):
         yaml = """
         - object : A
           fields:
             a: ${{date(datetime(year=2012, month=1, day=1))}}
         """
         generate(StringIO(yaml), {}, None)
-        assert write_row.mock_calls[0][1][1]["a"] == "2012-01-01"
+        assert generated_rows.mock_calls[0][1][1]["a"] == "2012-01-01"
 
     def test_now_variable(self, generated_rows):
         yaml = """
@@ -268,18 +253,16 @@ class TestTemplateFuncs:
         generate(StringIO(yaml))
         assert len(now.mock_calls) == 3
 
-    @mock.patch(write_row_path)
-    def test_old_syntax(self, write_row):
+    def test_old_syntax(self, generated_rows):
         yaml = """
         - object : A
           fields:
             a: ${{5 + 3}}
         """
         generate(StringIO(yaml), {}, None)
-        assert write_row.mock_calls[0][1][1]["a"] == 8
+        assert generated_rows.mock_calls[0][1][1]["a"] == 8
 
-    @mock.patch(write_row_path)
-    def test_functions_inline(self, write_row):
+    def test_functions_inline(self, generated_rows):
         yaml = """
         - object : A
           fields:
@@ -287,11 +270,10 @@ class TestTemplateFuncs:
             number: The number is ${{random_number(min=15, max=19)}}
         """
         generate(StringIO(yaml), {}, None)
-        assert "2012" in write_row.mock_calls[0][1][1]["wedding"]
-        assert "1" in write_row.mock_calls[0][1][1]["number"]
+        assert "2012" in generated_rows.mock_calls[0][1][1]["wedding"]
+        assert "1" in generated_rows.mock_calls[0][1][1]["number"]
 
-    @mock.patch(write_row_path)
-    def test_date_between_error_handling(self, write_row):
+    def test_date_between_error_handling(self, generated_rows):
         yaml = """
         - object : A
           fields:
@@ -303,8 +285,7 @@ class TestTemplateFuncs:
         with pytest.raises(DataGenError):
             generate(StringIO(yaml), {}, None)
 
-    @mock.patch(write_row_path)
-    def test_child_index(self, write_row):
+    def test_child_index(self, generated_rows):
         yaml = """
         - object: A
           friends:
@@ -314,7 +295,7 @@ class TestTemplateFuncs:
                     num: ${{child_index}}
         """
         generate(StringIO(yaml), {}, None)
-        assert write_row.mock_calls[3][1][1]["num"] == 2
+        assert generated_rows.mock_calls[3][1][1]["num"] == 2
 
     def test_random_number_with_step(self, generated_rows):
         yaml = """
@@ -344,8 +325,7 @@ class TestTemplateFuncs:
         with pytest.raises(DataGenError):
             generate(StringIO(yaml))
 
-    @mock.patch(write_row_path)
-    def test_random_choice_error_no_choices(self, write_row):
+    def test_random_choice_error_no_choices(self, generated_rows):
         yaml = """
         - object: A
           fields:
@@ -354,8 +334,7 @@ class TestTemplateFuncs:
         with pytest.raises(DataGenError):
             generate(StringIO(yaml))
 
-    @mock.patch(write_row_path)
-    def test_random_choice_can_generate_None(self, write_row):
+    def test_random_choice_can_generate_None(self, generated_rows):
         yaml = """
         - object: A
           fields:
@@ -365,10 +344,9 @@ class TestTemplateFuncs:
                     -
         """
         generate(StringIO(yaml))
-        write_row.mock_calls[0][1][1]["void"] is None
+        generated_rows.mock_calls[0][1][1]["void"] is None
 
-    @mock.patch(write_row_path)
-    def test_if_error_no_choices(self, write_row):
+    def test_if_error_no_choices(self, generated_rows):
         yaml = """
         - object: A
           fields:

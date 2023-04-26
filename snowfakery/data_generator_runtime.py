@@ -93,16 +93,6 @@ class Transients:
 
         self.orig_used_ids = id_manager.last_used_ids.copy()
 
-    def first_new_id(self, tablename):
-        return self.orig_used_ids.get(tablename, 0) + 1
-
-    def last_id_for_table(self, tablename):
-        last_obj = self.last_seen_obj_by_table.get(tablename)
-        if last_obj:
-            return last_obj.id
-        else:
-            return self.orig_used_ids.get(tablename)
-
 
 class Globals:
     """Globally named objects and other aspects of global scope
@@ -191,9 +181,6 @@ class Globals:
             raise DataGenNameError(
                 f"Reference{plural} not fulfilled: {','.join(not_filled)}"
             )
-
-    def first_new_id(self, tablename):
-        return self.transients.first_new_id(tablename)
 
     def __getstate__(self):
         def serialize_dict_of_object_rows(dct):

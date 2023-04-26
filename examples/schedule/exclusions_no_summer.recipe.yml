@@ -1,0 +1,14 @@
+- plugin: snowfakery.standard_plugins.Schedule
+
+- object: MonthlyEventsExceptSummer
+  count: 10
+  fields:
+    MonthlyEvent:
+      Schedule.Event:
+        start_date: 2025-02-01
+        freq: monthly
+        exclude:
+          Schedule.Event:
+            start_date: 2025-05-01
+            until: 2025-08-01
+            freq: monthly

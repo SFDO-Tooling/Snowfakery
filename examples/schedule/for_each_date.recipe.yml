@@ -1,0 +1,12 @@
+- plugin: snowfakery.standard_plugins.Schedule
+
+- object: Mondays
+  for_each:
+    var: Date
+    value:
+      Schedule.Event:
+        start_date: 2025-01-01
+        freq: weekly
+        until: 2025-03-01
+  fields:
+    Date: ${{Date}}

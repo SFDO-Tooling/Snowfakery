@@ -3,6 +3,7 @@ from os import fsencode, path
 import pytest
 
 from snowfakery.parse_recipe_yaml import (
+    TableInfo,
     parse_element,
     categorize_top_level_objects,
     ParseContext,
@@ -88,3 +89,8 @@ class TestFilesystem:
                         mock_safe_load,
                     ):
                         parse_file(tempfile, ParseContext())
+
+
+class TestMisc:
+    def test_tableinfo_repr(self):
+        assert "Blah" in repr(TableInfo("Blah"))

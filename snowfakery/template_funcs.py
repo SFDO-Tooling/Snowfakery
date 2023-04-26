@@ -3,6 +3,7 @@ import sys
 from ast import literal_eval
 from datetime import date, datetime
 from functools import lru_cache
+from datetime import timezone
 from typing import Any, List, Tuple, Union
 
 import dateutil.parser
@@ -58,6 +59,28 @@ def parse_date(d: Union[str, datetime, date]) -> date:
     return dateutil.parser.parse(d).date()
 
 
+@lru_cache(maxsize=512)
+def parse_datetimespec(d: Union[str, datetime, date]) -> datetime:
+    """Parse a string, datetime or date into a datetime."""
+    if isinstance(d, datetime):
+        if not d.tzinfo:
+            d = d.replace(tzinfo=timezone.utc)
+        return d
+    elif isinstance(d, str):
+        if d == "now":
+            return datetime.now(tz=timezone.utc)
+        elif d == "today":
+            return datetime.combine(
+                date.today(), datetime.min.time(), tzinfo=timezone.utc
+            )
+        d = dateutil.parser.parse(d)
+        if not d.tzinfo:
+            d = d.replace(tzinfo=timezone.utc)
+        return d
+    elif isinstance(d, date):
+        return datetime.combine(d, datetime.min.time(), tzinfo=timezone.utc)
+
+
 def render_boolean(context: PluginContext, value: FieldDefinition) -> bool:
     val = context.evaluate(value)
     if isinstance(val, str):
@@ -90,16 +113,21 @@ class StandardFuncs(SnowfakeryPlugin):
         ):
             """A YAML-embeddable function to construct a date from strings or integers"""
             if datespec:
+                if any((day, month, year)):
+                    raise DataGenError(
+                        "Should not specify a date specification and also day or month or year."
+                    )
                 return parse_date(datespec)
             else:
                 return date(year, month, day)
 
         def datetime(
             self,
+            datetimespec=None,
             *,
-            year: Union[str, int],
-            month: Union[str, int],
-            day: Union[str, int],
+            year: Union[str, int] = None,
+            month: Union[str, int] = None,
+            day: Union[str, int] = None,
             hour=0,
             minute=0,
             second=0,
@@ -108,11 +136,24 @@ class StandardFuncs(SnowfakeryPlugin):
         ):
             """A YAML-embeddable function to construct a datetime from strings or integers"""
             timezone = _normalize_timezone(timezone)
-            return datetime(
-                year, month, day, hour, minute, second, microsecond, tzinfo=timezone
-            )
+            if datetimespec:
+                if any((day, month, year, hour, minute, second, microsecond)):
+                    raise DataGenError(
+                        "Should not specify a date specification and also other parameters."
+                    )
+                dt = parse_datetimespec(datetimespec)
+                dt = dt.replace(tzinfo=timezone)
+            elif not (any((year, month, day, hour, minute, second, microsecond))):
+                # no dt specification provided at all...just use now()
+                dt = datetime.now(timezone)
+            else:
+                dt = datetime(
+                    year, month, day, hour, minute, second, microsecond, timezone
+                )
 
-        def date_between(self, *, start_date, end_date):
+            return dt
+
+        def date_between(self, *, start_date, end_date, timezone=UTCAsRelDelta):
             """A YAML-embeddable function to pick a date between two ranges"""
 
             def try_parse_date(d):
@@ -133,6 +174,20 @@ class StandardFuncs(SnowfakeryPlugin):
                     raise
             # swallow empty range errors per Python conventions
 
+        def datetime_between(self, *, start_date, end_date, timezone=UTCAsRelDelta):
+            """A YAML-embeddable function to pick a datetime between two ranges"""
+
+            start_date = self.datetime(start_date)
+            end_date = self.datetime(end_date)
+
+            timezone = _normalize_timezone(timezone)
+            if end_date < start_date:
+                raise DataGenError("End date is before start date")
+
+            return self._faker_for_dates.date_time_between(
+                start_date, end_date, tzinfo=timezone
+            )
+
         def i18n_fake(self, locale: str, fake: str):
             # deprecated by still here for backwards compatibility
             faker = Faker(locale, use_weighting=False)
@@ -152,8 +207,8 @@ class StandardFuncs(SnowfakeryPlugin):
             elif object:
                 try:
                     id = int(id)
-                except TypeError:
-                    raise DataGenError("Cannot interpret id as integer")
+                except (ValueError, TypeError):
+                    raise DataGenError("Cannot interpret `id` as an integer")
                 return ObjectReference(object, id)
 
         def _reference_from_scalar(self, x: Any):
