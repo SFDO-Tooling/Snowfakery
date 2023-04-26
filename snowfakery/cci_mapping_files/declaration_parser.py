@@ -4,8 +4,7 @@ from datetime import date
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, Extra, validator
-from typing_extensions import Literal
+from pydantic import BaseModel, Extra, validator, PositiveInt
 
 
 class AtomicDecl(T.NamedTuple):
@@ -60,11 +59,11 @@ class MergeRules:
 
 class SObjectRuleDeclaration(BaseModel):
     sf_object: str
-    priority: Literal["low", "medium", "high"] = None
+    priority: T.Literal["low", "medium", "high"] = None
 
-    api: Literal["smart", "rest", "bulk"] = None
+    api: T.Literal["smart", "rest", "bulk"] = None
     batch_size: int = None
-    bulk_mode: Literal["serial", "parallel"] = None
+    bulk_mode: T.Literal["serial", "parallel"] = None
     anchor_date: T.Union[str, date] = None
 
     load_after: str = None
@@ -107,8 +106,8 @@ class ChannelDeclaration(BaseModel):
     "Channel declarations are only of relevance to Salesforce employees"
     user: str
     recipe_options: T.Dict[str, T.Any] = None
-    num_generators: int = None
-    num_loaders: int = None
+    num_generators: PositiveInt = None
+    num_loaders: PositiveInt = None
 
     class Config:
         extra = Extra.forbid

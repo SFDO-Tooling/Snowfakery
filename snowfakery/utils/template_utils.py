@@ -1,4 +1,4 @@
-from typing import Sequence
+import typing as T
 import string
 from snowfakery.fakedata.fake_data_generator import FakeData
 
@@ -37,15 +37,18 @@ class StringGenerator:
     def __radd__(self, other):
         return str(other) + str(self)
 
+    def render(self):
+        return self.func()
+
 
 class FakerTemplateLibrary:
     """A Jinja template library to add the fake.xyz objects to templates"""
 
     def __init__(
         self,
-        faker_providers: Sequence[object],
-        locale: str = None,
-        context: PluginContext = None,
+        faker_providers: T.Sequence[object],
+        locale: T.Optional[str] = None,
+        context: T.Optional[PluginContext] = None,
     ):
         self.locale = locale
         self.context = context
@@ -66,7 +69,7 @@ number_chars = set(string.digits + ".")
 
 def look_for_number(arg):
     looks_like_float = False
-    if len(arg) == 0:
+    if len(arg) == 0 or (arg[0] == "0" and arg[1:2] != "."):
         return arg
     for char in arg:
         if char not in number_chars:

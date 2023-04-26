@@ -9,7 +9,7 @@ on:
 jobs:
   faker_docs:
     name: Faker Docs I18N
-    runs-on: ubuntu-latest
+    runs-on: sfdc-ubuntu-latest
     steps:
       - uses: "actions/checkout@v2"
       - uses: "actions/setup-python@v1"
@@ -19,7 +19,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -VV
-          make dev-install
+          pip install -r requirements_dev.txt
+          # docs build requires a proper install
           python setup.py install
 
       - name: Make Docs

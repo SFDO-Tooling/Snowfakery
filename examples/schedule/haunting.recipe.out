@@ -1,0 +1,5 @@
+ScaryEvent(id=1, Name=Halloween, DateTime=2023-10-31T23:59:59+00:00)
+ScaryEvent(id=2, Name=Halloween, DateTime=2024-10-31T23:59:59+00:00)
+ScaryEvent(id=3, Name=Halloween, DateTime=2025-10-31T23:59:59+00:00)
+ScaryEvent(id=4, Name=Halloween, DateTime=2026-10-31T23:59:59+00:00)
+ScaryEvent(id=5, Name=Halloween, DateTime=2027-10-31T23:59:59+00:00)

@@ -1,0 +1,10 @@
+- plugin: snowfakery.standard_plugins.Schedule
+- object: Meeting
+  count: 5
+  fields:
+    Name: Halloween
+    Date:
+      Schedule.Event:
+        start_date: 2023-01-01
+        freq: weekly
+        interval: 3

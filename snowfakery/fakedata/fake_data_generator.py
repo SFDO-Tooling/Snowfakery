@@ -1,11 +1,14 @@
-from difflib import get_close_matches
-import typing as T
 import random
-from snowfakery.plugins import PluginContext
+import typing as T
+import datetime
+from difflib import get_close_matches
 from itertools import product
-from datetime import datetime
 
+import dateutil
 from faker import Faker, Generator
+
+from snowfakery.plugins import PluginContext
+import snowfakery.data_gen_exceptions as exc
 
 # .format language doesn't allow slicing. :(
 first_name_patterns = ("{firstname}", "{firstname[0]}", "{firstname[0]}{firstname[1]}")
@@ -19,7 +22,10 @@ email_templates = [
     )
 ]
 
-this_year = datetime.today().year
+this_year = datetime.datetime.today().year
+DateLike = T.Union[datetime.date, datetime.datetime, datetime.timedelta, str, int]
+TimeZoneAsRelDelta = T.Union[dateutil.relativedelta.relativedelta, T.Literal[False]]
+UTCAsRelDelta = dateutil.relativedelta.relativedelta(hours=0)
 
 
 class FakeNames(T.NamedTuple):
@@ -30,11 +36,17 @@ class FakeNames(T.NamedTuple):
     # trying to incorporate one field into another if we
     # need to.
     def user_name(self, matching: bool = True):
-        "Salesforce-style username in the form of an email address"
+        "Globally unique Salesforce-style username in the form of an email address"
+        domain = self.f.hostname()
         already_created = self._already_have(("firstname", "lastname"))
         if matching and all(already_created):
-            return f"{already_created[0]}.{already_created[1]}_{self.f.uuid4()}@{self.f.safe_domain_name()}"
-        return f"{self.f.first_name()}_{self.f.last_name()}_{self.f.uuid4()}@{self.f.hostname()}"
+            namepart = f"{already_created[0]}.{already_created[1]}_{self.f.uuid4()}"
+        else:
+            namepart = f"{self.f.first_name()}_{self.f.last_name()}_{self.f.uuid4()}"
+
+        namepart_max_len = 80 - (len(domain) + 1)
+        namepart = namepart[0:namepart_max_len]
+        return f"{namepart}@{domain}"
 
     def alias(self):
         """Salesforce-style 8-character alias: really an 8 char-truncated firstname.
@@ -67,6 +79,13 @@ class FakeNames(T.NamedTuple):
         """Get a list of field values that we've already generated"""
         already_created = self.faker_context.local_vars()
         vals = [already_created.get(name) for name in names]
+
+        # if we ever need to use this function in a context where Unicode
+        # is okay, here's how to implement that:
+        # cleanup_func = replace_unicode_strings_with_None if must_be_ascii else NOOP
+
+        vals = [replace_unicode_strings_with_None(val) for val in vals]
+
         return vals
 
     def state(self):
@@ -76,6 +95,62 @@ class FakeNames(T.NamedTuple):
     def postalcode(self):
         """Return whatever counts as a postalcode for a particular locale"""
         return self.f.postcode()
+
+    def date_time_between(
+        self,
+        start_date: DateLike = "-30y",
+        end_date: DateLike = "now",
+        timezone: TimeZoneAsRelDelta = UTCAsRelDelta,
+    ) -> datetime.datetime:
+        timezone = _normalize_timezone(timezone)
+        return self.f.date_time_between(start_date, end_date, timezone)
+
+    date_time_between_dates = date_time_between
+
+    def future_datetime(
+        self,
+        end_date: DateLike = "+30d",
+        timezone: TimeZoneAsRelDelta = UTCAsRelDelta,
+    ) -> datetime.datetime:
+        timezone = _normalize_timezone(timezone)
+        return self.f.future_datetime(end_date, timezone)
+
+    def iso8601(
+        self,
+        timezone: TimeZoneAsRelDelta = UTCAsRelDelta,
+        end_datetime: DateLike = None,
+    ) -> str:
+        timezone = _normalize_timezone(timezone)
+        return self.f.iso8601(
+            timezone,
+            end_datetime,
+        )
+
+    date_time = datetime = date_time_between
+
+    # These faker types are not available in Snowfakery
+    # because they are redundant
+    date_time_this_year = NotImplemented
+    date_time_this_year = NotImplemented
+    date_time_this_month = NotImplemented
+    date_time_ad = NotImplemented
+    date_time_this_century = NotImplemented
+    date_time_this_decade = NotImplemented
+
+
+def _normalize_timezone(timezone=None):
+    if timezone in (None, False):
+        return None
+    elif timezone is UTCAsRelDelta:
+        return datetime.timezone.utc
+    else:
+        if not isinstance(timezone, dateutil.relativedelta.relativedelta):
+            raise exc.DataGenError(  # pragma: no cover
+                f"`timezone` should be a `relativedelta`, not `{type(timezone).__name__}`: {timezone}"
+            )
+        return datetime.timezone(
+            datetime.timedelta(hours=timezone.hours, minutes=timezone.minutes)
+        )
 
 
 # we will use this to exclude Faker's internal book-keeping methods
@@ -89,8 +164,8 @@ class FakeData:
     def __init__(
         self,
         faker_providers: T.Sequence[object],
-        locale: str = None,
-        faker_context: PluginContext = None,
+        locale: T.Optional[str] = None,
+        faker_context: T.Optional[PluginContext] = None,
     ):
         # access to persistent state
         self.faker_context = faker_context
@@ -129,15 +204,34 @@ class FakeData:
         # faker names are all lower-case
         name = origname.lower()
 
-        meth = self.fake_names.get(name)
+        meth = self.fake_names.get(name, NotImplemented)
 
-        if meth:
+        if meth != NotImplemented:
             ret = meth(*args, **kwargs)
             local_faker_vars[name.replace("_", "")] = ret
             return ret
 
         msg = f"No fake data type named {origname}."
-        match_list = get_close_matches(name, self.fake_names.keys(), n=1)
+        all_fake_names = [k for k, v in self.fake_names.items() if v != NotImplemented]
+        match_list = get_close_matches(name, all_fake_names, n=1)
         if match_list:
             msg += f" Did you mean {match_list[0]}"
         raise AttributeError(msg)
+
+
+def translate(x):
+    if chr(x).isalnum():
+        return x
+    else:
+        return None
+
+
+REMOVE_WEIRD_CHARS = {x: translate(x) for x in range(0, 128)}
+
+
+def replace_unicode_strings_with_None(val):
+    if type(val) == str:
+        if not val.isascii():
+            return None
+        return val.translate(REMOVE_WEIRD_CHARS)
+    return val

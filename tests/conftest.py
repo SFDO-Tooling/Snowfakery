@@ -7,6 +7,7 @@ from io import StringIO
 import pytest
 import yaml
 from sqlalchemy import create_engine
+from vcr.serializers import yamlserializer
 
 try:
     import cumulusci
@@ -27,9 +28,8 @@ def generated_rows(request):
     def row_values(index, value):
         return mockobj.mock_calls[index][1][1][value]
 
-    def table_values(tablename, index, field=None):
+    def table_values(tablename, index=None, field=None):
         """Look up a value from a table."""
-        index = index - 1  # use 1-based indexing like Snowfakery does
 
         # create and cache a dict of table names to lists of rows
         if type(mockobj._index) != dict:
@@ -38,13 +38,23 @@ def generated_rows(request):
                 table = row[1][0]
                 mockobj._index.setdefault(table, []).append(row[1][1])
 
-        if field:  # return just one field
-            return mockobj._index[tablename][index][field]
-        else:  # return a full row
-            return mockobj._index[tablename][index]
+        if index is None:  # return all rows
+            if field is None:  # return full rows
+                return mockobj._index[tablename]
+            else:  # return a single field
+                return [row[field] for row in mockobj._index[tablename]]
+        else:  # return data from just one row
+            # implement Python's "index from the back" semantics
+            if index == -1:
+                index = len(mockobj._index[tablename])
+            index = index - 1  # use 1-based indexing like Snowfakery does
+            if field:  # return just one field
+                return mockobj._index[tablename][index][field]
+            else:  # return a full row
+                return mockobj._index[tablename][index]
 
     with patch(
-        "snowfakery.output_streams.DebugOutputStream.write_single_row"
+        "snowfakery.output_streams.SimpleFileOutputStream.write_single_row"
     ) as mockobj:
         mockobj.row_values = row_values
         mockobj.table_values = table_values
@@ -53,8 +63,9 @@ def generated_rows(request):
 
 @pytest.fixture(scope="function")
 def disable_typeguard():
-    with patch("typeguard.check_argument_types", lambda *args, **kwargs: ...):
-        yield
+    # doesn't really do anything. at some point we can remove it if
+    # typeguard is really gone for good.
+    yield
 
 
 @pytest.fixture(scope="function")
@@ -115,3 +126,8 @@ def generate_data_with_continuation():
 @pytest.fixture(scope="session")
 def snowfakery_rootdir():
     return Path(__file__).parent.parent
+
+
+@pytest.fixture(scope="session")
+def salesforce_serializer():
+    return yamlserializer

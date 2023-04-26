@@ -24,5 +24,5 @@ class YamlOutputStream(FileOutputStream):
     ):
         return {"reference": f"row_{target_object_row.id}"}
 
-    def close(self):
+    def close(self, **kwargs):
         yaml.dump(self.out, self.stream, sort_keys=False)

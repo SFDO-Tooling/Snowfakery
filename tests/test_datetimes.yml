@@ -1,0 +1,90 @@
+- object: Contact
+  fields:
+    LastName:
+      fake: LastName
+    EmailBouncedDate: 2020-11-29 08:33:39+00:00
+
+- object: Contact
+  fields:
+    LastName:
+      fake: LastName
+    EmailBouncedDate:
+      fake: DateTime
+
+- object: Contact
+  fields:
+    LastName:
+      fake: LastName
+    EmailBouncedDate:
+      fake.datetime:
+        timezone:
+          relativedelta:
+            hours: 8
+
+- object: Contact
+  fields:
+    LastName:
+      fake: LastName
+    EmailBouncedDate:
+      fake.DateTimeBetween:
+        start_date: -10y
+        end_date: now
+
+- object: Contact
+  fields:
+    LastName:
+      fake: LastName
+    EmailBouncedDate:
+      fake.DateTimeBetween:
+        start_date: now
+        end_date: +20y
+
+- object: Contact
+  fields:
+    LastName:
+      fake: LastName
+    EmailBouncedDate:
+      fake: DateTime
+
+- object: Contact
+  fields:
+    LastName:
+      fake: LastName
+    EmailBouncedDate:
+      fake: FutureDatetime
+
+- object: Contact
+  fields:
+    LastName:
+      fake: LastName
+    EmailBouncedDate:
+      fake: iso8601
+
+- object: Contact
+  fields:
+    LastName:
+      fake: LastName
+    EmailBouncedDate: ${{fake.iso8601(timezone=False)}}Z
+
+- object: Contact
+  fields:
+    LastName:
+      fake: LastName
+    EmailBouncedDate:
+      datetime:
+        year: 2000
+        month: 1
+        day: 1
+
+- object: Contact
+  fields:
+    LastName:
+      fake: LastName
+    EmailBouncedDate:
+      datetime:
+        year: 2000
+        month: 1
+        day: 1
+        timezone:
+          relativedelta:
+            hours: 8

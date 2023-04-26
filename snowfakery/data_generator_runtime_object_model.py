@@ -2,9 +2,9 @@ from abc import abstractmethod, ABC
 from .data_generator_runtime import evaluate_function, RuntimeContext, Interpreter
 from .object_rows import ObjectRow, ObjectReference
 from contextlib import contextmanager
-from typing import Union, Dict, Sequence, Optional, cast
+from typing import NamedTuple, Union, Dict, Sequence, Optional, cast
 from .utils.template_utils import look_for_number
-
+import itertools
 import jinja2
 
 from .data_gen_exceptions import (
@@ -80,6 +80,39 @@ class VariableDefinition:
         interp.register_variable(name, value)
 
 
+class ForEachVariableDefinition:
+    """Represents a for_each statement."""
+
+    varname: str
+    expression: "StructuredValue"
+
+    def __init__(
+        self, filename: str, line_num: int, varname: str, expression: Definition
+    ):
+        self.varname = varname
+        self.expression = expression
+        self.filename = filename
+        self.line_num = line_num
+
+    def evaluate(self, context: RuntimeContext) -> FieldValue:
+        """Disable value caching for this context and evaluate the expression"""
+        context.recalculate_every_time = True
+        ret = self.expression.render(context)
+        if not isinstance(ret, PluginResultIterator):
+            raise DataGenValueError(
+                f"`for_each` value must be a DatasetIterator for `{self.varname}`",
+                self.filename,
+                self.line_num,
+            )
+        ret.repeat = False
+        return ret
+
+
+class LoopIterator(NamedTuple):
+    name: str
+    iterator: object
+
+
 class ObjectTemplate:
     """A factory that generates rows.
 
@@ -99,9 +132,11 @@ class ObjectTemplate:
         line_num: int,
         nickname: str = None,
         count_expr: FieldDefinition = None,  # counts can be dynamic so they are expressions
+        for_each_expr: ForEachVariableDefinition = None,
         just_once: bool = False,
         fields: Sequence = (),
         friends: Sequence = (),
+        update_key: str = None,
     ):
         self.tablename = tablename
         self.nickname = nickname
@@ -111,6 +146,15 @@ class ObjectTemplate:
         self.line_num = line_num
         self.fields = fields
         self.friends = friends
+        self.for_each_expr = for_each_expr
+        self.update_key = update_key
+
+        if count_expr and for_each_expr:
+            raise DataGenSyntaxError(
+                f"Cannot specify both a count expression and a for-each expression at the same time in declaration for {self.tablename}.",
+                self.filename,
+                self.line_num,
+            )
 
     def render(self, context: RuntimeContext) -> Optional[ObjectRow]:
         return self.generate_rows(context.output_stream, context)
@@ -121,9 +165,26 @@ class ObjectTemplate:
         """Generate several rows"""
         rc = None
         with parent_context.child_context(self) as context:
-            count = self._evaluate_count(context)
+            if self.for_each_expr:
+                # it would be easy to support multiple parallel
+                # for-eaches here and at one point the code did,
+                # but the use-case wasn't obvious so it was removed
+                # after 9bc296a7df. If we get to 2023 without
+                # # finding a use-case we can delete this comment.
+                iterators = [self._evaluate_for_each(context)]
+                iterators.append(LoopIterator("child_index", itertools.count()))
+            else:  # use a count, or a default count of 1
+                iterators = [
+                    LoopIterator(
+                        "child_index", iter(range(self._evaluate_count(context)))
+                    )
+                ]
             with self.exception_handling(f"Cannot generate {self.name}"):
-                for i in range(count):
+                master_iterator = zip(*(it.iterator for it in iterators))
+                iterator_names = [it.name for it in iterators]
+                for i, next_value_list in enumerate(master_iterator):
+                    for name, value in zip(iterator_names, next_value_list):
+                        context.interpreter.register_variable(name, value)
                     rc = self._generate_row(output_stream, context, i)
 
         return rc  # return last row
@@ -164,22 +225,49 @@ class ObjectTemplate:
     def id(self):
         return id(self)
 
+    def _evaluate_for_each(self, context: RuntimeContext) -> LoopIterator:
+        """Evaluate the expression to get an iterator we can iterate over"""
+
+        def eval_to_iterator(vardef):
+            val = vardef.evaluate(context)
+            try:
+                iterator = iter(val)
+            except TypeError:  # pragma: no cover
+                raise DataGenError(
+                    f"Object created by {vardef.varname} is not iterable: {val}"
+                )
+            return LoopIterator(vardef.varname, iterator)
+
+        with self.exception_handling("Cannot evaluate `for_each` definition"):
+            return eval_to_iterator(self.for_each_expr)
+
     def _generate_row(
         self, output_stream, context: RuntimeContext, index: int
     ) -> ObjectRow:
         """Generate an individual row"""
         id = context.generate_id(self.nickname)
         row = {"id": id}
+
+        # add a column keeping track of what update_key was specified by
+        # the template. This allows multiple templates to have different
+        # update_keys.
+        if self.update_key:
+            row["_sf_update_key"] = self.update_key
         sobj = ObjectRow(self.tablename, row, index)
 
         context.register_object(sobj, self.nickname, self.just_once)
 
         self._generate_fields(context, row)
 
+        context.remember_row(
+            self.tablename,
+            self.nickname,
+            row,
+        )
+
         with self.exception_handling("Cannot write row"):
-            self.register_row_intertable_references(row, context)
             if not self.tablename.startswith("__"):
-                output_stream.write_row(self.tablename, row)
+                output_stream.write_row(self.tablename, context.filter_row_values(row))
 
         context.interpreter.loop_over_templates_once(self.friends, True)
         return sobj
@@ -190,7 +278,14 @@ class ObjectTemplate:
             with self.exception_handling("Problem rendering value"):
                 value = field.generate_value(context)
                 if isinstance(value, PluginResultIterator):
-                    value = value.next()
+                    try:
+                        value = value.next()
+                    except StopIteration:
+                        raise DataGenError(
+                            "Could not generate enough values to create rows",
+                            self.filename,
+                            self.line_num,
+                        )
                 row[field.name] = value
 
                 self._check_type(field, row[field.name], context)
@@ -203,16 +298,6 @@ class ObjectTemplate:
                 self.filename,
                 self.line_num,
             )
-
-    def register_row_intertable_references(
-        self, row: dict, context: RuntimeContext
-    ) -> None:
-        """Before serializing we need to convert objects to flat ID integers."""
-        for fieldname, fieldvalue in row.items():
-            if isinstance(fieldvalue, (ObjectRow, ObjectReference)):
-                context.register_intertable_reference(
-                    self.tablename, fieldvalue._tablename, fieldname
-                )
 
     def execute(
         self, interp: Interpreter, context: RuntimeContext, continuing: bool
@@ -252,19 +337,24 @@ class SimpleValue(FieldDefinition):
 
     def render(self, context: RuntimeContext) -> FieldValue:
         """Render the value: rendering a template if necessary."""
+        old_context_identifier = context.unique_context_identifier
         context.unique_context_identifier = str(id(self))
         evaluator = self.evaluator(context)
         if evaluator:
             try:
                 val = evaluator(context)
+                if hasattr(val, "render"):
+                    val = val.render()
             except jinja2.exceptions.UndefinedError as e:
                 raise DataGenNameError(e.message, self.filename, self.line_num) from e
             except Exception as e:
-                raise
                 raise DataGenValueError(str(e), self.filename, self.line_num) from e
         else:
             val = self.definition
-        return look_for_number(val) if isinstance(val, str) else val
+        context.unique_context_identifier = old_context_identifier
+        if isinstance(val, str) and not context.interpreter.native_types:
+            val = look_for_number(val)
+        return val
 
     def __repr__(self):
         return f"<{self.__class__.__name__ , self.definition}>"
@@ -299,9 +389,10 @@ class StructuredValue(FieldDefinition):
         else:  # scalars will be turned into a one-argument list
             self.args = [args]
             self.kwargs = {}
+        self.unique_context_identifier = str(id(self))
 
     def render(self, context: RuntimeContext) -> FieldValue:
-        context.unique_context_identifier = str(id(self))
+        context.unique_context_identifier = self.unique_context_identifier
         if "." in self.function_name:
             objname, method, *rest = self.function_name.split(".")
             if rest:
@@ -324,9 +415,9 @@ class StructuredValue(FieldDefinition):
                 raise AttributeError(
                     f"'{objname}' plugin exposes no attribute '{method}'"
                 )
-            if not func:
+            if not callable(func):
                 raise DataGenNameError(
-                    f"Cannot find definition for: {method} on {objname}",
+                    f"Cannot call '{method}' on '{objname}'",
                     self.filename,
                     self.line_num,
                 )

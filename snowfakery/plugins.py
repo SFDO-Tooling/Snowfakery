@@ -6,10 +6,12 @@ from datetime import date, datetime
 from pathlib import Path
 from unittest.mock import patch
 from functools import wraps
+import typing as T
 
 import yaml
 from yaml.representer import Representer
 from faker.providers import BaseProvider as FakerProvider
+from dateutil.relativedelta import relativedelta
 
 import snowfakery.data_gen_exceptions as exc
 from .utils.yaml_utils import SnowfakeryDumper
@@ -18,9 +20,10 @@ from .utils.collections import CaseInsensitiveDict
 from numbers import Number
 
 
-Scalar = Union[str, Number, date, datetime, None]
+Scalar = Union[str, Number, date, datetime, None, relativedelta]
 FieldDefinition = "snowfakery.data_generator_runtime_object_model.FieldDefinition"
 ObjectRow = "snowfakery.object_rows.ObjectRow"
+ScalarTypes = T.get_args(Scalar)
 
 
 class LineTracker(NamedTuple):
@@ -114,7 +117,8 @@ class PluginContext:
         unique across iterations (but not portion invocations). It
         allows templates that do counting or iteration for a particular
         template context."""
-        return str(self.interpreter.current_context.unique_context_identifier)
+        context_id = self.interpreter.current_context.unique_context_identifier
+        return str(context_id)
 
     def evaluate_raw(self, field_definition):
         """Evaluate the contents of a field definition"""
@@ -123,12 +127,14 @@ class PluginContext:
     def evaluate(self, field_definition):
         """Evaluate the contents of a field definition and simplify to a primitive value."""
         rc = self.evaluate_raw(field_definition)
-        if isinstance(rc, Scalar.__args__):
+        if isinstance(rc, ScalarTypes):
             return rc
         elif hasattr(rc, "simplify"):
             return rc.simplify()
         else:
-            raise f"Cannot simplify {field_definition}. Perhaps should have used evaluate_raw?"
+            raise AssertionError(
+                f"Cannot simplify {field_definition}. Perhaps should have used evaluate_raw?"
+            )
 
     @property
     def current_filename(self):
@@ -153,6 +159,22 @@ def memorable(func: Any) -> Callable:
 
 
 def evaluate_memorable_function(context, func, self, args, kwargs):
+    """Memorable functions store state.
+
+    This function fetches that state unless the context has asked us
+    to re-start every time.
+
+    For example, a file would be retrieved over and over again, with
+    the file pointer advancing, unless the context asked us to re-open it
+    every time, in which case the file pointer would always be at the beginning.
+
+    For-loops are the primary example where we want to re-start an iterator
+    every time we evaluate.
+    """
+    if context.interpreter.current_context.recalculate_every_time:
+        return func(self, *args, **kwargs)
+
+    # otherwise, do all of the caching magic
     user_key = kwargs.get("name") or (
         context.unique_context_identifier,
         tuple(args),
@@ -300,7 +322,40 @@ def _register_for_continuation(cls):
 
 
 class PluginResultIterator(PluginResult):
-    pass
+    def __init__(self, repeat):
+        self.repeat = repeat
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.next()
+
+    def next(self):
+        try:
+            return self.next_result()
+        except StopIteration:
+            if self.repeat:
+                self.restart()
+                return self.next_result()
+            else:
+                raise
+
+    def next_result(self):
+        "Initialize the iterator in self.results."
+        raise NotImplementedError(f"start method on {self.__class__.__name__}")
+
+    def start(self):
+        "Initialize the iterator in self.results."
+        raise NotImplementedError(f"start method on {self.__class__.__name__}")
+
+    def restart(self):
+        "Restart the iterator by assigning to self.results"
+        self.start()
+
+    def close(self):
+        "Subclasses should implement this if they need to clean up resources"
+        pass  # pragma: no cover
 
 
 class PluginOption:

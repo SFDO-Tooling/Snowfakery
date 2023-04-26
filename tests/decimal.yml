@@ -1,0 +1,17 @@
+- snowfakery_version: 3
+- object: Foo
+  fields:
+    lat: ${{fake.latitude | string}} # jinja2 will still make a number
+    long: ${{fake.longitude | string}} # https://github.com/pallets/jinja/issues/1200
+
+- object: Bar
+  fields:
+    lat2: ${{fake.latitude}}
+    long2: ${{fake.longitude}}
+
+- object: Baz
+  fields:
+    lat3:
+      fake: latitude
+    long3:
+      fake: longitude

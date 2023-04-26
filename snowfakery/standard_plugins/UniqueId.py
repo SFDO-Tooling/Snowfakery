@@ -178,7 +178,7 @@ class UniqueNumericIdGenerator(PluginResult):
         if self.randomize:
             return scramble_number(int(val))
         else:
-            return val
+            return int(val)
 
     def __reduce__(self):
         state = {

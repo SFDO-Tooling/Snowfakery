@@ -1,3 +1,4 @@
+from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from subprocess import check_output
@@ -7,7 +8,7 @@ import gvgen
 import pytest
 
 from snowfakery.cli import generate_cli
-from snowfakery.output_streams import GraphvizOutputStream
+from snowfakery.output_streams import GraphvizOutputStream, ImageOutputStream
 from snowfakery.data_generator import generate
 
 sample_yaml = Path(__file__).parent.parent / "examples/family.recipe.yml"
@@ -55,7 +56,6 @@ class TestGraphvizOutputStream:
             mock_graph = MockGraph()
             mock_graph_class.return_value = mock_graph
             output_stream = GraphvizOutputStream(dot)
-            # print(mock_graph_class())
             generate(yaml, {}, output_stream)
             output_stream.close()
             assert mock_graph.nodes == [
@@ -98,6 +98,27 @@ class TestGraphvizOutputStream:
                     "husband",
                 ),
                 (("Lady(1, Lady Jessica)", "Duke(2, Muad'Dib)"), "label", "son"),
+            ]
+
+    @mock.patch("gvgen.GvGen")
+    def test_no_label(self, mock_graph_class):
+        with TemporaryDirectory() as t, sample_yaml.open() as yaml:
+            dot = Path(t) / "out.dot"
+
+            mock_graph = MockGraph()
+            mock_graph_class.return_value = mock_graph
+            output_stream = GraphvizOutputStream(dot)
+            yaml = (
+                yaml.read()
+                .replace("name", "REPLACEDNOMX")
+                .replace("nickREPLACEDNOMX", "nickname")
+            )
+            generate(StringIO(yaml), {}, output_stream)
+            output_stream.close()
+            assert mock_graph.nodes == [
+                "Duke(1)",
+                "Duke(2)",
+                "Lady(1, Lady Jessica)",
             ]
 
 
@@ -161,3 +182,13 @@ class TestImageOuputStreams:
             assert svg.read_bytes().startswith(b"<?xml"), svg.read_bytes()[0:5]
             assert dot.read_bytes().startswith(b"/* Ge"), dot.read_bytes()[0:5]
             assert txt.exists()
+
+    @mock.patch("subprocess.Popen", side_effect=FileNotFoundError)
+    def test_dot_missing(self, popen):
+        with TemporaryDirectory() as t, sample_yaml.open() as yaml:
+            dot = Path(t) / "out.dot"
+
+            output_stream = ImageOutputStream(dot, "png")
+            generate(yaml, {}, output_stream)
+            rc = output_stream.close()
+            assert "Could not find `dot` executable." in rc[0]

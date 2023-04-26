@@ -1,0 +1,12 @@
+- plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
+- object: Contact
+  count: 10
+  fields:
+    __users_from_salesforce:
+      SOQLDataset.iterate:
+        fields: Id, FirstName, LastName
+        from: XYZZY
+    OwnerId: ${{__users_from_salesforce.Id}}
+    FirstName: ${{__users_from_salesforce.FirstName}}
+    LastName: ${{__users_from_salesforce.LastName}}
+    Username: TestUser${{fake.Username}}
