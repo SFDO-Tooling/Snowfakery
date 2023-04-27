@@ -1,22 +1,27 @@
-from io import StringIO
+import gc
 import math
 import operator
 import time
 from base64 import b64decode
-
-from snowfakery import SnowfakeryPlugin, lazy
-from snowfakery.plugins import PluginResult, PluginOption, memorable
-
-from snowfakery.data_gen_exceptions import (
-    DataGenError,
-    DataGenTypeError,
-    DataGenImportError,
-)
-from snowfakery import generate_data
-
-generate = generate_data
+from io import StringIO
+from unittest import mock
 
 import pytest
+
+from snowfakery import SnowfakeryPlugin, generate_data, lazy
+from snowfakery.data_gen_exceptions import (
+    DataGenError,
+    DataGenImportError,
+    DataGenTypeError,
+)
+from snowfakery.plugins import (
+    PluginOption,
+    PluginResult,
+    PluginResultIterator,
+    memorable,
+)
+
+generate = generate_data
 
 
 def row_values(generated_rows, index, value):
@@ -36,6 +41,24 @@ class SimpleTestPlugin(SnowfakeryPlugin):
     class Functions:
         def double(self, value):
             return value * 2
+
+        @memorable
+        def fib(self, value):
+            return FibIterator()
+
+
+class FibIterator(PluginResultIterator):
+    def __init__(self):
+        self.a = 1
+        self.b = 1
+
+    def close(self):
+        self.a = None
+        self.b = None
+
+    def next(self):
+        self.a, self.b = self.b, self.a + self.b
+        return self.b
 
 
 class DoubleVisionPlugin(SnowfakeryPlugin):
@@ -316,6 +339,7 @@ class TestContextVars:
         """
         with pytest.raises(DataGenError) as e:
             generate_data(StringIO(yaml))
+        assert e.value.line_num
         assert 6 > e.value.line_num >= 3
 
     def test_plugin_paths(self, generated_rows):
@@ -331,6 +355,7 @@ class TestContextVars:
         """
         with pytest.raises(DataGenError) as e:
             generate_data(StringIO(yaml))
+        assert e.value.line_num
         assert 6 > e.value.line_num >= 3
 
     def test_null_attributes(self):
@@ -343,6 +368,7 @@ class TestContextVars:
         """
         with pytest.raises(DataGenError) as e:
             generate_data(StringIO(yaml))
+        assert e.value.line_num
         assert 6 > e.value.line_num >= 3
 
     def test_not_callable_attributes(self):
@@ -355,6 +381,7 @@ class TestContextVars:
         """
         with pytest.raises(DataGenError, match="Cannot call") as e:
             generate_data(StringIO(yaml))
+        assert e.value.line_num
         assert 6 > e.value.line_num >= 3
 
     def test_memorable_plugin(self, generated_rows):
@@ -417,3 +444,26 @@ class TestContextVars:
         """
         with pytest.warns(UserWarning, match="close"):
             generate_data(StringIO(yaml))
+
+
+class TestPluginResultIterator:
+    @mock.patch(
+        "tests.test_custom_plugins_and_providers.FibIterator.close",
+    )
+    def test_plugin_result_iterator__closes(self, close, generated_rows):
+        yaml = """
+        - plugin: tests.test_custom_plugins_and_providers.SimpleTestPlugin
+        - object: OBJ
+          fields:
+            fibnum:
+                SimpleTestPlugin.fib:
+        """
+        # it's better if closing of objects is triggered at a predictable
+        # time by the refcounter instead of by the cyclic GC
+        try:
+            gc.disable()
+            generate_data(StringIO(yaml), target_number=("OBJ", 3))
+            assert generated_rows.table_values("OBJ", field="fibnum") == [2, 3, 5]
+            assert len(close.mock_calls) == 1
+        finally:
+            gc.enable()
