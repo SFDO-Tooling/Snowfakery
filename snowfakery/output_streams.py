@@ -319,9 +319,9 @@ class SqlDbOutputStream(OutputStream):
             warn("Please do not pass mappings argument to from_url", DeprecationWarning)
         try:
             engine = create_engine(db_url)
-        except ModuleNotFoundError as e:  # pragma: no cover
+        except ModuleNotFoundError as e:
             raise DataGenError(f"Cannot find a driver for your database: {e}")
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             raise DataGenError(f"Cannot connect to database: {e}")
         self = cls(engine)
         return self
@@ -332,7 +332,6 @@ class SqlDbOutputStream(OutputStream):
 
     def flush(self):
         for tablename, (insert_statement, fallback_dict) in self.table_info.items():
-
             # Make sure every row has the same records per SQLAlchemy's rules
 
             # According to the SQL Alchemy docs, every dictionary in a set must
