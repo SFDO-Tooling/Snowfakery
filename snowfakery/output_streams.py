@@ -365,7 +365,7 @@ class SqlDbOutputStream(OutputStream):
             create_tables_from_inferred_fields(
                 inferred_tables, self.engine, self.metadata
             )
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             raise DataGenError(f"Cannot write to database: {e}")
         self.metadata.create_all()
         self.base.prepare(self.engine, reflect=True)

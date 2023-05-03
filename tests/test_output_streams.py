@@ -163,9 +163,9 @@ class OutputCommonTests(ABC):
 class TestSqlDbOutputStream(OutputCommonTests):
     cls = SqlDbOutputStream
 
-    def do_output(self, yaml):
+    def do_output(self, yaml, url=None):
         with named_temporary_file_path() as f:
-            url = f"sqlite:///{f}"
+            url = url or f"sqlite:///{f}"
             output_stream = SqlDbOutputStream.from_url(url)
             results = generate(StringIO(yaml), {}, output_stream)
             table_names = results.tables.keys()
@@ -204,6 +204,24 @@ class TestSqlDbOutputStream(OutputCommonTests):
             with pytest.raises(exc.DataGenError, match="Table already exists"):
                 output_stream = SqlDbOutputStream.from_url(url)
                 generate(StringIO(yaml), {}, output_stream)
+
+    def test_bad_database_connection(self):
+        yaml = """
+        - object: foo
+          fields:
+            is_null:
+            """
+        # unknown URL type
+        with pytest.raises(exc.DataGenError, match="unknowndb"):
+            self.do_output(yaml, "unknowndb://foo/bar/baz")
+
+        # missing driver
+        with pytest.raises(exc.DataGenError, match="fdb"):
+            self.do_output(yaml, "firebird://foo/bar/baz")
+
+        # cannot connect
+        with pytest.raises(exc.DataGenError, match="sqlite"):
+            self.do_output(yaml, "sqlite:///notarealpath/notreal/notreal")
 
 
 class JSONTables:
