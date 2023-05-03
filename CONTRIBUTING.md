@@ -147,3 +147,9 @@ Tada! You've published a new version of Snowfakery.
 
 Take a look at [`docs/arch/ArchIndex.md`](docs/arch/ArchIndex.md) to learn about
 Snowfakery's architecture.
+
+## Updating Dependencies
+
+Run `make update-deps` to update requirements files locally.
+
+Then run `make dev-install && pytest` to test.
