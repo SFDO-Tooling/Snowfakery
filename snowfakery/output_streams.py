@@ -319,9 +319,9 @@ class SqlDbOutputStream(OutputStream):
             warn("Please do not pass mappings argument to from_url", DeprecationWarning)
         try:
             engine = create_engine(db_url)
-        except ModuleNotFoundError as e:
+        except ModuleNotFoundError as e:  # pragma: no cover
             raise DataGenError(f"Cannot find a driver for your database: {e}")
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             raise DataGenError(f"Cannot connect to database: {e}")
         self = cls(engine)
         return self
