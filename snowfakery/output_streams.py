@@ -8,7 +8,7 @@ import sys
 from decimal import Decimal
 from pathlib import Path
 from collections import namedtuple, defaultdict
-from typing import Dict, Union, Optional, Mapping, Callable, Sequence
+from typing import Dict, TextIO, Union, Optional, Mapping, Callable, Sequence, cast
 import typing as T
 from warnings import warn
 
@@ -40,6 +40,10 @@ def noop(x):
 def format_datetime(dt: datetime.datetime):
     """Format into the Salesforce-preferred syntax."""
     return dt.isoformat(timespec="seconds")
+
+
+def simplifier_encoder(field_value):
+    return field_value.simplify()
 
 
 class OutputStream(ABC):
@@ -89,10 +93,7 @@ class OutputStream(ABC):
         else:
             encoder = self.encoders.get(type(field_value))
             if not encoder and hasattr(field_value, "simplify"):
-
-                def encoder(field_value):
-                    return field_value.simplify()
-
+                encoder = simplifier_encoder
             if not encoder:
                 raise TypeError(  # pragma: no cover
                     f"No encoder found for {type(field_value)} in {self.__class__.__name__} "
@@ -147,7 +148,7 @@ class SmartStream:
     mode = "wt"
 
     def __init__(self, stream_or_path=None, **kwargs):
-        if hasattr(stream_or_path, "write"):
+        if stream_or_path and hasattr(stream_or_path, "write"):
             self.owns_stream = False
             self.stream = stream_or_path
         elif stream_or_path:
@@ -432,7 +433,8 @@ class SqlTextOutputStream(FileOutputStream):
         con = self.sql_db.engine.raw_connection()
 
         # https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.iterdump
-        for line in con.iterdump():
+        for line in con.iterdump():  # type: ignore
+            assert self.text_output.stream
             self.text_output.stream.write("%s\n" % line)
 
     def close(self, *args, **kwargs):
@@ -545,7 +547,7 @@ class GraphvizOutputStream(FileOutputStream):
         for fieldname, source, target in self.links:
             mylink = self.G.newLink(self.nodes[source], self.nodes[target])
             self.G.propertyAppend(mylink, "label", fieldname)
-        self.G.dot(self.stream)
+        self.G.dot(cast(TextIO, self.stream))
         return super().close()
 
 

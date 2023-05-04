@@ -4,7 +4,7 @@
 #
 #    pip-compile --allow-unsafe requirements/dev.in
 #
-attrs==22.2.0
+attrs==23.1.0
     # via jsonschema
 black==23.3.0
     # via -r requirements/dev.in
@@ -46,13 +46,13 @@ docopt==0.6.2
     # via coveralls
 exceptiongroup==1.1.1
     # via pytest
-faker==18.4.0
+faker==18.6.1
     # via
     #   -r requirements/prod.txt
     #   faker-microservice
 faker-microservice==2.0.0
     # via -r requirements/dev.in
-filelock==3.11.0
+filelock==3.12.0
     # via
     #   tox
     #   virtualenv
@@ -64,14 +64,14 @@ greenlet==2.0.2
     #   sqlalchemy
 gvgen==1.0
     # via -r requirements/prod.txt
-identify==2.5.22
+identify==2.5.23
     # via pre-commit
 idna==3.4
     # via
     #   -r requirements/prod.txt
     #   requests
     #   yarl
-importlib-metadata==6.3.0
+importlib-metadata==6.6.0
     # via
     #   markdown
     #   mkdocs
@@ -106,7 +106,7 @@ nodeenv==1.7.0
     # via
     #   pre-commit
     #   pyright
-packaging==23.0
+packaging==23.1
     # via
     #   black
     #   mkdocs
@@ -115,7 +115,7 @@ packaging==23.0
     #   tox
 pathspec==0.11.1
     # via black
-platformdirs==3.2.0
+platformdirs==3.5.0
     # via
     #   black
     #   tox
@@ -125,19 +125,19 @@ pluggy==1.0.0
     #   diff-cover
     #   pytest
     #   tox
-pre-commit==3.2.2
+pre-commit==3.3.1
     # via -r requirements/dev.in
 pydantic==1.10.7
     # via -r requirements/prod.txt
-pygments==2.15.0
+pygments==2.15.1
     # via diff-cover
 pyproject-api==1.5.1
     # via tox
-pyright==1.1.302
+pyright==1.1.305
     # via -r requirements/dev.in
 pyrsistent==0.19.3
     # via jsonschema
-pytest==7.3.0
+pytest==7.3.1
     # via
     #   -r requirements/dev.in
     #   pytest-cov
@@ -163,7 +163,7 @@ pyyaml==6.0
     #   vcrpy
 pyyaml-env-tag==0.1
     # via mkdocs
-requests==2.28.2
+requests==2.29.0
     # via
     #   -r requirements/prod.txt
     #   coveralls
@@ -175,7 +175,7 @@ six==1.16.0
     #   -r requirements/prod.txt
     #   python-dateutil
     #   vcrpy
-sqlalchemy==1.4.47
+sqlalchemy==1.4.48
     # via -r requirements/prod.txt
 tomli==2.0.1
     # via
@@ -184,7 +184,7 @@ tomli==2.0.1
     #   pyproject-api
     #   pytest
     #   tox
-tox==4.4.11
+tox==4.5.1
     # via
     #   -r requirements/dev.in
     #   tox-gh-actions
@@ -206,7 +206,7 @@ vcrpy==4.2.1
     # via
     #   -r requirements/dev.in
     #   pytest-vcr
-virtualenv==20.21.0
+virtualenv==20.23.0
     # via
     #   pre-commit
     #   tox
@@ -214,11 +214,11 @@ watchdog==3.0.0
     # via mkdocs
 wrapt==1.15.0
     # via vcrpy
-yarl==1.8.2
+yarl==1.9.2
     # via vcrpy
 zipp==3.15.0
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
-setuptools==67.6.1
+setuptools==67.7.2
     # via nodeenv
