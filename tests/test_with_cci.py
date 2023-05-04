@@ -257,6 +257,19 @@ class TestSOQLWithCCI:
         generate_data(filename, plugin_options={"org_name": org_config.name})
         assert generated_rows.mock_calls
 
+    @patch("snowfakery.standard_plugins.Salesforce.randrange", lambda *arg, **kwargs: 1)
+    @pytest.mark.vcr()
+    def test_example_no_records(self, sf, generated_rows, org_config):
+        filename = (
+            Path(__file__).parent.parent
+            / "examples/salesforce_soql_example_no_records.recipe.yml"
+        )
+        with pytest.raises(
+            DataGenError,
+            match=".*AccountId(.|\n)*No records found matching .*Hungarian.*",
+        ):
+            generate_data(filename, plugin_options={"org_name": org_config.name})
+
     @pytest.mark.vcr()
     def test_find_records_returns_nothing(self, org_config):
         yaml = """
