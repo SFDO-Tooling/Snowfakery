@@ -310,8 +310,8 @@ class SqlDbOutputStream(OutputStream):
         self.table_info = {}
         self.engine = engine
         self.session = create_session(bind=self.engine, autocommit=False)
-        self.metadata = MetaData(bind=self.engine)
-        self.base = automap_base(bind=engine, metadata=self.metadata)
+        self.metadata = MetaData()
+        self.base = automap_base(metadata=self.metadata)
 
     @classmethod
     def from_url(cls, db_url: str, mappings: None = None):
@@ -327,7 +327,6 @@ class SqlDbOutputStream(OutputStream):
 
     def flush(self):
         for tablename, (insert_statement, fallback_dict) in self.table_info.items():
-
             # Make sure every row has the same records per SQLAlchemy's rules
 
             # According to the SQL Alchemy docs, every dictionary in a set must
@@ -358,8 +357,8 @@ class SqlDbOutputStream(OutputStream):
 
     def create_or_validate_tables(self, inferred_tables: Dict[str, TableInfo]) -> None:
         create_tables_from_inferred_fields(inferred_tables, self.engine, self.metadata)
-        self.metadata.create_all()
-        self.base.prepare(self.engine, reflect=True)
+        self.metadata.create_all(bind=self.engine)
+        self.base.prepare(autoload_with=self.engine)
 
         # Setup table info used by the write-buffering infrastructure
         TableTuple = namedtuple("TableTuple", ["insert_statement", "fallback_dict"])
@@ -367,7 +366,7 @@ class SqlDbOutputStream(OutputStream):
         for tablename, model in self.metadata.tables.items():
             if tablename in inferred_tables:
                 table_info = TableTuple(
-                    insert_statement=model.insert(bind=self.engine, inline=True),
+                    insert_statement=model.insert().inline(),
                     fallback_dict={
                         key: None for key in inferred_tables[tablename].fields.keys()
                     },
@@ -463,7 +462,7 @@ def create_tables_from_inferred_fields(
             t = Table(table_name, metadata, id_column, *columns)
 
             if inspector.has_table(table_name):
-                stmt = select([func.count(t.c.id)])
+                stmt = select(func.count(t.c.id))
                 count = conn.execute(stmt).first()[0]
                 if count > 0:
                     raise DataGenError(

@@ -2,23 +2,23 @@ import typing as T
 
 from sqlalchemy import create_engine, MetaData, Column, Table, Unicode
 from sqlalchemy.sql import select
-
+from sqlalchemy.engine.base import Connection
 from snowfakery.data_gen_exceptions import DataGenError
 
 
 def create_cci_record_type_tables(db_url: str):
     """Create record type tables that CCI expects"""
     engine = create_engine(db_url)
-    metadata = MetaData(bind=engine)
-    metadata.reflect(views=True)
-    with engine.connect() as connection:
+    metadata = MetaData()
+    metadata.reflect(views=True, bind=engine)
+    with engine.connect() as connection, connection.begin():
         for tablename, table in list(metadata.tables.items()):
             record_type_column = find_record_type_column(
                 tablename, table.columns.keys()
             )
             if record_type_column:
                 rt_table = _create_record_type_table(tablename, metadata)
-                rt_table.create()
+                rt_table.create(bind=connection)
                 _populate_rt_table(connection, table, record_type_column, rt_table)
 
 
@@ -32,11 +32,11 @@ def _create_record_type_table(tablename: str, metadata: MetaData):
     return rt_map_table
 
 
-def _populate_rt_table(connection, table: Table, columnname: str, rt_table: Table):
+def _populate_rt_table(
+    connection: Connection, table: Table, columnname: str, rt_table: Table
+):
     column = getattr(table.columns, columnname)
-    query_res = connection.execute(
-        select([column]).where(column is not None).distinct()
-    )
+    query_res = connection.execute(select(column).where(column is not None).distinct())
     record_types = [res[0] for res in query_res if res[0]]
 
     if record_types:
@@ -45,6 +45,7 @@ def _populate_rt_table(connection, table: Table, columnname: str, rt_table: Tabl
             dict(zip(rt_table.columns.keys(), (rtname, rtname)))
             for rtname in record_types
         ]
+
         connection.execute(insert_stmt, rows)
 
 
