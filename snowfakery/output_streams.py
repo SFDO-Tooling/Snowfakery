@@ -1,6 +1,5 @@
 from abc import abstractmethod, ABC
 import json
-import sqlite3
 from tempfile import TemporaryDirectory
 import csv
 import subprocess
@@ -329,7 +328,6 @@ class SqlDbOutputStream(OutputStream):
 
     def flush(self):
         for tablename, (insert_statement, fallback_dict) in self.table_info.items():
-
             # Make sure every row has the same records per SQLAlchemy's rules
 
             # According to the SQL Alchemy docs, every dictionary in a set must
@@ -425,8 +423,7 @@ class SqlTextOutputStream(FileOutputStream):
         con = self.sql_db.engine.raw_connection()
 
         # https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.iterdump
-        assert isinstance(con, sqlite3.Connection)
-        for line in con.iterdump():
+        for line in con.iterdump():  # type: ignore
             assert self.text_output.stream
             self.text_output.stream.write("%s\n" % line)
 
