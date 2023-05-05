@@ -134,9 +134,12 @@ changes using our build system before merging to main.
 
 Build the docs like this:
 
-    : \$ make docs \$ open build/html/index.html
+```sh
+    $ make docs
+    $ open build/html/index.html
+```
 
-Set SF_MKDOCS_BUILD_LOCALES=False to skip building all locales
+Set `SF_MKDOCS_BUILD_LOCALES=False` to skip building all locales.
 
 ## Pull Request Guidelines
 
@@ -146,7 +149,7 @@ Before you submit a pull request, check that it meets these guidelines:
 - New classes, functions, etc have docstrings.
 - New code has comments.
 - Code style and file structure is similar to the rest of the project.
-- You have run the [black]{.title-ref} code formatter.
+- You properly installed the `pre-commit` hooks.
 
 ## Releasing Snowfakery
 
