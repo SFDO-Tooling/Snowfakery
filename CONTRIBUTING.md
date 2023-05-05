@@ -145,11 +145,11 @@ Set `SF_MKDOCS_BUILD_LOCALES=False` to skip building all locales.
 
 Before you submit a pull request, check that it meets these guidelines:
 
+- You properly installed the `pre-commit` hooks.
 - Documentation is updated to reflect all changes.
 - New classes, functions, etc have docstrings.
 - New code has comments.
 - Code style and file structure is similar to the rest of the project.
-- You properly installed the `pre-commit` hooks.
 
 ## Releasing Snowfakery
 
