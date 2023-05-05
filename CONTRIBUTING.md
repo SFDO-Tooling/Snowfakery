@@ -74,36 +74,69 @@ development.
     $ pre-commit install --install-hooks
     ```
 
-6.  After making changes, run the tests and make sure they all pass:
+6.  Add the current directory to your python path. The easy, one-time
+    way to do that is with a command like:
+
+    ```sh
+    $ export PYTHONPATH=.
+    ```
+
+    But if you install a tool like `direnv` then you won't need to remember
+    to do that every time you start a terminal or restart your computer.
+
+7.  After making changes, run the tests and make sure they all pass:
 
     ```{.shell}
     $ pytest
     ```
 
-7.  Build the docs like this:
+## Testing with CumulusCI
+
+It's a best practice to test your changes with CumulusCI. Some Snowfakery
+features "turn on" if CumulusCI is detected in the Python installation.
+Instead of 20+ tests being skipped you may see just a couple.
+
+You can install a local CumulusCI repo into your Snowfakery like this:
+
+```sh
+$ pip install -e ../CumulusCI
+```
+
+After this, your `pytest` should include many tests that would otherwise
+be skipped.
+
+## Testing and Coverage
+
+Your new code should also have meaningful tests. One way to double
+check that your tests cover everything is to ensure that your new
+code has test code coverage:
+
+    $ pytest --cov
+
+    or
+
+    $ make coverage
+
+Code should have 100% coverage. If some corner case is impractical
+to test, first, try to test it anyways. If you still think it is
+impractical (e.g. a one in a million error case which is hard to mock
+for some reason), you can use a declaration of `# pragma: no cover`
+to skip it.
+
+## Submitting your change
+
+Push your changes to GitHub and submit a pull request. The base
+branch should be a new feature branch that we create to receive the
+changes (contact us to create the branch). This allows us to test the
+changes using our build system before merging to main.
+
+## Contributing to the docs
+
+Build the docs like this:
 
     : \$ make docs \$ open build/html/index.html
 
 Set SF_MKDOCS_BUILD_LOCALES=False to skip building all locales
-
-8.  Your new code should also have meaningful tests. One way to double
-    check that your tests cover everything is to ensure that your new
-    code has test code coverage:
-
-    \$ pytest \--cov
-
-    or
-
-    \$ make coverage
-
-9.  Push your changes to GitHub and submit a pull request. The base
-    branch should be a new feature branch that we create to receive the
-    changes (contact us to create the branch). This allows us to test the
-    changes using our build system before merging to main.
-
-Note that we enable typeguard with pytest so if you add type
-declarations to your code, those declarations will be treated as runtime
-assertions in your python tests. MyPy validation is also on our roadmap.
 
 ## Pull Request Guidelines
 
