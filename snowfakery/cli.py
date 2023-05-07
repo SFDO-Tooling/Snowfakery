@@ -276,14 +276,6 @@ def validate_options(
             "Sorry, you need to pick --dburl or --output-file "
             "because they are mutually exclusive."
         )
-    if (
-        output_folder
-        and str(output_folder) != "."
-        and not (output_files or output_format == "csv")
-    ):
-        raise click.ClickException(
-            "--output-folder can only be used with --output-file=<something> or --output-format=csv"
-        )
 
     if target_number and reps:
         raise click.ClickException(

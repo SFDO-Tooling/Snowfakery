@@ -32,6 +32,8 @@ OUTPUT_FORMATS = {
     "jpg": "snowfakery.output_streams.ImageOutputStream",
     "ps": "snowfakery.output_streams.ImageOutputStream",
     "dot": "snowfakery.output_streams.GraphvizOutputStream",
+    "datapack": "snowfakery.experimental.DataPack",
+    "apex": "snowfakery.experimental.DataPack.ApexDataPack",
     "json": "snowfakery.output_streams.JSONOutputStream",
     "txt": "snowfakery.output_streams.DebugOutputStream",
     "csv": "snowfakery.output_streams.CSVOutputStream",
@@ -251,6 +253,10 @@ def _get_output_streams(dburls, output_files, output_format, output_folder):
 
             if output_stream_cls.uses_folder:
                 output_streams.append(output_stream_cls(output_folder))
+            elif output_folder and str(output_folder) != "." and not output_files:
+                raise exc.DataGenError(
+                    "--output-folder can only be used with --output-file=<something> or --output-format=csv"
+                )
 
         if output_files:
             for f in output_files:

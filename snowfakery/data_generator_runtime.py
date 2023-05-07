@@ -408,6 +408,8 @@ class Interpreter:
             self.iteration_count += 1
             continuing = True
             self.globals.reset_slots()
+            # let the output stream know that the recipe was finished
+            self.output_stream.complete_recipe()
             self.row_history.reset_locals()
 
     def loop_over_templates_once(self, statement_list, continuing: bool):

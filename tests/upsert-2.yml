@@ -1,6 +1,145 @@
+# Accounts
+
+- object: Account
+  nickname: Bluth Company
+  fields:
+    Name: Bluth Company
+- object: Account
+  nickname: Michael B Company
+  fields:
+    Name: Michael B. Company
+- object: Account
+  nickname: Austero Bluth Company
+  fields:
+    Name: Austero Bluth Company
+- object: Account
+  nickname: Sitwell Enterprises
+  fields:
+    Name: Sitwell Enterprises
+
+# Contacts
+
 - object: Contact
   update_key: email
+  nickname: GOB
+  fields:
+    firstname: GOB
+    lastname: Bluth
+    email: George.Oscar@bluth.com
+    AccountId:
+      reference: Bluth Company
+- object: Contact
+  update_key: email
+  nickname: Michael
+  fields:
+    firstname: Michael
+    lastname: Bluth
+    email: michael@bluth.com
+    AccountId:
+      reference: Michael B Company
+- object: Contact
+  update_key: email
+  nickname: Lucille-2
+  fields:
+    firstname: Lucille
+    lastname: Austero
+    email: Lucille.Austero@bluth.com
+    AccountId:
+      reference: Austero Bluth Company
+- object: Contact
+  update_key: email
+  nickname: Lindsay
+  fields:
+    firstname: Lindsay
+    lastname: Bluth
+    email: lindsay@bluth.com
+    AccountId:
+      reference: Sitwell Enterprises
+- object: Contact
+  update_key: email
+  nickname: anyong
   fields:
     firstname: Hel-Loh
     lastname: Bluth
     email: anyong@bluth.com
+- object: Contact
+  update_key: email
+  nickname: george
+  fields:
+    firstname: George
+    lastname: Bluth
+    email: boss@bluth.com
+- object: Contact
+  update_key: email
+  nickname: buster
+  fields:
+    firstname: Buster
+    lastname: Bluth
+    email: buster@bluth.com
+
+# Opportunities
+
+- object: Opportunity
+  update_key: Name
+  fields:
+    Name: Bluth Company Opp
+    AccountId:
+      reference: Bluth Company
+    # ContactId:
+    #   reference: GOB
+    CloseDate:
+      date_between:
+        start_date: -1y
+        end_date: today
+    StageName:
+      random_choice:
+        - Prospecting
+        - Pledged
+- object: Opportunity
+  update_key: Name
+  fields:
+    Name: Michael B Company Opp
+    AccountId:
+      reference: Michael B Company
+    # ContactId:
+    #   reference: Michael
+    CloseDate:
+      date_between:
+        start_date: -1y
+        end_date: today
+    StageName:
+      random_choice:
+        - Prospecting
+        - Pledged
+- object: Opportunity
+  update_key: Name
+  fields:
+    Name: Austero Bluth Company Opp
+    AccountId:
+      reference: Austero Bluth Company
+    # ContactId:
+    #   reference: Lucille-2
+    CloseDate:
+      date_between:
+        start_date: -1y
+        end_date: today
+    StageName:
+      random_choice:
+        - Prospecting
+        - Pledged
+- object: Opportunity
+  update_key: Name
+  fields:
+    Name: Sitwell Enterprises Opp
+    AccountId:
+      reference: Sitwell Enterprises
+    # ContactId:
+    #   reference: Lindsay
+    CloseDate:
+      date_between:
+        start_date: -1y
+        end_date: today
+    StageName:
+      random_choice:
+        - Prospecting
+        - Pledged
