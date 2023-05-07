@@ -1,0 +1,14 @@
+- snowfakery_version: 3
+- macro: sfContact
+  fields:
+    FirstName: Mickey
+    LastName: Mouse
+
+- macro: HedStudent
+  include: sfContact
+  fields:
+    hed__UniversityEmail__c: ${{FirstName}}.${{LastName}}@example.edu
+    LastName: Rourke
+
+- object: Contact
+  include: HedStudent

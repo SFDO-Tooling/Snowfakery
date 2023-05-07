@@ -216,6 +216,10 @@ def parse_structured_value(name: str, field: Dict, context: ParseContext) -> Def
         function_name, blank = top_level.pop(0)
         args = dict(top_level)
         args["__line__"] = field.get("__line__")
+    else:
+        raise NotImplementedError()
+        function_name = ""
+
     plugin = None
     if "." in function_name:
         namespace, name = function_name.split(".")
@@ -304,17 +308,20 @@ def include_macro(
     parsed_macro = parse_element(
         macro, "macro", {}, {"fields": Dict, "friends": List, "include": str}, context
     )
-    fields = parsed_macro.fields or {}
-    friends = parsed_macro.friends or []
-    fields, friends = parse_fields(fields, context), parse_friends(friends, context)
     if name in parent_macros:
         idx = parent_macros.index(name)
         raise exc.DataGenError(
             f"Macro `{name}` calls `{'` which calls `'.join(parent_macros[idx+1:])}` which calls `{name}`",
             **context.line_num(macro),
         )
+
+    fields = []
+    friends = []
     parse_inclusions(macro, fields, friends, context, parent_macros + (name,))
-    return fields, friends
+    fields.extend(parse_fields(parsed_macro.fields or {}, context))
+    friends.extend(parse_friends(parsed_macro.friends or [], context))
+
+    return _dedupe_field_list(fields), friends
 
 
 def parse_inclusions(
@@ -352,6 +359,10 @@ def check_identifier(name: T.Optional[str], source: dict, context: str):
         )
 
 
+def _dedupe_field_list(fields: Sequence[FieldFactory]):
+    return list({f.name: f for f in fields}.values())
+
+
 def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTemplate:
     parsed_template: Any = parse_element(
         dct=yaml_sobj,
@@ -386,6 +397,7 @@ def parse_object_template(yaml_sobj: Dict, context: ParseContext) -> ObjectTempl
         parse_inclusions(yaml_sobj, fields, friends, context)
         fields.extend(parse_fields(parsed_template.fields or {}, context))
         friends.extend(parse_friends(parsed_template.friends or [], context))
+        fields[:] = _dedupe_field_list(fields)
         sobj_def["nickname"] = nickname = parsed_template.nickname
         check_identifier(nickname, yaml_sobj, "Nicknames")
         sobj_def["just_once"] = parsed_template.just_once or False

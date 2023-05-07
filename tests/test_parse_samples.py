@@ -1,5 +1,7 @@
+from io import StringIO
 import pathlib
 from unittest import mock
+from snowfakery.output_streams import DebugOutputStream
 
 from snowfakery.data_generator import generate
 
@@ -90,3 +92,15 @@ class TestParseAndOutput:
         assert find_row("Account", {}, calls)
         assert find_row("Contact", {}, calls)
         assert find_row("Opportunity", {}, calls)
+
+    def test_parse_nested_macros(self):
+        f = StringIO()
+        filename = (
+            pathlib.Path(__file__).parent.parent / "examples/nested_macros.recipe.yml"
+        )
+        with open(filename) as yaml:
+            generate(yaml, output_stream=DebugOutputStream(f))
+        assert (
+            f.getvalue()
+            == pathlib.Path(str(filename).replace(".yml", ".out")).read_text()
+        )
