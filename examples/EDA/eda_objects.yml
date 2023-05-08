@@ -1,4 +1,5 @@
 # most of the declarations are actually in the macro file
+- snowfakery_version: 3
 - include_file: eda_macros.yml
 
 # Account, Contact, Opportunity, etcs.

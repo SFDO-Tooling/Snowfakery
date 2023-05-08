@@ -1,4 +1,5 @@
 # Account, Contact, Opportunity, etcs.
+- snowfakery_version: 3
 - include_file: ../salesforce/standard_objs.recipe.yml
 
 - macro: incl_hed__Address__c

@@ -1,3 +1,4 @@
+- snowfakery_version: 3
 - object: Example
   fields:
     unique_code: ${{unique_alpha_code}}

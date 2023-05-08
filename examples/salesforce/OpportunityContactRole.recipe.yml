@@ -1,5 +1,6 @@
 ## Show how to create OpportunityContactRoles
 ## in context of other major objects
+- snowfakery_version: 3
 
 # To run this code against an org named 'qa':
 #

@@ -1,3 +1,4 @@
+- snowfakery_version: 3
 - include_file: npsp_standard_objects_macros.yml
 - option: num_accounts
   default: 5

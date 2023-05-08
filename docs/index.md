@@ -12,7 +12,7 @@ Snowfakery can write its output to `stdout`, or any database accessible to SQLAl
 
 If you intend to use Snowfakery with Salesforce, we recommend installing CumulusCI, which includes Snowfakery in the installation. To install CumulusCI, follow the steps in the [Get Started](https://cumulusci.readthedocs.io/en/latest/get-started.html) section of the CumulusCI documentation. (Don't forget to install [Python](https://www.python.org/downloads/), too!)
 
-After installation, from your development environment of choice (e.g. VS Code), create a Snowfakery recipe file in your working directory (with a file extension .yml).  Then, open a terminal and use the `snowfakery` task command to invoke Snowfakery, referencing the file you just created.  Of course, you will want your recipe to include good instructions.  We'll cover that in the rest of this documentation!
+After installation, from your development environment of choice (e.g. VS Code), create a Snowfakery recipe file in your working directory (with a file extension .yml). Then, open a terminal and use the `snowfakery` task command to invoke Snowfakery, referencing the file you just created. Of course, you will want your recipe to include good instructions. We'll cover that in the rest of this documentation!
 
 ```s
 $ snowfakery somefile.yml
@@ -29,7 +29,8 @@ $ pip3 install pipx
 $ pipx install snowfakery
 ...
 ```
-After installation, from your development environment of choice (e.g. VS Code), create a Snowfakery recipe file recipe file in your working directory (with a file extension .yml).  Then, open a terminal and use the `snowfakery` task command to invoke Snowfakery, referencing the file you just created.  Of course, you will want your recipe to include good instructions.  We'll cover that in the rest of this documentation!
+
+After installation, from your development environment of choice (e.g. VS Code), create a Snowfakery recipe file recipe file in your working directory (with a file extension .yml). Then, open a terminal and use the `snowfakery` task command to invoke Snowfakery, referencing the file you just created. Of course, you will want your recipe to include good instructions. We'll cover that in the rest of this documentation!
 
 After installation, use the `snowfakery` task command to invoke Snowfakery.
 
@@ -42,9 +43,14 @@ $ snowfakery somefile.yml
 
 Snowfakery recipes are specified in the simple, human-readable [YAML](http://yaml.org/) format. A YAML file is designated by the `.yml` extension.
 
+They typically begin with a version declaration to say which version
+of the snowfakery language you want to use. The current version is 3
+and new recipes should use it.
+
 Let's start with a stupidly simple recipe named `simple_static.yml`. In this example, you can see that YAML uses indentation to define what parts of the file are related to each other.
 
 ```yaml
+- snowfakery_version: 3
 - object: Person
   fields:
     name: Buster Bluth
@@ -76,6 +82,7 @@ Snowfakery only works for models that are amenable to including an `id` field fo
 Let's make a new recipe named `persons_of_interest.yml` that requires Snowfakery to do some automation.
 
 ```yaml
+- snowfakery: version
 - object: Person
   count: 3
   fields:
@@ -114,6 +121,7 @@ We've created people! Or at least fake personas for people! And every time you r
 While that's pretty cool, it doesn't use much of Snowfakery's power. Let's go deeper with a recipe named `pet_stories.yml`.
 
 ```yaml
+- snowfakery_version: 3
 - object: Person
   count: 3
   fields:
@@ -346,6 +354,7 @@ Let's use the `reference` feature in a recipe named `secret_life_of_pets.yml`.
 
 ```yaml
 # snowfakery/docs/examples/secret_life_of_pets.yml
+- snowfakery_version: 3
 - object: Person
   count: 3
   fields:
@@ -540,6 +549,7 @@ Let's explore this syntax with a recipe named `random-choice-complex.yml`.
 
 ```yaml
 # examples/random-choice-complex.yml
+- snowfakery_version: 3
 - object: Task
   count:
     random_choice:
@@ -626,6 +636,7 @@ In the case above, it is clear that the scope of the uniqueness should be the Pe
 
 ```yaml
 # examples/salesforce/campaign-member.yml
+- snowfakery_version: 3
 - object: Campaign
   count: 5
   fields:
@@ -735,6 +746,7 @@ Some example of randomized datetimes:
 
 ```yaml
 # tests/test_fake_datetimes.yml
+- snowfakery_version: 3
 - object: OBJ
   fields:
     past:
@@ -809,6 +821,7 @@ Let's use `if` and `when` in a recipe named `conditional.yml`.
 
 ```yaml
 # examples/conditional.yml
+- snowfakery_version: 3
 - object: Person
   fields:
     gender:
@@ -907,6 +920,7 @@ The debug function can "wrap" any formula expression and return its value.
 
 ```yaml
 # tests/debug.recipe.yml
+- snowfakery_version: 3
 - object: Example
   fields:
     value1: ${{ debug(399 + 21) / 10 }}
@@ -980,6 +994,7 @@ To insert data from one field into into another, use a formula.
 
 ```yaml
 # examples/price_math.recipe.yml
+- snowfakery_version: 3
 - object: Sale
   fields:
     num_items:
@@ -1025,6 +1040,7 @@ The relevant section of the Jinja document is called [Expressions](https://jinja
 
 ```yaml
 # examples/jinja_filters.recipe.yml
+- snowfakery_version: 3
 - object: Campaign
   fields:
     Name: ${{fake.bs | title}} Campaign
@@ -1055,6 +1071,7 @@ an employee ID.
 
 ```yaml
 # examples/unique_id/test_unique_id.yml
+- snowfakery_version: 3
 - object: Contact
   count: 3
   fields:
@@ -1103,6 +1120,7 @@ the bigger they will grow.
 
 ```yaml
 # examples/unique_id/test_unique_alpha_code.yml
+- snowfakery_version: 3
 - object: Contact
   count: 3
   fields:
@@ -1138,6 +1156,7 @@ ways of outputting the timestamp:
 
 ```yaml
 # tests/test_now.yml
+- snowfakery_version: 3
 - object: Times
   fields:
     current_datetime: ${{now}}
@@ -1162,6 +1181,7 @@ Let's use `fake:` and `fake.` in a recipe named `two_fakers.yml`.
 
 ```yaml
 # examples/two_fakers.yml
+- snowfakery_version: 3
 - object: Contact
   fields:
     FirstName:
@@ -1503,6 +1523,7 @@ Let's examine the relationships featured in the recipe named `company.yml`. You 
 
 ```yaml
 # examples/company.yml
+- snowfakery_version: 3
 - object: Company
   fields:
     Name:
@@ -1541,6 +1562,7 @@ Let's use the `friends` feature in a recipe named `company2.yml`.
 
 ```yaml
 # examples/company2.yml
+- snowfakery_version: 3
 - object: Company
   count: 10
   fields:
@@ -1561,6 +1583,7 @@ And let's use the `hidden fields`([#hidden-fields-and-objects]) feature in a rec
 
 ```yaml
 # examples/company3.yml
+- snowfakery_version: 3
 - object: Company
   count: 10
   fields:
@@ -1648,6 +1671,7 @@ Snowfakery can generate incrementing numbers like this:
 
 ```yaml
 # examples/counters/number_counter.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Counters
 - object: Example
   count: 10
@@ -1678,6 +1702,7 @@ You can also control the start position and "step" like this:
 
 ```yaml
 # examples/counters/counter_start.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Counters
 - object: Example
   count: 10
@@ -1875,6 +1900,7 @@ bigger or smaller as below:
 
 ```yaml
 # examples/unique_id/alphabet.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.UniqueId
 - var: LargeAlphabetGenerator
   value:
@@ -1913,6 +1939,7 @@ You can control the minimum (but not the maximum) length of a unique code:
 
 ```yaml
 # examples/unique_id/min_length.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.UniqueId
 - var: MySmallCodeGenerator
   value:
@@ -1991,6 +2018,7 @@ CSV file (or database table, or Salesforce Query) using the
 
 ```yaml
 # examples/datasets/simple_for_each.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.datasets.Dataset
 
 - object: Person
@@ -2147,6 +2175,7 @@ an address for every one, you do it like this:
 
 ```
 # examples/updates/update_contacts.recipe.yml
+- snowfakery_version: 3
 - object: Contact
   fields:
     FirstName:
@@ -2198,6 +2227,7 @@ A simple example is scheduling the next ten Halloween Days:
 
 ```yaml
 # examples/schedule/halloween.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Schedule
 - object: ScaryEvent
   count: 5
@@ -2229,6 +2259,7 @@ By supplying a more precise `start_date`, we can generate
 
 ```yaml
 # examples/schedule/haunting.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Schedule
 - object: ScaryEvent
   count: 5
@@ -2257,6 +2288,7 @@ the timezone of the `start_date`:
 
 ```yaml
 # examples/schedule/with_timezone.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Schedule
 - object: ScaryEvent
   count: 5
@@ -2286,6 +2318,7 @@ For exaample:
 
 ```yaml
 # examples/schedule/secondly.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Schedule
 - object: Seconds
   count: 5
@@ -2314,6 +2347,7 @@ parameter to achieve day-of-week schedules like Monday/Wednesday/Friday.
 
 ```yaml
 # examples/schedule/monday_wednesday_friday.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Schedule
 - object: Meeting
   count: 5
@@ -2343,6 +2377,7 @@ a date in that period.
 
 ```yaml
 # examples/schedule/monday_wednesday_friday_monthly.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Schedule
 - object: Meeting
   count: 10
@@ -2387,6 +2422,7 @@ etc.
 
 ```yaml
 # examples/schedule/bymonthday.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Schedule
 - object: ThirdDayOfMonth
   count: 5
@@ -2429,6 +2465,7 @@ The `byyearday` feature is similar to the `bymonthday` one.
 
 ```yaml
 # examples/schedule/byyearday.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Schedule
 - object: ThirdDayOfYear
   count: 5
@@ -2472,6 +2509,7 @@ above, but with datetimes. The numbers used must be positive integers.
 
 ```yaml
 # examples/schedule/bytimes.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Schedule
 - object: Hours
   count: 5
@@ -2537,6 +2575,7 @@ interval:
 
 ```yaml
 # examples/schedule/every_third_week.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Schedule
 - object: Meeting
   count: 5
@@ -2564,6 +2603,7 @@ We can also combine features, for example to get every second Monday:
 
 ```yaml
 # examples/schedule/every_other_monday.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Schedule
 - object: Meeting
   count: 5
@@ -2594,6 +2634,7 @@ and generate the correct number of rows to match them:
 
 ```yaml
 # examples/schedule/for_each_date.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Schedule
 
 - object: Mondays
@@ -2612,15 +2653,15 @@ This would generate this data:
 
 ```s
 # examples/schedule/for_each_date.recipe.out
-Mondays(id=1, Date=2025-01-01 00:00:00+00:00)
-Mondays(id=2, Date=2025-01-08 00:00:00+00:00)
-Mondays(id=3, Date=2025-01-15 00:00:00+00:00)
-Mondays(id=4, Date=2025-01-22 00:00:00+00:00)
-Mondays(id=5, Date=2025-01-29 00:00:00+00:00)
-Mondays(id=6, Date=2025-02-05 00:00:00+00:00)
-Mondays(id=7, Date=2025-02-12 00:00:00+00:00)
-Mondays(id=8, Date=2025-02-19 00:00:00+00:00)
-Mondays(id=9, Date=2025-02-26 00:00:00+00:00)
+Mondays(id=1, Date=2025-01-01T00:00:00+00:00)
+Mondays(id=2, Date=2025-01-08T00:00:00+00:00)
+Mondays(id=3, Date=2025-01-15T00:00:00+00:00)
+Mondays(id=4, Date=2025-01-22T00:00:00+00:00)
+Mondays(id=5, Date=2025-01-29T00:00:00+00:00)
+Mondays(id=6, Date=2025-02-05T00:00:00+00:00)
+Mondays(id=7, Date=2025-02-12T00:00:00+00:00)
+Mondays(id=8, Date=2025-02-19T00:00:00+00:00)
+Mondays(id=9, Date=2025-02-26T00:00:00+00:00)
 ```
 
 #### Inclusions
@@ -2631,6 +2672,7 @@ Includes can be either simple dates or other schedules:
 
 ```yaml
 # examples/schedule/inclusions.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Schedule
 
 - object: MonthlyEventsPlusValentines
@@ -2665,6 +2707,7 @@ The total number of events that will be created are 15.
 
 ```yaml
 # examples/schedule/deep_inclusions.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Schedule
 - object: TheEvent
   count: 15
@@ -2693,6 +2736,7 @@ just the event on May 1, 2025:
 
 ```yaml
 # examples/schedule/exclusions_no_May.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Schedule
 - object: MonthlyEventsExceptMay
   count: 12
@@ -2709,6 +2753,7 @@ of 2025:
 
 ```yaml
 # examples/schedule/exclusions_no_summer.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Schedule
 
 - object: MonthlyEventsExceptSummer
@@ -2808,6 +2853,7 @@ Snowfakery is a domain-specific programming language with access to most of the 
 # How many were there going to St. Ives?
 #
 # https://en.wikipedia.org/wiki/As_I_was_going_to_St_Ives
+- snowfakery_version: 3
 - object: narrator
 - object: man
   fields:
