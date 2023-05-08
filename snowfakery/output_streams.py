@@ -318,7 +318,12 @@ class SqlDbOutputStream(OutputStream):
     def from_url(cls, db_url: str, mappings: None = None):
         if mappings:  # pragma: no cover  -- should not be triggered.
             warn("Please do not pass mappings argument to from_url", DeprecationWarning)
-        engine = create_engine(db_url)
+        try:
+            engine = create_engine(db_url)
+        except ModuleNotFoundError as e:
+            raise DataGenError(f"Cannot find a driver for your database: {e}")
+        except Exception as e:
+            raise DataGenError(f"Cannot connect to database: {e}")
         self = cls(engine)
         return self
 
@@ -357,7 +362,12 @@ class SqlDbOutputStream(OutputStream):
         self.session.close()
 
     def create_or_validate_tables(self, inferred_tables: Dict[str, TableInfo]) -> None:
-        create_tables_from_inferred_fields(inferred_tables, self.engine, self.metadata)
+        try:
+            create_tables_from_inferred_fields(
+                inferred_tables, self.engine, self.metadata
+            )
+        except Exception as e:
+            raise DataGenError(f"Cannot write to database: {e}")
         self.metadata.create_all()
         self.base.prepare(self.engine, reflect=True)
 
