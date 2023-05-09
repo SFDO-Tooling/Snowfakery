@@ -209,7 +209,7 @@ def parse_structured_value(name: str, field: Dict, context: ParseContext) -> Def
         raise exc.DataGenSyntaxError(
             f"Strange datastructure ({field})", **context.line_num(field)
         )
-    if len(top_level) == 1:
+    elif len(top_level) == 1:
         [[function_name, args]] = top_level
     elif len(top_level) > 1:
         top_level = list(top_level)
@@ -217,8 +217,7 @@ def parse_structured_value(name: str, field: Dict, context: ParseContext) -> Def
         args = dict(top_level)
         args["__line__"] = field.get("__line__")
     else:
-        raise NotImplementedError()
-        function_name = ""
+        raise NotImplementedError("This should be unreachable!")
 
     plugin = None
     if "." in function_name:
