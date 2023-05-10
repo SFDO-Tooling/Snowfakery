@@ -6,7 +6,6 @@ from contextlib import contextmanager
 
 from typing import Optional, Dict, Sequence, Mapping, NamedTuple, Set
 import typing as T
-from warnings import warn
 
 import jinja2
 from jinja2 import nativetypes
@@ -423,10 +422,7 @@ class Interpreter:
 
     def __exit__(self, *args):
         for plugin in self.plugin_instances.values():
-            try:
-                plugin.close()
-            except Exception as e:
-                warn(f"Could not close {plugin} because {e}")
+            plugin.close()
         self.current_context = None
         self.plugin_instances = None
         self.plugin_function_libraries = None

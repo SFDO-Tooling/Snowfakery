@@ -24,6 +24,7 @@ from snowfakery.utils.yaml_utils import SnowfakeryDumper
 def _open_db(db_url):
     "Internal function for opening the database up."
     engine = create_engine(db_url)
+    print("datasets pluginn", db_url)
     metadata = MetaData()
     metadata.reflect(views=True, bind=engine)
     return engine, metadata
@@ -197,6 +198,9 @@ class DatasetBase:
 
 
 class FileDataset(DatasetBase):
+    def close(self):
+        pass
+
     def _load_dataset(self, iteration_mode, rootpath, kwargs):
         dataset = kwargs.get("dataset")
         tablename = kwargs.get("table")

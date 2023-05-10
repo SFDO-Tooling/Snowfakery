@@ -7,7 +7,7 @@ from collections import defaultdict
 import locale
 
 import click
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, text
 
 from snowfakery import generate_data
 
@@ -50,7 +50,6 @@ def snowbench(
     with TemporaryDirectory() as tempdir, click.progressbar(
         label="Benchmarking", length=num_records, show_eta=False
     ) as progress_bar:
-
         start = time()
         Thread(
             daemon=True,
@@ -129,7 +128,7 @@ def status(tempdir, num_records, num_records_tablename, progress_bar):
     start = time()
     sleep(2)
     previous_count = 0
-    for i in range(1, 10 ** 20):
+    for i in range(1, 10**20):
         sleep(1)
         if i in (2, 5, 10, 20, 30, 45, 90, 150) or (i % 60 == 0):
             print()
@@ -170,7 +169,8 @@ def count_database(filename, counts):
 
 
 def count_table(engine, tablename):
-    return engine.execute(f"select count(Id) from '{tablename}'").first()[0]
+    with engine.connect() as c:
+        return c.execute(text(f"select count(Id) from '{tablename}'")).first()[0]
 
 
 def snowfakery(recipe, num_records, tablename, outputfile):
