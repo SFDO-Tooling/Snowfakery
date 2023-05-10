@@ -326,6 +326,7 @@ class SqlDbOutputStream(OutputStream):
         except Exception as e:
             raise DataGenError(f"Cannot connect to database: {e}")
         self = cls(engine)
+        setattr(self, "url", db_url)
         return self
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
@@ -365,11 +366,15 @@ class SqlDbOutputStream(OutputStream):
         print("Starting close, SqlDbOutputStream")
         self.commit()
         self.session.close()
+        self.engine.dispose()
         del self.session
         del self.engine
         del self.metadata
         del self.base
-        print("Ending close")
+        # Gross hack
+        filename = getattr(self, "url").removeprefix("sqlite:///")
+        print("Ending close", filename, Path(filename).exists())
+        print(dir(self))
 
     def create_or_validate_tables(self, inferred_tables: Dict[str, TableInfo]) -> None:
         try:
