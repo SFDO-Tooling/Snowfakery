@@ -364,6 +364,9 @@ class SqlDbOutputStream(OutputStream):
         self.commit()
         self.session.close()
         del self.session
+        del self.engine
+        del self.metadata
+        del self.base
 
     def create_or_validate_tables(self, inferred_tables: Dict[str, TableInfo]) -> None:
         try:
