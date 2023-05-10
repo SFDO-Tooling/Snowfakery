@@ -5,7 +5,7 @@ from unittest.mock import patch
 from io import StringIO
 from contextlib import contextmanager
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 import pytest
 
@@ -46,7 +46,10 @@ class Test_CLI_CCI:
 
             engine = create_engine(url)
             with engine.connect() as connection:
-                result = list(connection.execute("select * from Account"))
+                result = [
+                    row._mapping
+                    for row in connection.execute(text("select * from Account"))
+                ]
                 assert result[0]["id"] == 1
                 assert result[0]["BillingCountry"] == "Canada"
 

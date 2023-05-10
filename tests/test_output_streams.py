@@ -14,7 +14,7 @@ import pytest
 
 from click.exceptions import ClickException
 
-from sqlalchemy import Column, MetaData, Table, Unicode, create_engine
+from sqlalchemy import Column, MetaData, Table, text, Unicode, create_engine
 
 from snowfakery.output_streams import (
     SqlDbOutputStream,
@@ -173,7 +173,12 @@ class TestSqlDbOutputStream(OutputCommonTests):
             engine = create_engine(url)
             with engine.connect() as connection:
                 tables = {
-                    table_name: list(connection.execute(f"select * from {table_name}"))
+                    table_name: [
+                        row._mapping
+                        for row in connection.execute(
+                            text(f"select * from {table_name}")
+                        )
+                    ]
                     for table_name in table_names
                 }
                 return tables
@@ -194,12 +199,13 @@ class TestSqlDbOutputStream(OutputCommonTests):
         with named_temporary_file_path() as f:
             url = f"sqlite:///{f}"
             engine = create_engine(url)
-            metadata = MetaData(bind=engine)
+            metadata = MetaData()
 
             id_column = Column("id", Unicode(255))
             t = Table("Account", metadata, id_column)
-            metadata.create_all()
-            t.insert([[5]]).execute()
+            metadata.create_all(bind=engine)
+            with engine.begin() as c:
+                c.execute(t.insert().values([[5]]))
 
             with pytest.raises(exc.DataGenError, match="Table already exists"):
                 output_stream = SqlDbOutputStream.from_url(url)

@@ -24,8 +24,8 @@ from snowfakery.utils.yaml_utils import SnowfakeryDumper
 def _open_db(db_url):
     "Internal function for opening the database up."
     engine = create_engine(db_url)
-    metadata = MetaData(bind=engine)
-    metadata.reflect(views=True)
+    metadata = MetaData()
+    metadata.reflect(views=True, bind=engine)
     return engine, metadata
 
 
@@ -79,7 +79,7 @@ class SQLDatasetIterator(DatasetIteratorBase):
 
     def start(self):
         self.results = (
-            DatasetPluginResult(dict(row))
+            DatasetPluginResult(dict(row._mapping))
             for row in self.connection.execute(self.query())
         )
 
@@ -96,14 +96,14 @@ class SQLDatasetLinearIterator(SQLDatasetIterator):
     "Iterator that reads a SQL table from top to bottom"
 
     def query(self):
-        return select([self.table])
+        return select(self.table)
 
 
 class SQLDatasetRandomPermutationIterator(SQLDatasetIterator):
     "Iterator that reads a SQL table in random order"
 
     def query(self):
-        return select([self.table]).order_by(func.random())
+        return select(self.table).order_by(func.random())
 
 
 class CSVDatasetLinearIterator(DatasetIteratorBase):

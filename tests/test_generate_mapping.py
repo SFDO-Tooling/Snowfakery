@@ -2,6 +2,7 @@ from io import StringIO
 from pathlib import Path
 
 import pytest
+from sqlalchemy import text
 
 from snowfakery import data_gen_exceptions as exc
 from snowfakery.api import generate_data
@@ -413,7 +414,7 @@ class TestRecordTypes:
                 RecordType: Bar
               """
         with generate_in_tmpdir(recipe_data) as (mapping, db):
-            records = list(db.execute("SELECT * from Obj_rt_mapping"))
+            records = list(db.execute(text("SELECT * from Obj_rt_mapping")))
             assert records == [("Bar", "Bar")], records
             assert mapping["Insert Obj"]["fields"]["RecordTypeId"] == "RecordType"
 
@@ -424,7 +425,7 @@ class TestRecordTypes:
                 recordtype: Bar
               """
         with generate_in_tmpdir(recipe_data) as (mapping, db):
-            records = list(db.execute("SELECT * from Case_rt_mapping"))
+            records = list(db.execute(text("SELECT * from Case_rt_mapping")))
             assert records == [("Bar", "Bar")], records
             assert mapping["Insert Case"]["fields"]["RecordTypeId"] == "recordtype"
 
@@ -438,7 +439,7 @@ class TestRecordTypes:
                 blah: Blah
               """
         with generate_in_tmpdir(recipe_data) as (mapping, db):
-            records = list(db.execute("SELECT * from Case_rt_mapping"))
+            records = list(db.execute(text("SELECT * from Case_rt_mapping")))
             assert records == [("Bar", "Bar")], records
             assert mapping["Insert Case"]["fields"]["RecordTypeId"] == "recordtype"
 
@@ -498,7 +499,7 @@ class TestPersonAccounts:
             self._standard_validations(mapping, db)
 
     def _standard_validations(self, mapping, db):
-        records = list(db.execute("SELECT * from PersonContact"))
+        records = list(db.execute(text("SELECT * from PersonContact")))
         assert records == [(1, "true", "1")], records
         assert mapping["Insert PersonContact"] == {
             "fields": {"IsPersonAccount": "IsPersonAccount"},
@@ -682,7 +683,7 @@ class TestPersonAccounts:
                     "filters": ["_sf_update_key = NULL"],
                 },
             }
-            rows = list(db.execute("select Name, _sf_update_key from User"))
+            rows = list(db.execute(text("select Name, _sf_update_key from User")))
             print(rows)
             assert rows == [
                 ("UpdateByNamePerson", "Name"),
