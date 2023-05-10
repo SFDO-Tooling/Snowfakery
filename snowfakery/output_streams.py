@@ -369,6 +369,7 @@ class SqlDbOutputStream(OutputStream):
         del self.engine
         del self.metadata
         del self.base
+        print("Ending close")
 
     def create_or_validate_tables(self, inferred_tables: Dict[str, TableInfo]) -> None:
         try:
