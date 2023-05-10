@@ -174,14 +174,16 @@ class TestSqlDbOutputStream(OutputCommonTests):
             with engine.connect() as connection:
                 tables = {
                     table_name: [
-                        row._mapping
+                        dict(row._mapping)
                         for row in connection.execute(
                             text(f"select * from {table_name}")
                         )
                     ]
                     for table_name in table_names
                 }
-                return tables
+            engine.dispose()
+            del engine
+        return tables
 
     def test_null(self):
         yaml = """
@@ -222,7 +224,7 @@ class TestSqlDbOutputStream(OutputCommonTests):
             self.do_output(yaml, "unknowndb://foo/bar/baz")
 
         # missing driver
-        with pytest.raises(exc.DataGenError, match="firebird"):
+        with pytest.raises(exc.DataGenError, match="(fdb)|(firebird)"):
             self.do_output(yaml, "firebird://foo/bar/baz")
 
         # cannot connect
