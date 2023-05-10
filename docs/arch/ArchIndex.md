@@ -66,6 +66,10 @@ The parser generates an object called a [ParseResult](https://github.com/SFDO-To
 
 The ParseResult is [analyzed](https://github.com/SFDO-Tooling/Snowfakery/search?q=parse_result+parse_recipe&type=code) and then used as input to the Interpreter.
 
+Snowfakery is based upon YAML, but unlike in the canonical YAML model,
+the order of keys does matter in Snowfakery. In particular, the first
+key defines the type of objects in the Snowfakery dialect.
+
 ## The Interpreter Object
 
 The [Interpreter](https://github.com/SFDO-Tooling/Snowfakery/search?q=%22class+Interpreter%22&type=code)
