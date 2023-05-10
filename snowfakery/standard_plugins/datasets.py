@@ -3,6 +3,7 @@ from contextlib import contextmanager, ExitStack
 from csv import DictReader
 from pathlib import Path
 from random import shuffle
+from typing import Any, Optional
 
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.sql.elements import quoted_name
@@ -28,7 +29,9 @@ def _open_db(db_url):
     return engine, metadata
 
 
-def sql_dataset(db_url: str, tablename: str = None, mode="linear", repeat: bool = True):
+def sql_dataset(
+    db_url: str, tablename: Optional[str] = None, mode="linear", repeat: bool = True
+):
     "Open the right SQL Dataset iterator based on the params"
     assert db_url
     engine, metadata = _open_db(db_url)
@@ -37,6 +40,7 @@ def sql_dataset(db_url: str, tablename: str = None, mode="linear", repeat: bool 
         for name, value in metadata.tables.items()
         if not name.startswith("sqlite")
     }
+    table = None
     if tablename:
         table = tables.get(tablename)
         if table is None:
@@ -114,8 +118,9 @@ class CSVDatasetLinearIterator(DatasetIteratorBase):
         super().__init__(repeat)
 
     def start(self):
+        assert self.file
         self.file.seek(0)
-        d = DictReader(self.file)
+        d = DictReader(self.file)  # type: ignore
 
         plugin_result = self.plugin_result
         self.results = (plugin_result(row) for row in d)
@@ -161,8 +166,9 @@ class CSVDatasetRandomPermutationIterator(CSVDatasetLinearIterator):
     #     rows in each partition and then pick randomly among the partitions
     #     before grabbing a row
     def start(self):
+        assert self.file
         self.file.seek(0)
-        d = DictReader(self.file)
+        d = DictReader(self.file)  # type: ignore
         rows = [DatasetPluginResult(row) for row in d]
         shuffle(rows)
 
@@ -187,8 +193,7 @@ class DatasetBase:
         raise NotImplementedError()
 
     def close(self):
-        for dataset in self.datasets.values():
-            dataset.close()
+        raise NotImplementedError()
 
 
 class FileDataset(DatasetBase):
@@ -219,6 +224,8 @@ class FileDataset(DatasetBase):
 
 class DatasetPluginBase(SnowfakeryPlugin):
     class Functions:
+        context: Any
+
         @memorable
         def iterate(self, **kwargs):
             return self.context.plugin.dataset_impl._get_dataset_instance(
@@ -257,4 +264,4 @@ def chdir(path):
         os.chdir(cwd)
 
 
-SnowfakeryDumper.add_representer(quoted_name, Representer.represent_str)
+SnowfakeryDumper.add_representer(quoted_name, Representer.represent_str)  # type: ignore
