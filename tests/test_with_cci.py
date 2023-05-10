@@ -43,7 +43,7 @@ class Test_CLI_CCI:
                 ],
                 standalone_mode=False,
             )
-
+            print("test_with_cci", url)
             engine = create_engine(url)
             with engine.connect() as connection:
                 result = [

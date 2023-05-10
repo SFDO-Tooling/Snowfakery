@@ -170,6 +170,7 @@ class TestSqlDbOutputStream(OutputCommonTests):
             results = generate(StringIO(yaml), {}, output_stream)
             table_names = results.tables.keys()
             output_stream.close()
+            print("do_output", url)
             engine = create_engine(url)
             with engine.connect() as connection:
                 tables = {

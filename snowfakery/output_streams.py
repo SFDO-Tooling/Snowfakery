@@ -319,6 +319,7 @@ class SqlDbOutputStream(OutputStream):
         if mappings:  # pragma: no cover  -- should not be triggered.
             warn("Please do not pass mappings argument to from_url", DeprecationWarning)
         try:
+            print("create_engine from_url", db_url)
             engine = create_engine(db_url)
         except ModuleNotFoundError as e:
             raise DataGenError(f"Cannot find a driver for your database: {e}")
@@ -361,6 +362,7 @@ class SqlDbOutputStream(OutputStream):
             self.flush()
 
     def close(self, **kwargs) -> Optional[Sequence[str]]:
+        print("Starting close, SqlDbOutputStream")
         self.commit()
         self.session.close()
         del self.session
@@ -417,6 +419,7 @@ class SqlTextOutputStream(FileOutputStream):
     def _init_db(self):
         "Initialize a db through an owned output stream"
         db_url = f"sqlite:///{self.tempdir.name}/tempdb.db"
+        print("create_engine _init_db", db_url)
         engine = create_engine(db_url)
         return SqlDbOutputStream(engine)
 
@@ -447,6 +450,7 @@ class SqlTextOutputStream(FileOutputStream):
         con.close()
 
     def close(self, *args, **kwargs):
+        print("starting close", self.tempdir)
         self._dump_db()
         self.sql_db.close(*args, **kwargs)
         self.text_output.close(*args, **kwargs)

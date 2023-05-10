@@ -8,6 +8,7 @@ from snowfakery.data_gen_exceptions import DataGenError
 
 def create_cci_record_type_tables(db_url: str):
     """Create record type tables that CCI expects"""
+    print("create_cci_record_type_tables", db_url)
     engine = create_engine(db_url)
     metadata = MetaData()
     metadata.reflect(views=True, bind=engine)

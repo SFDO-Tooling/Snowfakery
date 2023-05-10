@@ -90,6 +90,7 @@ def generate_in_tmpdir(tmpdir):
             **kwargs,
         )
         mapping = yaml.safe_load(mapping_file.read_text())
+        print("DOIT", dburl)
         e = create_engine(dburl)
         with e.connect() as connection:
             yield mapping, connection
