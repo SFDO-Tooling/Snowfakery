@@ -319,12 +319,14 @@ class SqlDbOutputStream(OutputStream):
         if mappings:  # pragma: no cover  -- should not be triggered.
             warn("Please do not pass mappings argument to from_url", DeprecationWarning)
         try:
+            print("create_engine from_url", db_url)
             engine = create_engine(db_url)
         except ModuleNotFoundError as e:
             raise DataGenError(f"Cannot find a driver for your database: {e}")
         except Exception as e:
             raise DataGenError(f"Cannot connect to database: {e}")
         self = cls(engine)
+        setattr(self, "url", db_url)
         return self
 
     def write_single_row(self, tablename: str, row: Dict) -> None:
@@ -332,6 +334,11 @@ class SqlDbOutputStream(OutputStream):
         self.buffered_rows[tablename].append(row)
 
     def flush(self):
+        with self.session.begin():
+            self._flush_rows()
+            self.session.flush()
+
+    def _flush_rows(self):
         for tablename, (insert_statement, fallback_dict) in self.table_info.items():
             # Make sure every row has the same records per SQLAlchemy's rules
 
@@ -350,16 +357,16 @@ class SqlDbOutputStream(OutputStream):
             if values:
                 self.session.execute(insert_statement, values)
             self.buffered_rows[tablename] = []
-        self.session.flush()
 
     def commit(self):
         if any(self.buffered_rows):
             self.flush()
-        self.session.commit()
 
     def close(self, **kwargs) -> Optional[Sequence[str]]:
+        print("Starting close, SqlDbOutputStream")
         self.commit()
         self.session.close()
+        self.engine.dispose()
 
     def create_or_validate_tables(self, inferred_tables: Dict[str, TableInfo]) -> None:
         try:
@@ -410,6 +417,7 @@ class SqlTextOutputStream(FileOutputStream):
     def _init_db(self):
         "Initialize a db through an owned output stream"
         db_url = f"sqlite:///{self.tempdir.name}/tempdb.db"
+        print("create_engine _init_db", db_url)
         engine = create_engine(db_url)
         return SqlDbOutputStream(engine)
 
@@ -437,11 +445,15 @@ class SqlTextOutputStream(FileOutputStream):
             assert self.text_output.stream
             self.text_output.stream.write("%s\n" % line)
 
+        con.close()
+
     def close(self, *args, **kwargs):
+        print("starting close", self.tempdir)
         self._dump_db()
         self.sql_db.close(*args, **kwargs)
         self.text_output.close(*args, **kwargs)
         self.tempdir.cleanup()
+        print("Ended close", self.tempdir)
 
 
 def create_tables_from_inferred_fields(

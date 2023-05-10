@@ -7,7 +7,7 @@ from collections import defaultdict
 import locale
 
 import click
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, text
 
 from snowfakery import generate_data
 
@@ -170,7 +170,7 @@ def count_database(filename, counts):
 
 def count_table(engine, tablename):
     with engine.connect() as c:
-        return c.execute(f"select count(Id) from '{tablename}'").first()[0]
+        return c.execute(text(f"select count(Id) from '{tablename}'")).first()[0]
 
 
 def snowfakery(recipe, num_records, tablename, outputfile):

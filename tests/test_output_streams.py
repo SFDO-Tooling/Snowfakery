@@ -170,18 +170,21 @@ class TestSqlDbOutputStream(OutputCommonTests):
             results = generate(StringIO(yaml), {}, output_stream)
             table_names = results.tables.keys()
             output_stream.close()
+            print("do_output", url)
             engine = create_engine(url)
             with engine.connect() as connection:
                 tables = {
                     table_name: [
-                        row._mapping
+                        dict(row._mapping)
                         for row in connection.execute(
                             text(f"select * from {table_name}")
                         )
                     ]
                     for table_name in table_names
                 }
-                return tables
+            engine.dispose()
+            del engine
+        return tables
 
     def test_null(self):
         yaml = """
@@ -206,10 +209,14 @@ class TestSqlDbOutputStream(OutputCommonTests):
             metadata.create_all(bind=engine)
             with engine.begin() as c:
                 c.execute(t.insert().values([[5]]))
+            engine.dispose()
 
             with pytest.raises(exc.DataGenError, match="Table already exists"):
                 output_stream = SqlDbOutputStream.from_url(url)
-                generate(StringIO(yaml), {}, output_stream)
+                try:
+                    generate(StringIO(yaml), {}, output_stream)
+                finally:
+                    output_stream.close()
 
     def test_bad_database_connection(self):
         yaml = """
@@ -288,6 +295,7 @@ class TestJSONOutputStream(OutputCommonTests):
     def test_from_cli(self):
         x = StringIO()
         with redirect_stdout(x):
+            assert generate_cli.callback
             generate_cli.callback(yaml_file=sample_yaml, output_format="json")
         data = json.loads(x.getvalue())
         print(data)
@@ -363,6 +371,7 @@ class TestCSVOutputStream(OutputCommonTests):
             output_stream = CSVOutputStream(Path(t) / "csvoutput")
             generate(StringIO(yaml), {}, output_stream)
             messages = output_stream.close()
+            assert messages
             assert "foo.csv" in messages[0]
             assert "bar.csv" in messages[1]
             assert "csvw" in messages[2]
@@ -417,6 +426,7 @@ class TestExternalOutputStream:
     def test_external_output_stream(self):
         x = StringIO()
         with redirect_stdout(x):
+            assert generate_cli.callback
             generate_cli.callback(
                 yaml_file=sample_yaml, output_format="package1.TestOutputStream"
             )
@@ -430,6 +440,7 @@ B - {'id': 1, 'A': 'A(1)'}
     def test_external_output_stream_yaml(self):
         x = StringIO()
         with redirect_stdout(x):
+            assert generate_cli.callback
             generate_cli.callback(
                 yaml_file=sample_yaml, output_format="examples.YamlOutputStream"
             )
@@ -451,6 +462,7 @@ B - {'id': 1, 'A': 'A(1)'}
 
     def test_external_output_stream__failure(self):
         with pytest.raises(ClickException, match="no.such.output.Stream"):
+            assert generate_cli.callback
             generate_cli.callback(
                 yaml_file=sample_yaml, output_format="no.such.output.Stream"
             )

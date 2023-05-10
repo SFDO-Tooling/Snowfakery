@@ -24,6 +24,7 @@ from snowfakery.utils.yaml_utils import SnowfakeryDumper
 def _open_db(db_url):
     "Internal function for opening the database up."
     engine = create_engine(db_url)
+    print("datasets pluginn", db_url)
     metadata = MetaData()
     metadata.reflect(views=True, bind=engine)
     return engine, metadata
