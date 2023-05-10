@@ -222,7 +222,7 @@ class TestSqlDbOutputStream(OutputCommonTests):
             self.do_output(yaml, "unknowndb://foo/bar/baz")
 
         # missing driver
-        with pytest.raises(exc.DataGenError, match="fdb"):
+        with pytest.raises(exc.DataGenError, match="firebird"):
             self.do_output(yaml, "firebird://foo/bar/baz")
 
         # cannot connect
@@ -288,6 +288,7 @@ class TestJSONOutputStream(OutputCommonTests):
     def test_from_cli(self):
         x = StringIO()
         with redirect_stdout(x):
+            assert generate_cli.callback
             generate_cli.callback(yaml_file=sample_yaml, output_format="json")
         data = json.loads(x.getvalue())
         print(data)
@@ -363,6 +364,7 @@ class TestCSVOutputStream(OutputCommonTests):
             output_stream = CSVOutputStream(Path(t) / "csvoutput")
             generate(StringIO(yaml), {}, output_stream)
             messages = output_stream.close()
+            assert messages
             assert "foo.csv" in messages[0]
             assert "bar.csv" in messages[1]
             assert "csvw" in messages[2]
@@ -417,6 +419,7 @@ class TestExternalOutputStream:
     def test_external_output_stream(self):
         x = StringIO()
         with redirect_stdout(x):
+            assert generate_cli.callback
             generate_cli.callback(
                 yaml_file=sample_yaml, output_format="package1.TestOutputStream"
             )
@@ -430,6 +433,7 @@ B - {'id': 1, 'A': 'A(1)'}
     def test_external_output_stream_yaml(self):
         x = StringIO()
         with redirect_stdout(x):
+            assert generate_cli.callback
             generate_cli.callback(
                 yaml_file=sample_yaml, output_format="examples.YamlOutputStream"
             )
@@ -451,6 +455,7 @@ B - {'id': 1, 'A': 'A(1)'}
 
     def test_external_output_stream__failure(self):
         with pytest.raises(ClickException, match="no.such.output.Stream"):
+            assert generate_cli.callback
             generate_cli.callback(
                 yaml_file=sample_yaml, output_format="no.such.output.Stream"
             )
