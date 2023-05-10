@@ -371,13 +371,6 @@ class SqlDbOutputStream(OutputStream):
         del self.engine
         del self.metadata
         del self.base
-        # Gross hack
-        filename = getattr(self, "url", "")
-        if filename:
-            filename = filename.removeprefix("sqlite:///")
-            print(filename, Path(filename).exists())
-        print("Ending close")
-        print("props", dir(self))
 
     def create_or_validate_tables(self, inferred_tables: Dict[str, TableInfo]) -> None:
         try:
