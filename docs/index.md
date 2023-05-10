@@ -82,7 +82,7 @@ Snowfakery only works for models that are amenable to including an `id` field fo
 Let's make a new recipe named `persons_of_interest.yml` that requires Snowfakery to do some automation.
 
 ```yaml
-- snowfakery: version
+- snowfakery_version: 3
 - object: Person
   count: 3
   fields:
