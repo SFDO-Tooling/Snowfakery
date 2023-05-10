@@ -222,7 +222,7 @@ class TestSqlDbOutputStream(OutputCommonTests):
             self.do_output(yaml, "unknowndb://foo/bar/baz")
 
         # missing driver
-        with pytest.raises(exc.DataGenError, match="fdb"):
+        with pytest.raises(exc.DataGenError, match="(fdb)|(firebird)"):
             self.do_output(yaml, "firebird://foo/bar/baz")
 
         # cannot connect
