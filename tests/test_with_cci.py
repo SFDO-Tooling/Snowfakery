@@ -16,7 +16,7 @@ from snowfakery import generate_data
 from snowfakery.standard_plugins import Salesforce
 
 try:
-    import cumulusci
+    import cumulusci  # type: ignore
 except ImportError:
     cumulusci = False
 
@@ -52,6 +52,7 @@ class Test_CLI_CCI:
                 ]
                 assert result[0]["id"] == 1
                 assert result[0]["BillingCountry"] == "Canada"
+            engine.dispose()
 
 
 class FakeSimpleSalesforce:

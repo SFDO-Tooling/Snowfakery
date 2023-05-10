@@ -209,10 +209,14 @@ class TestSqlDbOutputStream(OutputCommonTests):
             metadata.create_all(bind=engine)
             with engine.begin() as c:
                 c.execute(t.insert().values([[5]]))
+            engine.dispose()
 
             with pytest.raises(exc.DataGenError, match="Table already exists"):
                 output_stream = SqlDbOutputStream.from_url(url)
-                generate(StringIO(yaml), {}, output_stream)
+                try:
+                    generate(StringIO(yaml), {}, output_stream)
+                finally:
+                    output_stream.close()
 
     def test_bad_database_connection(self):
         yaml = """
