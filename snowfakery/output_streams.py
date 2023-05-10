@@ -437,6 +437,8 @@ class SqlTextOutputStream(FileOutputStream):
             assert self.text_output.stream
             self.text_output.stream.write("%s\n" % line)
 
+        con.close()
+
     def close(self, *args, **kwargs):
         self._dump_db()
         self.sql_db.close(*args, **kwargs)
