@@ -372,9 +372,12 @@ class SqlDbOutputStream(OutputStream):
         del self.metadata
         del self.base
         # Gross hack
-        filename = getattr(self, "url").removeprefix("sqlite:///")
-        print("Ending close", filename, Path(filename).exists())
-        print(dir(self))
+        filename = getattr(self, "url", "")
+        if filename:
+            filename = filename.removeprefix("sqlite:///")
+            print(filename, Path(filename).exists())
+        print("Ending close")
+        print("props", dir(self))
 
     def create_or_validate_tables(self, inferred_tables: Dict[str, TableInfo]) -> None:
         try:
@@ -461,6 +464,7 @@ class SqlTextOutputStream(FileOutputStream):
         self.sql_db.close(*args, **kwargs)
         self.text_output.close(*args, **kwargs)
         self.tempdir.cleanup()
+        print("Ended close", self.tempdir)
 
 
 def create_tables_from_inferred_fields(
