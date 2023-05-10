@@ -30,7 +30,7 @@ python-dateutil==2.8.2
     #   faker
 pyyaml==6.0
     # via -r requirements/prod.in
-requests==2.30.0
+requests==2.29.0
     # via -r requirements/prod.in
 six==1.16.0
     # via python-dateutil
@@ -38,5 +38,5 @@ sqlalchemy==1.4.48
     # via -r requirements/prod.in
 typing-extensions==4.5.0
     # via pydantic
-urllib3==2.0.2
+urllib3==1.26.15
     # via requests

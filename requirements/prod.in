@@ -7,4 +7,4 @@ python-dateutil
 gvgen
 pydantic
 python-baseconv
-requests
+requests<2.30.0 # Tests failed with 2.30.0 version
