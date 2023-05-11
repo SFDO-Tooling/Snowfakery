@@ -1,4 +1,5 @@
 ## Salesforce Contact Example
+- snowfakery_version: 3
 
 # To run this code against an org called 'qa':
 #

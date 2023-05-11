@@ -64,6 +64,7 @@ namespace would be `DoublingPlugin` and the function name `double`:
 
 ```yaml
 # examples/use_doubling_plugin.yml
+- snowfakery_version: 3
 - plugin: mypackage.DoublingPlugin
 - object: sixer
   fields:
@@ -149,6 +150,7 @@ unique timestamps:
 
 ```yaml
 # examples/plugins/test_timestamp.recipe.yml
+- snowfakery_version: 3
 - plugin: tests.test_custom_plugins_and_providers.TimeStampPlugin
 - object: parent
   count: 2
@@ -199,6 +201,7 @@ be recomputed as if it were a new context.
 
 ```yaml
 # examples/plugins/test_timestamp_args_change.recipe.yml
+- snowfakery_version: 3
 - plugin: tests.test_custom_plugins_and_providers.TimeStampPlugin
 - object: A
   count: 5
@@ -222,6 +225,7 @@ will allow the user to reuse the value between contexts.
 
 ```yaml
 # examples/plugins/test_timestamp_name_change.recipe.yml
+- snowfakery_version: 3
 - plugin: tests.test_custom_plugins_and_providers.TimeStampPlugin
 - object: A
   fields:
@@ -294,6 +298,7 @@ Here is an example YAML:
 
 ```yaml
 # examples/plugins/test_open_file.yml
+- snowfakery_version: 3
 - plugin: examples.plugins.OpenFiles
 - object: WithOpenFile
   count: 3
@@ -318,6 +323,7 @@ As described earlier, you could open two different files using context:
 
 ```yaml
 # examples/plugins/test_multiple_open_files.yml
+- snowfakery_version: 3
 - plugin: examples.plugins.OpenFiles
 - object: parent
   count: 3
@@ -351,6 +357,7 @@ And you could share a context between templates by using a `name`:
 
 ```yaml
 # examples/plugins/test_shared_open_files.yml
+- snowfakery_version: 3
 - plugin: examples.plugins.OpenFiles
 - object: parent
   friends:
@@ -420,6 +427,7 @@ that include values that sum up values on child objects to a value specified on 
 # This shows how you could create a plugin or feature where
 # a parent object generates child objects which sum up
 # to any particular value.
+- snowfakery_version: 3
 
 - plugin: examples.sum_totals.SummationPlugin
 - var: summation_helper
@@ -548,6 +556,7 @@ A recipe can refer to the provider like this:
 
 ```yaml
 # examples/use_custom_provider.yml
+- snowfakery_version: 3
 - plugin: tla_provider.Provider
 - object: Company
   fields:

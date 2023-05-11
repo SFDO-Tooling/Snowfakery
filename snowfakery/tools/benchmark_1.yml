@@ -1,4 +1,5 @@
 # Hard-coded objects
+- snowfakery_version: 3
 - object: Account
   nickname: bluth_co
   fields:

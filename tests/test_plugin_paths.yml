@@ -1,3 +1,4 @@
+- snowfakery_version: 3
 - plugin: package1.plugin1.Plugin1_1
 - plugin: package1.plugin2.Plugin1_2
 - plugin: package2.plugin1.Plugin2_1

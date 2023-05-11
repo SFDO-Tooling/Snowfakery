@@ -1,4 +1,5 @@
 # execute this recipe like this:
+- snowfakery_version: 3
 
 # snowfakery tests/salesforce/test_where.recipe.yml --plugin-option org_name qa
 

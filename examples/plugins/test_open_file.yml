@@ -1,3 +1,4 @@
+- snowfakery_version: 3
 - plugin: examples.plugins.OpenFiles
 - object: WithOpenFile
   count: 3

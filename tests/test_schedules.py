@@ -464,7 +464,7 @@ def test_example_files(filename):
     f = StringIO()
     with open(filename) as yaml:
         generate(yaml, output_stream=DebugOutputStream(f))
-    assert f.getvalue() == Path(filename.replace(".yml", ".out")).read_text()
+    assert f.getvalue() == Path(filename.replace(".yml", ".out")).read_text(), filename
 
 
 def test_undocumented_feature__error():

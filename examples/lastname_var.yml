@@ -1,3 +1,4 @@
+- snowfakery_version: 3
 - var: lastname_var
   value:
     fake: last_name

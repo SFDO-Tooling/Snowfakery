@@ -1,3 +1,4 @@
+- snowfakery_version: 3
 - object: npe03__Recurring_Donation__c
   just_once: True
   fields:

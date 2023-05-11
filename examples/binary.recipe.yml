@@ -1,3 +1,4 @@
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.base64.Base64
 - plugin: snowfakery.standard_plugins.file.File
 

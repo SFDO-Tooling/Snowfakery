@@ -1,3 +1,4 @@
+- snowfakery_version: 3
 - include_file: child.yml
 - object: Contact
   nickname: TheContact

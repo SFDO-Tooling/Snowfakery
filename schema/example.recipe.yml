@@ -1,4 +1,5 @@
 # yaml-language-server: $schema=snowfakery_recipe.jsonschema.json
+- snowfakery_version: 3
 - include_file: foo.yml
 - object: Account
   nickname: An ice sculpture

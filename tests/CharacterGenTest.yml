@@ -1,3 +1,4 @@
+- snowfakery_version: 3
 - option: num_fighters
   default: 2
 - option: num_druids

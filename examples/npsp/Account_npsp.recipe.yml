@@ -1,4 +1,5 @@
 # Look at examples/salesforce/Account.recipe.yml for more examples.
+- snowfakery_version: 3
 
 # Run this like this:
 

@@ -71,6 +71,7 @@ Here is an example where we query a particular Campaign object:
 
 ```yaml
 # examples/salesforce/CampaignMembers-first.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
 
 - object: Contact
@@ -92,6 +93,7 @@ Perhaps you do not care which Campaign you connect to:
 
 ```yaml
 # examples/salesforce/CampaignMembers-random.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
 
 - object: Contact
@@ -131,6 +133,7 @@ name as the Contacts.
 
 ```yaml
 # examples/salesforce/UsersForContacts.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Salesforce.SalesforceQuery
 - plugin: snowfakery.standard_plugins.Salesforce
 
@@ -170,6 +173,7 @@ create is associated with a distinct record from Salesforce.
 
 ```yaml
 # examples/soql_dataset.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
 - object: Contact
   count: 10
@@ -189,6 +193,7 @@ use `SOQLDataset.shuffle`:
 
 ```yaml
 # examples/soql_dataset_shuffled.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
 - object: Contact
   count: 10
@@ -209,6 +214,7 @@ You may also specify a "where" clause to filter out irrelevant records:
 
 ```yaml
 # examples/soql_dataset_where.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
 - object: Contact
   count: 10
@@ -247,6 +253,7 @@ To specify a Record Type for a record, just put the Record Type’s API Name in 
 
 ```yaml
 # tests/cci/record_types.yml
+- snowfakery_version: 3
 - object: Account
   fields:
     name: Bluth Family
@@ -353,6 +360,7 @@ Files can be used as Salesforce ContentVersions like this:
 
 ```yaml
 # examples/salesforce/ContentVersion.recipe.yml
+- snowfakery_version: 3
 - plugin: snowfakery.standard_plugins.Salesforce
 - object: Account
   nickname: FileOwner

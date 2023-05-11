@@ -1,3 +1,4 @@
+- snowfakery_version: 3
 - var: num_records
   value: 10_000
 

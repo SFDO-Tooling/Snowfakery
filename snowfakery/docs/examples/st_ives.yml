@@ -7,6 +7,7 @@
 # How many were there going to St. Ives?
 #
 # https://en.wikipedia.org/wiki/As_I_was_going_to_St_Ives
+- snowfakery_version: 3
 - object: narrator
 - object: man
   fields:
