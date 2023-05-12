@@ -60,10 +60,10 @@ def pr_to_branch(pr_number):
         owner,
         repo,
         branch,
-        f"https://github.com/{owner}/{repo}",
-        pr_info["title"],
-        pr_info["title"],
-        pr_info["author"],
+        repo_url=f"https://github.com/{owner}/{repo}",
+        title=pr_info["title"],
+        body=pr_info["body"],
+        author=pr_info["author"]["login"],
     )
 
 
@@ -84,8 +84,8 @@ def adopt_branch(pr_number):
     command(f"git fetch {pr_info.owner}")
     command(f"git checkout --track {pr_info.owner}/{pr_info.branch}")
     command("git push origin --set-upstream")
-    title = f"{pr_info.title} -- from {pr_info.author}"
-    body = f"Copied from #{[pr_number]} by {pr_info.author}"
+    title = f"{pr_info.title} -- from @{pr_info.author}"
+    body = f"Copied from #{pr_number} by @{pr_info.author}\n\n{pr_info.body}"
     subprocess.run(["gh", "pr", "create", "--title", title, "--body", body])
 
 
