@@ -11,9 +11,9 @@ jobs:
   test:
     name: "Python ${{ matrix.python-version }}"
     runs-on: sfdc-ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.8", "3.9", "3.11", "3.12"]
+    strategy: # when github action adds 3.12, you can add it here.
+      matrix: # https://github.com/actions/python-versions/releases
+        python-version: ["3.8", "3.9", "3.11"]
     steps:
       - uses: "actions/checkout@v2"
       - uses: "actions/setup-python@v1"
@@ -97,7 +97,7 @@ jobs:
     runs-on: sfdc-ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.12"]
+        python-version: ["3.8", "3.11"]
     steps:
       - uses: "actions/checkout@v2"
       - uses: "actions/setup-python@v1"
@@ -122,7 +122,7 @@ jobs:
     runs-on: sfdc-windows-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.12"]
+        python-version: ["3.8", "3.11"]
     steps:
       - uses: "actions/checkout@v2"
       - uses: "actions/setup-python@v1"
