@@ -1,6 +1,7 @@
 """Adopt a branch from a third party"""
+import json
 import os
-import re
+import subprocess
 
 import click
 
@@ -14,18 +15,49 @@ def command(cmd):
     assert os.system(cmd) == 0
 
 
-@click.command()
-@click.argument("url", required=True)
-def adopt_branch(url):
+def pr_to_branch(pr_number):
     """
-    adopt-branch URL
+    adopt-branch pr_number
 
-    URL is a github:// URL to the branch on the fork"
+    pr_number is a number like "553" or whatever.
     """
-    url_match = re.match(URL_RE, url)
-    assert url_match, f"{url} did not match {URL_RE}"
-    owner, repo, branch = url_match["owner"], url_match["repo"], url_match["branch"]
-    repo_url = url_match["repo_root"]
+    result = subprocess.run(
+        [
+            "gh",
+            "pr",
+            "view",
+            str(pr_number),
+            "--json",
+            "url,headRepositoryOwner,headRepository,headRefName",
+        ],
+        capture_output=True,
+        text=True,  # This is to ensure that the output from the subprocess is text
+    )
+
+    assert result.returncode == 0, f"gh command failed: {result.stderr}"
+
+    pr_info = json.loads(result.stdout)
+
+    owner = pr_info["headRepositoryOwner"]["login"]
+    repo = pr_info["headRepository"]["name"]
+    branch = pr_info["headRefName"]
+    print(pr_info["headRepository"])
+    repo_url = f"https://github.com/{owner}/{repo}"
+
+    assert all((owner, repo, branch, repo_url)), (owner, repo, branch, repo_url)
+
+    return owner, repo, branch, repo_url
+
+
+@click.command()
+@click.argument("pr_number", required=True)
+def adopt_branch(pr_number):
+    """
+    adopt-branch pr_number
+
+    pr_number is a number like "553" or whatever.
+    """
+    owner, repo, branch, repo_url = pr_to_branch(pr_number)
     assert all((owner, repo, branch, repo_url)), (owner, repo, branch, repo_url)
     print("Using", repo, branch)
     try:
