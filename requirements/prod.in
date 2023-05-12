@@ -1,5 +1,7 @@
 SQLAlchemy<2.0
 Faker
+faker-nonprofit
+faker-edu
 jinja2
 PyYAML
 click
