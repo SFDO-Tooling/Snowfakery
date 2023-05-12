@@ -1,4 +1,4 @@
-SQLAlchemy<2.0
+SQLAlchemy
 Faker
 jinja2
 PyYAML
@@ -8,3 +8,7 @@ gvgen
 pydantic
 python-baseconv
 requests
+
+# remove this line when VCR is fixed
+# https://github.com/kevin1024/vcrpy/issues/688
+urllib3<2.0.0

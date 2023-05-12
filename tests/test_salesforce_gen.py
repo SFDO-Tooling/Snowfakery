@@ -17,6 +17,7 @@ class TestSalesforceGen:
             assert rawdata.startswith(b"%PDF-1.3")
             assert b"Helvetica" in rawdata
 
+
 class TestSalesforcePlugin:
     @skip_if_cumulusci_missing
     @pytest.mark.vcr()

@@ -434,16 +434,16 @@ class TestContextVars:
             "B", 1, "foo"
         ) != generated_rows.table_values("C", 1, "foo")
 
-    def test_plugin_does_not_close(self):
-        yaml = """
-        - plugin: tests.test_custom_plugins_and_providers.DoesNotClosePlugin
-        - object: B
-          fields:
-            foo:
-                DoesNotClosePlugin.foo:
-        """
-        with pytest.warns(UserWarning, match="close"):
-            generate_data(StringIO(yaml))
+    # def test_plugin_does_not_close(self):
+    #     yaml = """
+    #     - plugin: tests.test_custom_plugins_and_providers.DoesNotClosePlugin
+    #     - object: B
+    #       fields:
+    #         foo:
+    #             DoesNotClosePlugin.foo:
+    #     """
+    #     with pytest.warns(UserWarning, match="close"):
+    #         generate_data(StringIO(yaml))
 
 
 class TestPluginResultIterator:

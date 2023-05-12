@@ -332,6 +332,11 @@ class SqlDbOutputStream(OutputStream):
         self.buffered_rows[tablename].append(row)
 
     def flush(self):
+        with self.session.begin():
+            self._flush_rows()
+            self.session.flush()
+
+    def _flush_rows(self):
         for tablename, (insert_statement, fallback_dict) in self.table_info.items():
             # Make sure every row has the same records per SQLAlchemy's rules
 
@@ -350,16 +355,15 @@ class SqlDbOutputStream(OutputStream):
             if values:
                 self.session.execute(insert_statement, values)
             self.buffered_rows[tablename] = []
-        self.session.flush()
 
     def commit(self):
         if any(self.buffered_rows):
             self.flush()
-        self.session.commit()
 
     def close(self, **kwargs) -> Optional[Sequence[str]]:
         self.commit()
         self.session.close()
+        self.engine.dispose()
 
     def create_or_validate_tables(self, inferred_tables: Dict[str, TableInfo]) -> None:
         try:
@@ -436,6 +440,8 @@ class SqlTextOutputStream(FileOutputStream):
         for line in con.iterdump():  # type: ignore
             assert self.text_output.stream
             self.text_output.stream.write("%s\n" % line)
+
+        con.close()
 
     def close(self, *args, **kwargs):
         self._dump_db()

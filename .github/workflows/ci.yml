@@ -134,6 +134,7 @@ jobs:
           python -VV
           python -m pip install --upgrade pip
           pip install -r requirements_dev.txt
+          pip install git+https://github.com/SFDO-Tooling/CumulusCI.git@main
 
       - name: Run Tests
         run: python -m pytest
