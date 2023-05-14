@@ -36,9 +36,11 @@ requests==2.29.0
     # via -r requirements/prod.in
 six==1.16.0
     # via python-dateutil
-sqlalchemy==1.4.48
+sqlalchemy==2.0.13
     # via -r requirements/prod.in
 typing-extensions==4.5.0
-    # via pydantic
+    # via
+    #   pydantic
+    #   sqlalchemy
 urllib3==1.26.15
     # via requests
