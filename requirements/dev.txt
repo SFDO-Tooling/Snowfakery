@@ -44,8 +44,6 @@ distlib==0.3.6
     # via virtualenv
 docopt==0.6.2
     # via coveralls
-exceptiongroup==1.1.1
-    # via pytest
 faker==18.7.0
     # via
     #   -r requirements/prod.txt
@@ -78,9 +76,7 @@ idna==3.4
     #   requests
     #   yarl
 importlib-metadata==6.6.0
-    # via
-    #   markdown
-    #   mkdocs
+    # via mkdocs
 iniconfig==2.0.0
     # via pytest
 jinja2==3.1.2
@@ -183,25 +179,17 @@ six==1.16.0
     #   vcrpy
 sqlalchemy==1.4.48
     # via -r requirements/prod.txt
-tomli==2.0.1
-    # via
-    #   black
-    #   coverage
-    #   pyproject-api
-    #   pytest
-    #   tox
 tox==4.5.1
     # via
     #   -r requirements/dev.in
     #   tox-gh-actions
-tox-gh-actions==3.1.0
+tox-gh-actions==3.1.3
     # via -r requirements/dev.in
 types-pyyaml==6.0.12.9
     # via responses
 typing-extensions==4.5.0
     # via
     #   -r requirements/prod.txt
-    #   black
     #   pydantic
 urllib3==1.26.15
     # via
