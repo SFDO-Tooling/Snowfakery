@@ -8,7 +8,7 @@ attrs==23.1.0
     # via jsonschema
 black==23.3.0
     # via -r requirements/dev.in
-cachetools==5.3.0
+cachetools==5.3.1
     # via tox
 certifi==2022.12.7
     # via
@@ -44,8 +44,6 @@ distlib==0.3.6
     # via virtualenv
 docopt==0.6.2
     # via coveralls
-exceptiongroup==1.1.1
-    # via pytest
 faker==18.7.0
     # via
     #   -r requirements/prod.txt
@@ -58,7 +56,7 @@ faker-microservice==2.0.0
     # via -r requirements/dev.in
 faker-nonprofit==1.0.0
     # via -r requirements/prod.txt
-filelock==3.12.0
+filelock==3.12.2
     # via
     #   tox
     #   virtualenv
@@ -78,9 +76,7 @@ idna==3.4
     #   requests
     #   yarl
 importlib-metadata==6.6.0
-    # via
-    #   markdown
-    #   mkdocs
+    # via mkdocs
 iniconfig==2.0.0
     # via pytest
 jinja2==3.1.2
@@ -121,12 +117,12 @@ packaging==23.1
     #   tox
 pathspec==0.11.1
     # via black
-platformdirs==3.5.0
+platformdirs==3.8.1
     # via
     #   black
     #   tox
     #   virtualenv
-pluggy==1.0.0
+pluggy==1.2.0
     # via
     #   diff-cover
     #   pytest
@@ -137,7 +133,7 @@ pydantic==1.10.7
     # via -r requirements/prod.txt
 pygments==2.15.1
     # via diff-cover
-pyproject-api==1.5.1
+pyproject-api==1.5.3
     # via tox
 pyright==1.1.305
     # via -r requirements/dev.in
@@ -183,14 +179,7 @@ six==1.16.0
     #   vcrpy
 sqlalchemy==1.4.48
     # via -r requirements/prod.txt
-tomli==2.0.1
-    # via
-    #   black
-    #   coverage
-    #   pyproject-api
-    #   pytest
-    #   tox
-tox==4.5.1
+tox==4.6.4
     # via
     #   -r requirements/dev.in
     #   tox-gh-actions
@@ -201,7 +190,6 @@ types-pyyaml==6.0.12.9
 typing-extensions==4.5.0
     # via
     #   -r requirements/prod.txt
-    #   black
     #   pydantic
 urllib3==1.26.15
     # via
@@ -212,7 +200,7 @@ vcrpy==4.2.1
     # via
     #   -r requirements/dev.in
     #   pytest-vcr
-virtualenv==20.23.0
+virtualenv==20.23.1
     # via
     #   pre-commit
     #   tox
