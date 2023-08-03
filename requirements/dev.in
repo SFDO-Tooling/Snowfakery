@@ -6,7 +6,7 @@ diff-cover
 mkdocs<1.3.0      # need to change Snowfakery monkey-patching before upgrade
 mkdocs-exclude-search
 pre-commit
-pyright
+pyright<=1.1.305  # To avoid few errors with latest version
 pytest
 pytest-cov
 faker-microservice
