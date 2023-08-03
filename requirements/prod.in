@@ -7,6 +7,6 @@ PyYAML
 click
 python-dateutil
 gvgen
-pydantic
+pydantic<2.0.0
 python-baseconv
-requests
+requests<=2.29.0
