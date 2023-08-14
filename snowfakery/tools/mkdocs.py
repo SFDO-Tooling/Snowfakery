@@ -9,7 +9,7 @@ import mkdocs
 
 class Plugin(BasePlugin):
     config_scheme = (
-        ("build_locales", mkdocs.config.config_options.Type(bool, default=False)),
+        ("build_locales", mkdocs.config.config_options.Type(bool, default=False)),  # type: ignore
     )
 
     def on_config(self, config):
