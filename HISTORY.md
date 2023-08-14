@@ -6,6 +6,8 @@ And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” an
 
 ## Snowfakery 3.6.0
 
+Added educational and non-profit fakers (#897)
+
 Better error messages for missing database drivers. (#873)
 
 Improve error message for random_record query into Salesforce org. (#844)
