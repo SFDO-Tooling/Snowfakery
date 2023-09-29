@@ -129,7 +129,7 @@ def status(tempdir, num_records, num_records_tablename, progress_bar):
     start = time()
     sleep(2)
     previous_count = 0
-    for i in range(1, 10 ** 20):
+    for i in range(1, 10**20):
         sleep(1)
         if i in (2, 5, 10, 20, 30, 45, 90, 150) or (i % 60 == 0):
             print()
@@ -163,7 +163,7 @@ def count_database(filename, counts):
     dburl = f"sqlite:///{filename}?mode=ro"
     engine = create_engine(dburl)
     insp = inspect(engine)
-    tables = insp.get_table_names()
+    tables = insp.get_table_names()  # type: ignore
     for table in tables:
         counts[table] += count_table(engine, table)
     return counts

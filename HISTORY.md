@@ -4,6 +4,16 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 3.6.0
+
+Added educational and non-profit fakers (#897)
+
+Better error messages for missing database drivers. (#873)
+
+Improve error message for random_record query into Salesforce org. (#844)
+
+Simpler syntax for choice feature. (#441)
+
 ## Snowfakery 3.5.0
 
 Snowfakery's Debug and CSV outputs now use the same format that Salesforce prefers. (#778)

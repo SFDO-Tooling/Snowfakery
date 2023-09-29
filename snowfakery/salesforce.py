@@ -11,8 +11,8 @@ def create_cci_record_type_tables(db_url: str):
     engine = create_engine(db_url)
     metadata = MetaData()
     metadata.reflect(views=True, bind=engine)
-    with engine.connect() as connection, connection.begin():
-        for tablename, table in list(metadata.tables.items()):
+    with engine.connect() as connection, connection.begin():  # type: ignore
+        for tablename, table in list(metadata.tables.items()):  # type: ignore
             record_type_column = find_record_type_column(
                 tablename, table.columns.keys()
             )
@@ -37,12 +37,12 @@ def _populate_rt_table(
 ):
     column = getattr(table.columns, columnname)
     query_res = connection.execute(select(column).where(column is not None).distinct())
-    record_types = [res[0] for res in query_res if res[0]]
+    record_types = [res[0] for res in query_res if res[0]]  # type: ignore
 
     if record_types:
         insert_stmt = rt_table.insert()
         rows = [
-            dict(zip(rt_table.columns.keys(), (rtname, rtname)))
+            dict(zip(rt_table.columns.keys(), (rtname, rtname)))  # type: ignore
             for rtname in record_types
         ]
 
