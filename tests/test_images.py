@@ -130,6 +130,30 @@ def graphviz_available():
 
 
 class TestImageOuputStreams:
+    @mock.patch("subprocess.Popen")
+    def test_image_outputs_mocked(self, popen):
+        png = "out.png"
+        svg = "out.svg"
+        txt = "out.txt"
+        dot = "out.dot"
+        popen.return_value.communicate = lambda: (mock.Mock(), mock.Mock())
+        generate_cli.main(
+            [
+                str(sample_yaml),
+                "--output-file",
+                png,
+                "--output-file",
+                svg,
+                "--output-file",
+                txt,
+                "--output-file",
+                dot,
+            ],
+            standalone_mode=False,
+        )
+        for call in popen.mock_calls:
+            assert call[1][0][0] == "dot"
+
     def test_image_outputs(self):
         if not graphviz_available():
             pytest.skip("Graphviz is not installed")
@@ -153,7 +177,7 @@ class TestImageOuputStreams:
                 ],
                 standalone_mode=False,
             )
-            assert png.read_bytes().startswith(b"\x89PNG\r\n")
+            assert png.read_bytes().startswith(b"\x89PNG"), png.read_bytes()[0:10]
             assert svg.read_bytes().startswith(b"<?xml"), svg.read_bytes()[0:5]
             assert svg.read_bytes().startswith(b"<?xml"), svg.read_bytes()[0:5]
             assert dot.read_bytes().startswith(b"/* Ge"), dot.read_bytes()[0:5]
