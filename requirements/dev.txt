@@ -66,6 +66,8 @@ filelock==3.12.2
     #   virtualenv
 ghp-import==2.1.0
     # via mkdocs
+greenlet==3.0.1
+    # via sqlalchemy
 gvgen==1.0
     # via -r requirements/prod.txt
 identify==2.5.26
@@ -96,9 +98,10 @@ markupsafe==2.1.3
     # via
     #   -r requirements/prod.txt
     #   jinja2
+    #   mkdocs
 mergedeep==1.3.4
     # via mkdocs
-mkdocs==1.2.4
+mkdocs==1.5.3
     # via
     #   -r requirements/dev.in
     #   mkdocs-exclude-search
@@ -120,10 +123,13 @@ packaging==23.1
     #   pytest
     #   tox
 pathspec==0.11.2
-    # via black
+    # via
+    #   black
+    #   mkdocs
 platformdirs==3.10.0
     # via
     #   black
+    #   mkdocs
     #   tox
     #   virtualenv
 pluggy==1.2.0
