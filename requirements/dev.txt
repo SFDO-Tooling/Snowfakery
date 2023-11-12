@@ -4,6 +4,10 @@
 #
 #    pip-compile --allow-unsafe requirements/dev.in
 #
+annotated-types==0.6.0
+    # via
+    #   -r requirements/prod.txt
+    #   pydantic
 attrs==23.1.0
     # via
     #   jsonschema
@@ -66,6 +70,10 @@ filelock==3.12.2
     #   virtualenv
 ghp-import==2.1.0
     # via mkdocs
+greenlet==3.0.1
+    # via
+    #   -r requirements/prod.txt
+    #   sqlalchemy
 gvgen==1.0
     # via -r requirements/prod.txt
 identify==2.5.26
@@ -133,8 +141,12 @@ pluggy==1.2.0
     #   tox
 pre-commit==3.3.3
     # via -r requirements/dev.in
-pydantic==1.10.12
+pydantic==2.4.2
     # via -r requirements/prod.txt
+pydantic-core==2.10.1
+    # via
+    #   -r requirements/prod.txt
+    #   pydantic
 pygments==2.16.1
     # via diff-cover
 pyproject-api==1.5.3
@@ -208,6 +220,7 @@ typing-extensions==4.7.1
     #   -r requirements/prod.txt
     #   black
     #   pydantic
+    #   pydantic-core
 urllib3==1.26.16
     # via
     #   -r requirements/prod.txt
