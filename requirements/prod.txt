@@ -8,7 +8,7 @@ certifi==2023.7.22
     # via requests
 charset-normalizer==3.2.0
     # via requests
-click==8.1.6
+click==8.1.7
     # via -r requirements/prod.in
 faker==19.3.0
     # via
@@ -19,6 +19,8 @@ faker-edu==1.0.0
     # via -r requirements/prod.in
 faker-nonprofit==1.0.0
     # via -r requirements/prod.in
+greenlet==3.0.1
+    # via sqlalchemy
 gvgen==1.0
     # via -r requirements/prod.in
 idna==3.4
