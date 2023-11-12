@@ -40,7 +40,7 @@ coverage[toml]==6.5.0
     #   pytest-cov
 coveralls==3.3.1
     # via -r requirements/dev.in
-diff-cover==7.7.0
+diff-cover==8.0.0
     # via -r requirements/dev.in
 distlib==0.3.7
     # via virtualenv
@@ -66,6 +66,8 @@ filelock==3.12.2
     #   virtualenv
 ghp-import==2.1.0
     # via mkdocs
+greenlet==3.0.1
+    # via sqlalchemy
 gvgen==1.0
     # via -r requirements/prod.txt
 identify==2.5.26
