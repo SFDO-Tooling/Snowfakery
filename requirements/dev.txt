@@ -66,6 +66,8 @@ filelock==3.12.2
     #   virtualenv
 ghp-import==2.1.0
     # via mkdocs
+greenlet==3.0.1
+    # via sqlalchemy
 gvgen==1.0
     # via -r requirements/prod.txt
 identify==2.5.26
@@ -86,7 +88,7 @@ jinja2==3.1.2
     #   -r requirements/prod.txt
     #   diff-cover
     #   mkdocs
-jsonschema==4.19.0
+jsonschema==4.20.0
     # via -r requirements/dev.in
 jsonschema-specifications==2023.7.1
     # via jsonschema
