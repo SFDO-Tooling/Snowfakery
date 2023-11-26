@@ -10,7 +10,7 @@ charset-normalizer==3.2.0
     # via requests
 click==8.1.6
     # via -r requirements/prod.in
-faker==19.3.0
+faker==20.1.0
     # via
     #   -r requirements/prod.in
     #   faker-edu
@@ -19,6 +19,8 @@ faker-edu==1.0.0
     # via -r requirements/prod.in
 faker-nonprofit==1.0.0
     # via -r requirements/prod.in
+greenlet==3.0.1
+    # via sqlalchemy
 gvgen==1.0
     # via -r requirements/prod.in
 idna==3.4
