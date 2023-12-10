@@ -66,6 +66,8 @@ filelock==3.12.2
     #   virtualenv
 ghp-import==2.1.0
     # via mkdocs
+greenlet==3.0.2
+    # via sqlalchemy
 gvgen==1.0
     # via -r requirements/prod.txt
 identify==2.5.26
@@ -102,7 +104,7 @@ mkdocs==1.2.4
     # via
     #   -r requirements/dev.in
     #   mkdocs-exclude-search
-mkdocs-exclude-search==0.6.5
+mkdocs-exclude-search==0.6.6
     # via -r requirements/dev.in
 multidict==6.0.4
     # via yarl
