@@ -66,6 +66,10 @@ filelock==3.12.2
     #   virtualenv
 ghp-import==2.1.0
     # via mkdocs
+greenlet==3.0.3
+    # via
+    #   -r requirements/prod.txt
+    #   sqlalchemy
 gvgen==1.0
     # via -r requirements/prod.txt
 identify==2.5.26
@@ -186,7 +190,7 @@ six==1.16.0
     # via
     #   -r requirements/prod.txt
     #   python-dateutil
-sqlalchemy==1.4.49
+sqlalchemy==2.0.24
     # via -r requirements/prod.txt
 tomli==2.0.1
     # via
@@ -208,6 +212,7 @@ typing-extensions==4.7.1
     #   -r requirements/prod.txt
     #   black
     #   pydantic
+    #   sqlalchemy
 urllib3==1.26.16
     # via
     #   -r requirements/prod.txt
