@@ -66,6 +66,8 @@ filelock==3.12.2
     #   virtualenv
 ghp-import==2.1.0
     # via mkdocs
+greenlet==3.0.3
+    # via sqlalchemy
 gvgen==1.0
     # via -r requirements/prod.txt
 identify==2.5.26
@@ -199,7 +201,7 @@ tox==4.8.0
     # via
     #   -r requirements/dev.in
     #   tox-gh-actions
-tox-gh-actions==3.1.3
+tox-gh-actions==3.2.0
     # via -r requirements/dev.in
 types-pyyaml==6.0.12.11
     # via responses
