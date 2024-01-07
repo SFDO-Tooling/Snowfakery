@@ -1,4 +1,4 @@
-SQLAlchemy<2.0
+SQLAlchemy<3.0
 Faker
 faker-nonprofit
 faker-edu
