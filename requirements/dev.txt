@@ -66,6 +66,10 @@ filelock==3.12.2
     #   virtualenv
 ghp-import==2.1.0
     # via mkdocs
+greenlet==3.0.3
+    # via
+    #   -r requirements/prod.txt
+    #   sqlalchemy
 gvgen==1.0
     # via -r requirements/prod.txt
 identify==2.5.26
@@ -81,7 +85,7 @@ importlib-metadata==6.8.0
     #   mkdocs
 iniconfig==2.0.0
     # via pytest
-jinja2==3.1.2
+jinja2==3.1.3
     # via
     #   -r requirements/prod.txt
     #   diff-cover
