@@ -66,6 +66,8 @@ filelock==3.12.2
     #   virtualenv
 ghp-import==2.1.0
     # via mkdocs
+greenlet==3.0.3
+    # via sqlalchemy
 gvgen==1.0
     # via -r requirements/prod.txt
 identify==2.5.26
@@ -126,7 +128,7 @@ platformdirs==3.10.0
     #   black
     #   tox
     #   virtualenv
-pluggy==1.2.0
+pluggy==1.4.0
     # via
     #   diff-cover
     #   pytest
@@ -141,7 +143,7 @@ pyproject-api==1.5.3
     # via tox
 pyright==1.1.322
     # via -r requirements/dev.in
-pytest==7.4.0
+pytest==8.0.0
     # via
     #   -r requirements/dev.in
     #   pytest-cov
