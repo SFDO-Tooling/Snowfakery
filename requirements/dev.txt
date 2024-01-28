@@ -48,7 +48,7 @@ docopt==0.6.2
     # via coveralls
 exceptiongroup==1.1.2
     # via pytest
-faker==19.3.0
+faker==22.5.1
     # via
     #   -r requirements/prod.txt
     #   faker-edu
@@ -66,6 +66,10 @@ filelock==3.12.2
     #   virtualenv
 ghp-import==2.1.0
     # via mkdocs
+greenlet==3.0.3
+    # via
+    #   -r requirements/prod.txt
+    #   sqlalchemy
 gvgen==1.0
     # via -r requirements/prod.txt
 identify==2.5.26
