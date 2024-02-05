@@ -4,7 +4,7 @@ from datetime import date
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, Extra, validator, PositiveInt
+from pydantic import field_validator, ConfigDict, BaseModel, RootModel, PositiveInt
 
 
 class AtomicDecl(T.NamedTuple):
@@ -67,16 +67,15 @@ class SObjectRuleDeclaration(BaseModel):
     anchor_date: T.Union[str, date] = None
 
     load_after: str = None
-
-    class Config:
-        extra = Extra.forbid
+    model_config = ConfigDict(extra="forbid")
 
     @property
     def priority_number(self):
         values = {"low": 1, "medium": 2, "high": 3, None: 2}
         return values[self.priority]
 
-    @validator("priority", "api", "bulk_mode", pre=True)
+    @field_validator("priority", "api", "bulk_mode", mode="before")
+    @classmethod
     def case_normalizer(cls, val):
         if hasattr(val, "lower"):
             return val.lower()
@@ -108,9 +107,7 @@ class ChannelDeclaration(BaseModel):
     recipe_options: T.Dict[str, T.Any] = None
     num_generators: PositiveInt = None
     num_loaders: PositiveInt = None
-
-    class Config:
-        extra = Extra.forbid
+    model_config = ConfigDict(extra="forbid")
 
 
 class ChannelDeclarationList(BaseModel):
@@ -125,8 +122,8 @@ class LoadDeclarationsTuple(T.NamedTuple):
     ]  # Channel declarations are only of relevance to Salesforce employees
 
 
-class SObjectRuleDeclarationFile(BaseModel):
-    __root__: T.List[T.Union[ChannelDeclarationList, SObjectRuleDeclaration]]
+class SObjectRuleDeclarationFile(RootModel):
+    root: T.List[T.Union[ChannelDeclarationList, SObjectRuleDeclaration]]
 
     @classmethod
     def parse_from_yaml(cls, f: T.Union[Path, T.TextIO]):
@@ -139,12 +136,12 @@ class SObjectRuleDeclarationFile(BaseModel):
 
         sobject_decls = [
             obj
-            for obj in cls.parse_obj(data).__root__
+            for obj in cls.parse_obj(data).root
             if isinstance(obj, SObjectRuleDeclaration)
         ]
         channel_decls = [
             obj
-            for obj in cls.parse_obj(data).__root__
+            for obj in cls.parse_obj(data).root
             if isinstance(obj, ChannelDeclarationList)
         ]
         if len(channel_decls) > 1:
