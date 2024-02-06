@@ -59,14 +59,14 @@ class MergeRules:
 
 class SObjectRuleDeclaration(BaseModel):
     sf_object: str
-    priority: T.Literal["low", "medium", "high"] = None
+    priority: T.Literal["low", "medium", "high"] | None = None
 
-    api: T.Literal["smart", "rest", "bulk"] = None
-    batch_size: int = None
-    bulk_mode: T.Literal["serial", "parallel"] = None
-    anchor_date: T.Union[str, date] = None
+    api: T.Literal["smart", "rest", "bulk"] | None = None
+    batch_size: int | None = None
+    bulk_mode: T.Literal["serial", "parallel"] | None = None
+    anchor_date: T.Union[str, date] | None = None
 
-    load_after: str = None
+    load_after: str | None = None
     model_config = ConfigDict(extra="forbid")
 
     @property
@@ -104,9 +104,9 @@ MERGE_RULES = {
 class ChannelDeclaration(BaseModel):
     "Channel declarations are only of relevance to Salesforce employees"
     user: str
-    recipe_options: T.Dict[str, T.Any] = None
-    num_generators: PositiveInt = None
-    num_loaders: PositiveInt = None
+    recipe_options: T.Dict[str, T.Any] | None = None
+    num_generators: PositiveInt | None = None
+    num_loaders: PositiveInt | None = None
     model_config = ConfigDict(extra="forbid")
 
 
