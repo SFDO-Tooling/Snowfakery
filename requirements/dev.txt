@@ -50,7 +50,7 @@ distlib==0.3.8
     # via virtualenv
 docopt==0.6.2
     # via coveralls
-faker==22.6.0
+faker==23.0.0
     # via
     #   -r requirements/prod.txt
     #   faker-edu
