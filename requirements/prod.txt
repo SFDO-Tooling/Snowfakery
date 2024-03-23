@@ -15,7 +15,7 @@ faker==19.3.0
     #   -r requirements/prod.in
     #   faker-edu
     #   faker-nonprofit
-faker-edu==1.0.0
+faker-edu==1.1.0
     # via -r requirements/prod.in
 faker-nonprofit==1.0.0
     # via -r requirements/prod.in
