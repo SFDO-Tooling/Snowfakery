@@ -54,7 +54,7 @@ faker==19.3.0
     #   faker-edu
     #   faker-microservice
     #   faker-nonprofit
-faker-edu==1.0.0
+faker-edu==1.1.0
     # via -r requirements/prod.txt
 faker-microservice==2.0.0
     # via -r requirements/dev.in
