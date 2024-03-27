@@ -327,6 +327,7 @@ class PluginResultIterator(PluginResult):
     def __init__(self, repeat):
         self.repeat = repeat
 
+    @T.overload
     def __iter__(self):
         return self
 

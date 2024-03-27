@@ -7,6 +7,7 @@ from datetime import datetime, date, time, timezone
 from snowfakery import PluginResultIterator
 from snowfakery.plugins import SnowfakeryPlugin, memorable
 from snowfakery.template_funcs import parse_datetimespec, parse_date
+from typing_extensions import override
 
 
 # Note
@@ -331,6 +332,7 @@ class CalendarRule(PluginResultIterator):
             raise exc.DataGenTypeError(f"Cannot interpret {offset} as a number")
         return weekday, offset
 
+    @override
     def __iter__(self) -> T.Union[T.Iterator[datetime], T.Iterator[date]]:
         return iter(self.ruleset)
 
