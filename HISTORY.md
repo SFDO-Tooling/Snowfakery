@@ -4,6 +4,10 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 3.6.2
+
+Update dependencies.
+
 ## Snowfakery 3.6.0
 
 Added educational and non-profit fakers (#897)
