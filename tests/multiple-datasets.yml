@@ -1,0 +1,17 @@
+- plugin: snowfakery.standard_plugins.Salesforce.SOQLDataset
+- object: Contact
+  count: 10
+  fields:
+    __users_from_salesforce:
+      SOQLDataset.shuffle:
+        fields: Id, FirstName, LastName
+        from: User
+    __Account_from_Salesforce:
+      SOQLDataset.shuffle:
+        fields: Id
+        from: Account
+    # The next line depends on the users having particular
+    # permissions.
+    FirstName: ${{__users_from_salesforce.FirstName}}
+    LastName: ${{__users_from_salesforce.LastName}}
+    AccountId: ${{__Account_from_Salesforce.Id}}
