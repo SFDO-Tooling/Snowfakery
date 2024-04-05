@@ -73,8 +73,8 @@ class SnowfakeryPlugin:
     def custom_functions(self, *args, **kwargs):
         """Instantiate, contextualize and return a function library
 
-        Default behaviour is to return self.Function()."""
-        functions = self.Functions()
+        Default behaviour is to return self.Functions()."""
+        functions = self.Functions() # type: ignore
         functions.context = self.context
         return functions
 
@@ -200,7 +200,7 @@ def resolve_plugins(
     with plugin_path(search_paths):
         plugins = []
         for plugin_spec in plugin_specs:
-            plugins.extend(resolve_plugin(*plugin_spec))
+            plugins.extend(resolve_plugin(*plugin_spec)) # type: ignore
         return plugins
 
 
@@ -312,7 +312,7 @@ class PluginResult:
 
 
 def _register_for_continuation(cls):
-    SnowfakeryDumper.add_representer(cls, Representer.represent_object)
+    SnowfakeryDumper.add_representer(cls, Representer.represent_object) # type: ignore
     yaml.SafeLoader.add_constructor(
         f"tag:yaml.org,2002:python/object/apply:{cls.__module__}.{cls.__name__}",
         lambda loader, node: cls._from_continuation(
@@ -327,7 +327,7 @@ class PluginResultIterator(PluginResult):
     def __init__(self, repeat):
         self.repeat = repeat
 
-    def __iter__(self):
+    def __iter__(self) -> T.Iterator:
         return self
 
     def __next__(self):
