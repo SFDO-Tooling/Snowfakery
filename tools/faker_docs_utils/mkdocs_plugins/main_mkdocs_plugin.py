@@ -35,10 +35,6 @@ class Plugin(BasePlugin):
         logger_patch = patch("logging.Logger.warning", new=new_warning)
 
         # speed up a critical function
-        #
-        #   Disabled due to Faker refactoring. After release can look into
-        #   whether it is still needed.
-        #
         lru_patch = patch(
             "faker.factory.Factory._find_provider_class",
             lru_cache(maxsize=10_000)(Factory._find_provider_class),

@@ -4,13 +4,11 @@ from importlib import import_module
 from unittest.mock import patch
 
 from mkdocs.plugins import BasePlugin
-import mkdocs
+from mkdocs.config import config_options
 
 
 class Plugin(BasePlugin):
-    config_scheme = (
-        ("build_locales", mkdocs.config.config_options.Type(bool, default=False)),  # type: ignore
-    )
+    config_scheme = (("build_locales", config_options.Type(bool, default=False)),)
 
     def on_config(self, config):
         """Look for and load main_mkdocs_plugin in tools/faker_docs_utils/mkdocs_plugins.py
