@@ -21,6 +21,8 @@ faker-edu==1.1.0
     # via -r requirements/prod.in
 faker-nonprofit==1.0.0
     # via -r requirements/prod.in
+greenlet==3.0.3
+    # via sqlalchemy
 gvgen==1.0
     # via -r requirements/prod.in
 idna==3.6
@@ -47,7 +49,7 @@ six==1.16.0
     # via python-dateutil
 sqlalchemy==1.4.52
     # via -r requirements/prod.in
-typing-extensions==4.11.0
+typing-extensions==4.10.0
     # via
     #   pydantic
     #   pydantic-core
