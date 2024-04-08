@@ -330,26 +330,14 @@ class SOQLDatasetImpl(DatasetBase):
                 f"Unable to query records for {query}: {','.join(qs.job_result.job_errors)}"
             )
 
-        self.tempdir, self.iterator = create_tempfile_sql_db_iterator(
+        tempdir, iterator = create_tempfile_sql_db_iterator(
             iteration_mode, fieldnames, qs.get_results()
         )
-        return self.iterator
+        iterator.cleanup.push(tempdir)
+        return iterator
 
     def close(self):
-        if self.iterator:
-            self.iterator.close()
-            self.iterator = None
-
-        if self.tempdir:
-            self.tempdir.cleanup()
-            self.tempdir = None
-
-    def __del__(self):
-        # in case close was not called
-        # properly, try to do an orderly
-        # cleanup
-        self.close()
-
+        pass
 
 def create_tempfile_sql_db_iterator(mode, fieldnames, results):
     tempdir, db_url = _create_db(fieldnames, results)
