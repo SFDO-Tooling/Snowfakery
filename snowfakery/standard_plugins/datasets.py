@@ -66,8 +66,16 @@ class DatasetIteratorBase(PluginResultIterator):
     Subclasses should implement 'self.restart' which puts an iterator into 'self.results'
     """
 
+    def __init__(self, repeat):
+        # subclasses can register stuff to be cleaned up here.
+        self.cleanup = ExitStack()
+        super().__init__(repeat)
+
     def next_result(self):
         return next(self.results)
+
+    def close(self):
+        self.cleanup.close()
 
 
 class SQLDatasetIterator(DatasetIteratorBase):
@@ -86,6 +94,7 @@ class SQLDatasetIterator(DatasetIteratorBase):
     def close(self):
         self.results = None
         self.connection.close()
+        super().close()
 
     def query(self):
         "Return a SQL Alchemy SELECT statement"
@@ -108,14 +117,13 @@ class SQLDatasetRandomPermutationIterator(SQLDatasetIterator):
 
 class CSVDatasetLinearIterator(DatasetIteratorBase):
     def __init__(self, datasource: FileLike, repeat: bool):
-        self.cleanup = ExitStack()
+        super().__init__(repeat)
         # utf-8-sig and newline="" are for Windows
         self.path, self.file = self.cleanup.enter_context(
             open_file_like(datasource, "r", newline="", encoding="utf-8-sig")
         )
 
         self.start()
-        super().__init__(repeat)
 
     def start(self):
         assert self.file
@@ -127,7 +135,7 @@ class CSVDatasetLinearIterator(DatasetIteratorBase):
 
     def close(self):
         self.results = None
-        self.cleanup.close()
+        super().close()
 
     def plugin_result(self, row):
         if None in row:
@@ -190,13 +198,17 @@ class DatasetBase:
         return dataset_instance
 
     def _load_dataset(self, iteration_mode, rootpath, kwargs):
-        raise NotImplementedError()
+        raise NotImplementedError("_load_dataset not implemented")
 
     def close(self):
-        raise NotImplementedError()
+        raise NotImplementedError("close not implemented: " + repr(self))
 
 
 class FileDataset(DatasetBase):
+
+    def close(self):
+        pass
+    
     def _load_dataset(self, iteration_mode, rootpath, kwargs):
         dataset = kwargs.get("dataset")
         tablename = kwargs.get("table")
