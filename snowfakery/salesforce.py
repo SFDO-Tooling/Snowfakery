@@ -22,7 +22,7 @@ def create_cci_record_type_tables(db_url: str):
                 _populate_rt_table(connection, table, record_type_column, rt_table)
 
 
-def _create_record_type_table(tablename: str, metadata: MetaData):
+def _create_record_type_table(tablename: str, metadata: MetaData) -> Table:
     """Create a table to store mapping between Record Type Ids and Developer Names."""
     rt_map_fields = [
         Column("record_type_id", Unicode(18), primary_key=True),

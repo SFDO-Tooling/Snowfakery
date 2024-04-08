@@ -236,7 +236,7 @@ class CalendarRule(PluginResultIterator):
             add_date = self.ruleset.rdate
         else:  # pragma: no cover   -   Should be unreachable
             assert action in ("include", "exclude"), "Bad action!"
-            raise NotImplementedError()
+            raise NotImplementedError("Bad action!")
 
         if isinstance(case, (list, tuple)):
             for case in case:
@@ -338,7 +338,7 @@ class CalendarRule(PluginResultIterator):
         """This method is never called.
 
         It is replaced at runtime by _next_datetime or _next_date"""
-        raise NotImplementedError()
+        raise NotImplementedError("next is not implemented")
 
     def _next_datetime(self) -> datetime:
         return next(self.iterator)
