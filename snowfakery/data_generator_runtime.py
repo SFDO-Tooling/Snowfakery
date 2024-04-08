@@ -426,7 +426,7 @@ class Interpreter:
             try:
                 plugin.close()
             except Exception as e:
-                warn(f"Could not close {plugin} because {e}")
+                warn(f"Could not close {plugin} because {repr(e)}")
         self.current_context = None
         self.plugin_instances = None
         self.plugin_function_libraries = None
