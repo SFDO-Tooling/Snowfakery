@@ -104,6 +104,7 @@ markupsafe==2.1.5
     # via
     #   -r requirements/prod.txt
     #   jinja2
+    #   mkdocs
 mergedeep==1.3.4
     # via mkdocs
 mkdocs==1.5.3
@@ -128,12 +129,15 @@ packaging==24.0
     #   pytest
     #   tox
 pathspec==0.12.1
-    # via black
+    # via
+    #   black
+    #   mkdocs
 pkgutil-resolve-name==1.3.10
     # via jsonschema
 platformdirs==4.2.0
     # via
     #   black
+    #   mkdocs
     #   tox
     #   virtualenv
 pluggy==1.4.0
@@ -196,7 +200,7 @@ six==1.16.0
     # via
     #   -r requirements/prod.txt
     #   python-dateutil
-sqlalchemy==1.4.52
+sqlalchemy==2.0.29
     # via -r requirements/prod.txt
 tomli==2.0.1
     # via
@@ -219,6 +223,7 @@ typing-extensions==4.10.0
     #   black
     #   faker
     #   pydantic
+    #   sqlalchemy
 urllib3==1.26.18
     # via
     #   -r requirements/prod.txt
