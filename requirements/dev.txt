@@ -4,6 +4,10 @@
 #
 #    pip-compile --allow-unsafe requirements/dev.in
 #
+annotated-types==0.6.0
+    # via
+    #   -r requirements/prod.txt
+    #   pydantic
 attrs==23.2.0
     # via
     #   jsonschema
@@ -104,6 +108,7 @@ markupsafe==2.1.5
     # via
     #   -r requirements/prod.txt
     #   jinja2
+    #   mkdocs
 mergedeep==1.3.4
     # via mkdocs
 mkdocs==1.5.3
@@ -128,12 +133,15 @@ packaging==24.0
     #   pytest
     #   tox
 pathspec==0.12.1
-    # via black
+    # via
+    #   black
+    #   mkdocs
 pkgutil-resolve-name==1.3.10
     # via jsonschema
 platformdirs==4.2.0
     # via
     #   black
+    #   mkdocs
     #   tox
     #   virtualenv
 pluggy==1.4.0
@@ -143,8 +151,12 @@ pluggy==1.4.0
     #   tox
 pre-commit==3.5.0
     # via -r requirements/dev.in
-pydantic==1.10.14
+pydantic==2.7.0
     # via -r requirements/prod.txt
+pydantic-core==2.18.1
+    # via
+    #   -r requirements/prod.txt
+    #   pydantic
 pygments==2.17.2
     # via diff-cover
 pyproject-api==1.6.1
@@ -216,9 +228,11 @@ types-pyyaml==6.0.12.20240311
 typing-extensions==4.10.0
     # via
     #   -r requirements/prod.txt
+    #   annotated-types
     #   black
     #   faker
     #   pydantic
+    #   pydantic-core
 urllib3==1.26.18
     # via
     #   -r requirements/prod.txt
