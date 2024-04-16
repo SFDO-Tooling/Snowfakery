@@ -7,7 +7,7 @@ from collections import defaultdict
 import locale
 
 import click
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, text
 
 from snowfakery import generate_data
 
@@ -50,7 +50,6 @@ def snowbench(
     with TemporaryDirectory() as tempdir, click.progressbar(
         label="Benchmarking", length=num_records, show_eta=False
     ) as progress_bar:
-
         start = time()
         Thread(
             daemon=True,
@@ -163,14 +162,15 @@ def count_database(filename, counts):
     dburl = f"sqlite:///{filename}?mode=ro"
     engine = create_engine(dburl)
     insp = inspect(engine)
-    tables = insp.get_table_names()  # type: ignore
+    tables = insp.get_table_names() # type: ignore
     for table in tables:
         counts[table] += count_table(engine, table)
     return counts
 
 
 def count_table(engine, tablename):
-    return engine.execute(f"select count(Id) from '{tablename}'").first()[0]
+    with engine.connect() as c:
+        return c.execute(text(f"select count(Id) from '{tablename}'")).first()[0]
 
 
 def snowfakery(recipe, num_records, tablename, outputfile):
