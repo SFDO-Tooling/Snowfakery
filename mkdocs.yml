@@ -1,8 +1,8 @@
 site_name: Snowfakery documentation
 site_url: ""
 use_directory_urls: False
-theme: readthedocs
-custom_dir: custom_theme
+theme:
+  name: readthedocs
 repo_url: https://github.com/SFDO-Tooling/Snowfakery/
 nav:
   - index.md
