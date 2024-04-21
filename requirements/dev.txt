@@ -83,6 +83,7 @@ importlib-metadata==7.1.0
     # via
     #   markdown
     #   mkdocs
+    #   mkdocs-get-deps
 importlib-resources==6.4.0
     # via
     #   jsonschema
@@ -104,14 +105,19 @@ markupsafe==2.1.5
     # via
     #   -r requirements/prod.txt
     #   jinja2
+    #   mkdocs
 mergedeep==1.3.4
-    # via mkdocs
-mkdocs==1.5.3
+    # via
+    #   mkdocs
+    #   mkdocs-get-deps
+mkdocs==1.6.0
     # via
     #   -r requirements/dev.in
     #   mkdocs-exclude-search
 mkdocs-exclude-search==0.6.6
     # via -r requirements/dev.in
+mkdocs-get-deps==0.2.0
+    # via mkdocs
 multidict==6.0.5
     # via yarl
 mypy-extensions==1.0.0
@@ -128,12 +134,15 @@ packaging==24.0
     #   pytest
     #   tox
 pathspec==0.12.1
-    # via black
+    # via
+    #   black
+    #   mkdocs
 pkgutil-resolve-name==1.3.10
     # via jsonschema
 platformdirs==4.2.0
     # via
     #   black
+    #   mkdocs-get-deps
     #   tox
     #   virtualenv
 pluggy==1.4.0
@@ -171,6 +180,7 @@ pyyaml==6.0.1
     # via
     #   -r requirements/prod.txt
     #   mkdocs
+    #   mkdocs-get-deps
     #   pre-commit
     #   pyyaml-env-tag
     #   responses
