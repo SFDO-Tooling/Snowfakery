@@ -10,7 +10,7 @@ charset-normalizer==3.3.2
     # via requests
 click==8.1.7
     # via -r requirements/prod.in
-faker==24.4.0
+faker==24.11.0
     # via
     #   -r requirements/prod.in
     #   faker-edu
