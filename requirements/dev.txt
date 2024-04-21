@@ -40,7 +40,7 @@ coverage[toml]==6.5.0
     #   pytest-cov
 coveralls==3.3.1
     # via -r requirements/dev.in
-diff-cover==8.0.3
+diff-cover==9.0.0
     # via -r requirements/dev.in
 distlib==0.3.8
     # via virtualenv
@@ -104,6 +104,7 @@ markupsafe==2.1.5
     # via
     #   -r requirements/prod.txt
     #   jinja2
+    #   mkdocs
 mergedeep==1.3.4
     # via mkdocs
 mkdocs==1.5.3
@@ -128,12 +129,15 @@ packaging==24.0
     #   pytest
     #   tox
 pathspec==0.12.1
-    # via black
+    # via
+    #   black
+    #   mkdocs
 pkgutil-resolve-name==1.3.10
     # via jsonschema
 platformdirs==4.2.0
     # via
     #   black
+    #   mkdocs
     #   tox
     #   virtualenv
 pluggy==1.4.0
