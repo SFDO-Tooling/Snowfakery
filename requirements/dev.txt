@@ -8,7 +8,7 @@ attrs==23.2.0
     # via
     #   jsonschema
     #   referencing
-black==24.4.1
+black==24.4.2
     # via -r requirements/dev.in
 cachetools==5.3.3
     # via tox
