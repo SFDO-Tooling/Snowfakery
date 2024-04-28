@@ -160,7 +160,7 @@ pyproject-api==1.6.1
     # via tox
 pyright==1.1.360
     # via -r requirements/dev.in
-pytest==8.1.1
+pytest==8.2.0
     # via
     #   -r requirements/dev.in
     #   pytest-cov
