@@ -215,7 +215,7 @@ tomli==2.0.1
     #   pyproject-api
     #   pytest
     #   tox
-tox==4.14.2
+tox==4.15.0
     # via
     #   -r requirements/dev.in
     #   tox-gh-actions
