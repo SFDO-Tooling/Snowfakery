@@ -13,10 +13,10 @@ jobs:
     runs-on: sfdc-ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
     steps:
-      - uses: "actions/checkout@v2"
-      - uses: "actions/setup-python@v1"
+      - uses: "actions/checkout@v4"
+      - uses: "actions/setup-python@v5"
         with:
           python-version: "${{ matrix.python-version }}"
 
@@ -43,11 +43,11 @@ jobs:
     name: With CumulusCI
     runs-on: sfdc-ubuntu-latest
     steps:
-      - uses: "actions/checkout@v2"
+      - uses: "actions/checkout@v4"
       - run: |
           git fetch --no-tags origin main:_remote_main_
 
-      - uses: "actions/setup-python@v1"
+      - uses: "actions/setup-python@v5"
         with:
           python-version: "3.9"
 
@@ -77,8 +77,8 @@ jobs:
     name: Faker Docs
     runs-on: sfdc-ubuntu-latest
     steps:
-      - uses: "actions/checkout@v2"
-      - uses: "actions/setup-python@v1"
+      - uses: "actions/checkout@v4"
+      - uses: "actions/setup-python@v5"
         with:
           python-version: "3.9"
 
@@ -99,8 +99,8 @@ jobs:
       matrix:
         python-version: ["3.8", "3.10"]
     steps:
-      - uses: "actions/checkout@v2"
-      - uses: "actions/setup-python@v1"
+      - uses: "actions/checkout@v4"
+      - uses: "actions/setup-python@v5"
         with:
           python-version: "${{ matrix.python-version }}"
 
@@ -124,8 +124,8 @@ jobs:
       matrix:
         python-version: ["3.9", "3.10"]
     steps:
-      - uses: "actions/checkout@v2"
-      - uses: "actions/setup-python@v1"
+      - uses: "actions/checkout@v4"
+      - uses: "actions/setup-python@v5"
         with:
           python-version: "${{ matrix.python-version }}"
 
