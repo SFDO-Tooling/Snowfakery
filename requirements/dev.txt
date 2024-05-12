@@ -158,7 +158,7 @@ pygments==2.17.2
     # via diff-cover
 pyproject-api==1.6.1
     # via tox
-pyright==1.1.360
+pyright==1.1.362
     # via -r requirements/dev.in
 pytest==8.1.1
     # via
