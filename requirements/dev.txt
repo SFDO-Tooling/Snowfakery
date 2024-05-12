@@ -206,7 +206,7 @@ six==1.16.0
     # via
     #   -r requirements/prod.txt
     #   python-dateutil
-sqlalchemy==2.0.29
+sqlalchemy==2.0.30
     # via -r requirements/prod.txt
 tomli==2.0.1
     # via
