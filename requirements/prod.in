@@ -9,4 +9,4 @@ python-dateutil
 gvgen
 pydantic<2.0.0
 python-baseconv
-requests<=2.29.0 # There are issues with urllib on latest version
+requests<=2.32.2 # There are issues with urllib on latest version
