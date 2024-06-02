@@ -39,7 +39,7 @@ python-dateutil==2.9.0.post0
     #   faker
 pyyaml==6.0.1
     # via -r requirements/prod.in
-requests==2.29.0
+requests==2.32.3
     # via -r requirements/prod.in
 six==1.16.0
     # via python-dateutil
