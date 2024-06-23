@@ -152,7 +152,7 @@ pluggy==1.5.0
     #   tox
 pre-commit==3.5.0
     # via -r requirements/dev.in
-pydantic==1.10.15
+pydantic==1.10.17
     # via -r requirements/prod.txt
 pygments==2.17.2
     # via diff-cover
