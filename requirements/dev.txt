@@ -40,7 +40,7 @@ coverage[toml]==6.5.0
     #   pytest-cov
 coveralls==3.3.1
     # via -r requirements/dev.in
-diff-cover==9.0.0
+diff-cover==9.1.0
     # via -r requirements/dev.in
 distlib==0.3.8
     # via virtualenv
