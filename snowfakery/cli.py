@@ -6,7 +6,7 @@ from snowfakery.data_gen_exceptions import DataGenError
 from snowfakery.utils.versions import check_latest_version
 
 import click
-from snowfakery import version
+from snowfakery.__about__ import __version__ as version
 from snowfakery.api import file_extensions, generate_data, COUNT_REPS
 
 if __name__ == "__main__":  # pragma: no cover

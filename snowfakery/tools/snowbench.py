@@ -162,7 +162,7 @@ def count_database(filename, counts):
     dburl = f"sqlite:///{filename}?mode=ro"
     engine = create_engine(dburl)
     insp = inspect(engine)
-    tables = insp.get_table_names() # type: ignore
+    tables = insp.get_table_names()  # type: ignore
     for table in tables:
         counts[table] += count_table(engine, table)
     return counts

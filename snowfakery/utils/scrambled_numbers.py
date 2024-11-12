@@ -64,7 +64,7 @@ def _test_scrambling_is_safe(iterations):
     for _ in range(0, iterations):
         for numsize in range(5, 100):
             for minbits in range(10, 100):
-                num = randint(10, 10 ** numsize)
+                num = randint(10, 10**numsize)
                 scrambled = scramble_number(num, minbits)
                 unscrambled = unscramble_number(scrambled)
                 assert unscrambled == num, (num, minbits, scrambled)

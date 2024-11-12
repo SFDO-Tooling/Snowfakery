@@ -339,6 +339,7 @@ class SOQLDatasetImpl(DatasetBase):
     def close(self):
         pass
 
+
 def create_tempfile_sql_db_iterator(mode, fieldnames, results):
     tempdir, db_url = _create_db(fieldnames, results)
     rc = sql_dataset(db_url, "data", mode)

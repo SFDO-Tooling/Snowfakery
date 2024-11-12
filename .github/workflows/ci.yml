@@ -3,45 +3,44 @@ name: CI
 on: [push, workflow_dispatch]
 
 env:
-  COVERALLS_PARALLEL: true
-  COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
   SF_MKDOCS_BUILD_LOCALES: "False"
 
 jobs:
   test:
-    name: "Python ${{ matrix.python-version }}"
-    runs-on: sfdc-ubuntu-latest
+    name: "Unit tests: ${{ matrix.os }}-${{ matrix.python-version }}"
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        os: [macos-latest, SFDO-Tooling-Ubuntu, SFDO-Tooling-Windows]
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: "actions/checkout@v4"
       - uses: "actions/setup-python@v5"
         with:
           python-version: "${{ matrix.python-version }}"
-
+      - name: Install a specific version of uv
+        uses: SFDO-Tooling/setup-uv@main
+        with:
+          version: "0.5.0"
+          enable-cache: true
       - name: "Install dependencies"
         run: |
           python -VV
           python -m pip install --upgrade pip
-          pip install -r requirements_dev.txt
+          uv sync -p ${{ matrix.python-version }}
 
-      - name: "Run tox targets for ${{ matrix.python-version }}"
-        run: python -m tox
-
-      - name: Report Coverage
-        run: coveralls
+      - name: "Run pytest"
+        run: uv run pytest
 
       - name: Test snowbench
         run: |
-          python setup.py install
-          snowbench snowfakery/tools/benchmark_1.yml --num-records 10_000  --num-records-tablename Account --number-of-processes 4
-          snowbench | tee bench.txt
+          uv run snowbench snowfakery/tools/benchmark_1.yml --num-records 10_000  --num-records-tablename Account --number-of-processes 4
+          uv run snowbench | tee bench.txt
           tail -n 7 bench.txt >> $GITHUB_STEP_SUMMARY
 
   with_cci:
     name: With CumulusCI
-    runs-on: sfdc-ubuntu-latest
+    runs-on: SFDO-Tooling-Ubuntu
     steps:
       - uses: "actions/checkout@v4"
       - run: |
@@ -49,55 +48,67 @@ jobs:
 
       - uses: "actions/setup-python@v5"
         with:
-          python-version: "3.9"
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: SFDO-Tooling/setup-uv@main
+        with:
+            version: "0.5.0"
+            enable-cache: true
 
       - name: Install dependencies
         run: |
           python -VV
           python -m pip install --upgrade pip
-          pip install -r requirements_dev.txt
-          python -m pip install git+https://github.com/SFDO-Tooling/CumulusCI.git@main
+          uv sync -p 3.11
+          uv add git+https://github.com/SFDO-Tooling/CumulusCI.git@main
 
       - name: Run Tests
         run: |
-          python -m coverage run -m pytest
+          uv run coverage run -m pytest
 
       - name: Check Coverage
         run: |
-          coverage xml
-          coverage report
+          uv run coverage xml
+          uv run coverage report
           git diff HEAD.._remote_main_
-          diff-cover coverage.xml --fail-under 100 --compare-branch=_remote_main_ --diff-range-notation=.. --show-uncovered --markdown-report coverage.md
+          uv run diff-cover coverage.xml --fail-under 100 --compare-branch=_remote_main_ --diff-range-notation=.. --show-uncovered --markdown-report coverage.md
           cat coverage.md >> $GITHUB_STEP_SUMMARY
 
       - name: Type Check
-        run: pyright
+        run: uv run pyright
 
   faker_docs:
     name: Faker Docs
-    runs-on: sfdc-ubuntu-latest
+    runs-on: SFDO-Tooling-Ubuntu
     steps:
       - uses: "actions/checkout@v4"
       - uses: "actions/setup-python@v5"
         with:
-          python-version: "3.9"
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: SFDO-Tooling/setup-uv@main
+        with:
+            version: "0.5.0"
+            enable-cache: true
 
       - name: Install dependencies
         run: |
           python -VV
-          pip install -r requirements_dev.txt
+          pip install -r docs/requirements.txt
           # docs build requires a proper install
-          python setup.py install
+          pip install .
 
       - name: Make Docs
         run: make docs
 
   pip:
     name: "Install from Pip ${{ matrix.python-version }}"
-    runs-on: sfdc-ubuntu-latest
+    runs-on: SFDO-Tooling-Ubuntu
     strategy:
       matrix:
-        python-version: ["3.8", "3.10"]
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: "actions/checkout@v4"
       - uses: "actions/setup-python@v5"
@@ -117,30 +128,3 @@ jobs:
         run: |
           python -m snowfakery --version
 
-  windows:
-    name: Windows ${{ matrix.python-version }}
-    runs-on: sfdc-windows-latest
-    strategy:
-      matrix:
-        python-version: ["3.9", "3.10"]
-    steps:
-      - uses: "actions/checkout@v4"
-      - uses: "actions/setup-python@v5"
-        with:
-          python-version: "${{ matrix.python-version }}"
-
-      - name: "Install dependencies"
-        run: |
-          python -VV
-          python -m pip install --upgrade pip
-          pip install -r requirements_dev.txt
-
-      - name: Run Tests
-        run: python -m pytest
-
-  coveralls_done:
-    name: Finalize coveralls
-    needs: [test]
-    runs-on: sfdc-ubuntu-latest
-    steps:
-      - run: curl -k https://coveralls.io/webhook?repo_token=$COVERALLS_REPO_TOKEN -d "payload[build_num]=$GITHUB_SHA&payload[status]=done"

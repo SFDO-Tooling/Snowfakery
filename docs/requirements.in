@@ -1,0 +1,2 @@
+mkdocs>=1.6.1
+mkdocs-exclude-search>=0.6.6
