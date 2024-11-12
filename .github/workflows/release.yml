@@ -12,7 +12,7 @@ on:
 jobs:
   publish-to-pypi:
     name: Publish new release to PyPI
-    runs-on: sfdc-ubuntu-latest
+    runs-on: SFDO-Tooling-Ubuntu
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python 3.8

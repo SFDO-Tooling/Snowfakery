@@ -9,7 +9,7 @@ on:
 jobs:
   faker_docs:
     name: Faker Docs I18N
-    runs-on: sfdc-ubuntu-latest
+    runs-on: SFDO-Tooling-Ubuntu
     steps:
       - uses: "actions/checkout@v4"
       - uses: "actions/setup-python@v5"

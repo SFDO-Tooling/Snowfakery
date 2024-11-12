@@ -10,7 +10,7 @@ env:
 jobs:
   test:
     name: "Python ${{ matrix.python-version }}"
-    runs-on: sfdc-ubuntu-latest
+    runs-on: SFDO-Tooling-Ubuntu
     strategy:
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
@@ -41,7 +41,7 @@ jobs:
 
   with_cci:
     name: With CumulusCI
-    runs-on: sfdc-ubuntu-latest
+    runs-on: SFDO-Tooling-Ubuntu
     steps:
       - uses: "actions/checkout@v4"
       - run: |
@@ -75,7 +75,7 @@ jobs:
 
   faker_docs:
     name: Faker Docs
-    runs-on: sfdc-ubuntu-latest
+    runs-on: SFDO-Tooling-Ubuntu
     steps:
       - uses: "actions/checkout@v4"
       - uses: "actions/setup-python@v5"
@@ -94,7 +94,7 @@ jobs:
 
   pip:
     name: "Install from Pip ${{ matrix.python-version }}"
-    runs-on: sfdc-ubuntu-latest
+    runs-on: SFDO-Tooling-Ubuntu
     strategy:
       matrix:
         python-version: ["3.8", "3.10"]
@@ -141,6 +141,6 @@ jobs:
   coveralls_done:
     name: Finalize coveralls
     needs: [test]
-    runs-on: sfdc-ubuntu-latest
+    runs-on: SFDO-Tooling-Ubuntu
     steps:
       - run: curl -k https://coveralls.io/webhook?repo_token=$COVERALLS_REPO_TOKEN -d "payload[build_num]=$GITHUB_SHA&payload[status]=done"
