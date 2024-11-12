@@ -4,6 +4,10 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 4.0.0
+
+Drop support for Python versions 3.8, 3.9, and 3.10 (#1091)
+
 ## Snowfakery 3.6.3
 
 Update dependencies.
