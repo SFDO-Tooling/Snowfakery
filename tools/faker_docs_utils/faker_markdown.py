@@ -176,7 +176,7 @@ def generate_markdown_for_all_locales(path: Path, locales=None):
             generate_markdown_for_fakers(f, locale)
 
 
-def generate_locales_index(path: T.Union[Path,str], locales_list: T.List[str]):
+def generate_locales_index(path: T.Union[Path, str], locales_list: T.List[str]):
     "Generate markdown index including listed locales. None means all locales"
     locales_list = locales_list or AVAILABLE_LOCALES
     with Path(path).open("w") as outfile:

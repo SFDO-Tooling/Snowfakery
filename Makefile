@@ -1,18 +1,16 @@
 update-deps:
-	pip-compile --upgrade --allow-unsafe requirements/prod.in
-	pip-compile --upgrade --allow-unsafe requirements/dev.in
+	uv lock --upgrade
+	uv pip compile docs/requirements.in -o docs/requirements.txt --universal -p 3.11
 
 dev-install:
-	pip install --upgrade pip-tools
-	pip-sync requirements/*.txt
-	pip install -e .
+	uv sync
 
 # set SF_MKDOCS_BUILD_LOCALES=False to skip building all locales
 docs:		.FORCE
-	python -m mkdocs build --clean --site-dir build/html --config-file mkdocs.yml
+	mkdocs build --clean --site-dir build/html --config-file mkdocs.yml
 
 coverage:
-	pytest --cov --cov-report=html
+	uv run pytest --cov --cov-report=html
 	open htmlcov/index.html
 
 .FORCE:

@@ -205,10 +205,9 @@ class DatasetBase:
 
 
 class FileDataset(DatasetBase):
-
     def close(self):
         pass
-    
+
     def _load_dataset(self, iteration_mode, rootpath, kwargs):
         dataset = kwargs.get("dataset")
         tablename = kwargs.get("table")

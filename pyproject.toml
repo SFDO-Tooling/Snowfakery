@@ -1,7 +1,115 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "snowfakery"
+description = """
+Snowfakery is a tool for generating fake data that has relations between tables.
+Every row is faked data, but also unique and random, like a snowflake.
+"""
+dynamic = ["version"]
+readme = { file = "README.md", content-type = "text/markdown" }
+license = { text = "BSD 3-Clause License" }
+requires-python = ">=3.11"
+authors = [
+    { name = "Paul Prescod", email = "pprescod@salesforce.com" },
+    { name = "Salesforce.org", email = "sfdo-mrbelvedere@salesforce.com" },
+]
+keywords = ["fake data", "data generation", "snowfakery", "salesforce"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "sqlalchemy<3",
+    "faker",
+    "faker-nonprofit",
+    "faker-edu",
+    "jinja2",
+    "pyyaml",
+    "click",
+    "python-dateutil",
+    "gvgen",
+    "pydantic<2.0.0",
+    "python-baseconv",
+    "requests",
+    "setuptools>=75.4.0",
+]
+
+[dependency-groups]
+dev = [
+    "black>=24.10.0",
+    "coverage>=7.6.4",
+    "coveralls>=4.0.1",
+    "diff-cover>=9.2.0",
+    "faker-microservice>=2.0.0",
+    "jsonschema>=4.23.0",
+    "mkdocs>=1.6.1",
+    "mkdocs-exclude-search>=0.6.6",
+    "pre-commit>=4.0.1",
+    "pyright>=1.1.388",
+    "pytest>=8.3.3",
+    "pytest-cov>=6.0.0",
+    "pytest-vcr>=1.0.2",
+    "responses>=0.23.1",
+    "vcrpy>=6.0.2",
+]
+
+[project.scripts]
+snowbench = "snowfakery.tools.snowbench:main"
+snowfakery = "snowfakery.cli:main"
+
+[project.entry-points."mkdocs.plugins"]
+snowfakery_fakes = "snowfakery.tools.mkdocs:Plugin"
+
+[project.urls]
+Homepage = "https://github.com/SFDO-Tooling/Snowfakery"
+"Bug Tracker" = "https://github.com/SFDO-Tooling/Snowfakery/issues"
+
+[tool.hatch.version]
+path = "snowfakery/__about__.py"
+
+[tool.hatch.build]
+include = ["snowfakery", "snowfakery/**/*", "README.md"]
+# Exclude the 'snowfakery.docs' package
+exclude = ["snowfakery/docs", "snowfakery/docs/**/*"]
+
+[tool.hatch.build.targets.wheel]
+exclude = ["*.sql", "*.zip"]
+
+[tool.coverage.run]
+source = ["snowfakery"]
+omit = ["snowfakery/standard_plugins/statistical_distributions.py"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "@abstract",
+    "raise NotImplementedError",
+    "raise AssertionError",
+    "def __repr__",
+    "def __str__",
+    "if T.TYPE_CHECKING",
+    "if TYPE_CHECKING",
+]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+multi_line_output = 3
+
 [tool.pyright]
 include = [
     "snowfakery/utils/*",
-    "snowfakery/tools/*", 
+    "snowfakery/tools/*",
     "snowfakery/__init__.py",
     "snowfakery/__main__.py",
     "snowfakery/cci_mapping_files/post_processes.py",
@@ -13,3 +121,7 @@ include = [
     "snowfakery/object_rows.py",
     "snowfakery/standard_plugins/Schedule.py",
 ]
+
+[tool.pytest.ini_options]
+testpaths = "tests"
+addopts = "-p pytest_snowfakery.salesforce_cci_pytest_plugin"

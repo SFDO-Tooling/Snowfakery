@@ -9,19 +9,25 @@ on:
 jobs:
   faker_docs:
     name: Faker Docs I18N
-    runs-on: sfdc-ubuntu-latest
+    runs-on: SFDO-Tooling-Ubuntu
     steps:
       - uses: "actions/checkout@v4"
       - uses: "actions/setup-python@v5"
         with:
-          python-version: "3.9"
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: SFDO-Tooling/setup-uv@main
+        with:
+            version: "0.5.0"
+            enable-cache: true
 
       - name: Install dependencies
         run: |
           python -VV
-          pip install -r requirements_dev.txt
+          pip install mkdocs mkdocs-exclude-search
           # docs build requires a proper install
-          python setup.py install
+          pip install .
 
       - name: Make Docs
         run: make docs
