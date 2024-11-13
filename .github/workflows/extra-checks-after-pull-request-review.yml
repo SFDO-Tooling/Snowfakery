@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -VV
-          pip install -r mkdocs mkdocs-exclude-search
+          pip install mkdocs mkdocs-exclude-search
           # docs build requires a proper install
           pip install .
 
