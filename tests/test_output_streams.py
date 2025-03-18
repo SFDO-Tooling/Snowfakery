@@ -353,6 +353,7 @@ class TestCSVOutputStream(OutputCommonTests):
 
     def test_csv_output(self):
         yaml = """
+        - snowfakery_version: 3
         - object: foo
           fields:
             a: 1
@@ -365,6 +366,10 @@ class TestCSVOutputStream(OutputCommonTests):
           fields:
             barb: 2
             bard: 4
+        - object: faz
+          fields:
+            list_t: ${{fake.json(data_columns={'Spec':'@1.0.1', 'ID':'pyint','Details':{'Name':'name', 'Address':'address'}}, num_rows=2)}}
+            dict_t: ${{fake.json(data_columns={'Spec':'@1.0.1', 'ID':'pyint','Details':{'Name':'name', 'Address':'address'}}, num_rows=1)}}
         """
         with TemporaryDirectory() as t:
             output_stream = CSVOutputStream(Path(t) / "csvoutput")
@@ -373,13 +378,15 @@ class TestCSVOutputStream(OutputCommonTests):
             assert messages
             assert "foo.csv" in messages[0]
             assert "bar.csv" in messages[1]
-            assert "csvw" in messages[2]
+            assert "faz.csv" in messages[2]
+            assert "csvw" in messages[3]
             assert (Path(t) / "csvoutput" / "foo.csv").exists()
             with open(Path(t) / "csvoutput" / "csvw_metadata.json") as f:
                 metadata = json.load(f)
                 assert {table["url"] for table in metadata["tables"]} == {
                     "foo.csv",
                     "bar.csv",
+                    "faz.csv",
                 }
 
     def test_null(self):
