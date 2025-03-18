@@ -61,6 +61,8 @@ class OutputStream(ABC):
         type(None): noop,
         bool: int,
         Decimal: str,
+        list: lambda data_list: json.dumps(data_list),
+        dict: lambda data_list: json.dumps(data_list),
     }
     uses_folder = False
     uses_path = False

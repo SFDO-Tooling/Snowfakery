@@ -1,0 +1,4 @@
+- snowfakery_version: 3
+- object: SomeObject
+  fields:
+    formula_field_example: ${{fake.json(data_columns={'Spec':'@1.0.1', 'ID':'pyint','Details':{'Name':'name', 'Address':'address'}}, num_rows=10)}}
