@@ -4,7 +4,7 @@ from datetime import date
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, Extra, validator, PositiveInt
+from pydantic.v1 import BaseModel, Extra, validator, PositiveInt
 
 
 class AtomicDecl(T.NamedTuple):

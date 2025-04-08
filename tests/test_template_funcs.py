@@ -416,7 +416,7 @@ class TestTemplateFuncs:
             generate(yaml)
         result = generated_rows.table_values("foo", 0)
 
-        class ResultModel(pydantic.BaseModel):
+        class ResultModel(pydantic.v1.BaseModel):
             id: int
             bool: bool
             date: date
