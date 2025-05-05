@@ -370,6 +370,9 @@ class TestCSVOutputStream(OutputCommonTests):
           fields:
             list_t: ${{fake.json(data_columns={'Spec':'@1.0.1', 'ID':'pyint','Details':{'Name':'name', 'Address':'address'}}, num_rows=2)}}
             dict_t: ${{fake.json(data_columns={'Spec':'@1.0.1', 'ID':'pyint','Details':{'Name':'name', 'Address':'address'}}, num_rows=1)}}
+            bool_t: ${{fake.pybool()}}
+            tuple_t: ${{(1, 2)}}
+            bytes_t: ${{fake.binary(length=64)}}
         """
         with TemporaryDirectory() as t:
             output_stream = CSVOutputStream(Path(t) / "csvoutput")

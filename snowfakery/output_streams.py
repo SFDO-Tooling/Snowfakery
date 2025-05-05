@@ -63,6 +63,9 @@ class OutputStream(ABC):
         Decimal: str,
         list: lambda data: json.dumps(data),
         dict: lambda data: json.dumps(data),
+        bytes: str,
+        tuple: lambda data: data,
+        set: lambda data: data,
     }
     uses_folder = False
     uses_path = False
