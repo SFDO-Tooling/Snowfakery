@@ -1050,6 +1050,7 @@ wheels = [
 
 [[package]]
 name = "snowfakery"
+version="4.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
