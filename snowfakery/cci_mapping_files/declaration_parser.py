@@ -4,7 +4,7 @@ from datetime import date
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, Extra, validator, PositiveInt
+from pydantic import BaseModel, ConfigDict, PositiveInt, RootModel, field_validator
 
 
 class AtomicDecl(T.NamedTuple):
@@ -58,25 +58,24 @@ class MergeRules:
 
 
 class SObjectRuleDeclaration(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     sf_object: str
-    priority: T.Literal["low", "medium", "high"] = None
+    priority: T.Optional[T.Literal["low", "medium", "high"]] = None
 
-    api: T.Literal["smart", "rest", "bulk"] = None
-    batch_size: int = None
-    bulk_mode: T.Literal["serial", "parallel"] = None
-    anchor_date: T.Union[str, date] = None
+    api: T.Optional[T.Literal["smart", "rest", "bulk"]] = None
+    batch_size: T.Optional[int] = None
+    bulk_mode: T.Optional[T.Literal["serial", "parallel"]] = None
+    anchor_date: T.Optional[T.Union[str, date]] = None
 
-    load_after: str = None
-
-    class Config:
-        extra = Extra.forbid
+    load_after: T.Optional[str] = None
 
     @property
     def priority_number(self):
         values = {"low": 1, "medium": 2, "high": 3, None: 2}
         return values[self.priority]
 
-    @validator("priority", "api", "bulk_mode", pre=True)
+    @field_validator("priority", "api", "bulk_mode", mode="before")
     def case_normalizer(cls, val):
         if hasattr(val, "lower"):
             return val.lower()
@@ -104,13 +103,12 @@ MERGE_RULES = {
 
 class ChannelDeclaration(BaseModel):
     "Channel declarations are only of relevance to Salesforce employees"
-    user: str
-    recipe_options: T.Dict[str, T.Any] = None
-    num_generators: PositiveInt = None
-    num_loaders: PositiveInt = None
+    model_config = ConfigDict(extra="forbid")
 
-    class Config:
-        extra = Extra.forbid
+    user: str
+    recipe_options: T.Optional[T.Dict[str, T.Any]] = None
+    num_generators: T.Optional[PositiveInt] = None
+    num_loaders: T.Optional[PositiveInt] = None
 
 
 class ChannelDeclarationList(BaseModel):
@@ -125,9 +123,9 @@ class LoadDeclarationsTuple(T.NamedTuple):
     ]  # Channel declarations are only of relevance to Salesforce employees
 
 
-class SObjectRuleDeclarationFile(BaseModel):
-    __root__: T.List[T.Union[ChannelDeclarationList, SObjectRuleDeclaration]]
-
+class SObjectRuleDeclarationFile(
+    RootModel[T.List[T.Union[ChannelDeclarationList, SObjectRuleDeclaration]]]
+):
     @classmethod
     def parse_from_yaml(cls, f: T.Union[Path, T.TextIO]):
         "Parse from a file-like or Path"
@@ -137,15 +135,13 @@ class SObjectRuleDeclarationFile(BaseModel):
         else:
             data = yaml.safe_load(f)
 
+        parsed = cls.model_validate(data)
+
         sobject_decls = [
-            obj
-            for obj in cls.parse_obj(data).__root__
-            if isinstance(obj, SObjectRuleDeclaration)
+            obj for obj in parsed.root if isinstance(obj, SObjectRuleDeclaration)
         ]
         channel_decls = [
-            obj
-            for obj in cls.parse_obj(data).__root__
-            if isinstance(obj, ChannelDeclarationList)
+            obj for obj in parsed.root if isinstance(obj, ChannelDeclarationList)
         ]
         if len(channel_decls) > 1:
             raise AssertionError("Only one channel declaration list allowed per file.")
