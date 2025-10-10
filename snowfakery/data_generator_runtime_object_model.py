@@ -19,7 +19,10 @@ from .plugins import Scalar, PluginResult, PluginResultIterator
 # objects that represent the hierarchy of a data generator.
 # roughly similar to the YAML structure but with domain-specific objects
 Definition = Union["ObjectTemplate", "SimpleValue", "StructuredValue"]
-FieldValue = Union[None, Scalar, ObjectRow, tuple, PluginResult, ObjectReference]
+FieldValue = Union[
+    None, bool, int, float, str, bytes, list, dict, tuple, set,
+    Scalar, ObjectRow, PluginResult, ObjectReference
+]
 
 
 class FieldDefinition(ABC):
