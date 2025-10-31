@@ -196,22 +196,8 @@ def generate(
 
                 validation_result = validate_recipe(parse_result, interpreter, options)
 
-                # Display validation summary statistics
-                error_count = len(validation_result.errors)
-                warning_count = len(validation_result.warnings)
-
-                if error_count > 0 or warning_count > 0:
-                    summary_msg = f"\nValidation found {error_count} error(s) and {warning_count} warning(s)"
-                    parent_application.echo(summary_msg)
-
-                # Display errors with color
+                # Stop execution if errors found
                 if validation_result.has_errors():
-                    parent_application.echo("\nErrors:", err=True)
-                    for i, error in enumerate(validation_result.errors, 1):
-                        error_msg = click.style(f"  {i}. {error}", fg="red")
-                        parent_application.echo(error_msg, err=True)
-
-                    # Stop execution if errors found
                     raise DataGenValidationError(validation_result)
 
                 # Display warnings with color (only if no errors)
