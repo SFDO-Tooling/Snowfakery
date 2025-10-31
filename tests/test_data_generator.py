@@ -156,3 +156,137 @@ persistent_nicknames: {}
             match="Should not reuse names as both nickname and table name:",
         ):
             generate(StringIO(yaml))
+
+
+class TestValidationIntegration:
+    """Test validation integration in data_generator"""
+
+    def test_strict_mode_catches_validation_errors(self):
+        """Test that strict_mode catches validation errors and raises exception"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Account
+          fields:
+            Score:
+              random_number:
+                min: 100
+                max: 50
+        """
+        from snowfakery.data_gen_exceptions import DataGenValidationError
+
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(StringIO(yaml), strict_mode=True)
+
+        # Should mention the validation error
+        assert (
+            "min" in str(exc_info.value).lower() or "max" in str(exc_info.value).lower()
+        )
+
+    def test_strict_mode_allows_valid_recipe(self):
+        """Test that strict_mode allows valid recipes to execute"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Account
+          count: 2
+          fields:
+            Name: Test Account
+            Score:
+              random_number:
+                min: 1
+                max: 10
+        """
+        # Should execute without errors
+        result = generate(StringIO(yaml), strict_mode=True)
+        assert result is not None
+
+    def test_validate_only_mode(self):
+        """Test that validate_only performs validation and returns ValidationResult"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Account
+          fields:
+            Name: Test
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+
+        # Should return ValidationResult, not ExecutionSummary
+        assert hasattr(result, "has_errors")
+        assert hasattr(result, "has_warnings")
+        assert not result.has_errors()
+
+    def test_validate_only_with_errors(self):
+        """Test that validate_only detects errors without execution"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Account
+          fields:
+            Score:
+              random_number:
+                min: 100
+                max: 50
+        """
+        from snowfakery.data_gen_exceptions import DataGenValidationError
+
+        with pytest.raises(DataGenValidationError):
+            generate(StringIO(yaml), validate_only=True)
+
+    def test_default_mode_no_validation(self):
+        """Test that default mode (no strict_mode) doesn't perform upfront validation"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Account
+          count: 1
+          fields:
+            Name: Test
+        """
+        # Should execute normally without validation phase
+        result = generate(StringIO(yaml), strict_mode=False)
+        assert result is not None
+
+    def test_validation_with_unknown_function(self):
+        """Test validation catches unknown function names"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Account
+          fields:
+            Value:
+              unknown_function_xyz:
+                param: value
+        """
+        from snowfakery.data_gen_exceptions import DataGenValidationError
+
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(StringIO(yaml), strict_mode=True)
+
+        assert "unknown" in str(exc_info.value).lower()
+
+    def test_validation_with_reference_forward_ref(self):
+        """Test validation allows forward references for reference function"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Account
+          fields:
+            ContactRef:
+              reference: Contact
+        - object: Contact
+          fields:
+            Name: Test
+        """
+        # Should validate successfully (forward reference is allowed)
+        result = generate(StringIO(yaml), strict_mode=True)
+        assert result is not None
+
+    def test_validation_with_warnings_only(self):
+        """Test validation success message with warnings"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Account
+          fields:
+            Value:
+              random_choice:
+                option1: 30%
+                option2: 40%
+        """
+        # Should pass with warnings (probabilities don't add to 100%)
+        result = generate(StringIO(yaml), strict_mode=True)
+        assert result is not None

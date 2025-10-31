@@ -18,6 +18,8 @@ from snowfakery.plugins import PluginContext, SnowfakeryPlugin, lazy, memorable
 from snowfakery.row_history import RandomReferenceContext
 from snowfakery.standard_plugins.UniqueId import UniqueId
 from snowfakery.utils.template_utils import StringGenerator
+from snowfakery.utils.validation_utils import resolve_value, get_fuzzy_match
+from datetime import date as date_constructor, datetime as datetime_constructor
 
 from .data_gen_exceptions import DataGenError
 
@@ -403,3 +405,755 @@ class StandardFuncs(SnowfakeryPlugin):
     setattr(Functions, "NULL", None)
     setattr(Functions, "null", None)
     setattr(Functions, "Null", None)
+
+    class Validators:
+        """Static validators for standard functions."""
+
+        @staticmethod
+        def check_required_params(sv, context, required_params, func_name):
+            """Helper to check required parameters and return False if any missing.
+
+            Args:
+                sv: StructuredValue with kwargs to check
+                context: ValidationContext to add errors to
+                required_params: List or set of required parameter names
+                func_name: Name of function for error messages
+
+            Returns:
+                True if all required params present, False if any missing
+            """
+            kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
+            missing = [p for p in required_params if p not in kwargs]
+            if missing:
+                context.add_error(
+                    f"{func_name}: Missing required parameter(s): {', '.join(missing)}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+                return False
+            return True
+
+        @staticmethod
+        def validate_random_number(sv, context):
+            """Validate random_number(min, max, step)"""
+
+            # ERROR: Required parameters
+            if not StandardFuncs.Validators.check_required_params(
+                sv, context, ["min", "max"], "random_number"
+            ):
+                return
+
+            kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
+
+            # Resolve values
+            min_val = resolve_value(kwargs.get("min"), context)
+            max_val = resolve_value(kwargs.get("max"), context)
+            step_val = resolve_value(kwargs.get("step", 1), context)
+
+            # ERROR: Type checking
+            if min_val is not None and not isinstance(min_val, (int, float)):
+                context.add_error(
+                    "random_number: 'min' must be an integer",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+            if max_val is not None and not isinstance(max_val, (int, float)):
+                context.add_error(
+                    "random_number: 'max' must be an integer",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+            # ERROR: Logical constraints
+            if isinstance(min_val, (int, float)) and isinstance(max_val, (int, float)):
+                if min_val > max_val:
+                    context.add_error(
+                        f"random_number: 'min' ({min_val}) must be <= 'max' ({max_val})",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+
+            # ERROR: Step validation
+            if step_val is not None:
+                if not isinstance(step_val, int) or step_val <= 0:
+                    context.add_error(
+                        "random_number: 'step' must be a positive integer",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+
+            # WARNING: Unknown parameters
+            valid_params = {"min", "max", "step"}
+            unknown = set(kwargs.keys()) - valid_params
+            if unknown:
+                context.add_warning(
+                    f"random_number: Unknown parameter(s): {', '.join(unknown)}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+        @staticmethod
+        def validate_reference(sv, context):
+            """Validate reference(x, object, id)"""
+
+            kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
+            args = getattr(sv, "args", [])
+
+            # Determine if using x or object+id form
+            has_x = len(args) > 0 or "x" in kwargs
+            has_object = "object" in kwargs
+            has_id = "id" in kwargs
+
+            # ERROR: Must specify either x OR (object AND id)
+            if not has_x and not (has_object and has_id):
+                context.add_error(
+                    "reference: Must specify either positional argument or both 'object' and 'id'",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+                return
+
+            # ERROR: Cannot mix x and object/id
+            if has_x and (has_object or has_id):
+                context.add_error(
+                    "reference: Cannot specify both positional argument and 'object'/'id'",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+                return
+
+            # Validate object exists
+            if has_x:
+                ref_name = resolve_value(args[0] if args else kwargs["x"], context)
+                if ref_name and isinstance(ref_name, str):
+                    # Allow forward references for reference function
+                    obj = context.resolve_object(ref_name, allow_forward_ref=True)
+                    if not obj:
+                        suggestion = get_fuzzy_match(
+                            ref_name,
+                            list(context.all_objects.keys())
+                            + list(context.all_nicknames.keys()),
+                        )
+                        msg = f"reference: Unknown object/nickname '{ref_name}'"
+                        if suggestion:
+                            msg += f". Did you mean '{suggestion}'?"
+                        context.add_error(
+                            msg,
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+
+            elif has_object:
+                obj_name = resolve_value(kwargs["object"], context)
+                if obj_name and isinstance(obj_name, str):
+                    # Allow forward references for reference function
+                    if obj_name not in context.all_objects:
+                        suggestion = get_fuzzy_match(
+                            obj_name, list(context.all_objects.keys())
+                        )
+                        msg = f"reference: Unknown object type '{obj_name}'"
+                        if suggestion:
+                            msg += f". Did you mean '{suggestion}'?"
+                        context.add_error(
+                            msg,
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+
+                # Validate id is numeric
+                id_val = resolve_value(kwargs["id"], context)
+                if id_val is not None and not isinstance(id_val, (int, float)):
+                    context.add_warning(
+                        "reference: 'id' must be numeric",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+
+        @staticmethod
+        def validate_random_choice(sv, context):
+            """Validate random_choice(*choices, **kwchoices)"""
+
+            kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
+            args = getattr(sv, "args", [])
+
+            # ERROR: Must have at least one choice
+            if not args and not kwargs:
+                context.add_error(
+                    "random_choice: No choices provided",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+                return
+
+            # ERROR: Cannot mix list and dict formats
+            if args and kwargs:
+                context.add_error(
+                    "random_choice: Cannot mix list-based and probability-based choices",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+                return
+
+            # Validate probability format if using dict
+            if kwargs:
+                total = 0
+                has_percentages = False
+
+                for key, prob in kwargs.items():
+                    prob_val = resolve_value(prob, context)
+
+                    if prob_val is not None:
+                        # Check if it's a string percentage
+                        if isinstance(prob_val, str) and prob_val.endswith("%"):
+                            has_percentages = True
+                            try:
+                                numeric_val = float(prob_val.rstrip("%"))
+
+                                # ERROR: Must be positive
+                                if numeric_val < 0:
+                                    context.add_error(
+                                        "random_choice: Probability must be positive",
+                                        getattr(sv, "filename", None),
+                                        getattr(sv, "line_num", None),
+                                    )
+
+                                # ERROR: Individual > 100%
+                                if numeric_val > 100:
+                                    context.add_error(
+                                        f"random_choice: Probability {prob_val} exceeds 100%",
+                                        getattr(sv, "filename", None),
+                                        getattr(sv, "line_num", None),
+                                    )
+
+                                total += numeric_val
+                            except ValueError:
+                                context.add_error(
+                                    "random_choice: Probability must be numeric or percentage (e.g., '50%')",
+                                    getattr(sv, "filename", None),
+                                    getattr(sv, "line_num", None),
+                                )
+                        elif isinstance(prob_val, (int, float)):
+                            # ERROR: Must be positive
+                            if prob_val < 0:
+                                context.add_error(
+                                    "random_choice: Probability must be positive",
+                                    getattr(sv, "filename", None),
+                                    getattr(sv, "line_num", None),
+                                )
+                        else:
+                            context.add_error(
+                                "random_choice: Probability must be numeric or percentage (e.g., '50%')",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+
+                # ERROR: Probabilities sum to 0
+                if has_percentages and total == 0:
+                    context.add_error(
+                        "random_choice: Probabilities sum to zero",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+
+                # WARNING: Probabilities don't add to 100%
+                if has_percentages and total != 0 and total != 100:
+                    context.add_warning(
+                        f"random_choice: Warning - probabilities add up to {total}%, expected 100%",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+
+        @staticmethod
+        def validate_date(sv, context):
+            """Validate date(datespec=None, *, year=None, month=None, day=None)"""
+
+            kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
+            args = getattr(sv, "args", [])
+
+            # Get datespec (positional or keyword)
+            datespec = args[0] if args else kwargs.get("datespec")
+            year = kwargs.get("year")
+            month = kwargs.get("month")
+            day = kwargs.get("day")
+
+            # ERROR: Cannot specify both datespec and components
+            if datespec and any([year, month, day]):
+                context.add_error(
+                    "date: Cannot specify 'datespec' with 'year', 'month', or 'day'",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+                return
+
+            # If using components, validate them
+            if any([year, month, day]):
+                # ERROR: All three required together
+                if not all([year, month, day]):
+                    context.add_error(
+                        "date: Must specify 'year', 'month', and 'day' together",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                    return
+
+                # Resolve and validate
+                year_val = resolve_value(year, context)
+                month_val = resolve_value(month, context)
+                day_val = resolve_value(day, context)
+
+                if all([isinstance(v, int) for v in [year_val, month_val, day_val]]):
+                    try:
+                        date_constructor(year_val, month_val, day_val)
+                    except (ValueError, TypeError) as e:
+                        context.add_error(
+                            f"date: Invalid date - {str(e)}",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+
+            # If using datespec, validate it
+            elif datespec:
+                datespec_val = resolve_value(datespec, context)
+                if isinstance(datespec_val, str):
+                    # Skip validation for Jinja expressions
+                    if not ("{{" in datespec_val or "{%" in datespec_val):
+                        try:
+                            parse_date(datespec_val)
+                        except Exception:
+                            context.add_error(
+                                f"date: Invalid date string '{datespec_val}'",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+
+            # WARNING: Unknown parameters
+            valid_params = {"datespec", "year", "month", "day"}
+            unknown = set(kwargs.keys()) - valid_params
+            if unknown:
+                context.add_warning(
+                    f"date: Unknown parameter(s): {', '.join(unknown)}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+        @staticmethod
+        def validate_datetime(sv, context):
+            """Validate datetime(datetimespec=None, *, year, month, day, hour, minute, second, microsecond, timezone)"""
+
+            kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
+            args = getattr(sv, "args", [])
+
+            datetimespec = args[0] if args else kwargs.get("datetimespec")
+            components = [
+                "year",
+                "month",
+                "day",
+                "hour",
+                "minute",
+                "second",
+                "microsecond",
+            ]
+            has_components = any([kwargs.get(c) for c in components])
+
+            # ERROR: Cannot specify both datetimespec and components
+            if datetimespec and has_components:
+                context.add_error(
+                    "datetime: Cannot specify 'datetimespec' with other parameters",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+                return
+
+            # Validate components if provided
+            if has_components:
+                year = resolve_value(kwargs.get("year"), context)
+                month = resolve_value(kwargs.get("month"), context)
+                day = resolve_value(kwargs.get("day"), context)
+                hour = resolve_value(kwargs.get("hour", 0), context)
+                minute = resolve_value(kwargs.get("minute", 0), context)
+                second = resolve_value(kwargs.get("second", 0), context)
+                microsecond = resolve_value(kwargs.get("microsecond", 0), context)
+
+                # Try to construct datetime if all are literals
+                if all(
+                    [
+                        isinstance(v, int)
+                        for v in [year, month, day, hour, minute, second, microsecond]
+                    ]
+                ):
+                    try:
+                        datetime_constructor(
+                            year, month, day, hour, minute, second, microsecond
+                        )
+                    except (ValueError, TypeError) as e:
+                        context.add_error(
+                            f"datetime: Invalid datetime - {str(e)}",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+
+            # Validate datetimespec if provided
+            elif datetimespec:
+                spec_val = resolve_value(datetimespec, context)
+                if isinstance(spec_val, str):
+                    # Skip validation for Jinja expressions
+                    if not ("{{" in spec_val or "{%" in spec_val):
+                        try:
+                            parse_datetimespec(spec_val)
+                        except Exception:
+                            context.add_error(
+                                f"datetime: Invalid datetime string '{spec_val}'",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+
+            # WARNING: Unknown parameters
+            valid_params = {
+                "datetimespec",
+                "year",
+                "month",
+                "day",
+                "hour",
+                "minute",
+                "second",
+                "microsecond",
+                "timezone",
+            }
+            unknown = set(kwargs.keys()) - valid_params
+            if unknown:
+                context.add_warning(
+                    f"datetime: Unknown parameter(s): {', '.join(unknown)}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+        @staticmethod
+        def validate_date_between(sv, context):
+            """Validate date_between(*, start_date, end_date, timezone)"""
+
+            # ERROR: Required parameters
+            if not StandardFuncs.Validators.check_required_params(
+                sv, context, ["start_date", "end_date"], "date_between"
+            ):
+                return
+
+            kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
+
+            # Validate date strings
+            for param in ["start_date", "end_date"]:
+                date_val = resolve_value(kwargs[param], context)
+                if isinstance(date_val, str):
+                    # Try Faker relative format or parse_date
+                    # If both fail, we still allow it - Faker might handle it (e.g., "today")
+                    # This matches runtime behavior which passes unknown strings to Faker
+                    if not DateProvider.regex.fullmatch(date_val):
+                        try:
+                            parse_date(date_val)
+                        except Exception:
+                            # Can't parse, but Faker might handle it (like "today")
+                            # Only warn if it looks completely wrong
+                            if not date_val.lower() in ["today", "now"]:
+                                context.add_warning(
+                                    f"date_between: Unknown date format '{date_val}' in '{param}' - will rely on Faker to parse",
+                                    getattr(sv, "filename", None),
+                                    getattr(sv, "line_num", None),
+                                )
+
+            # WARNING: Unknown parameters
+            valid_params = {"start_date", "end_date", "timezone"}
+            unknown = set(kwargs.keys()) - valid_params
+            if unknown:
+                context.add_warning(
+                    f"date_between: Unknown parameter(s): {', '.join(unknown)}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+        @staticmethod
+        def validate_datetime_between(sv, context):
+            """Validate datetime_between(*, start_date, end_date, timezone)"""
+
+            # ERROR: Required parameters
+            if not StandardFuncs.Validators.check_required_params(
+                sv, context, ["start_date", "end_date"], "datetime_between"
+            ):
+                return
+
+            kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
+
+            # Validate datetime strings
+            for param in ["start_date", "end_date"]:
+                dt_val = resolve_value(kwargs[param], context)
+                if isinstance(dt_val, str):
+                    if not DateProvider.regex.fullmatch(dt_val):
+                        try:
+                            parse_datetimespec(dt_val)
+                        except Exception:
+                            context.add_error(
+                                f"datetime_between: Invalid datetime string '{dt_val}' in '{param}'",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+
+            # WARNING: Unknown parameters
+            valid_params = {"start_date", "end_date", "timezone"}
+            unknown = set(kwargs.keys()) - valid_params
+            if unknown:
+                context.add_warning(
+                    f"datetime_between: Unknown parameter(s): {', '.join(unknown)}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+        @staticmethod
+        def validate_relativedelta(sv, context):
+            """Validate relativedelta(...) - basic parameter check"""
+
+            kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
+
+            known_params = {
+                "years",
+                "months",
+                "days",
+                "hours",
+                "minutes",
+                "seconds",
+                "microseconds",
+                "year",
+                "month",
+                "day",
+                "hour",
+                "minute",
+                "second",
+                "microsecond",
+                "weekday",
+            }
+
+            # Validate numeric parameters
+            for param, value in kwargs.items():
+                if param in known_params:
+                    val = resolve_value(value, context)
+                    if val is not None and not isinstance(val, (int, float)):
+                        context.add_warning(
+                            f"relativedelta: Parameter '{param}' must be numeric",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+
+            # WARNING: Unknown parameters
+            unknown = set(kwargs.keys()) - known_params
+            if unknown:
+                context.add_warning(
+                    f"relativedelta: Unknown parameter(s): {', '.join(unknown)}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+        @staticmethod
+        def validate_random_reference(sv, context):
+            """Validate random_reference(to, *, parent, scope, unique)"""
+
+            kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
+            args = getattr(sv, "args", [])
+
+            # Get 'to' parameter
+            to = args[0] if args else kwargs.get("to")
+
+            # ERROR: 'to' is required
+            if not to:
+                context.add_error(
+                    "random_reference: Missing required parameter 'to'",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+                return
+
+            # Validate 'to' object exists (allow forward references)
+            to_val = resolve_value(to, context)
+            if to_val and isinstance(to_val, str):
+                if to_val not in context.all_objects:
+                    suggestion = get_fuzzy_match(
+                        to_val, list(context.all_objects.keys())
+                    )
+                    msg = f"random_reference: Unknown object type '{to_val}'"
+                    if suggestion:
+                        msg += f". Did you mean '{suggestion}'?"
+                    context.add_error(
+                        msg,
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+
+            # Validate 'scope'
+            scope = kwargs.get("scope", "current-iteration")
+            scope_val = resolve_value(scope, context)
+            if scope_val and isinstance(scope_val, str):
+                valid_scopes = ["current-iteration", "prior-and-current-iterations"]
+                if scope_val not in valid_scopes:
+                    context.add_error(
+                        f"random_reference: 'scope' must be one of: {', '.join(valid_scopes)}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+
+            # Validate 'unique'
+            unique = kwargs.get("unique", False)
+            unique_val = resolve_value(unique, context)
+            if unique_val is not None and not isinstance(unique_val, bool):
+                context.add_error(
+                    "random_reference: 'unique' must be boolean (true/false)",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+            # Validate 'parent' object exists (allow forward references)
+            parent = kwargs.get("parent")
+            if parent:
+                parent_val = resolve_value(parent, context)
+                if parent_val and isinstance(parent_val, str):
+                    if parent_val not in context.all_objects:
+                        suggestion = get_fuzzy_match(
+                            parent_val, list(context.all_objects.keys())
+                        )
+                        msg = f"random_reference: Unknown parent object type '{parent_val}'"
+                        if suggestion:
+                            msg += f". Did you mean '{suggestion}'?"
+                        context.add_error(
+                            msg,
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+
+                # WARNING: parent without unique
+                if not unique_val:
+                    context.add_warning(
+                        "random_reference: 'parent' parameter is only meaningful with 'unique: true'",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+
+            # WARNING: Unknown parameters
+            valid_params = {"to", "parent", "scope", "unique"}
+            unknown = set(kwargs.keys()) - valid_params
+            if unknown:
+                context.add_warning(
+                    f"random_reference: Unknown parameter(s): {', '.join(unknown)}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+        @staticmethod
+        def validate_choice(sv, context):
+            """Validate choice(pick, probability=None, when=None)"""
+            kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
+            args = getattr(sv, "args", [])
+
+            # Get pick
+            pick = args[0] if args else kwargs.get("pick")
+
+            # ERROR: 'pick' is required
+            if not pick:
+                context.add_error(
+                    "choice: Missing required parameter 'pick'",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+                return
+
+            # WARNING: Cannot use both probability and when
+            if "probability" in kwargs and "when" in kwargs:
+                context.add_warning(
+                    "choice: Cannot specify both 'probability' and 'when'",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+            # WARNING: Unknown parameters
+            valid_params = {"pick", "probability", "when"}
+            unknown = set(kwargs.keys()) - valid_params
+            if unknown:
+                context.add_warning(
+                    f"choice: Unknown parameter(s): {', '.join(unknown)}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+        @staticmethod
+        def validate_if_(sv, context):
+            """Validate if(*choices)"""
+            kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
+            args = getattr(sv, "args", [])
+
+            # ERROR: Must have at least one choice
+            if not args and not kwargs:
+                context.add_error(
+                    "if: No choices provided",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+                return
+
+            # Check that all but last have 'when' clause
+            # This is simplified - full validation would require checking nested structures
+            if len(args) > 1:
+                context.add_warning(
+                    "if: Ensure all choices except the last have 'when' clause",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+        @staticmethod
+        def validate_snowfakery_filename(sv, context):
+            """Validate snowfakery_filename() - takes no parameters"""
+            kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
+            args = getattr(sv, "args", [])
+
+            # ERROR: No parameters allowed
+            if args or kwargs:
+                context.add_error(
+                    "snowfakery_filename: Takes no parameters",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+        @staticmethod
+        def validate_unique_id(sv, context):
+            """Validate unique_id() - takes no parameters"""
+            kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
+            args = getattr(sv, "args", [])
+
+            # ERROR: No parameters allowed
+            if args or kwargs:
+                context.add_error(
+                    "unique_id: Takes no parameters",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+        @staticmethod
+        def validate_unique_alpha_code(sv, context):
+            """Validate unique_alpha_code() - takes no parameters"""
+            kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
+            args = getattr(sv, "args", [])
+
+            # ERROR: No parameters allowed
+            if args or kwargs:
+                context.add_error(
+                    "unique_alpha_code: Takes no parameters",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+        @staticmethod
+        def validate_debug(sv, context):
+            """Validate debug(value) - requires exactly one argument"""
+            kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
+            args = getattr(sv, "args", [])
+
+            # ERROR: Requires exactly one argument
+            if len(args) != 1 and "value" not in kwargs:
+                context.add_error(
+                    "debug: Requires exactly one argument",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )

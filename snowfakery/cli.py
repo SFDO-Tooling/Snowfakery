@@ -167,6 +167,16 @@ class VersionMessage:
     hidden=True,
     default=None,
 )
+@click.option(
+    "--strict-mode",
+    is_flag=True,
+    help="Validate the recipe before generating data. Stops if validation errors are found.",
+)
+@click.option(
+    "--validate-only",
+    is_flag=True,
+    help="Validate the recipe without generating any data.",
+)
 @click.version_option(version=version, prog_name="snowfakery", message=VersionMessage())
 def generate_cli(
     yaml_file,
@@ -186,6 +196,8 @@ def generate_cli(
     load_declarations=None,
     update_input_file=None,
     update_passthrough_fields=(),  # undocumented feature used mostly for testing
+    strict_mode=False,
+    validate_only=False,
 ):
     """
         Generates records from a YAML file
@@ -244,6 +256,8 @@ def generate_cli(
             plugin_options=plugin_options,
             update_input_file=update_input_file,
             update_passthrough_fields=update_passthrough_fields,
+            strict_mode=strict_mode,
+            validate_only=validate_only,
         )
     except DataGenError as e:
         if debug_internals:

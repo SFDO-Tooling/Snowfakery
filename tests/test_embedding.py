@@ -138,3 +138,137 @@ class TestEmbedding:
             load_declarations=load_declarations,
         )
         assert generated_rows.table_values("Foo", 0)["id"] == 7
+
+
+class TestAPIValidation:
+    """Test validation parameters in the generate_data API"""
+
+    def test_api_strict_mode_with_valid_recipe(self):
+        """Test strict_mode parameter with valid recipe"""
+        with TemporaryDirectory() as t:
+            recipe_path = Path(t) / "recipe.yml"
+            recipe_path.write_text(
+                """
+- snowfakery_version: 3
+- object: Account
+  count: 2
+  fields:
+    Name: Test
+    Score:
+      random_number:
+        min: 1
+        max: 10
+"""
+            )
+            result = generate_data(yaml_file=recipe_path, strict_mode=True)
+            assert result is not None
+
+    def test_api_strict_mode_catches_errors(self):
+        """Test strict_mode catches validation errors via API"""
+        with TemporaryDirectory() as t:
+            recipe_path = Path(t) / "bad_recipe.yml"
+            recipe_path.write_text(
+                """
+- snowfakery_version: 3
+- object: Account
+  fields:
+    Score:
+      random_number:
+        min: 100
+        max: 50
+"""
+            )
+            from snowfakery.data_gen_exceptions import DataGenValidationError
+
+            with pytest.raises(DataGenValidationError):
+                generate_data(yaml_file=recipe_path, strict_mode=True)
+
+    def test_api_validate_only_mode(self):
+        """Test validate_only parameter returns ValidationResult"""
+        with TemporaryDirectory() as t:
+            recipe_path = Path(t) / "recipe.yml"
+            recipe_path.write_text(
+                """
+- snowfakery_version: 3
+- object: Account
+  fields:
+    Name: Test Account
+"""
+            )
+            result = generate_data(yaml_file=recipe_path, validate_only=True)
+
+            # Should return ValidationResult
+            assert hasattr(result, "has_errors")
+            assert hasattr(result, "has_warnings")
+            assert not result.has_errors()
+
+    def test_api_validate_only_with_errors(self):
+        """Test validate_only detects errors via API"""
+        with TemporaryDirectory() as t:
+            recipe_path = Path(t) / "bad_recipe.yml"
+            recipe_path.write_text(
+                """
+- snowfakery_version: 3
+- object: Account
+  fields:
+    Value:
+      unknown_function:
+        param: value
+"""
+            )
+            from snowfakery.data_gen_exceptions import DataGenValidationError
+
+            with pytest.raises(DataGenValidationError):
+                generate_data(yaml_file=recipe_path, validate_only=True)
+
+    def test_api_backward_compatibility(self):
+        """Test that default behavior hasn't changed (no validation)"""
+        with TemporaryDirectory() as t:
+            recipe_path = Path(t) / "recipe.yml"
+            recipe_path.write_text(
+                """
+- snowfakery_version: 3
+- object: Account
+  count: 1
+  fields:
+    Name: Test
+"""
+            )
+            # Default: no strict_mode, no validate_only
+            result = generate_data(yaml_file=recipe_path)
+            assert result is not None
+
+    def test_api_with_stringio(self):
+        """Test API validation with StringIO input"""
+        recipe = StringIO(
+            """
+- snowfakery_version: 3
+- object: Account
+  fields:
+    Score:
+      random_number:
+        min: 1
+        max: 10
+"""
+        )
+        result = generate_data(yaml_file=recipe, strict_mode=True)
+        assert result is not None
+
+    def test_api_validate_only_no_data_generation(self):
+        """Test that validate_only doesn't generate actual data"""
+        with TemporaryDirectory() as t:
+            recipe_path = Path(t) / "recipe.yml"
+            recipe_path.write_text(
+                """
+- snowfakery_version: 3
+- object: Account
+  count: 100
+  fields:
+    Name: Test
+"""
+            )
+            result = generate_data(yaml_file=recipe_path, validate_only=True)
+
+            # Should be ValidationResult, not ExecutionSummary with row counts
+            assert hasattr(result, "has_errors")
+            assert not hasattr(result, "row_counts")

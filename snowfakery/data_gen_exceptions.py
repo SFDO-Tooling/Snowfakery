@@ -57,6 +57,23 @@ class DataGenTypeError(DataGenError):
     pass
 
 
+class DataGenValidationError(DataGenError):
+    """Raised when recipe validation fails."""
+
+    prefix = "Recipe validation failed. Please fix the errors below before running.\n"
+
+    def __init__(self, validation_result):
+        self.validation_result = validation_result
+        # Extract first error for basic message
+        message = "Recipe validation failed"
+        if validation_result.errors:
+            message = validation_result.errors[0].message
+        super().__init__(message)
+
+    def __str__(self):
+        return str(self.validation_result)
+
+
 def fix_exception(message, parentobj, e, args=(), kwargs=None):
     """Add filename and linenumber to an exception if needed"""
     filename, line_num = parentobj.filename, parentobj.line_num
