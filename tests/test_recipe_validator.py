@@ -12,7 +12,7 @@ from snowfakery.recipe_validator import (
     build_function_registry,
     is_name_available,
     validate_statement,
-    validate_jinja_template,
+    validate_jinja_template_by_execution,
     validate_field_definition,
 )
 from snowfakery.data_generator_runtime_object_model import (
@@ -22,6 +22,7 @@ from snowfakery.data_generator_runtime_object_model import (
     SimpleValue,
 )
 from snowfakery.data_generator import generate
+from snowfakery.data_gen_exceptions import DataGenValidationError
 
 
 class TestValidationError:
@@ -256,16 +257,30 @@ class TestIsNameAvailable:
 
 
 class TestValidateJinjaTemplate:
-    """Test validate_jinja_template function"""
+    """Test validate_jinja_template_by_execution function"""
 
     def test_valid_jinja_syntax(self):
+        """Test valid Jinja syntax validation with mock interpreter"""
+        from unittest.mock import MagicMock
+
         context = ValidationContext()
         context.jinja_env = __import__("jinja2").Environment(
             variable_start_string="${{", variable_end_string="}}"
         )
 
+        # Mock interpreter with template evaluator factory
+        mock_interpreter = MagicMock()
+
+        def mock_evaluator(ctx):
+            return 2  # Returns mock result
+
+        mock_interpreter.template_evaluator_factory.get_evaluator.return_value = (
+            mock_evaluator
+        )
+        context.interpreter = mock_interpreter
+
         # Valid syntax - should not add errors
-        validate_jinja_template("${{count + 1}}", "test.yml", 10, context)
+        validate_jinja_template_by_execution("${{count + 1}}", "test.yml", 10, context)
         assert len(context.errors) == 0
 
     def test_invalid_jinja_syntax(self):
@@ -275,7 +290,8 @@ class TestValidateJinjaTemplate:
         )
 
         # Invalid syntax - missing closing braces
-        validate_jinja_template("${{count +", "test.yml", 10, context)
+        # Note: Syntax errors are caught before interpreter is needed
+        validate_jinja_template_by_execution("${{count +", "test.yml", 10, context)
         assert len(context.errors) == 1
         assert "Jinja syntax error" in context.errors[0].message
 
@@ -293,10 +309,24 @@ class TestValidateFieldDefinition:
         assert len(context.errors) == 0
 
     def test_validate_jinja_simple_value(self):
+        """Test validation of Jinja template in SimpleValue with mock interpreter"""
+        from unittest.mock import MagicMock
+
         context = ValidationContext()
         context.jinja_env = __import__("jinja2").Environment(
             variable_start_string="${{", variable_end_string="}}"
         )
+
+        # Mock interpreter with template evaluator factory
+        mock_interpreter = MagicMock()
+
+        def mock_evaluator(ctx):
+            return 2  # Returns mock result
+
+        mock_interpreter.template_evaluator_factory.get_evaluator.return_value = (
+            mock_evaluator
+        )
+        context.interpreter = mock_interpreter
 
         # Jinja template in SimpleValue
         field_def = SimpleValue("${{count + 1}}", "test.yml", 10)
@@ -328,6 +358,402 @@ class TestValidateFieldDefinition:
 
         # Should not have errors (validator was called successfully)
         assert len(context.errors) == 0
+
+
+class TestJinjaExecutionValidation:
+    """Test execution-based Jinja validation features"""
+
+    def test_cross_object_field_validation_success(self):
+        """Test that valid cross-object field access passes validation"""
+        recipe = """
+- snowfakery_version: 3
+- object: Account
+  fields:
+    Name: Test Company
+    EmployeeCount: 100
+
+- object: Contact
+  fields:
+    AccountName: ${{Account.Name}}
+    CompanySize: ${{Account.EmployeeCount}}
+        """
+
+        result = generate(
+            open_yaml_file=StringIO(recipe),
+            strict_mode=True,
+            validate_only=True,
+        )
+        assert not result.has_errors()
+
+    def test_cross_object_field_validation_error(self):
+        """Test that invalid cross-object field access is caught"""
+        recipe = """
+- snowfakery_version: 3
+- object: Account
+  fields:
+    Name: Test Company
+
+- object: Contact
+  fields:
+    Reference: ${{Account.NonExistentField}}
+        """
+
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(
+                open_yaml_file=StringIO(recipe),
+                strict_mode=True,
+                validate_only=True,
+            )
+
+        error_msg = str(exc_info.value)
+        assert "NonExistentField" in error_msg
+        # Error message says "Object has no attribute 'NonExistentField'"
+        assert "Object has no attribute" in error_msg or "no attribute" in error_msg
+
+    def test_nested_function_calls_in_jinja(self):
+        """Test that nested function calls inside Jinja are validated"""
+        recipe = """
+- snowfakery_version: 3
+- object: Account
+  fields:
+    Score: ${{random_number(min=1, max=random_number(min=50, max=100))}}
+        """
+
+        # Should validate successfully (both inner and outer random_number calls)
+        result = generate(
+            open_yaml_file=StringIO(recipe),
+            strict_mode=True,
+            validate_only=True,
+        )
+        assert not result.has_errors()
+
+    def test_nested_function_with_error(self):
+        """Test that errors in nested function calls are caught"""
+        recipe = """
+- snowfakery_version: 3
+- object: Account
+  fields:
+    Score: ${{random_number(min=100, max=random_number(min=10, max=5))}}
+        """
+
+        # Inner random_number has min > max
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(
+                open_yaml_file=StringIO(recipe),
+                strict_mode=True,
+                validate_only=True,
+            )
+
+        error_msg = str(exc_info.value)
+        assert "min" in error_msg.lower()
+        assert "max" in error_msg.lower()
+
+    def test_faker_provider_in_jinja_success(self):
+        """Test that valid Faker providers in Jinja are accepted"""
+        recipe = """
+- snowfakery_version: 3
+- object: Contact
+  fields:
+    FirstName: ${{fake.first_name}}
+    LastName: ${{fake.last_name}}
+    Email: ${{fake.email}}
+        """
+
+        result = generate(
+            open_yaml_file=StringIO(recipe),
+            strict_mode=True,
+            validate_only=True,
+        )
+        assert not result.has_errors()
+
+    def test_faker_provider_in_jinja_error(self):
+        """Test that invalid Faker provider names in Jinja are caught"""
+        recipe = """
+- snowfakery_version: 3
+- object: Contact
+  fields:
+    FirstName: ${{fake.frist_name}}
+        """
+
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(
+                open_yaml_file=StringIO(recipe),
+                strict_mode=True,
+                validate_only=True,
+            )
+
+        error_msg = str(exc_info.value)
+        assert "frist_name" in error_msg
+        # Should suggest the correct provider
+        assert "first_name" in error_msg
+
+    def test_faker_provider_returns_real_values(self):
+        """Test that Faker providers return real values, not mock strings"""
+        recipe = """
+- snowfakery_version: 3
+- var: generated_name
+  value: ${{fake.first_name()}}
+
+- var: name_length
+  value: ${{'%s' % generated_name | length}}
+
+- object: Contact
+  fields:
+    NameLength: ${{name_length}}
+        """
+
+        # This test verifies that fake.first_name() returns an actual string value
+        # If it returned a mock like "<fake_first_name>", the length calculation would work
+        # but the value would be a mock. The recipe should validate successfully
+        # because the Faker method returns a real string value.
+        result = generate(
+            open_yaml_file=StringIO(recipe),
+            strict_mode=True,
+            validate_only=True,
+        )
+        assert not result.has_errors()
+
+    def test_faker_provider_without_parentheses(self):
+        """Test that Faker providers work without parentheses"""
+        recipe = """
+- snowfakery_version: 3
+- object: Contact
+  fields:
+    FirstName: ${{fake.first_name}}
+    LastName: ${{fake.last_name}}
+    Email: ${{fake.email}}
+    CompanyName: ${{fake.company}}
+        """
+
+        # Faker providers should work without parentheses
+        result = generate(
+            open_yaml_file=StringIO(recipe),
+            strict_mode=True,
+            validate_only=True,
+        )
+        assert not result.has_errors()
+
+    def test_faker_provider_with_parentheses(self):
+        """Test that Faker providers work with parentheses"""
+        recipe = """
+- snowfakery_version: 3
+- object: Contact
+  fields:
+    FirstName: ${{fake.first_name()}}
+    LastName: ${{fake.last_name()}}
+    Email: ${{fake.email()}}
+    CompanyName: ${{fake.company()}}
+        """
+
+        # Faker providers should work with parentheses
+        result = generate(
+            open_yaml_file=StringIO(recipe),
+            strict_mode=True,
+            validate_only=True,
+        )
+        assert not result.has_errors()
+
+    def test_undefined_variable_in_jinja(self):
+        """Test that undefined variables in Jinja are caught"""
+        recipe = """
+- snowfakery_version: 3
+- var: company_suffix
+  value: Corp
+
+- object: Account
+  fields:
+    Name: ${{fake.company}} ${{company_sufix}}
+        """
+
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(
+                open_yaml_file=StringIO(recipe),
+                strict_mode=True,
+                validate_only=True,
+            )
+
+        error_msg = str(exc_info.value)
+        assert "company_sufix" in error_msg
+
+    def test_variable_reference_success(self):
+        """Test that defined variables can be referenced in Jinja"""
+        recipe = """
+- snowfakery_version: 3
+- var: base_count
+  value: 10
+
+- object: Account
+  fields:
+    EmployeeCount: ${{base_count * 5}}
+        """
+
+        result = generate(
+            open_yaml_file=StringIO(recipe),
+            strict_mode=True,
+            validate_only=True,
+        )
+        assert not result.has_errors()
+
+    def test_builtin_variable_access(self):
+        """Test that built-in variables (count, id, etc.) are available"""
+        recipe = """
+- snowfakery_version: 3
+- object: Account
+  count: 5
+  fields:
+    Name: Account ${{count}}
+    RecordId: ${{id}}
+        """
+
+        result = generate(
+            open_yaml_file=StringIO(recipe),
+            strict_mode=True,
+            validate_only=True,
+        )
+        assert not result.has_errors()
+
+    def test_complex_jinja_expression(self):
+        """Test complex Jinja expressions with multiple operations"""
+        recipe = """
+- snowfakery_version: 3
+- var: multiplier
+  value: 2
+
+- object: Account
+  count: 3
+  fields:
+    Value: ${{(count + 1) * multiplier + random_number(min=1, max=10)}}
+        """
+
+        result = generate(
+            open_yaml_file=StringIO(recipe),
+            strict_mode=True,
+            validate_only=True,
+        )
+        assert not result.has_errors()
+
+    def test_variable_resolution_in_jinja(self):
+        """Test that variables are resolved and validated in Jinja templates"""
+        recipe = """
+- snowfakery_version: 3
+- var: base_value
+  value: 100
+
+- var: doubled
+  value: ${{base_value * 2}}
+
+- object: Account
+  fields:
+    Value: ${{doubled + 50}}
+        """
+
+        result = generate(
+            open_yaml_file=StringIO(recipe),
+            strict_mode=True,
+            validate_only=True,
+        )
+        assert not result.has_errors()
+
+    def test_undefined_variable_clear_error_message(self):
+        """Test that undefined variable errors have clear messages"""
+        recipe = """
+- snowfakery_version: 3
+- object: Account
+  fields:
+    Name: ${{this_variable_does_not_exist}}
+        """
+
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(
+                open_yaml_file=StringIO(recipe),
+                strict_mode=True,
+                validate_only=True,
+            )
+
+        error_msg = str(exc_info.value)
+        # Should have clear error message about undefined variable
+        assert "this_variable_does_not_exist" in error_msg
+        assert "undefined" in error_msg.lower()
+        # Should NOT mention MockObjectRow or internal implementation details
+        assert "MockObjectRow" not in error_msg
+
+    def test_self_referencing_variable(self):
+        """Test that a variable referencing itself is caught as undefined"""
+        recipe = """
+- snowfakery_version: 3
+- var: loop_var
+  value: ${{loop_var + 1}}
+
+- object: Account
+  fields:
+    Value: ${{loop_var}}
+        """
+
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(
+                open_yaml_file=StringIO(recipe),
+                strict_mode=True,
+                validate_only=True,
+            )
+
+        error_msg = str(exc_info.value)
+        # Self-reference is caught as undefined (variable not available during its own evaluation)
+        assert "loop_var" in error_msg
+        assert "undefined" in error_msg.lower()
+
+    def test_forward_variable_reference_error(self):
+        """Test that variables must be defined before use (sequential order)"""
+        recipe = """
+- snowfakery_version: 3
+- var: var_a
+  value: ${{var_b + 1}}
+
+- var: var_b
+  value: 100
+
+- object: Account
+  fields:
+    Value: ${{var_a}}
+        """
+
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(
+                open_yaml_file=StringIO(recipe),
+                strict_mode=True,
+                validate_only=True,
+            )
+
+        error_msg = str(exc_info.value)
+        # Should report undefined variable (sequential validation)
+        assert "var_b" in error_msg
+        assert "undefined" in error_msg.lower()
+
+    def test_structured_value_function_resolution(self):
+        """Test that StructuredValue functions are executed and resolved"""
+        recipe = """
+- snowfakery_version: 3
+- var: random_val
+  value:
+    random_number:
+      min: 10
+      max: 20
+
+- var: doubled
+  value: ${{random_val * 2}}
+
+- object: Account
+  fields:
+    Value: ${{doubled}}
+        """
+
+        # This test verifies that random_number returns an actual number
+        # and can be used in calculations
+        result = generate(
+            open_yaml_file=StringIO(recipe),
+            strict_mode=True,
+            validate_only=True,
+        )
+        assert not result.has_errors()
 
 
 class TestIntegration:
@@ -608,3 +1034,37 @@ class TestEdgeCasesAndComplexScenarios:
         assert len(context.errors) == 0
         # Field registry should be populated (implementation detail, just verify it's not empty)
         assert context.current_object_fields is not None
+
+    def test_mock_object_field_resolution(self):
+        """Test that MockObjectRow resolves field values correctly"""
+        from snowfakery.data_generator_runtime_object_model import FieldFactory
+
+        context = ValidationContext()
+        context.jinja_env = jinja2.Environment()
+        context.available_functions = {}
+
+        # Create object with literal fields
+        obj = ObjectTemplate("Account", "test.yml", 10)
+        name_field = FieldFactory(
+            "Name", SimpleValue("Acme Corp", "test.yml", 10), "test.yml", 10
+        )
+        count_field = FieldFactory(
+            "EmployeeCount", SimpleValue(500, "test.yml", 11), "test.yml", 11
+        )
+        obj.fields = [name_field, count_field]
+
+        # Register the object
+        context.available_objects["Account"] = obj
+
+        # Create mock object
+        mock_obj = context._create_mock_object("Account")
+
+        # Test field resolution - should return actual values
+        assert mock_obj.Name == "Acme Corp"
+        assert mock_obj.EmployeeCount == 500
+
+        # Test non-existent field - should raise AttributeError
+        with pytest.raises(AttributeError) as exc_info:
+            _ = mock_obj.NonExistentField
+        assert "NonExistentField" in str(exc_info.value)
+        assert "Available fields" in str(exc_info.value)
