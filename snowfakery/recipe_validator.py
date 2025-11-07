@@ -12,7 +12,12 @@ import jinja2
 from jinja2 import nativetypes
 from jinja2.sandbox import SandboxedEnvironment
 
-from snowfakery.utils.validation_utils import get_fuzzy_match, resolve_value
+from snowfakery.utils.validation_utils import (
+    get_fuzzy_match,
+    resolve_value,
+    with_mock_context,
+    validate_and_check_errors,
+)
 from snowfakery.data_generator_runtime_object_model import (
     ObjectTemplate,
     VariableDefinition,
@@ -22,6 +27,8 @@ from snowfakery.data_generator_runtime_object_model import (
     SimpleValue,
 )
 from snowfakery.template_funcs import StandardFuncs
+from snowfakery.fakedata.faker_validators import FakerValidators
+from snowfakery.fakedata.fake_data_generator import FakeNames
 
 
 class SandboxedNativeEnvironment(SandboxedEnvironment, nativetypes.NativeEnvironment):
@@ -289,9 +296,11 @@ class ValidationContext:
                 func_name, validator
             )
 
-        # 5. Plugins (actual plugin function libraries)
+        # 5. Plugins (with validation wrappers)
         for plugin_name, plugin_instance in self.interpreter.plugin_instances.items():
-            namespace[plugin_name] = plugin_instance.custom_functions()
+            namespace[plugin_name] = self._create_mock_plugin(
+                plugin_name, plugin_instance
+            )
 
         # 6. Faker (mock with provider validation)
         namespace["fake"] = self._create_mock_faker()
@@ -419,15 +428,19 @@ class ValidationContext:
 
         return MockObjectRow(obj_template, self)
 
-    def _create_validation_function(self, func_name, validator):
-        """Create wrapper that validates when called from Jinja.
+    def _create_validated_wrapper(
+        self, func_name, validator, actual_func_getter, is_plugin=False
+    ):
+        """Create a validation wrapper that validates before executing.
 
         Args:
-            func_name: Name of the function
+            func_name: Full function name (e.g., "random_number" or "StatisticalDistributions.normal")
             validator: Validator function to call
+            actual_func_getter: Callable that returns the actual function to execute, or None
+            is_plugin: Whether this is a plugin function (requires mock context)
 
         Returns:
-            Wrapper function that validates and returns mock value
+            Wrapper function that validates and conditionally executes
         """
 
         def validation_wrapper(*args, **kwargs):
@@ -441,31 +454,35 @@ class ValidationContext:
                 self.current_template.line_num if self.current_template else 0,
             )
 
-            # Call validator
+            # Call validator and track if errors were added
             try:
-                validator(sv, self)
+                validation_added_errors = validate_and_check_errors(
+                    self, validator, sv, self
+                )
             except Exception as e:
                 self.add_error(
                     f"Function '{func_name}' validation failed: {str(e)}",
                     sv.filename,
                     sv.line_num,
                 )
+                validation_added_errors = True
+
+            # If validation added errors, don't attempt execution
+            if validation_added_errors:
+                return f"<mock_function_{func_name}>"
 
             # Try to execute the actual function to get a real value
             try:
-                # First check standard functions
-                if func_name in self.interpreter.standard_funcs:
-                    actual_func = self.interpreter.standard_funcs[func_name]
-                    if callable(actual_func):
-                        return actual_func(*args, **kwargs)
+                actual_func = actual_func_getter()
+                if actual_func and callable(actual_func):
+                    # For plugin functions, we need to set up mock context
+                    if is_plugin:
+                        from snowfakery.utils.validation_utils import with_mock_context
 
-                # Then check plugin functions
-                for _, plugin_instance in self.interpreter.plugin_instances.items():
-                    funcs = plugin_instance.custom_functions()
-                    if func_name in dir(funcs):
-                        actual_func = getattr(funcs, func_name)
-                        if callable(actual_func):
+                        with with_mock_context(self):
                             return actual_func(*args, **kwargs)
+                    else:
+                        return actual_func(*args, **kwargs)
             except Exception:
                 # Could not execute function, return mock value
                 pass
@@ -474,8 +491,66 @@ class ValidationContext:
 
         return validation_wrapper
 
+    def _create_validation_function(self, func_name, validator):
+        """Create wrapper that validates when called from Jinja.
+
+        Args:
+            func_name: Name of the function
+            validator: Validator function to call
+
+        Returns:
+            Wrapper function that validates and returns mock value
+        """
+
+        def get_standard_func():
+            if self.interpreter and func_name in self.interpreter.standard_funcs:
+                return self.interpreter.standard_funcs[func_name]
+            return None
+
+        return self._create_validated_wrapper(func_name, validator, get_standard_func)
+
+    def _create_mock_plugin(self, plugin_name, plugin_instance):
+        """Create mock plugin namespace that validates function calls.
+
+        Args:
+            plugin_name: Name of the plugin (e.g., "StatisticalDistributions")
+            plugin_instance: The actual plugin instance
+
+        Returns:
+            Mock plugin namespace with validated function wrappers
+        """
+        plugin_funcs = plugin_instance.custom_functions()
+
+        class MockPlugin:
+            def __init__(self, plugin_name, plugin_funcs, context):
+                self._plugin_name = plugin_name
+                self._plugin_funcs = plugin_funcs
+                self._context = context
+
+            def __getattr__(self, func_attr):
+                # Build full function name with plugin namespace
+                func_full_name = f"{self._plugin_name}.{func_attr}"
+
+                # Check if this function has a validator
+                if func_full_name in self._context.available_functions:
+                    validator = self._context.available_functions[func_full_name]
+
+                    # Create function getter for this specific plugin method
+                    def get_plugin_func():
+                        return getattr(self._plugin_funcs, func_attr, None)
+
+                    # Use shared validation wrapper (with plugin context support)
+                    return self._context._create_validated_wrapper(
+                        func_full_name, validator, get_plugin_func, is_plugin=True
+                    )
+                else:
+                    # No validator, return actual function
+                    return getattr(self._plugin_funcs, func_attr)
+
+        return MockPlugin(plugin_name, plugin_funcs, self)
+
     def _create_mock_faker(self):
-        """Create mock Faker that validates provider names and executes them.
+        """Create mock Faker that validates provider names and parameters.
 
         Returns:
             MockFaker instance that validates and executes Faker providers
@@ -484,18 +559,16 @@ class ValidationContext:
         class MockFaker:
             def __init__(self, context):
                 self.context = context
+                # Create validator instance for parameter validation
+                self.validator = (
+                    FakerValidators(context.faker_instance, context.faker_providers)
+                    if context.faker_instance
+                    else None
+                )
 
             def __getattr__(self, provider_name):
-                # Validate provider exists
-                if provider_name not in self.context.faker_providers:
-                    suggestion = get_fuzzy_match(
-                        provider_name, list(self.context.faker_providers)
-                    )
-                    msg = f"Unknown Faker provider '{provider_name}'"
-                    if suggestion:
-                        msg += f". Did you mean '{suggestion}'?"
-
-                    # Get location from current template
+                # Validate provider exists using shared validator
+                if self.validator:
                     filename = (
                         self.context.current_template.filename
                         if self.context.current_template
@@ -506,21 +579,34 @@ class ValidationContext:
                         if self.context.current_template
                         else None
                     )
-                    self.context.add_error(msg, filename, line_num)
+                    self.validator.validate_provider_name(
+                        provider_name, self.context, filename, line_num
+                    )
 
-                # Try to execute the actual Faker method
-                try:
-                    if self.context.faker_instance:
-                        actual_method = getattr(
-                            self.context.faker_instance, provider_name, None
+                # Return wrapper that validates parameters and executes method
+                def validated_provider(*args, **kwargs):
+                    # Validate parameters using introspection
+                    if self.validator:
+                        self.validator.validate_provider_call(
+                            provider_name, args, kwargs, self.context
                         )
-                        if actual_method and callable(actual_method):
-                            return actual_method
-                except Exception:
-                    pass
 
-                # Return callable mock as fallback
-                return lambda *args, **kwargs: f"<fake_{provider_name}>"
+                    # Try to execute the actual Faker method
+                    try:
+                        if self.context.faker_instance:
+                            actual_method = getattr(
+                                self.context.faker_instance, provider_name, None
+                            )
+                            if actual_method and callable(actual_method):
+                                return actual_method(*args, **kwargs)
+                    except Exception:
+                        # Execution failed, return mock value
+                        pass
+
+                    # Return mock value as fallback
+                    return f"<fake_{provider_name}>"
+
+                return validated_provider
 
         return MockFaker(self)
 
@@ -559,8 +645,10 @@ def build_function_registry(plugins) -> Dict[str, Callable]:
                         # The Functions class has the alias (e.g., "if"), register it
                         registry[alias_name] = validator
 
-    # Add plugin validators (future enhancement)
+    # Add plugin validators
     for plugin in plugins:
+        plugin_name = plugin.__class__.__name__  # e.g., "UniqueId", "Math", etc.
+
         if hasattr(plugin, "Validators"):
             validators = plugin.Validators
             functions = plugin.Functions if hasattr(plugin, "Functions") else None
@@ -569,13 +657,19 @@ def build_function_registry(plugins) -> Dict[str, Callable]:
                 if attr.startswith("validate_"):
                     func_name = attr.replace("validate_", "")
                     validator = getattr(validators, attr)
-                    registry[func_name] = validator
+
+                    # Register with plugin namespace prefix for StructuredValue access
+                    # e.g., "UniqueId.NumericIdGenerator"
+                    registry[f"{plugin_name}.{func_name}"] = validator
 
                     # Check if there's an alias without trailing underscore
                     if functions and func_name.endswith("_"):
                         alias_name = func_name[:-1]
                         if hasattr(functions, alias_name):
-                            registry[alias_name] = validator
+                            registry[f"{plugin_name}.{alias_name}"] = validator
+
+    # Add Faker validator (special case - StructuredValue syntax: fake: provider_name)
+    registry["fake"] = FakerValidators.validate_fake
 
     return registry
 
@@ -618,17 +712,26 @@ def validate_recipe(parse_result, interpreter, options) -> ValidationResult:
     """
     # Build context
     context = ValidationContext()
-    context.available_functions = build_function_registry(interpreter.plugin_instances)
+    context.available_functions = build_function_registry(
+        interpreter.plugin_instances.values()
+    )
 
     # Store interpreter reference for Jinja execution
     context.interpreter = interpreter
 
     # Extract method names from faker by creating a Faker instance with the providers
+    # This replicates what FakeData does at runtime (see fake_data_generator.py:173-177)
     faker_instance = Faker()
 
     # Add custom providers to the faker instance
     for provider in interpreter.faker_providers:
         faker_instance.add_provider(provider)
+
+    # Add FakeNames to override standard Faker methods with Snowfakery's custom signatures
+    # (e.g., email(matching=True) instead of standard Faker's email(safe=True, domain=None))
+    # This matches what FakeData.__init__ does at runtime
+    fake_names = FakeNames(faker_instance, faker_context=None)
+    faker_instance.add_provider(fake_names)
 
     # Store faker instance in context for execution
     context.faker_instance = faker_instance
@@ -765,12 +868,15 @@ def validate_jinja_template_by_execution(
 
     # 3. Parse and execute template using our strict Jinja environment
     try:
-        template = context.jinja_env.from_string(template_str)
-        namespace = context.field_vars()
-        result = template.render(namespace)
-        # NativeEnvironment returns a lazy object - force evaluation to catch errors
-        bool(result)  # Force evaluation
-        return result
+        namespace_dict = {}
+        with with_mock_context(context, namespace_dict):
+            namespace = context.field_vars()
+            # Render the template (mock context is still active)
+            template = context.jinja_env.from_string(template_str)
+            result = template.render(namespace)
+            # NativeEnvironment returns a lazy object - force evaluation to catch errors
+            bool(result)  # Force evaluation
+            return result
     except jinja2.exceptions.UndefinedError as e:
         # Variable or name not found
         error_msg = getattr(e, "message", str(e))

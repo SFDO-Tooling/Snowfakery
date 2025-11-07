@@ -12,6 +12,7 @@ from snowfakery.plugins import PluginResult, PluginOption
 from snowfakery import data_gen_exceptions as exc
 
 from snowfakery.utils.scrambled_numbers import scramble_number
+from snowfakery.utils.validation_utils import resolve_value
 
 # the option name that the user specifies on the CLI or API is just "pid"
 # but using this long name internally prevents us from clashing with the
@@ -300,3 +301,198 @@ class UniqueId(SnowfakeryPlugin):
                 min_chars=min_chars,
                 randomize_codes=randomize_codes,
             )
+
+    class Validators:
+        """Validators for UniqueId plugin functions."""
+
+        @staticmethod
+        def validate_NumericIdGenerator(sv, context):
+            """Validate UniqueId.NumericIdGenerator(template=None)
+
+            Args:
+                sv: StructuredValue with args/kwargs
+                context: ValidationContext for error reporting
+            """
+            kwargs = getattr(sv, "kwargs", {})
+            args = getattr(sv, "args", [])
+
+            # Get template value (can be positional or keyword)
+            template = None
+            if args:
+                template = args[0]
+            elif "template" in kwargs:
+                template = kwargs["template"]
+
+            # Validate template if provided
+            if template is not None:
+                template_val = resolve_value(template, context)
+
+                if template_val is not None:
+                    # ERROR: Template must be string
+                    if not isinstance(template_val, str):
+                        context.add_error(
+                            f"UniqueId.NumericIdGenerator: 'template' must be a string, got {type(template_val).__name__}",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+                        return
+
+                    # Validate template parts
+                    valid_parts = {"pid", "context", "index"}
+                    parts = [p.strip().lower() for p in template_val.split(",")]
+
+                    for part in parts:
+                        # Check if it's numeric
+                        if part.isnumeric():
+                            continue
+
+                        # Check if it's a valid part
+                        if part not in valid_parts:
+                            context.add_error(
+                                f"UniqueId.NumericIdGenerator: Invalid template part '{part}'. "
+                                f"Valid parts: {', '.join(sorted(valid_parts))}, or numeric values",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+
+            # WARNING: Unknown parameters
+            valid_params = {"template", "_"}
+            unknown = set(kwargs.keys()) - valid_params
+            if unknown:
+                context.add_warning(
+                    f"UniqueId.NumericIdGenerator: Unknown parameter(s): {', '.join(unknown)}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+        @staticmethod
+        def validate_AlphaCodeGenerator(sv, context):
+            """Validate UniqueId.AlphaCodeGenerator(template, alphabet, min_chars, randomize_codes)
+
+            Args:
+                sv: StructuredValue with args/kwargs
+                context: ValidationContext for error reporting
+            """
+            kwargs = getattr(sv, "kwargs", {})
+
+            # Validate template (same as NumericIdGenerator)
+            if "template" in kwargs:
+                template_val = resolve_value(kwargs["template"], context)
+
+                if template_val is not None and isinstance(template_val, str):
+                    valid_parts = {"pid", "context", "index"}
+                    parts = [p.strip().lower() for p in template_val.split(",")]
+
+                    for part in parts:
+                        if not part.isnumeric() and part not in valid_parts:
+                            context.add_error(
+                                f"UniqueId.AlphaCodeGenerator: Invalid template part '{part}'. "
+                                f"Valid parts: {', '.join(sorted(valid_parts))}, or numeric values",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+
+            # Validate alphabet
+            if "alphabet" in kwargs:
+                alphabet_val = resolve_value(kwargs["alphabet"], context)
+
+                if alphabet_val is not None:
+                    # ERROR: Must be string
+                    if not isinstance(alphabet_val, str):
+                        context.add_error(
+                            f"UniqueId.AlphaCodeGenerator: 'alphabet' must be a string, got {type(alphabet_val).__name__}",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+                    # ERROR: Must have at least 2 characters
+                    elif len(alphabet_val) < 2:
+                        context.add_error(
+                            "UniqueId.AlphaCodeGenerator: 'alphabet' must have at least 2 characters",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+                    else:
+                        # Check if alphabet is large enough for randomization
+                        # When randomize_codes=True, we need at least 10 bits
+                        # bits_per_char = log2(len(alphabet))
+                        # For min_chars=4 (the minimum when randomize_codes=True):
+                        # We need: 4 * log2(len(alphabet)) >= 10
+                        # So: log2(len(alphabet)) >= 2.5
+                        # So: len(alphabet) >= 2^2.5 ≈ 5.66, meaning at least 6 characters
+
+                        # Get randomize_codes value (default is True)
+                        randomize_codes = True
+                        if "randomize_codes" in kwargs:
+                            randomize_val = resolve_value(
+                                kwargs["randomize_codes"], context
+                            )
+                            if randomize_val is not None and isinstance(
+                                randomize_val, bool
+                            ):
+                                randomize_codes = randomize_val
+
+                        # Get min_chars value (default is 8, but becomes 4 if randomize_codes=True)
+                        min_chars = 8
+                        if "min_chars" in kwargs:
+                            min_chars_val = resolve_value(kwargs["min_chars"], context)
+                            if min_chars_val is not None and isinstance(
+                                min_chars_val, int
+                            ):
+                                min_chars = min_chars_val
+
+                        if randomize_codes:
+                            # When randomizing, min_chars is at least 4
+                            effective_min_chars = max(min_chars, 4)
+                            bits_per_char = int(log(len(alphabet_val), 2))
+                            min_bits = effective_min_chars * bits_per_char
+
+                            # ERROR: Alphabet too small for randomization
+                            if min_bits < 10:
+                                context.add_error(
+                                    f"UniqueId.AlphaCodeGenerator: 'alphabet' with {len(alphabet_val)} characters is too small for randomization. "
+                                    f"With min_chars={effective_min_chars}, this gives {min_bits} bits but requires at least 10 bits. "
+                                    f"Use an alphabet with at least 6 characters, or set randomize_codes=False",
+                                    getattr(sv, "filename", None),
+                                    getattr(sv, "line_num", None),
+                                )
+
+            # Validate min_chars
+            if "min_chars" in kwargs:
+                min_chars_val = resolve_value(kwargs["min_chars"], context)
+
+                if min_chars_val is not None:
+                    # ERROR: Must be integer
+                    if not isinstance(min_chars_val, int):
+                        context.add_error(
+                            f"UniqueId.AlphaCodeGenerator: 'min_chars' must be an integer, got {type(min_chars_val).__name__}",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+                    # ERROR: Must be positive
+                    elif min_chars_val <= 0:
+                        context.add_error(
+                            "UniqueId.AlphaCodeGenerator: 'min_chars' must be positive",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+
+            # Validate randomize_codes
+            if "randomize_codes" in kwargs:
+                randomize_val = resolve_value(kwargs["randomize_codes"], context)
+
+                if randomize_val is not None and not isinstance(randomize_val, bool):
+                    context.add_error(
+                        f"UniqueId.AlphaCodeGenerator: 'randomize_codes' must be a boolean, got {type(randomize_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+
+            # WARNING: Unknown parameters
+            valid_params = {"template", "alphabet", "min_chars", "randomize_codes"}
+            unknown = set(kwargs.keys()) - valid_params
+            if unknown:
+                context.add_warning(
+                    f"UniqueId.AlphaCodeGenerator: Unknown parameter(s): {', '.join(unknown)}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
