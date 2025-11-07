@@ -954,9 +954,9 @@ class TestEdgeCasesAndComplexScenarios:
         plugins = [MockPlugin()]
         registry = build_function_registry(plugins)
 
-        # Should include plugin validator
-        assert "custom_func" in registry
-        assert registry["custom_func"] == MockValidators.validate_custom_func
+        # Should include plugin validator with namespace
+        assert "MockPlugin.custom_func" in registry
+        assert registry["MockPlugin.custom_func"] == MockValidators.validate_custom_func
 
     def test_build_function_registry_with_plugin_alias(self):
         """Test build_function_registry with plugin that has aliases"""
@@ -978,10 +978,10 @@ class TestEdgeCasesAndComplexScenarios:
         plugins = [MockPlugin()]
         registry = build_function_registry(plugins)
 
-        # Should include both the underscore and non-underscore versions
-        assert "my_if_" in registry
-        assert "my_if" in registry
-        assert registry["my_if"] == MockValidators.validate_my_if_
+        # Should include both the underscore and non-underscore versions with namespace
+        assert "MockPlugin.my_if_" in registry
+        assert "MockPlugin.my_if" in registry
+        assert registry["MockPlugin.my_if"] == MockValidators.validate_my_if_
 
     def test_validate_variable_definition(self):
         """Test validation of VariableDefinition statements"""

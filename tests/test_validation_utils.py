@@ -187,6 +187,36 @@ class TestResolveValueWithInterpreter:
         context.interpreter = mock_interpreter
         context.current_template = MagicMock(filename="test.yml", line_num=10)
 
+        # Set up Faker for validation
+        from faker import Faker
+
+        context.faker_instance = Faker()
+        # Extract faker providers
+        faker_providers = set()
+        for name in dir(context.faker_instance):
+            if not name.startswith("_"):
+                try:
+                    attr = getattr(context.faker_instance, name)
+                    if callable(attr):
+                        faker_providers.add(name)
+                except (TypeError, AttributeError):
+                    pass
+        context.faker_providers = faker_providers
+
+        # Register validators for functions used in tests
+        def mock_validator(sv, ctx):
+            pass  # No-op validator for testing
+
+        # Import FakerValidators for fake function
+        from snowfakery.fakedata.faker_validators import FakerValidators
+
+        context.available_functions = {
+            "Math.sqrt": mock_validator,
+            "random_number": mock_validator,
+            "if_": mock_validator,
+            "fake": FakerValidators.validate_fake,  # Register Faker validator
+        }
+
         return context
 
     def test_resolve_jinja_with_interpreter(self):
@@ -270,7 +300,7 @@ class TestResolveValueWithInterpreter:
         """Test resolving StructuredValue that calls plugin function"""
         context = self.setup_context_with_interpreter()
 
-        struct_val = StructuredValue("sqrt", [25], "test.yml", 10)
+        struct_val = StructuredValue("Math.sqrt", [25], "test.yml", 10)
 
         result = resolve_value(struct_val, context)
         # Should execute the plugin function
@@ -355,3 +385,143 @@ class TestResolveValueWithInterpreter:
         result = resolve_value(outer_struct, context)
         # Should return None when nested arg cannot be resolved
         assert result is None
+
+    def test_resolve_structured_value_faker_provider(self):
+        """Test resolving StructuredValue with fake: provider syntax"""
+        context = self.setup_context_with_interpreter()
+
+        # Create StructuredValue for fake: first_name
+        sv = StructuredValue(
+            "fake", [SimpleValue("first_name", "test.yml", 10)], "test.yml", 10
+        )
+        result = resolve_value(sv, context)
+
+        # Should execute Faker and return a string
+        assert result is not None
+        assert isinstance(result, str)
+        assert len(result) > 0  # Should be a non-empty first name
+
+    def test_resolve_structured_value_faker_with_params(self):
+        """Test resolving StructuredValue with fake provider and parameters"""
+        context = self.setup_context_with_interpreter()
+
+        # Create StructuredValue for fake: email with safe=True
+        sv = StructuredValue(
+            "fake", [SimpleValue("email", "test.yml", 10)], "test.yml", 10
+        )
+        sv.kwargs = {"safe": SimpleValue(True, "test.yml", 10)}
+        result = resolve_value(sv, context)
+
+        # Should execute Faker with parameters
+        assert result is not None
+        assert isinstance(result, str)
+        assert "@" in result  # Should be an email
+
+    def test_resolve_structured_value_faker_unknown_provider(self):
+        """Test resolving StructuredValue with unknown Faker provider"""
+        context = self.setup_context_with_interpreter()
+
+        # Create StructuredValue for fake: unknown_provider
+        sv = StructuredValue(
+            "fake", [SimpleValue("unknown_provider", "test.yml", 10)], "test.yml", 10
+        )
+        result = resolve_value(sv, context)
+
+        # Should add validation error and return None
+        assert result is None
+        assert len(context.errors) > 0
+        assert "unknown_provider" in str(context.errors[0].message).lower()
+
+    def test_resolve_structured_value_faker_non_string_provider(self):
+        """Test resolving StructuredValue with non-string provider name"""
+        context = self.setup_context_with_interpreter()
+
+        # Create StructuredValue for fake: 123 (non-string)
+        sv = StructuredValue("fake", [SimpleValue(123, "test.yml", 10)], "test.yml", 10)
+        result = resolve_value(sv, context)
+
+        # Should return None (can't use non-string as provider name)
+        assert result is None
+
+    def test_resolve_structured_value_faker_no_instance(self):
+        """Test resolving StructuredValue when faker_instance is None"""
+        context = self.setup_context_with_interpreter()
+        context.faker_instance = None  # Remove faker instance
+
+        # Create StructuredValue for fake: first_name
+        sv = StructuredValue(
+            "fake", [SimpleValue("first_name", "test.yml", 10)], "test.yml", 10
+        )
+        result = resolve_value(sv, context)
+
+        # Should return None when faker_instance is not available
+        assert result is None
+
+    def test_mock_runtime_context_context_vars(self):
+        """Test MockRuntimeContext.context_vars() method"""
+        context = self.setup_context_with_interpreter()
+
+        from snowfakery.utils.validation_utils import MockRuntimeContext
+
+        mock_context = MockRuntimeContext(context)
+
+        # Test context_vars method (line 41)
+        result = mock_context.context_vars("some_plugin")
+        assert result == {}
+
+    def test_resolve_structured_value_with_unresolvable_simple_value_in_args(self):
+        """Test unresolvable complex arg that isn't SimpleValue(None) - line 184 else path"""
+        context = self.setup_context_with_interpreter()
+
+        # Create a StructuredValue with a complex unresolvable arg (not SimpleValue(None))
+        # Use a StructuredValue that will fail validation and return None
+        complex_arg = StructuredValue("unknown_function", [], "test.yml", 10)
+        sv = StructuredValue("random_number", [complex_arg], "test.yml", 10)
+
+        result = resolve_value(sv, context)
+        # Should return None when it can't resolve the complex argument
+        assert result is None
+
+    def test_resolve_structured_value_with_unresolvable_simple_value_in_kwargs(self):
+        """Test unresolvable complex kwarg that isn't SimpleValue(None) - line 200 else path"""
+        context = self.setup_context_with_interpreter()
+
+        # Create a StructuredValue with a complex unresolvable kwarg
+        complex_kwarg = StructuredValue("unknown_function", [], "test.yml", 10)
+        sv = StructuredValue("random_number", [], "test.yml", 10)
+        sv.kwargs = {"min": complex_kwarg}
+
+        result = resolve_value(sv, context)
+        # Should return None when it can't resolve the complex kwarg
+        assert result is None
+
+    def test_mock_runtime_context_field_vars_with_namespace(self):
+        """Test MockRuntimeContext.field_vars() with pre-built namespace - lines 32-37"""
+        context = self.setup_context_with_interpreter()
+
+        from snowfakery.utils.validation_utils import MockRuntimeContext
+
+        # Create MockRuntimeContext with a pre-built namespace
+        test_namespace = {"test_var": 123, "another_var": "hello"}
+        mock_context = MockRuntimeContext(context, namespace=test_namespace)
+
+        # Call field_vars - should return the pre-built namespace
+        result = mock_context.field_vars()
+        assert result == test_namespace
+        assert result["test_var"] == 123
+
+    def test_mock_runtime_context_field_vars_without_namespace(self):
+        """Test MockRuntimeContext.field_vars() without namespace - calls context.field_vars()"""
+        context = self.setup_context_with_interpreter()
+
+        from snowfakery.utils.validation_utils import MockRuntimeContext
+
+        # Create MockRuntimeContext without a pre-built namespace
+        mock_context = MockRuntimeContext(context, namespace=None)
+
+        # Call field_vars - should call context.field_vars() to build namespace on demand
+        result = mock_context.field_vars()
+        assert isinstance(result, dict)
+        # Should contain built-in variables
+        assert "id" in result
+        assert "today" in result
