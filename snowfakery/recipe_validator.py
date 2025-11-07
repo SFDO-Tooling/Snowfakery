@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from faker import Faker
 import jinja2
 from jinja2 import nativetypes
+from jinja2.sandbox import SandboxedEnvironment
 
 from snowfakery.utils.validation_utils import get_fuzzy_match, resolve_value
 from snowfakery.data_generator_runtime_object_model import (
@@ -21,6 +22,20 @@ from snowfakery.data_generator_runtime_object_model import (
     SimpleValue,
 )
 from snowfakery.template_funcs import StandardFuncs
+
+
+class SandboxedNativeEnvironment(SandboxedEnvironment, nativetypes.NativeEnvironment):
+    """Jinja2 environment that combines sandboxing security with native type preservation.
+
+    This class provides:
+    - Security restrictions from SandboxedEnvironment (blocks dangerous operations)
+    - Native Python type preservation from NativeEnvironment (returns int, bool, list, etc.)
+
+    Used during validation to safely execute Jinja templates while maintaining
+    type compatibility with Snowfakery's runtime behavior.
+    """
+
+    pass
 
 
 @dataclass
@@ -632,8 +647,8 @@ def validate_recipe(parse_result, interpreter, options) -> ValidationResult:
             continue
     context.faker_providers = faker_method_names
 
-    # Create Jinja environment with NativeEnvironment to preserve Python types
-    context.jinja_env = nativetypes.NativeEnvironment(
+    # Create Jinja environment with SandboxedNativeEnvironment
+    context.jinja_env = SandboxedNativeEnvironment(
         block_start_string="${%",
         block_end_string="%}",
         variable_start_string="${{",
