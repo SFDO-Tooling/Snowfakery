@@ -228,6 +228,7 @@ def generate_cli(
         output_folder=output_folder,
         target_number=target_number,
         reps=reps,
+        validate_only=validate_only,
     )
     if update_passthrough_fields:
         update_passthrough_fields = update_passthrough_fields.split(",")
@@ -279,6 +280,7 @@ def validate_options(
     output_folder,
     target_number,
     reps,
+    validate_only=False,
 ):
     if dburl and output_format:
         raise click.ClickException(
@@ -303,6 +305,12 @@ def validate_options(
         raise click.ClickException(
             "Sorry, you need to pick --target_number or --reps "
             "because they are mutually exclusive."
+        )
+
+    if validate_only and generate_cci_mapping_file:
+        raise click.ClickException(
+            "Cannot generate CCI mapping file in validate-only mode. "
+            "Remove --validate-only to generate mapping files."
         )
 
 

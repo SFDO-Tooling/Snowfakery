@@ -200,12 +200,6 @@ def generate_data(
         )
 
         if open_cci_mapping_file:
-            # CCI mapping requires execution (intertable_dependencies), not available in validate-only mode
-            if validate_only:
-                raise exc.DataGenValueError(
-                    "Cannot generate CCI mapping file in validate-only mode. "
-                    "Remove --validate-only to generate mapping files."
-                )
             declarations = gather_declarations(yaml_path or "", load_declarations)
             yaml.safe_dump(
                 mapping_from_recipe_templates(summary, declarations),
