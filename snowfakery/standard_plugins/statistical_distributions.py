@@ -1,5 +1,6 @@
 from numpy.random import normal, lognormal, binomial, exponential, poisson, gamma
 from numpy.random import seed
+import math
 
 
 from snowfakery.plugins import SnowfakeryPlugin
@@ -84,6 +85,23 @@ class StatisticalDistributions(SnowfakeryPlugin):
                     getattr(sv, "line_num", None),
                 )
 
+            # Return intelligent mock: execute distribution or return mean
+            loc_val = resolve_value(kwargs.get("loc", 0.0), context)
+            scale_val = resolve_value(kwargs.get("scale", 1.0), context)
+
+            # Use defaults if not resolved
+            if not isinstance(loc_val, (int, float)):
+                loc_val = 0.0
+            if not isinstance(scale_val, (int, float)):
+                scale_val = 1.0
+
+            try:
+                # Execute the normal distribution
+                return float(normal(loc=loc_val, scale=scale_val, size=1)[0])
+            except Exception:
+                # Fallback: return the mean (loc)
+                return float(loc_val)
+
         @staticmethod
         def validate_lognormal(sv, context):
             """Validate StatisticalDistributions.lognormal(mean=0.0, sigma=1.0, seed=None)"""
@@ -130,6 +148,23 @@ class StatisticalDistributions(SnowfakeryPlugin):
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )
+
+            # Return intelligent mock: execute distribution or return exp(mean)
+            mean_val = resolve_value(kwargs.get("mean", 0.0), context)
+            sigma_val = resolve_value(kwargs.get("sigma", 1.0), context)
+
+            # Use defaults if not resolved
+            if not isinstance(mean_val, (int, float)):
+                mean_val = 0.0
+            if not isinstance(sigma_val, (int, float)):
+                sigma_val = 1.0
+
+            try:
+                # Execute the lognormal distribution
+                return float(lognormal(mean=mean_val, sigma=sigma_val, size=1)[0])
+            except Exception:
+                # Fallback: return exp(mean) ≈ 1.0 for mean=0.0
+                return float(math.exp(mean_val))
 
         @staticmethod
         def validate_binomial(sv, context):
@@ -199,6 +234,27 @@ class StatisticalDistributions(SnowfakeryPlugin):
                     getattr(sv, "line_num", None),
                 )
 
+            # Return intelligent mock: execute distribution or return expected value (n*p)
+            n_val = resolve_value(kwargs.get("n"), context)
+            p_val = resolve_value(kwargs.get("p"), context)
+
+            # Check if both are valid
+            if (
+                isinstance(n_val, int)
+                and isinstance(p_val, (int, float))
+                and n_val > 0
+                and 0.0 <= p_val <= 1.0
+            ):
+                try:
+                    # Execute the binomial distribution
+                    return int(binomial(n=n_val, p=p_val, size=1)[0])
+                except Exception:
+                    # Fallback: return expected value n*p
+                    return int(n_val * p_val)
+
+            # Fallback if params not available
+            return 1
+
         @staticmethod
         def validate_exponential(sv, context):
             """Validate StatisticalDistributions.exponential(scale=1.0, seed=None)"""
@@ -234,6 +290,20 @@ class StatisticalDistributions(SnowfakeryPlugin):
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )
+
+            # Return intelligent mock: execute distribution or return scale
+            scale_val = resolve_value(kwargs.get("scale", 1.0), context)
+
+            # Use default if not resolved
+            if not isinstance(scale_val, (int, float)):
+                scale_val = 1.0
+
+            try:
+                # Execute the exponential distribution
+                return float(exponential(scale=scale_val, size=1)[0])
+            except Exception:
+                # Fallback: return the scale (mean of exponential distribution)
+                return float(scale_val)
 
         @staticmethod
         def validate_poisson(sv, context):
@@ -278,6 +348,20 @@ class StatisticalDistributions(SnowfakeryPlugin):
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )
+
+            # Return intelligent mock: execute distribution or return lambda
+            lam_val = resolve_value(kwargs.get("lam"), context)
+
+            if isinstance(lam_val, (int, float)) and lam_val > 0:
+                try:
+                    # Execute the poisson distribution
+                    return int(poisson(lam=lam_val, size=1)[0])
+                except Exception:
+                    # Fallback: return lambda (mean of poisson distribution)
+                    return int(lam_val)
+
+            # Fallback if lambda not available
+            return 1
 
         @staticmethod
         def validate_gamma(sv, context):
@@ -346,6 +430,26 @@ class StatisticalDistributions(SnowfakeryPlugin):
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )
+
+            # Return intelligent mock: execute distribution or return expected value (shape*scale)
+            shape_val = resolve_value(kwargs.get("shape"), context)
+            scale_val = resolve_value(kwargs.get("scale"), context)
+
+            if (
+                isinstance(shape_val, (int, float))
+                and isinstance(scale_val, (int, float))
+                and shape_val > 0
+                and scale_val > 0
+            ):
+                try:
+                    # Execute the gamma distribution
+                    return float(gamma(shape=shape_val, scale=scale_val, size=1)[0])
+                except Exception:
+                    # Fallback: return expected value shape*scale
+                    return float(shape_val * scale_val)
+
+            # Fallback if params not available
+            return 1.0
 
 
 for distribution in [normal, lognormal, binomial, exponential, poisson, gamma]:

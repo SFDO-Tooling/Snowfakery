@@ -30,6 +30,7 @@ from snowfakery.standard_plugins.datasets import (
     DatasetPluginBase,
     sql_dataset,
 )
+from snowfakery.utils.validation_utils import resolve_value
 
 MAX_SALESFORCE_OFFSET = 2000  # Any way around this?
 
@@ -284,6 +285,167 @@ class Salesforce(ParserMacroPlugin, SnowfakeryPlugin, SalesforceConnectionMixin)
             with open(template_path / file, "rb") as data:
                 return b64encode(data.read()).decode("ascii")
 
+    class Validators:
+        """Validators for Salesforce plugin functions."""
+
+        @staticmethod
+        def validate_ProfileId(sv, context):
+            """Validate Salesforce.ProfileId(name) and Salesforce.Profile(name)"""
+
+            # Get positional and keyword arguments
+            args = getattr(sv, "args", [])
+            kwargs = getattr(sv, "kwargs", {})
+
+            # Check if name provided as positional arg
+            name_val = None
+            if args:
+                if len(args) != 1:
+                    context.add_error(
+                        f"Salesforce.ProfileId: Expected 1 positional argument (name), got {len(args)}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                    return
+                raw_val = args[0]
+                # Check raw type before resolution (to catch invalid types early)
+                if not isinstance(raw_val, (str, SimpleValue)):
+                    context.add_error(
+                        f"Salesforce.ProfileId: 'name' must be a string, got {type(raw_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                    return
+                name_val = resolve_value(raw_val, context)
+            elif "name" in kwargs:
+                raw_val = kwargs["name"]
+                # Check raw type before resolution (to catch invalid types early)
+                if not isinstance(raw_val, (str, SimpleValue)):
+                    context.add_error(
+                        f"Salesforce.ProfileId: 'name' must be a string, got {type(raw_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                    return
+                name_val = resolve_value(raw_val, context)
+            else:
+                context.add_error(
+                    "Salesforce.ProfileId: Missing required parameter 'name'",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+                return
+
+            # Validate name is a string after resolution
+            if name_val is not None and not isinstance(name_val, str):
+                context.add_error(
+                    f"Salesforce.ProfileId: 'name' must be a string, got {type(name_val).__name__}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+            # WARNING: Unknown parameters
+            valid_params = {"name", "parent", "_"}
+            unknown = set(kwargs.keys()) - valid_params
+            if unknown:
+                context.add_warning(
+                    f"Salesforce.ProfileId: Unknown parameter(s): {', '.join(sorted(unknown))}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+            # Return mock: Salesforce Profile ID
+            # Profile IDs start with "005" and are 18 characters (15-char + 3-char suffix)
+            return "00558000001abcAAA"
+
+        validate_Profile = validate_ProfileId  # Alias
+
+        @staticmethod
+        def validate_ContentFile(sv, context):
+            """Validate Salesforce.ContentFile(file)"""
+
+            # Get positional and keyword arguments
+            args = getattr(sv, "args", [])
+            kwargs = getattr(sv, "kwargs", {})
+
+            # Check if file provided as positional arg
+            file_val = None
+            if args:
+                if len(args) != 1:
+                    context.add_error(
+                        f"Salesforce.ContentFile: Expected 1 positional argument (file), got {len(args)}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                    return
+                raw_val = args[0]
+                # Check raw type before resolution (to catch invalid types early)
+                if not isinstance(raw_val, (str, SimpleValue)):
+                    context.add_error(
+                        f"Salesforce.ContentFile: 'file' must be a string, got {type(raw_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                    return
+                file_val = resolve_value(raw_val, context)
+            elif "file" in kwargs:
+                raw_val = kwargs["file"]
+                # Check raw type before resolution (to catch invalid types early)
+                if not isinstance(raw_val, (str, SimpleValue)):
+                    context.add_error(
+                        f"Salesforce.ContentFile: 'file' must be a string, got {type(raw_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                    return
+                file_val = resolve_value(raw_val, context)
+            else:
+                context.add_error(
+                    "Salesforce.ContentFile: Missing required parameter 'file'",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+                return
+
+            # Validate file is a string after resolution
+            if file_val is not None:
+                if not isinstance(file_val, str):
+                    context.add_error(
+                        f"Salesforce.ContentFile: 'file' must be a string, got {type(file_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                else:
+                    # Validate file exists relative to recipe
+                    if context.current_template and context.current_template.filename:
+                        template_path = Path(context.current_template.filename).parent
+                        file_path = template_path / file_val
+
+                        if not file_path.exists():
+                            context.add_error(
+                                f"Salesforce.ContentFile: File not found: {file_val}",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+                        elif not file_path.is_file():
+                            context.add_error(
+                                f"Salesforce.ContentFile: Path must be a file, not a directory: {file_val}",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+
+            # WARNING: Unknown parameters
+            valid_params = {"file", "parent", "_"}
+            unknown = set(kwargs.keys()) - valid_params
+            if unknown:
+                context.add_warning(
+                    f"Salesforce.ContentFile: Unknown parameter(s): {', '.join(sorted(unknown))}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+            # Return intelligent mock: base64-encoded mock file content
+            return b64encode(b"Mock file content for validation").decode("ascii")
+
 
 class SOQLDatasetImpl(DatasetBase):
     iterator = None
@@ -424,3 +586,276 @@ class SalesforceQuery(SalesforceConnectionMixin, SnowfakeryPlugin):
                 raise ValueError("Must supply 'from:'")
 
             return query_from
+
+    class Validators:
+        """Validators for SalesforceQuery plugin functions."""
+
+        @staticmethod
+        def validate_random_record(sv, context):
+            """Validate SalesforceQuery.random_record(from, fields, where)"""
+
+            # Get positional and keyword arguments
+            args = getattr(sv, "args", [])
+            kwargs = getattr(sv, "kwargs", {})
+
+            # Parse 'from' parameter (special handling because it's a Python keyword)
+            query_from = None
+            from_is_positional = False
+
+            # Check positional args
+            if args:
+                if len(args) != 1:
+                    context.add_error(
+                        f"SalesforceQuery.random_record: Expected 1 positional argument (from), got {len(args)}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                    return
+                from_is_positional = True
+                raw_val = args[0]
+                # Check raw type before resolution
+                if not isinstance(raw_val, (str, SimpleValue)):
+                    context.add_error(
+                        f"SalesforceQuery.random_record: 'from' must be a string, got {type(raw_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                    return
+                query_from = resolve_value(raw_val, context)
+
+            # Check keyword args
+            if "from" in kwargs:
+                if from_is_positional:
+                    context.add_warning(
+                        "SalesforceQuery.random_record: Cannot specify 'from' both as positional and keyword argument",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                raw_val = kwargs["from"]
+                # Check raw type before resolution
+                if not isinstance(raw_val, (str, SimpleValue)):
+                    context.add_error(
+                        f"SalesforceQuery.random_record: 'from' must be a string, got {type(raw_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                    return
+                query_from = resolve_value(raw_val, context)
+
+            # ERROR: Missing required 'from'
+            if query_from is None:
+                context.add_error(
+                    "SalesforceQuery.random_record: Missing required parameter 'from'",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+                return
+
+            # Validate 'from' is a string after resolution
+            if not isinstance(query_from, str):
+                context.add_error(
+                    f"SalesforceQuery.random_record: 'from' must be a string, got {type(query_from).__name__}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+            # Validate 'fields' parameter
+            fields_str = "Id"  # Default
+            if "fields" in kwargs:
+                raw_val = kwargs["fields"]
+                # Check raw type before resolution
+                if not isinstance(raw_val, (str, SimpleValue)):
+                    context.add_error(
+                        f"SalesforceQuery.random_record: 'fields' must be a string, got {type(raw_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                else:
+                    fields_val = resolve_value(raw_val, context)
+                    if fields_val is not None:
+                        if not isinstance(fields_val, str):
+                            context.add_error(
+                                f"SalesforceQuery.random_record: 'fields' must be a string, got {type(fields_val).__name__}",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+                        else:
+                            fields_str = fields_val
+
+            # Validate 'where' parameter
+            if "where" in kwargs:
+                raw_val = kwargs["where"]
+                # Check raw type before resolution
+                if not isinstance(raw_val, (str, SimpleValue, type(None))):
+                    context.add_error(
+                        f"SalesforceQuery.random_record: 'where' must be a string, got {type(raw_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                else:
+                    where_val = resolve_value(raw_val, context)
+                    if where_val is not None and not isinstance(where_val, str):
+                        context.add_error(
+                            f"SalesforceQuery.random_record: 'where' must be a string, got {type(where_val).__name__}",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+
+            # WARNING: Unknown parameters
+            valid_params = {"from", "fields", "where", "parent", "_"}
+            unknown = set(kwargs.keys()) - valid_params
+            if unknown:
+                context.add_warning(
+                    f"SalesforceQuery.random_record: Unknown parameter(s): {', '.join(sorted(unknown))}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+            # Return mock object with dynamic field attributes
+            return SalesforceQuery.Validators._create_mock_record(fields_str)
+
+        @staticmethod
+        def validate_find_record(sv, context):
+            """Validate SalesforceQuery.find_record(from, fields, where)"""
+
+            # Get positional and keyword arguments
+            args = getattr(sv, "args", [])
+            kwargs = getattr(sv, "kwargs", {})
+
+            # Parse 'from' parameter (special handling because it's a Python keyword)
+            query_from = None
+            from_is_positional = False
+
+            # Check positional args
+            if args:
+                if len(args) != 1:
+                    context.add_error(
+                        f"SalesforceQuery.find_record: Expected 1 positional argument (from), got {len(args)}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                    return
+                from_is_positional = True
+                raw_val = args[0]
+                # Check raw type before resolution
+                if not isinstance(raw_val, (str, SimpleValue)):
+                    context.add_error(
+                        f"SalesforceQuery.find_record: 'from' must be a string, got {type(raw_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                    return
+                query_from = resolve_value(raw_val, context)
+
+            # Check keyword args
+            if "from" in kwargs:
+                if from_is_positional:
+                    context.add_warning(
+                        "SalesforceQuery.find_record: Cannot specify 'from' both as positional and keyword argument",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                raw_val = kwargs["from"]
+                # Check raw type before resolution
+                if not isinstance(raw_val, (str, SimpleValue)):
+                    context.add_error(
+                        f"SalesforceQuery.find_record: 'from' must be a string, got {type(raw_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                    return
+                query_from = resolve_value(raw_val, context)
+
+            # ERROR: Missing required 'from'
+            if query_from is None:
+                context.add_error(
+                    "SalesforceQuery.find_record: Missing required parameter 'from'",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+                return
+
+            # Validate 'from' is a string after resolution
+            if not isinstance(query_from, str):
+                context.add_error(
+                    f"SalesforceQuery.find_record: 'from' must be a string, got {type(query_from).__name__}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+            # Validate 'fields' parameter
+            fields_str = "Id"  # Default
+            if "fields" in kwargs:
+                raw_val = kwargs["fields"]
+                # Check raw type before resolution
+                if not isinstance(raw_val, (str, SimpleValue)):
+                    context.add_error(
+                        f"SalesforceQuery.find_record: 'fields' must be a string, got {type(raw_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                else:
+                    fields_val = resolve_value(raw_val, context)
+                    if fields_val is not None:
+                        if not isinstance(fields_val, str):
+                            context.add_error(
+                                f"SalesforceQuery.find_record: 'fields' must be a string, got {type(fields_val).__name__}",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+                        else:
+                            fields_str = fields_val
+
+            # Validate 'where' parameter
+            if "where" in kwargs:
+                raw_val = kwargs["where"]
+                # Check raw type before resolution
+                if not isinstance(raw_val, (str, SimpleValue, type(None))):
+                    context.add_error(
+                        f"SalesforceQuery.find_record: 'where' must be a string, got {type(raw_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                else:
+                    where_val = resolve_value(raw_val, context)
+                    if where_val is not None and not isinstance(where_val, str):
+                        context.add_error(
+                            f"SalesforceQuery.find_record: 'where' must be a string, got {type(where_val).__name__}",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+
+            # WARNING: Unknown parameters
+            valid_params = {"from", "fields", "where", "parent", "_"}
+            unknown = set(kwargs.keys()) - valid_params
+            if unknown:
+                context.add_warning(
+                    f"SalesforceQuery.find_record: Unknown parameter(s): {', '.join(sorted(unknown))}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+            # Return mock object with dynamic field attributes
+            return SalesforceQuery.Validators._create_mock_record(fields_str)
+
+        @staticmethod
+        def _create_mock_record(fields_str):
+            """Create a mock Salesforce record with dynamic field attributes."""
+            # Parse comma-separated fields
+            field_names = [f.strip() for f in fields_str.split(",") if f.strip()]
+            if not field_names:
+                field_names = ["Id"]
+
+            # Create mock object class
+            class MockSalesforceRecord:
+                def __init__(self, field_names):
+                    for field_name in field_names:
+                        setattr(self, field_name, f"<mock_{field_name}>")
+
+                def __repr__(self):
+                    fields = ", ".join(
+                        [f"{k}=<mock_{k}>" for k in self.__dict__.keys()]
+                    )
+                    return f"MockSalesforceRecord({fields})"
+
+            return MockSalesforceRecord(field_names)
