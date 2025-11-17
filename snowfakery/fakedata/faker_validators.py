@@ -1,7 +1,7 @@
 """Validators for Faker provider calls using introspection."""
 
 import inspect
-from typing import get_origin, get_args, Union
+from typing import get_origin, get_args, Union, Optional
 from snowfakery.utils.validation_utils import resolve_value, get_fuzzy_match
 
 
@@ -45,6 +45,21 @@ class FakerValidators:
                     pass
         return providers
 
+    def _resolve_provider_name(self, provider_name: str) -> Optional[str]:
+        """Resolve provider name accounting for case and underscores."""
+        if not provider_name:
+            return None
+        if provider_name in self.faker_providers:
+            return provider_name
+
+        normalized = provider_name.replace("_", "").lower()
+        for candidate in self.faker_providers:
+            if candidate.lower() == provider_name.lower():
+                return candidate
+            if candidate.replace("_", "").lower() == normalized:
+                return candidate
+        return None
+
     def validate_provider_name(
         self, provider_name, context, filename=None, line_num=None
     ):
@@ -57,16 +72,17 @@ class FakerValidators:
             line_num: Line number for error reporting
 
         Returns:
-            True if provider exists, False otherwise
+            Resolved provider name string if provider exists, otherwise None
         """
-        if provider_name not in self.faker_providers:
+        resolved_name = self._resolve_provider_name(provider_name)
+        if not resolved_name:
             suggestion = get_fuzzy_match(provider_name, list(self.faker_providers))
             msg = f"Unknown Faker provider '{provider_name}'"
             if suggestion:
                 msg += f". Did you mean '{suggestion}'?"
             context.add_error(msg, filename, line_num)
-            return False
-        return True
+            return None
+        return resolved_name
 
     def validate_provider_call(self, provider_name, args, kwargs, context):
         """Validate a Faker provider call.
@@ -82,24 +98,29 @@ class FakerValidators:
             kwargs: Keyword arguments (dict)
             context: ValidationContext for error reporting
         """
+        resolved_name: Optional[str] = self._resolve_provider_name(provider_name)
+        if not resolved_name:
+            # Re-use name validation to record a helpful error message
+            self.validate_provider_name(provider_name, context)
+            return
+
         # 1. Check if provider exists
-        if not hasattr(self.faker_instance, provider_name):
-            # Provider doesn't exist, but validation should have been done already
+        if not hasattr(self.faker_instance, resolved_name):
             return
 
         # 2. Get the method
-        method = getattr(self.faker_instance, provider_name)
+        method = getattr(self.faker_instance, resolved_name)
 
         # 3. Get signature (with caching)
-        if provider_name not in self._signature_cache:
+        if resolved_name not in self._signature_cache:
             try:
                 sig = inspect.signature(method)
-                self._signature_cache[provider_name] = sig
+                self._signature_cache[resolved_name] = sig
             except (ValueError, TypeError):
                 # Can't introspect (rare case) - skip validation
                 return
 
-        sig = self._signature_cache[provider_name]
+        sig = self._signature_cache[resolved_name]
 
         # 4. Resolve arguments (convert FieldDefinitions to actual values)
         resolved_args = []
@@ -307,14 +328,14 @@ class FakerValidators:
         validator = FakerValidators(context.faker_instance, context.faker_providers)
 
         # Validate provider name immediately
-        provider_exists = validator.validate_provider_name(
+        resolved_name = validator.validate_provider_name(
             provider_name,
             context,
             getattr(sv, "filename", None),
             getattr(sv, "line_num", None),
         )
 
-        if not provider_exists:
+        if not resolved_name:
             # Validation failed, return mock placeholder
             return lambda *a, **kw: f"<fake_{provider_name}>"
 
@@ -325,18 +346,18 @@ class FakerValidators:
             if call_args or call_kwargs:
                 error_count_before = len(context.errors)
                 validator.validate_provider_call(
-                    provider_name, call_args, call_kwargs, context
+                    resolved_name, call_args, call_kwargs, context
                 )
                 if len(context.errors) > error_count_before:
                     return f"<fake_{provider_name}>"
 
             # Execute Faker method
             try:
-                method = getattr(context.faker_instance, provider_name)
+                method = getattr(context.faker_instance, resolved_name)
                 return method(*call_args, **call_kwargs)
             except Exception as e:
                 context.add_error(
-                    f"fake.{provider_name}: Execution error: {str(e)}",
+                    f"fake.{resolved_name}: Execution error: {str(e)}",
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )

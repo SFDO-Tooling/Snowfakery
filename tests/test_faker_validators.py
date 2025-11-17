@@ -69,7 +69,7 @@ class TestValidateProviderName:
 
         result = validator.validate_provider_name("first_name", context)
 
-        assert result is True
+        assert result == "first_name"
         assert len(context.errors) == 0
 
     def test_invalid_provider_name(self):
@@ -80,7 +80,7 @@ class TestValidateProviderName:
 
         result = validator.validate_provider_name("invalid_provider", context)
 
-        assert result is False
+        assert result is None
         assert len(context.errors) == 1
         assert "Unknown Faker provider 'invalid_provider'" in context.errors[0].message
 
@@ -92,10 +92,21 @@ class TestValidateProviderName:
 
         result = validator.validate_provider_name("first_nam", context)
 
-        assert result is False
+        assert result is None
         assert len(context.errors) == 1
         assert "first_name" in context.errors[0].message
         assert "Did you mean" in context.errors[0].message
+
+    def test_case_insensitive_lookup(self):
+        """Provider resolution should be case/underscore insensitive."""
+        faker = create_faker_with_snowfakery_providers()
+        validator = FakerValidators(faker)
+        context = ValidationContext()
+
+        result = validator.validate_provider_name("FirstName", context)
+
+        assert result is not None
+        assert len(context.errors) == 0
 
 
 class TestValidateProviderCall:
