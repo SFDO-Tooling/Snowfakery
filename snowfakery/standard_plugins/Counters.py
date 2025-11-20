@@ -142,6 +142,16 @@ class Counters(SnowfakeryPlugin):
                     getattr(sv, "line_num", None),
                 )
 
+            # Return mock: counter object that returns start value
+            start = 1
+            if "start" in kwargs:
+                start_val = resolve_value(kwargs["start"], context)
+                if isinstance(start_val, int):
+                    start = start_val
+
+            # Return a mock counter object with a next() method
+            return type("MockNumberCounter", (), {"next": lambda self: start})()
+
         @staticmethod
         def validate_DateCounter(sv, context):
             """Validate Counters.DateCounter(start_date, step, name=None, parent=None)."""
@@ -228,3 +238,19 @@ class Counters(SnowfakeryPlugin):
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )
+
+            # Return mock: counter object that returns start_date
+            start_date = date.today()
+            if "start_date" in kwargs:
+                start_date_val = resolve_value(kwargs["start_date"], context)
+                if start_date_val is not None:
+                    try:
+                        # Try to parse the date
+                        parsed_date = try_parse_date(start_date_val)
+                        if parsed_date:
+                            start_date = parsed_date
+                    except Exception:
+                        pass
+
+            # Return a mock counter object with a next() method
+            return type("MockDateCounter", (), {"next": lambda self: start_date})()

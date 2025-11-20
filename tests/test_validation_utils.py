@@ -205,13 +205,23 @@ class TestResolveValueWithInterpreter:
 
         # Register validators for functions used in tests
         def mock_validator(sv, ctx):
-            pass  # No-op validator for testing
+            # Return a simple mock value (validators should return mocks now)
+            return 5  # Return fixed mock value
 
         # Import FakerValidators for fake function
         from snowfakery.fakedata.faker_validators import FakerValidators
 
+        # Create a plugin-specific validator that returns appropriate mock
+        def mock_sqrt_validator(sv, ctx):
+            # For Math.sqrt, return sqrt of first arg if available
+            if sv.args and len(sv.args) > 0:
+                arg = sv.args[0]
+                if isinstance(arg, (int, float)):
+                    return arg**0.5
+            return 5.0  # Default mock
+
         context.available_functions = {
-            "Math.sqrt": mock_validator,
+            "Math.sqrt": mock_sqrt_validator,
             "random_number": mock_validator,
             "if_": mock_validator,
             "fake": FakerValidators.validate_fake,  # Register Faker validator
@@ -291,10 +301,9 @@ class TestResolveValueWithInterpreter:
         )
 
         result = resolve_value(struct_val, context)
-        # Dict arguments get passed through - the function will try to execute with them
-        # Since random_number expects int but gets dict, it will raise an exception
-        # and resolve_value will return None
-        assert result is None
+        # With the new mock return behavior, validators return fallback mocks
+        # even when arguments can't be resolved
+        assert result == 5  # Mock validator returns 5
 
     def test_resolve_structured_value_plugin_function(self):
         """Test resolving StructuredValue that calls plugin function"""
@@ -383,8 +392,8 @@ class TestResolveValueWithInterpreter:
         )
 
         result = resolve_value(outer_struct, context)
-        # Should return None when nested arg cannot be resolved
-        assert result is None
+        # With new mock behavior, outer validator still returns mock
+        assert result == 5  # Mock validator returns 5
 
     def test_resolve_structured_value_faker_provider(self):
         """Test resolving StructuredValue with fake: provider syntax"""
@@ -427,8 +436,8 @@ class TestResolveValueWithInterpreter:
         )
         result = resolve_value(sv, context)
 
-        # Should add validation error and return None
-        assert result is None
+        # Should add validation error and return fallback mock
+        assert result == "<fake_unknown_provider>"  # Fallback mock
         assert len(context.errors) > 0
         assert "unknown_provider" in str(context.errors[0].message).lower()
 
@@ -479,8 +488,8 @@ class TestResolveValueWithInterpreter:
         sv = StructuredValue("random_number", [complex_arg], "test.yml", 10)
 
         result = resolve_value(sv, context)
-        # Should return None when it can't resolve the complex argument
-        assert result is None
+        # With new mock behavior, outer validator still returns mock
+        assert result == 5  # Mock validator returns 5
 
     def test_resolve_structured_value_with_unresolvable_simple_value_in_kwargs(self):
         """Test unresolvable complex kwarg that isn't SimpleValue(None) - line 200 else path"""
@@ -492,8 +501,8 @@ class TestResolveValueWithInterpreter:
         sv.kwargs = {"min": complex_kwarg}
 
         result = resolve_value(sv, context)
-        # Should return None when it can't resolve the complex kwarg
-        assert result is None
+        # With new mock behavior, outer validator still returns mock
+        assert result == 5  # Mock validator returns 5
 
     def test_mock_runtime_context_field_vars_with_namespace(self):
         """Test MockRuntimeContext.field_vars() with pre-built namespace - lines 32-37"""
@@ -525,3 +534,65 @@ class TestResolveValueWithInterpreter:
         # Should contain built-in variables
         assert "id" in result
         assert "today" in result
+
+    def test_nested_structured_value_resolution(self):
+        """Test that nested StructuredValues are resolved before validator sees them."""
+        context = self.setup_context_with_interpreter()
+
+        # Create deeply nested StructuredValue:
+        # random_number(min=1, max=random_number(min=50, max=100))
+        inner = StructuredValue(
+            "random_number", {"min": 50, "max": 100}, "test.yml", 10
+        )
+        outer = StructuredValue(
+            "random_number", {"min": 1, "max": inner}, "test.yml", 11
+        )
+
+        result = resolve_value(outer, context)
+
+        # Both inner and outer should be validated and resolved
+        # Inner returns 5, outer uses 5 as max and also returns 5
+        assert result == 5
+
+    def test_triple_nested_structured_value_resolution(self):
+        """Test that triple-nested StructuredValues are resolved correctly."""
+        context = self.setup_context_with_interpreter()
+
+        # Create triple-nested: random_number(min=random_number(min=random_number(min=1, max=5), max=10), max=20)
+        innermost = StructuredValue(
+            "random_number", {"min": 1, "max": 5}, "test.yml", 10
+        )
+        middle = StructuredValue(
+            "random_number", {"min": innermost, "max": 10}, "test.yml", 11
+        )
+        outermost = StructuredValue(
+            "random_number", {"min": middle, "max": 20}, "test.yml", 12
+        )
+
+        result = resolve_value(outermost, context)
+
+        # All levels should resolve to 5 (our mock returns 5)
+        assert result == 5
+
+    def test_nested_structured_value_with_faker(self):
+        """Test nested StructuredValue where inner is a Faker call."""
+        context = self.setup_context_with_interpreter()
+
+        # Create nested with Faker: random_number(min=1, max=fake.random_int(min=50, max=100))
+        # Note: fake.random_int returns an int
+        inner_fake = StructuredValue(
+            "fake",
+            [SimpleValue("random_int", "test.yml", 10)],
+            "test.yml",
+            10,
+        )
+        inner_fake.kwargs = {"min": 50, "max": 100}
+
+        outer = StructuredValue(
+            "random_number", {"min": 1, "max": inner_fake}, "test.yml", 11
+        )
+
+        result = resolve_value(outer, context)
+
+        # Inner Faker executes and returns an int, outer uses it and returns 5
+        assert result == 5

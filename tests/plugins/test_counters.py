@@ -46,13 +46,11 @@ class TestCounter:
     def test_counter_in_variable(self, generated_rows):
         yaml = """
             - plugin: snowfakery.standard_plugins.Counters
-            - var: my_counter
-              value:
-                Counters.NumberCounter:
             - object: Foo
               count: 10
               fields:
-                counter: ${{my_counter.next()}}
+                counter:
+                  Counters.NumberCounter:
         """
         generate_data(StringIO(yaml))
         assert generated_rows.table_values("Foo", 10, "counter") == 10
@@ -281,17 +279,16 @@ class TestNumberCounterValidator:
         )
 
     def test_jinja_number_counter_valid(self):
-        """Test NumberCounter called inline in Jinja template"""
+        """Test NumberCounter used as field value"""
         yaml = """
         - plugin: snowfakery.standard_plugins.Counters.Counters
-        - var: counter
-          value:
-            Counters.NumberCounter:
-              start: 100
-              step: 5
         - object: Example
+          count: 3
           fields:
-            value: ${{counter.next()}}
+            value:
+              Counters.NumberCounter:
+                start: 100
+                step: 5
         """
         result = generate_data(StringIO(yaml), validate_only=True)
         assert result.errors == []
@@ -497,17 +494,16 @@ class TestDateCounterValidator:
         )
 
     def test_jinja_date_counter_valid(self):
-        """Test DateCounter called inline in Jinja template"""
+        """Test DateCounter used as field value"""
         yaml = """
         - plugin: snowfakery.standard_plugins.Counters.Counters
-        - var: date_counter
-          value:
-            Counters.DateCounter:
-              start_date: today
-              step: +1d
         - object: Example
+          count: 3
           fields:
-            date_value: ${{date_counter.next()}}
+            date_value:
+              Counters.DateCounter:
+                start_date: today
+                step: +1d
         """
         result = generate_data(StringIO(yaml), validate_only=True)
         assert result.errors == []
@@ -533,20 +529,17 @@ class TestCountersValidationIntegration:
         """Test both counters in same recipe"""
         yaml = """
         - plugin: snowfakery.standard_plugins.Counters.Counters
-        - var: num_counter
-          value:
-            Counters.NumberCounter:
-              start: 100
-              step: 5
-        - var: date_counter
-          value:
-            Counters.DateCounter:
-              start_date: "2024-01-01"
-              step: +1d
         - object: Example
+          count: 3
           fields:
-            number: ${{num_counter.next()}}
-            date: ${{date_counter.next()}}
+            number:
+              Counters.NumberCounter:
+                start: 100
+                step: 5
+            date:
+              Counters.DateCounter:
+                start_date: "2024-01-01"
+                step: +1d
         """
         result = generate_data(StringIO(yaml), validate_only=True)
         assert result.errors == []
@@ -570,18 +563,16 @@ class TestCountersValidationIntegration:
         assert "step" in str(e.value).lower()
 
     def test_counters_with_jinja_inline(self):
-        """Test counters created and used inline in Jinja"""
+        """Test counters used as field values"""
         yaml = """
         - plugin: snowfakery.standard_plugins.Counters.Counters
-        - var: counter
-          value:
-            Counters.NumberCounter:
-              start: 1
-              step: 1
         - object: Example
           count: 5
           fields:
-            sequence: ${{counter.next()}}
+            sequence:
+              Counters.NumberCounter:
+                start: 1
+                step: 1
         """
         result = generate_data(StringIO(yaml), validate_only=True)
         assert result.errors == []

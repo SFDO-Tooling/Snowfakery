@@ -335,7 +335,10 @@ class UniqueId(SnowfakeryPlugin):
                             getattr(sv, "filename", None),
                             getattr(sv, "line_num", None),
                         )
-                        return
+                        # Return mock generator object even on error
+                        return type(
+                            "MockNumericGenerator", (), {"unique_id": 1234567890}
+                        )()
 
                     # Validate template parts
                     valid_parts = {"pid", "context", "index"}
@@ -364,6 +367,9 @@ class UniqueId(SnowfakeryPlugin):
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )
+
+            # Return intelligent mock: mock generator object with unique_id property
+            return type("MockNumericGenerator", (), {"unique_id": 1234567890})()
 
         @staticmethod
         def validate_AlphaCodeGenerator(sv, context):
@@ -496,3 +502,28 @@ class UniqueId(SnowfakeryPlugin):
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )
+
+            # Return intelligent mock: alpha code generator object
+            min_chars = 8  # Default
+            if "min_chars" in kwargs:
+                min_chars_val = resolve_value(kwargs["min_chars"], context)
+                if isinstance(min_chars_val, int) and min_chars_val > 0:
+                    min_chars = min_chars_val
+
+            # Get alphabet if provided
+            alphabet = None
+            if "alphabet" in kwargs:
+                alphabet_val = resolve_value(kwargs["alphabet"], context)
+                if isinstance(alphabet_val, str) and len(alphabet_val) >= 2:
+                    alphabet = alphabet_val
+
+            # Generate mock alpha code
+            if alphabet:
+                # Use first character from alphabet repeated to min_chars length
+                mock_code = alphabet[0] * min_chars
+            else:
+                # Default: use 'A' repeated to min_chars length
+                mock_code = "A" * min_chars
+
+            # Return mock generator object with unique_id property
+            return type("MockAlphaGenerator", (), {"unique_id": mock_code})()

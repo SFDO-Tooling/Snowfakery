@@ -5,6 +5,7 @@ from datetime import date, datetime
 from functools import lru_cache
 from datetime import timezone
 from typing import Any, List, Tuple, Union
+from unittest.mock import MagicMock
 
 import dateutil.parser
 from dateutil.relativedelta import relativedelta
@@ -435,13 +436,17 @@ class StandardFuncs(SnowfakeryPlugin):
 
         @staticmethod
         def validate_random_number(sv, context):
-            """Validate random_number(min, max, step)"""
+            """Validate random_number(min, max, step)
+
+            Returns:
+                int: min + 1 as intelligent mock, or 1 as fallback
+            """
 
             # ERROR: Required parameters
             if not StandardFuncs.Validators.check_required_params(
                 sv, context, ["min", "max"], "random_number"
             ):
-                return
+                return 1  # Fallback mock
 
             kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
 
@@ -457,12 +462,15 @@ class StandardFuncs(SnowfakeryPlugin):
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )
+                return 1  # Fallback mock
+
             if max_val is not None and not isinstance(max_val, (int, float)):
                 context.add_error(
                     "random_number: 'max' must be an integer",
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )
+                return 1  # Fallback mock
 
             # ERROR: Logical constraints
             if isinstance(min_val, (int, float)) and isinstance(max_val, (int, float)):
@@ -472,6 +480,7 @@ class StandardFuncs(SnowfakeryPlugin):
                         getattr(sv, "filename", None),
                         getattr(sv, "line_num", None),
                     )
+                    return 1  # Fallback mock
 
             # ERROR: Step validation
             if step_val is not None:
@@ -481,6 +490,7 @@ class StandardFuncs(SnowfakeryPlugin):
                         getattr(sv, "filename", None),
                         getattr(sv, "line_num", None),
                     )
+                    return 1  # Fallback mock
 
             # WARNING: Unknown parameters
             valid_params = {"min", "max", "step"}
@@ -492,9 +502,18 @@ class StandardFuncs(SnowfakeryPlugin):
                     getattr(sv, "line_num", None),
                 )
 
+            # Return intelligent mock: min + 1 (or min if we can't add)
+            if isinstance(min_val, (int, float)):
+                return int(min_val) + 1
+            return 1  # Fallback if min not available
+
         @staticmethod
         def validate_reference(sv, context):
-            """Validate reference(x, object, id)"""
+            """Validate reference(x, object, id)
+
+            Returns:
+                ObjectReference or None: Mock reference object, or None on error
+            """
 
             kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
             args = getattr(sv, "args", [])
@@ -511,7 +530,7 @@ class StandardFuncs(SnowfakeryPlugin):
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )
-                return
+                return None  # Fallback mock
 
             # ERROR: Cannot mix x and object/id
             if has_x and (has_object or has_id):
@@ -520,7 +539,7 @@ class StandardFuncs(SnowfakeryPlugin):
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )
-                return
+                return None  # Fallback mock
 
             # Validate object exists
             if has_x:
@@ -542,6 +561,12 @@ class StandardFuncs(SnowfakeryPlugin):
                             getattr(sv, "filename", None),
                             getattr(sv, "line_num", None),
                         )
+                        return None  # Fallback mock
+
+                    # Return intelligent mock: ObjectReference with resolved name
+                    # Use tablename from the resolved object
+                    tablename = obj.tablename if hasattr(obj, "tablename") else ref_name
+                    return ObjectReference(tablename, 1)
 
             elif has_object:
                 obj_name = resolve_value(kwargs["object"], context)
@@ -559,6 +584,7 @@ class StandardFuncs(SnowfakeryPlugin):
                             getattr(sv, "filename", None),
                             getattr(sv, "line_num", None),
                         )
+                        return None  # Fallback mock
 
                 # Validate id is numeric
                 id_val = resolve_value(kwargs["id"], context)
@@ -568,10 +594,23 @@ class StandardFuncs(SnowfakeryPlugin):
                         getattr(sv, "filename", None),
                         getattr(sv, "line_num", None),
                     )
+                    id_val = 1  # Use fallback ID
+
+                # Return intelligent mock: ObjectReference with specified object and id
+                return ObjectReference(
+                    obj_name, int(id_val) if id_val is not None else 1
+                )
+
+            # Fallback
+            return None
 
         @staticmethod
         def validate_random_choice(sv, context):
-            """Validate random_choice(*choices, **kwchoices)"""
+            """Validate random_choice(*choices, **kwchoices)
+
+            Returns:
+                First choice as intelligent mock, or None as fallback
+            """
 
             kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
             args = getattr(sv, "args", [])
@@ -583,7 +622,7 @@ class StandardFuncs(SnowfakeryPlugin):
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )
-                return
+                return None  # Fallback mock
 
             # ERROR: Cannot mix list and dict formats
             if args and kwargs:
@@ -592,7 +631,7 @@ class StandardFuncs(SnowfakeryPlugin):
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )
-                return
+                return None  # Fallback mock
 
             # Validate probability format if using dict
             if kwargs:
@@ -663,9 +702,26 @@ class StandardFuncs(SnowfakeryPlugin):
                         getattr(sv, "line_num", None),
                     )
 
+            # Return intelligent mock: first choice
+            if args:
+                # Try to resolve first choice
+                first_choice = args[0]
+                resolved = resolve_value(first_choice, context)
+                return resolved if resolved is not None else None
+            elif kwargs:
+                # Return first key (string)
+                return list(kwargs.keys())[0]
+
+            # Fallback
+            return None
+
         @staticmethod
         def validate_date(sv, context):
-            """Validate date(datespec=None, *, year=None, month=None, day=None)"""
+            """Validate date(datespec=None, *, year=None, month=None, day=None)
+
+            Returns:
+                date: Resolved date or date(2020, 1, 1) as fallback
+            """
 
             kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
             args = getattr(sv, "args", [])
@@ -676,6 +732,16 @@ class StandardFuncs(SnowfakeryPlugin):
             month = kwargs.get("month")
             day = kwargs.get("day")
 
+            # WARNING: Unknown parameters (check early before any returns)
+            valid_params = {"datespec", "year", "month", "day"}
+            unknown = set(kwargs.keys()) - valid_params
+            if unknown:
+                context.add_warning(
+                    f"date: Unknown parameter(s): {', '.join(unknown)}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
             # ERROR: Cannot specify both datespec and components
             if datespec and any([year, month, day]):
                 context.add_error(
@@ -683,7 +749,7 @@ class StandardFuncs(SnowfakeryPlugin):
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )
-                return
+                return date_constructor(2020, 1, 1)  # Fallback mock
 
             # If using components, validate them
             if any([year, month, day]):
@@ -694,22 +760,46 @@ class StandardFuncs(SnowfakeryPlugin):
                         getattr(sv, "filename", None),
                         getattr(sv, "line_num", None),
                     )
-                    return
+                    return date_constructor(2020, 1, 1)  # Fallback mock
 
                 # Resolve and validate
                 year_val = resolve_value(year, context)
                 month_val = resolve_value(month, context)
                 day_val = resolve_value(day, context)
 
+                non_int_components = [
+                    name
+                    for name, value in (
+                        ("year", year_val),
+                        ("month", month_val),
+                        ("day", day_val),
+                    )
+                    if value is not None and not isinstance(value, int)
+                ]
+
+                if non_int_components:
+                    for name in non_int_components:
+                        context.add_error(
+                            f"date: '{name}' must be an integer",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+                    return date_constructor(2020, 1, 1)  # Fallback mock
+
                 if all([isinstance(v, int) for v in [year_val, month_val, day_val]]):
                     try:
-                        date_constructor(year_val, month_val, day_val)
+                        # Return intelligent mock: constructed date
+                        return date_constructor(year_val, month_val, day_val)
                     except (ValueError, TypeError) as e:
                         context.add_error(
                             f"date: Invalid date - {str(e)}",
                             getattr(sv, "filename", None),
                             getattr(sv, "line_num", None),
                         )
+                        return date_constructor(2020, 1, 1)  # Fallback mock
+                else:
+                    # Components couldn't be resolved
+                    return date_constructor(2020, 1, 1)  # Fallback mock
 
             # If using datespec, validate it
             elif datespec:
@@ -718,27 +808,35 @@ class StandardFuncs(SnowfakeryPlugin):
                     # Skip validation for Jinja expressions
                     if not ("{{" in datespec_val or "{%" in datespec_val):
                         try:
-                            parse_date(datespec_val)
+                            # Return intelligent mock: parsed date
+                            return parse_date(datespec_val)
                         except Exception:
                             context.add_error(
                                 f"date: Invalid date string '{datespec_val}'",
                                 getattr(sv, "filename", None),
                                 getattr(sv, "line_num", None),
                             )
+                            return date_constructor(2020, 1, 1)  # Fallback mock
+                    else:
+                        # Jinja expression - can't parse at validation time
+                        return date_constructor(2020, 1, 1)  # Fallback mock
+                elif isinstance(datespec_val, date):
+                    # Already a date
+                    return datespec_val
+                elif isinstance(datespec_val, datetime):
+                    # Convert datetime to date
+                    return datespec_val.date()
 
-            # WARNING: Unknown parameters
-            valid_params = {"datespec", "year", "month", "day"}
-            unknown = set(kwargs.keys()) - valid_params
-            if unknown:
-                context.add_warning(
-                    f"date: Unknown parameter(s): {', '.join(unknown)}",
-                    getattr(sv, "filename", None),
-                    getattr(sv, "line_num", None),
-                )
+            # Default: return today
+            return date_constructor.today()
 
         @staticmethod
         def validate_datetime(sv, context):
-            """Validate datetime(datetimespec=None, *, year, month, day, hour, minute, second, microsecond, timezone)"""
+            """Validate datetime(datetimespec=None, *, year, month, day, hour, minute, second, microsecond, timezone)
+
+            Returns:
+                datetime: Resolved datetime or datetime(2020, 1, 1, 0, 0, 0, 0, timezone.utc) as fallback
+            """
 
             kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
             args = getattr(sv, "args", [])
@@ -755,59 +853,7 @@ class StandardFuncs(SnowfakeryPlugin):
             ]
             has_components = any([kwargs.get(c) for c in components])
 
-            # ERROR: Cannot specify both datetimespec and components
-            if datetimespec and has_components:
-                context.add_error(
-                    "datetime: Cannot specify 'datetimespec' with other parameters",
-                    getattr(sv, "filename", None),
-                    getattr(sv, "line_num", None),
-                )
-                return
-
-            # Validate components if provided
-            if has_components:
-                year = resolve_value(kwargs.get("year"), context)
-                month = resolve_value(kwargs.get("month"), context)
-                day = resolve_value(kwargs.get("day"), context)
-                hour = resolve_value(kwargs.get("hour", 0), context)
-                minute = resolve_value(kwargs.get("minute", 0), context)
-                second = resolve_value(kwargs.get("second", 0), context)
-                microsecond = resolve_value(kwargs.get("microsecond", 0), context)
-
-                # Try to construct datetime if all are literals
-                if all(
-                    [
-                        isinstance(v, int)
-                        for v in [year, month, day, hour, minute, second, microsecond]
-                    ]
-                ):
-                    try:
-                        datetime_constructor(
-                            year, month, day, hour, minute, second, microsecond
-                        )
-                    except (ValueError, TypeError) as e:
-                        context.add_error(
-                            f"datetime: Invalid datetime - {str(e)}",
-                            getattr(sv, "filename", None),
-                            getattr(sv, "line_num", None),
-                        )
-
-            # Validate datetimespec if provided
-            elif datetimespec:
-                spec_val = resolve_value(datetimespec, context)
-                if isinstance(spec_val, str):
-                    # Skip validation for Jinja expressions
-                    if not ("{{" in spec_val or "{%" in spec_val):
-                        try:
-                            parse_datetimespec(spec_val)
-                        except Exception:
-                            context.add_error(
-                                f"datetime: Invalid datetime string '{spec_val}'",
-                                getattr(sv, "filename", None),
-                                getattr(sv, "line_num", None),
-                            )
-
-            # WARNING: Unknown parameters
+            # WARNING: Unknown parameters (check early before any returns)
             valid_params = {
                 "datetimespec",
                 "year",
@@ -827,17 +873,115 @@ class StandardFuncs(SnowfakeryPlugin):
                     getattr(sv, "line_num", None),
                 )
 
+            # ERROR: Cannot specify both datetimespec and components
+            if datetimespec and has_components:
+                context.add_error(
+                    "datetime: Cannot specify 'datetimespec' with other parameters",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+                return datetime_constructor(
+                    2020, 1, 1, 0, 0, 0, 0, timezone.utc
+                )  # Fallback mock
+
+            # Validate components if provided
+            if has_components:
+                year = resolve_value(kwargs.get("year"), context)
+                month = resolve_value(kwargs.get("month"), context)
+                day = resolve_value(kwargs.get("day"), context)
+                hour = resolve_value(kwargs.get("hour", 0), context)
+                minute = resolve_value(kwargs.get("minute", 0), context)
+                second = resolve_value(kwargs.get("second", 0), context)
+                microsecond = resolve_value(kwargs.get("microsecond", 0), context)
+
+                # Try to construct datetime if all are literals
+                if all(
+                    [
+                        isinstance(v, int)
+                        for v in [year, month, day, hour, minute, second, microsecond]
+                    ]
+                ):
+                    try:
+                        # Return intelligent mock: constructed datetime
+                        return datetime_constructor(
+                            year,
+                            month,
+                            day,
+                            hour,
+                            minute,
+                            second,
+                            microsecond,
+                            timezone.utc,
+                        )
+                    except (ValueError, TypeError) as e:
+                        context.add_error(
+                            f"datetime: Invalid datetime - {str(e)}",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+                        return datetime_constructor(
+                            2020, 1, 1, 0, 0, 0, 0, timezone.utc
+                        )  # Fallback mock
+                else:
+                    # Components couldn't be resolved
+                    return datetime_constructor(
+                        2020, 1, 1, 0, 0, 0, 0, timezone.utc
+                    )  # Fallback mock
+
+            # Validate datetimespec if provided
+            elif datetimespec:
+                spec_val = resolve_value(datetimespec, context)
+                if isinstance(spec_val, str):
+                    # Skip validation for Jinja expressions
+                    if not ("{{" in spec_val or "{%" in spec_val):
+                        try:
+                            # Return intelligent mock: parsed datetime
+                            return parse_datetimespec(spec_val)
+                        except Exception:
+                            context.add_error(
+                                f"datetime: Invalid datetime string '{spec_val}'",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+                            return datetime_constructor(
+                                2020, 1, 1, 0, 0, 0, 0, timezone.utc
+                            )  # Fallback mock
+                    else:
+                        # Jinja expression - can't parse at validation time
+                        return datetime_constructor(
+                            2020, 1, 1, 0, 0, 0, 0, timezone.utc
+                        )  # Fallback mock
+                elif isinstance(spec_val, datetime):
+                    # Already a datetime
+                    return spec_val
+                elif isinstance(spec_val, date):
+                    # Convert date to datetime
+                    return datetime_constructor.combine(
+                        spec_val, datetime_constructor.min.time(), tzinfo=timezone.utc
+                    )
+
+            # Default: return now
+            return datetime_constructor.now(timezone.utc)
+
         @staticmethod
         def validate_date_between(sv, context):
-            """Validate date_between(*, start_date, end_date, timezone)"""
+            """Validate date_between(*, start_date, end_date, timezone)
+
+            Returns:
+                date: Midpoint date as intelligent mock, or date.today() as fallback
+            """
 
             # ERROR: Required parameters
             if not StandardFuncs.Validators.check_required_params(
                 sv, context, ["start_date", "end_date"], "date_between"
             ):
-                return
+                return date_constructor.today()  # Fallback mock
 
             kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
+
+            # Try to parse start and end dates
+            start_parsed = None
+            end_parsed = None
 
             # Validate date strings
             for param in ["start_date", "end_date"]:
@@ -848,7 +992,11 @@ class StandardFuncs(SnowfakeryPlugin):
                     # This matches runtime behavior which passes unknown strings to Faker
                     if not DateProvider.regex.fullmatch(date_val):
                         try:
-                            parse_date(date_val)
+                            parsed = parse_date(date_val)
+                            if param == "start_date":
+                                start_parsed = parsed
+                            else:
+                                end_parsed = parsed
                         except Exception:
                             # Can't parse, but Faker might handle it (like "today")
                             # Only warn if it looks completely wrong
@@ -858,6 +1006,11 @@ class StandardFuncs(SnowfakeryPlugin):
                                     getattr(sv, "filename", None),
                                     getattr(sv, "line_num", None),
                                 )
+                elif isinstance(date_val, date):
+                    if param == "start_date":
+                        start_parsed = date_val
+                    else:
+                        end_parsed = date_val
 
             # WARNING: Unknown parameters
             valid_params = {"start_date", "end_date", "timezone"}
@@ -869,17 +1022,40 @@ class StandardFuncs(SnowfakeryPlugin):
                     getattr(sv, "line_num", None),
                 )
 
+            # Return intelligent mock: midpoint if both dates parsed
+            if start_parsed and end_parsed:
+                if start_parsed > end_parsed:
+                    context.add_error(
+                        "date_between: 'start_date' must be on or before 'end_date'",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                    return date_constructor.today()
+                delta = (end_parsed - start_parsed) / 2
+                return start_parsed + delta
+
+            # Fallback: today
+            return date_constructor.today()
+
         @staticmethod
         def validate_datetime_between(sv, context):
-            """Validate datetime_between(*, start_date, end_date, timezone)"""
+            """Validate datetime_between(*, start_date, end_date, timezone)
+
+            Returns:
+                datetime: Midpoint datetime as intelligent mock, or datetime.now() as fallback
+            """
 
             # ERROR: Required parameters
             if not StandardFuncs.Validators.check_required_params(
                 sv, context, ["start_date", "end_date"], "datetime_between"
             ):
-                return
+                return datetime_constructor.now(timezone.utc)  # Fallback mock
 
             kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
+
+            # Try to parse start and end datetimes
+            start_parsed = None
+            end_parsed = None
 
             # Validate datetime strings
             for param in ["start_date", "end_date"]:
@@ -887,13 +1063,22 @@ class StandardFuncs(SnowfakeryPlugin):
                 if isinstance(dt_val, str):
                     if not DateProvider.regex.fullmatch(dt_val):
                         try:
-                            parse_datetimespec(dt_val)
+                            parsed = parse_datetimespec(dt_val)
+                            if param == "start_date":
+                                start_parsed = parsed
+                            else:
+                                end_parsed = parsed
                         except Exception:
                             context.add_error(
                                 f"datetime_between: Invalid datetime string '{dt_val}' in '{param}'",
                                 getattr(sv, "filename", None),
                                 getattr(sv, "line_num", None),
                             )
+                elif isinstance(dt_val, datetime):
+                    if param == "start_date":
+                        start_parsed = dt_val
+                    else:
+                        end_parsed = dt_val
 
             # WARNING: Unknown parameters
             valid_params = {"start_date", "end_date", "timezone"}
@@ -905,9 +1090,28 @@ class StandardFuncs(SnowfakeryPlugin):
                     getattr(sv, "line_num", None),
                 )
 
+            # Return intelligent mock: midpoint if both datetimes parsed
+            if start_parsed and end_parsed:
+                if start_parsed > end_parsed:
+                    context.add_error(
+                        "datetime_between: 'start_date' must be on or before 'end_date'",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                    return datetime_constructor.now(timezone.utc)
+                delta = (end_parsed - start_parsed) / 2
+                return start_parsed + delta
+
+            # Fallback: now
+            return datetime_constructor.now(timezone.utc)
+
         @staticmethod
         def validate_relativedelta(sv, context):
-            """Validate relativedelta(...) - basic parameter check"""
+            """Validate relativedelta(...) - basic parameter check
+
+            Returns:
+                relativedelta: Resolved relativedelta or empty relativedelta() as fallback
+            """
 
             kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
 
@@ -929,16 +1133,24 @@ class StandardFuncs(SnowfakeryPlugin):
                 "weekday",
             }
 
-            # Validate numeric parameters
+            # Build resolved kwargs for relativedelta construction
+            resolved_kwargs = {}
+            has_errors = False
+
+            # Validate and resolve numeric parameters
             for param, value in kwargs.items():
                 if param in known_params:
                     val = resolve_value(value, context)
-                    if val is not None and not isinstance(val, (int, float)):
-                        context.add_warning(
-                            f"relativedelta: Parameter '{param}' must be numeric",
-                            getattr(sv, "filename", None),
-                            getattr(sv, "line_num", None),
-                        )
+                    if val is not None:
+                        if isinstance(val, (int, float)):
+                            resolved_kwargs[param] = int(val)
+                        else:
+                            context.add_warning(
+                                f"relativedelta: Parameter '{param}' must be numeric",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+                            has_errors = True
 
             # WARNING: Unknown parameters
             unknown = set(kwargs.keys()) - known_params
@@ -948,6 +1160,16 @@ class StandardFuncs(SnowfakeryPlugin):
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )
+
+            # Return intelligent mock: relativedelta with resolved parameters
+            if not has_errors and resolved_kwargs:
+                try:
+                    return relativedelta(**resolved_kwargs)
+                except Exception:
+                    return relativedelta()  # Fallback mock
+
+            # Fallback: empty relativedelta
+            return relativedelta()
 
         @staticmethod
         def validate_random_reference(sv, context):
@@ -1042,9 +1264,32 @@ class StandardFuncs(SnowfakeryPlugin):
                     getattr(sv, "line_num", None),
                 )
 
+            # Return intelligent mock: Mock RandomReferenceContext
+            # Create a mock row_history (RandomReferenceContext needs it but we can use a mock)
+            mock_row_history = MagicMock()
+            to_str = str(to_val) if to_val and isinstance(to_val, str) else "MockObject"
+            scope_str = (
+                str(scope_val)
+                if scope_val and isinstance(scope_val, str)
+                else "current-iteration"
+            )
+            unique_bool = bool(unique_val) if isinstance(unique_val, bool) else False
+
+            try:
+                return RandomReferenceContext(
+                    mock_row_history, to_str, scope_str, unique_bool
+                )
+            except Exception:
+                # Fallback if construction fails
+                return None
+
         @staticmethod
         def validate_choice(sv, context):
-            """Validate choice(pick, probability=None, when=None)"""
+            """Validate choice(pick, probability=None, when=None)
+
+            Returns:
+                tuple: (probability/when, pick) tuple as expected by random_choice/if
+            """
             kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
             args = getattr(sv, "args", [])
 
@@ -1078,9 +1323,24 @@ class StandardFuncs(SnowfakeryPlugin):
                     getattr(sv, "line_num", None),
                 )
 
+            # Return intelligent mock: (probability_or_when, pick) tuple
+            # This matches the runtime format expected by random_choice and if
+            probability = kwargs.get("probability")
+            when = kwargs.get("when")
+
+            prob_or_when = resolve_value(probability or when, context)
+            if prob_or_when is None:
+                prob_or_when = 1.0  # Default weight
+
+            return (prob_or_when, pick)
+
         @staticmethod
         def validate_if_(sv, context):
-            """Validate if(*choices)"""
+            """Validate if(*choices)
+
+            Returns:
+                Last choice's pick value as mock (fallthrough behavior)
+            """
             kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
             args = getattr(sv, "args", [])
 
@@ -1102,9 +1362,23 @@ class StandardFuncs(SnowfakeryPlugin):
                     getattr(sv, "line_num", None),
                 )
 
+            # Return intelligent mock: last choice (fallthrough behavior)
+            if args:
+                last_choice = args[-1]
+                # Try to resolve the last choice
+                resolved = resolve_value(last_choice, context)
+                return resolved if resolved is not None else None
+
+            # Fallback
+            return None
+
         @staticmethod
         def validate_snowfakery_filename(sv, context):
-            """Validate snowfakery_filename() - takes no parameters"""
+            """Validate snowfakery_filename() - takes no parameters
+
+            Returns:
+                str: "<stream>" as mock filename, or "<unknown>" on error
+            """
             kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
             args = getattr(sv, "args", [])
 
@@ -1115,10 +1389,17 @@ class StandardFuncs(SnowfakeryPlugin):
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )
+                return "<unknown>"  # Fallback mock
+
+            return "<stream>"  # Intelligent mock (mimics runtime behavior)
 
         @staticmethod
         def validate_unique_id(sv, context):
-            """Validate unique_id() - takes no parameters"""
+            """Validate unique_id() - takes no parameters
+
+            Returns:
+                str: "mock_unique_id_1" as mock ID, or fallback on error
+            """
             kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
             args = getattr(sv, "args", [])
 
@@ -1129,10 +1410,17 @@ class StandardFuncs(SnowfakeryPlugin):
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )
+                return "mock_unique_id_fallback"  # Fallback mock
+
+            return "mock_unique_id_1"  # Intelligent mock
 
         @staticmethod
         def validate_unique_alpha_code(sv, context):
-            """Validate unique_alpha_code() - takes no parameters"""
+            """Validate unique_alpha_code() - takes no parameters
+
+            Returns:
+                str: "AAA" as mock alpha code (3-char), or "XXX" on error
+            """
             kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
             args = getattr(sv, "args", [])
 
@@ -1143,10 +1431,17 @@ class StandardFuncs(SnowfakeryPlugin):
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )
+                return "XXX"  # Fallback mock
+
+            return "AAA"  # Intelligent mock (3-char alpha code)
 
         @staticmethod
         def validate_debug(sv, context):
-            """Validate debug(value) - requires exactly one argument"""
+            """Validate debug(value) - requires exactly one argument
+
+            Returns:
+                The resolved value (debug passes through), or fallback on error
+            """
             kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
             args = getattr(sv, "args", [])
 
@@ -1157,3 +1452,11 @@ class StandardFuncs(SnowfakeryPlugin):
                     getattr(sv, "filename", None),
                     getattr(sv, "line_num", None),
                 )
+                return "<debug_fallback>"  # Fallback mock
+
+            # Get the value argument
+            value = args[0] if args else kwargs.get("value")
+
+            # Resolve and return the value (debug passes through)
+            resolved = resolve_value(value, context)
+            return resolved if resolved is not None else "<debug_unresolved>"

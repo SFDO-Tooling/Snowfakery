@@ -7,7 +7,8 @@ from datetime import datetime, date, time, timezone
 from snowfakery import PluginResultIterator
 from snowfakery.plugins import SnowfakeryPlugin, memorable
 from snowfakery.template_funcs import parse_datetimespec, parse_date
-
+from snowfakery.utils.validation_utils import resolve_value
+from snowfakery.data_generator_runtime_object_model import SimpleValue, StructuredValue
 
 # Note
 
@@ -394,6 +395,382 @@ class Schedule(SnowfakeryPlugin):
                 exclude=exclude,
                 include=include,
             )
+
+    class Validators:
+        """Validators for Schedule plugin functions."""
+
+        @staticmethod
+        def validate_Event(sv, context):
+            """Validate Schedule.Event(freq, ...) function call."""
+
+            kwargs = getattr(sv, "kwargs", {})
+
+            # ERROR: Required parameter 'freq'
+            if "freq" not in kwargs:
+                context.add_error(
+                    "Schedule.Event: Missing required parameter 'freq'",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+                return
+
+            # Validate freq value
+            freq_val = resolve_value(kwargs["freq"], context)
+
+            if freq_val is not None:
+                if not isinstance(freq_val, str):
+                    context.add_error(
+                        f"Schedule.Event: 'freq' must be a string, got {type(freq_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                else:
+                    if freq_val.upper() not in FREQ_STRS:
+                        context.add_error(
+                            f"Schedule.Event: Invalid frequency '{freq_val}'. Valid values: {', '.join(FREQ_STRS.keys())}",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+
+            # Validate start_date
+            if "start_date" in kwargs:
+                start_date_val = resolve_value(kwargs["start_date"], context)
+
+                if start_date_val is not None and not isinstance(
+                    start_date_val, (str, date, datetime)
+                ):
+                    context.add_error(
+                        f"Schedule.Event: 'start_date' must be a string or date/datetime, got {type(start_date_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+
+            # Validate interval
+            if "interval" in kwargs:
+                interval_val = resolve_value(kwargs["interval"], context)
+
+                if interval_val is not None:
+                    if not isinstance(interval_val, int):
+                        context.add_error(
+                            f"Schedule.Event: 'interval' must be an integer, got {type(interval_val).__name__}",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+                    elif interval_val <= 0:
+                        context.add_error(
+                            "Schedule.Event: 'interval' must be positive",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+
+            # Validate count
+            if "count" in kwargs:
+                count_val = resolve_value(kwargs["count"], context)
+
+                if count_val is not None:
+                    if not isinstance(count_val, int):
+                        context.add_error(
+                            f"Schedule.Event: 'count' must be an integer, got {type(count_val).__name__}",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+                    elif count_val <= 0:
+                        context.add_error(
+                            "Schedule.Event: 'count' must be positive",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+
+            # Validate until
+            if "until" in kwargs:
+                until_val = resolve_value(kwargs["until"], context)
+
+                if until_val is not None and not isinstance(
+                    until_val, (str, date, datetime)
+                ):
+                    context.add_error(
+                        f"Schedule.Event: 'until' must be a string or date/datetime, got {type(until_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+
+            # WARNING: Both count and until
+            if "count" in kwargs and "until" in kwargs:
+                context.add_warning(
+                    "Schedule.Event: Using both 'count' and 'until' may produce unexpected results",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+            # Validate byweekday
+            if "byweekday" in kwargs:
+                byweekday_val = resolve_value(kwargs["byweekday"], context)
+
+                if byweekday_val is not None:
+                    if not isinstance(byweekday_val, str):
+                        context.add_error(
+                            f"Schedule.Event: 'byweekday' must be a string, got {type(byweekday_val).__name__}",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+                    else:
+                        # Validate weekday format
+                        days = [d.strip() for d in byweekday_val.split(",")]
+
+                        for day in days:
+                            # Extract day part (before parentheses if present)
+                            day_part = day.split("(")[0].strip().upper()
+
+                            if day_part not in WEEKDAYS:
+                                context.add_error(
+                                    f"Schedule.Event: Invalid weekday '{day_part}'. Valid values: {', '.join(WEEKDAYS.keys())}",
+                                    getattr(sv, "filename", None),
+                                    getattr(sv, "line_num", None),
+                                )
+
+            # Validate bymonthday
+            Schedule.Validators._validate_day_list(
+                sv, context, "bymonthday", min_val=1, max_val=31
+            )
+
+            # Validate byyearday
+            Schedule.Validators._validate_day_list(
+                sv, context, "byyearday", min_val=1, max_val=366
+            )
+
+            # Validate byhour
+            Schedule.Validators._validate_time_component(sv, context, "byhour", 23)
+
+            # Validate byminute
+            Schedule.Validators._validate_time_component(sv, context, "byminute", 59)
+
+            # Validate bysecond
+            Schedule.Validators._validate_time_component(sv, context, "bysecond", 59)
+
+            # Validate exclude
+            Schedule.Validators._validate_exception(sv, context, "exclude")
+
+            # Validate include
+            Schedule.Validators._validate_exception(sv, context, "include")
+
+            # WARNING: Unknown parameters
+            valid_params = {
+                "freq",
+                "start_date",
+                "interval",
+                "count",
+                "until",
+                "bysetpos",
+                "bymonth",
+                "bymonthday",
+                "byyearday",
+                "byeaster",
+                "byweekno",
+                "byweekday",
+                "byhour",
+                "byminute",
+                "bysecond",
+                "cache",
+                "exclude",
+                "include",
+                "use_undocumented_features",
+                "parent",
+                "_",
+            }
+            unknown = set(kwargs.keys()) - valid_params
+            if unknown:
+                context.add_warning(
+                    f"Schedule.Event: Unknown parameter(s): {', '.join(sorted(unknown))}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+            # Return intelligent mock: date or datetime based on frequency
+            # Try to resolve start_date if provided
+            if "start_date" in kwargs:
+                start_val = resolve_value(kwargs["start_date"], context)
+                if isinstance(start_val, (date, datetime)):
+                    return start_val
+                elif isinstance(start_val, str):
+                    try:
+                        # Try to parse the start_date (imports are at module level)
+                        if ":" in start_val or "T" in start_val:
+                            return parse_datetimespec(start_val)
+                        else:
+                            return parse_date(start_val)
+                    except Exception:
+                        pass
+
+            # Check frequency to determine return type
+            freq_val = resolve_value(kwargs.get("freq"), context)
+            if freq_val and isinstance(freq_val, str):
+                freq_upper = freq_val.upper()
+                if freq_upper in ("HOURLY", "MINUTELY", "SECONDLY"):
+                    # Return datetime for time-based frequencies
+                    return datetime.now(timezone.utc)
+
+            # Default: return today's date
+            return date.today()
+
+        @staticmethod
+        def _validate_day_list(sv, context, param_name, min_val=1, max_val=31):
+            """Helper to validate day lists (bymonthday, byyearday, etc.)"""
+
+            kwargs = getattr(sv, "kwargs", {})
+
+            if param_name in kwargs:
+                raw_val = kwargs[param_name]
+
+                # Check raw type before resolution (to catch invalid types early)
+                if not isinstance(raw_val, (int, str, SimpleValue)):
+                    context.add_error(
+                        f"Schedule.Event: '{param_name}' must be integer or string, got {type(raw_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                    return
+
+                val = resolve_value(raw_val, context)
+
+                if val is not None:
+                    # Can be int or string
+                    if isinstance(val, int):
+                        vals = [val]
+                    elif isinstance(val, str):
+                        try:
+                            vals = [int(v.strip()) for v in val.split(",")]
+                        except ValueError:
+                            context.add_error(
+                                f"Schedule.Event: '{param_name}' must contain integers, got '{val}'",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+                            return
+                    else:
+                        context.add_error(
+                            f"Schedule.Event: '{param_name}' must be integer or string, got {type(val).__name__}",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+                        return
+
+                    # Validate ranges
+                    for v in vals:
+                        if v == 0:
+                            context.add_error(
+                                f"Schedule.Event: '{param_name}' cannot be 0",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+                        elif v > 0 and (v < min_val or v > max_val):
+                            context.add_error(
+                                f"Schedule.Event: '{param_name}' must be between {min_val} and {max_val} (or negative), got {v}",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+
+        @staticmethod
+        def _validate_time_component(sv, context, param_name, max_value):
+            """Validate time components (hour, minute, second)"""
+
+            kwargs = getattr(sv, "kwargs", {})
+
+            if param_name in kwargs:
+                raw_val = kwargs[param_name]
+
+                # Check raw type before resolution (to catch invalid types early)
+                if not isinstance(raw_val, (int, str, SimpleValue)):
+                    context.add_error(
+                        f"Schedule.Event: '{param_name}' must be integer or string, got {type(raw_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                    return
+
+                val = resolve_value(raw_val, context)
+
+                if val is not None:
+                    # Can be int or comma-separated string
+                    if isinstance(val, int):
+                        vals = [val]
+                    elif isinstance(val, str):
+                        try:
+                            vals = [int(v.strip()) for v in val.split(",")]
+                        except ValueError:
+                            context.add_error(
+                                f"Schedule.Event: '{param_name}' must contain integers",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+                            return
+                    else:
+                        context.add_error(
+                            f"Schedule.Event: '{param_name}' must be integer or string, got {type(val).__name__}",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+                        return
+
+                    # Validate range
+                    for v in vals:
+                        if v < 0 or v > max_value:
+                            context.add_error(
+                                f"Schedule.Event: '{param_name}' must be between 0 and {max_value}, got {v}",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+
+        @staticmethod
+        def _validate_exception(sv, context, param_name):
+            """Validate exclude/include parameters"""
+
+            kwargs = getattr(sv, "kwargs", {})
+
+            if param_name in kwargs:
+                val = kwargs[param_name]
+
+                # Can be: string (date), list, or StructuredValue (nested Schedule.Event)
+                if isinstance(val, StructuredValue):
+                    # It's a nested Schedule.Event - validate it recursively
+                    if val.function_name != "Schedule.Event":
+                        context.add_warning(
+                            f"Schedule.Event: '{param_name}' expects Schedule.Event or date string, got {val.function_name}",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+                elif isinstance(val, list):
+                    # List of dates or nested events
+                    for item in val:
+                        # Recursively validate each item
+                        if isinstance(item, StructuredValue):
+                            if item.function_name != "Schedule.Event":
+                                context.add_warning(
+                                    f"Schedule.Event: '{param_name}' list item expects Schedule.Event or date string, got {item.function_name}",
+                                    getattr(sv, "filename", None),
+                                    getattr(sv, "line_num", None),
+                                )
+                        else:
+                            # Validate date string
+                            resolved_item = resolve_value(item, context)
+                            if resolved_item is not None and not isinstance(
+                                resolved_item, (str, date, datetime)
+                            ):
+                                context.add_error(
+                                    f"Schedule.Event: '{param_name}' list item must be a date string or Schedule.Event, got {type(resolved_item).__name__}",
+                                    getattr(sv, "filename", None),
+                                    getattr(sv, "line_num", None),
+                                )
+                else:
+                    # Should be a date string
+                    resolved_val = resolve_value(val, context)
+                    if resolved_val is not None and not isinstance(
+                        resolved_val, (str, date, datetime)
+                    ):
+                        context.add_error(
+                            f"Schedule.Event: '{param_name}' must be a date string, Schedule.Event, or list, got {type(resolved_val).__name__}",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
 
 
 def process_list_of_ints(val: SeqOfIntsLike) -> T.Optional[T.List[int]]:

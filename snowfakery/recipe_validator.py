@@ -4,6 +4,7 @@ This module provides semantic validation for Snowfakery recipes,
 catching errors before runtime execution.
 """
 
+import re
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -16,7 +17,6 @@ from snowfakery.utils.validation_utils import (
     get_fuzzy_match,
     resolve_value,
     with_mock_context,
-    validate_and_check_errors,
 )
 from snowfakery.data_generator_runtime_object_model import (
     ObjectTemplate,
@@ -26,9 +26,11 @@ from snowfakery.data_generator_runtime_object_model import (
     StructuredValue,
     SimpleValue,
 )
+from snowfakery.plugins import PluginResultIterator
 from snowfakery.template_funcs import StandardFuncs
 from snowfakery.fakedata.faker_validators import FakerValidators
 from snowfakery.fakedata.fake_data_generator import FakeNames
+from snowfakery.utils.template_utils import StringGenerator
 
 
 class SandboxedNativeEnvironment(SandboxedEnvironment, nativetypes.NativeEnvironment):
@@ -173,6 +175,8 @@ class ValidationContext:
         self.current_template: Optional[
             Any
         ] = None  # Current ObjectTemplate/VariableDefinition being validated
+        # Line number of current field being validated
+        self.current_field_line_num: Optional[int] = None
         self.faker_instance: Optional[
             Any
         ] = None  # Faker instance for executing providers
@@ -180,6 +184,9 @@ class ValidationContext:
         # Variable value cache to prevent recursion during evaluation
         self._variable_cache: Dict[str, Any] = {}
         self._evaluating: set = set()  # Track variables currently being evaluated
+
+        # StructuredValue validation cache to prevent duplicate validation
+        self._structured_value_cache: Dict[int, Any] = {}  # id(sv) -> mock result
 
         # Error collection
         self.errors: List[ValidationError] = []
@@ -308,13 +315,18 @@ class ValidationContext:
         # 7. Options
         namespace.update(self.interpreter.options)
 
+        # 8. Current object fields (fields defined earlier in the same object)
+        for field_name in self.current_object_fields.keys():
+            if field_name not in self._evaluating:
+                namespace[field_name] = self._get_mock_value_for_variable(field_name)
+
         return namespace
 
     def _get_mock_value_for_variable(self, var_name):
-        """Get value for a variable.
+        """Get value for a variable or field.
 
         Args:
-            var_name: Name of the variable
+            var_name: Name of the variable or field
 
         Returns:
             The variable's evaluated value
@@ -327,9 +339,20 @@ class ValidationContext:
         self._evaluating.add(var_name)
 
         try:
+            # Check available_variables first, then current_object_fields
             var_def = self.available_variables.get(var_name)
+            if not var_def:
+                var_def = self.current_object_fields.get(var_name)
+
             if var_def and hasattr(var_def, "expression"):
                 expression = var_def.expression
+            elif var_def and hasattr(var_def, "definition"):
+                # For FieldFactory, use definition instead of expression
+                expression = var_def.definition
+            else:
+                expression = None
+
+            if expression:
 
                 # If it's a SimpleValue, check if it's literal or Jinja
                 if isinstance(expression, SimpleValue):
@@ -354,8 +377,16 @@ class ValidationContext:
                 if isinstance(expression, StructuredValue):
                     resolved = resolve_value(expression, self)
                     if resolved is not None:
-                        self._variable_cache[var_name] = resolved
-                        return resolved
+                        # Plugins like Dataset and Counters return iterators
+                        if isinstance(resolved, PluginResultIterator):
+                            try:
+                                resolved = resolved.next()
+                            except StopIteration:
+                                resolved = None
+
+                        if resolved is not None:
+                            self._variable_cache[var_name] = resolved
+                            return resolved
 
             # Fall back to mock value if variable not found
             mock_value = f"<mock_variable_{var_name}>"
@@ -428,69 +459,6 @@ class ValidationContext:
 
         return MockObjectRow(obj_template, self)
 
-    def _create_validated_wrapper(
-        self, func_name, validator, actual_func_getter, is_plugin=False
-    ):
-        """Create a validation wrapper that validates before executing.
-
-        Args:
-            func_name: Full function name (e.g., "random_number" or "StatisticalDistributions.normal")
-            validator: Validator function to call
-            actual_func_getter: Callable that returns the actual function to execute, or None
-            is_plugin: Whether this is a plugin function (requires mock context)
-
-        Returns:
-            Wrapper function that validates and conditionally executes
-        """
-
-        def validation_wrapper(*args, **kwargs):
-            # Create synthetic StructuredValue
-            sv = StructuredValue(
-                func_name,
-                kwargs if kwargs else list(args),
-                self.current_template.filename
-                if self.current_template
-                else "<unknown>",
-                self.current_template.line_num if self.current_template else 0,
-            )
-
-            # Call validator and track if errors were added
-            try:
-                validation_added_errors = validate_and_check_errors(
-                    self, validator, sv, self
-                )
-            except Exception as e:
-                self.add_error(
-                    f"Function '{func_name}' validation failed: {str(e)}",
-                    sv.filename,
-                    sv.line_num,
-                )
-                validation_added_errors = True
-
-            # If validation added errors, don't attempt execution
-            if validation_added_errors:
-                return f"<mock_function_{func_name}>"
-
-            # Try to execute the actual function to get a real value
-            try:
-                actual_func = actual_func_getter()
-                if actual_func and callable(actual_func):
-                    # For plugin functions, we need to set up mock context
-                    if is_plugin:
-                        from snowfakery.utils.validation_utils import with_mock_context
-
-                        with with_mock_context(self):
-                            return actual_func(*args, **kwargs)
-                    else:
-                        return actual_func(*args, **kwargs)
-            except Exception:
-                # Could not execute function, return mock value
-                pass
-
-            return f"<mock_function_{func_name}>"
-
-        return validation_wrapper
-
     def _create_validation_function(self, func_name, validator):
         """Create wrapper that validates when called from Jinja.
 
@@ -502,12 +470,37 @@ class ValidationContext:
             Wrapper function that validates and returns mock value
         """
 
-        def get_standard_func():
-            if self.interpreter and func_name in self.interpreter.standard_funcs:
-                return self.interpreter.standard_funcs[func_name]
-            return None
+        def validation_wrapper(*args, **kwargs):
+            # Create synthetic StructuredValue
+            # Use current_field_line_num if available (for inline Jinja calls), else use template line_num
+            line_num = (
+                self.current_field_line_num
+                if self.current_field_line_num is not None
+                else (self.current_template.line_num if self.current_template else 0)
+            )
+            sv = StructuredValue(
+                func_name,
+                list(args),
+                self.current_template.filename
+                if self.current_template
+                else "<unknown>",
+                line_num,
+            )
+            if kwargs:
+                sv.kwargs = dict(kwargs)
 
-        return self._create_validated_wrapper(func_name, validator, get_standard_func)
+            # Call validator and return its mock result
+            try:
+                return validator(sv, self)
+            except Exception as exc:
+                self.add_error(
+                    f"Function '{func_name}' validation failed: {exc}",
+                    sv.filename,
+                    sv.line_num,
+                )
+                return f"<result_of_{func_name}>"
+
+        return validation_wrapper
 
     def _create_mock_plugin(self, plugin_name, plugin_instance):
         """Create mock plugin namespace that validates function calls.
@@ -535,78 +528,74 @@ class ValidationContext:
                 if func_full_name in self._context.available_functions:
                     validator = self._context.available_functions[func_full_name]
 
-                    # Create function getter for this specific plugin method
-                    def get_plugin_func():
-                        return getattr(self._plugin_funcs, func_attr, None)
+                    # Create wrapper that calls validator and returns mock
+                    def wrapper(*args, **kwargs):
+                        # Use current_field_line_num if available (for inline Jinja calls), else use template line_num
+                        line_num = (
+                            self._context.current_field_line_num
+                            if self._context.current_field_line_num is not None
+                            else (
+                                self._context.current_template.line_num
+                                if self._context.current_template
+                                else 0
+                            )
+                        )
+                        sv = StructuredValue(
+                            func_full_name,
+                            kwargs if kwargs else list(args),
+                            self._context.current_template.filename
+                            if self._context.current_template
+                            else "<unknown>",
+                            line_num,
+                        )
 
-                    # Use shared validation wrapper (with plugin context support)
-                    return self._context._create_validated_wrapper(
-                        func_full_name, validator, get_plugin_func, is_plugin=True
-                    )
+                        return validator(sv, self._context)
+
+                    return wrapper
                 else:
-                    # No validator, return actual function
-                    return getattr(self._plugin_funcs, func_attr)
+                    # No validator, return generic mock function
+                    return lambda *args, **kwargs: f"<mock_{func_full_name}>"
 
         return MockPlugin(plugin_name, plugin_funcs, self)
 
     def _create_mock_faker(self):
-        """Create mock Faker that validates provider names and parameters.
+        """Create mock Faker that validates provider names immediately.
 
         Returns:
-            MockFaker instance that validates and executes Faker providers
+            MockFaker instance that validates on attribute access
         """
 
         class MockFaker:
             def __init__(self, context):
                 self.context = context
-                # Create validator instance for parameter validation
-                self.validator = (
-                    FakerValidators(context.faker_instance, context.faker_providers)
-                    if context.faker_instance
-                    else None
-                )
 
             def __getattr__(self, provider_name):
-                # Validate provider exists using shared validator
-                if self.validator:
-                    filename = (
-                        self.context.current_template.filename
-                        if self.context.current_template
-                        else None
-                    )
-                    line_num = (
+                # Get line number for error reporting
+                line_num = (
+                    self.context.current_field_line_num
+                    if self.context.current_field_line_num is not None
+                    else (
                         self.context.current_template.line_num
                         if self.context.current_template
                         else None
                     )
-                    self.validator.validate_provider_name(
-                        provider_name, self.context, filename, line_num
-                    )
+                )
 
-                # Return wrapper that validates parameters and executes method
-                def validated_provider(*args, **kwargs):
-                    # Validate parameters using introspection
-                    if self.validator:
-                        self.validator.validate_provider_call(
-                            provider_name, args, kwargs, self.context
-                        )
+                # Create StructuredValue for validate_fake (which validates provider name immediately)
+                sv = StructuredValue(
+                    "fake",
+                    [provider_name],  # Just provider name, no args yet
+                    self.context.current_template.filename
+                    if self.context.current_template
+                    else "<unknown>",
+                    line_num,
+                )
 
-                    # Try to execute the actual Faker method
-                    try:
-                        if self.context.faker_instance:
-                            actual_method = getattr(
-                                self.context.faker_instance, provider_name, None
-                            )
-                            if actual_method and callable(actual_method):
-                                return actual_method(*args, **kwargs)
-                    except Exception:
-                        # Execution failed, return mock value
-                        pass
+                # validate_fake returns a method - it validates the provider name immediately
+                validated_method = FakerValidators.validate_fake(sv, self.context)
 
-                    # Return mock value as fallback
-                    return f"<fake_{provider_name}>"
-
-                return validated_provider
+                # Wrap in StringGenerator for Jinja compatibility
+                return StringGenerator(validated_method)
 
         return MockFaker(self)
 
@@ -727,10 +716,15 @@ def validate_recipe(parse_result, interpreter, options) -> ValidationResult:
     for provider in interpreter.faker_providers:
         faker_instance.add_provider(provider)
 
-    # Add FakeNames to override standard Faker methods with Snowfakery's custom signatures
-    # (e.g., email(matching=True) instead of standard Faker's email(safe=True, domain=None))
-    # This matches what FakeData.__init__ does at runtime
-    fake_names = FakeNames(faker_instance, faker_context=None)
+    # Create a mock faker_context for FakeNames methods that need local_vars()
+    class MockFakerContext:
+        """Mock context for FakeNames during validation."""
+
+        def local_vars(self):
+            """Return empty dict (no previously generated fields during validation)."""
+            return {}
+
+    fake_names = FakeNames(faker_instance, faker_context=MockFakerContext())
     faker_instance.add_provider(fake_names)
 
     # Store faker instance in context for execution
@@ -868,34 +862,36 @@ def validate_jinja_template_by_execution(
 
     # 3. Parse and execute template using our strict Jinja environment
     try:
-        namespace_dict = {}
-        with with_mock_context(context, namespace_dict):
-            namespace = context.field_vars()
-            # Render the template (mock context is still active)
-            template = context.jinja_env.from_string(template_str)
-            result = template.render(namespace)
-            # NativeEnvironment returns a lazy object - force evaluation to catch errors
-            bool(result)  # Force evaluation
-            return result
+        # Store the field's line number for inline function calls
+        saved_line_num = context.current_field_line_num
+        context.current_field_line_num = line_num
+
+        try:
+            namespace_dict = {}
+            with with_mock_context(context, namespace_dict):
+                namespace = context.field_vars()
+                # Render the template (mock context is still active)
+                template = context.jinja_env.from_string(template_str)
+                result = template.render(namespace)
+                # NativeEnvironment returns a lazy object - force evaluation to catch errors
+                bool(result)  # Force evaluation
+                return result
+        finally:
+            # Restore the previous line number
+            context.current_field_line_num = saved_line_num
     except jinja2.exceptions.UndefinedError as e:
         # Variable or name not found
         error_msg = getattr(e, "message", str(e))
 
-        # Simplify error messages about MockObjectRow to be more user-friendly
-        # MockObjectRow is an internal validation class, users shouldn't see it in error messages
-        # Example: "'MockObjectRow' object has no attribute 'foo'" -> "Object has no attribute 'foo'"
-        if (
-            error_msg
-            and "MockObjectRow object" in error_msg
-            and "has no attribute" in error_msg
-        ):
-            # Extract just the attribute name
-            import re
-
+        # Simplify error messages about Mock* objects to be more user-friendly
+        if error_msg and "has no attribute" in error_msg:
             match = re.search(r"has no attribute '(\w+)'", error_msg)
             if match:
                 attr_name = match.group(1)
-                error_msg = f"Object has no attribute '{attr_name}'"
+                if "MockObjectRow object" in error_msg:
+                    error_msg = f"Object has no attribute '{attr_name}'"
+                elif "MockPlugin object" in error_msg:
+                    error_msg = f"Plugin has no attribute '{attr_name}'"
 
         context.add_error(
             f"Jinja template error: {error_msg}",
@@ -924,57 +920,119 @@ def validate_jinja_template_by_execution(
 def validate_field_definition(field_def, context: ValidationContext):
     """Validate a FieldDefinition (SimpleValue or StructuredValue).
 
-    This function recursively validates nested StructuredValues (function calls) and
-    validates Jinja templates in SimpleValues.
-
     Args:
         field_def: A FieldDefinition object (SimpleValue or StructuredValue)
         context: The validation context
+
+    Returns:
+        For StructuredValue: The mock result returned by the validator (or None)
+        For SimpleValue: The resolved value (or None)
     """
     # Check if it's a StructuredValue (function call)
     if isinstance(field_def, StructuredValue):
-        func_name = field_def.function_name
+        # Check if this StructuredValue has already been validated (using object id)
+        sv_id = id(field_def)
+        if sv_id in context._structured_value_cache:
+            return context._structured_value_cache[sv_id]
 
-        # Look up validator for this function
-        if func_name in context.available_functions:
-            validator = context.available_functions[func_name]
-            try:
-                validator(field_def, context)
-            except Exception as e:
-                # Catch any validator errors to avoid breaking the validation process
+        func_name = field_def.function_name
+        mock_result = None
+
+        # STEP 1: Resolve nested StructuredValues in args/kwargs BEFORE calling validator
+        # This allows validators to receive mock values instead of StructuredValue objects
+        resolved_args = []
+        for arg in field_def.args:
+            if isinstance(arg, StructuredValue):
+                nested_mock = validate_field_definition(arg, context)
+                resolved_args.append(nested_mock)
+            else:
+                resolved_args.append(arg)
+
+        resolved_kwargs = {}
+        for key, value in field_def.kwargs.items():
+            if isinstance(value, StructuredValue):
+                nested_mock = validate_field_definition(value, context)
+                resolved_kwargs[key] = nested_mock
+            else:
+                resolved_kwargs[key] = value
+
+        func_name = field_def.function_name
+        lookup_func_name = func_name
+        fake_provider = None
+        if lookup_func_name not in context.available_functions and "." in func_name:
+            base_name, method_name = func_name.split(".", 1)
+            if base_name == "fake":
+                lookup_func_name = "fake"
+                fake_provider = method_name
+
+        # STEP 2: Temporarily replace args/kwargs (and possibly function name) with resolved versions
+        original_args = field_def.args
+        original_kwargs = field_def.kwargs
+        original_function_name = field_def.function_name
+
+        if fake_provider:
+            resolved_args = [fake_provider] + resolved_args
+            field_def.function_name = "fake"
+
+        field_def.args = resolved_args
+        field_def.kwargs = resolved_kwargs
+
+        try:
+            # STEP 3: Look up validator and call it with resolved args/kwargs
+            if lookup_func_name in context.available_functions:
+                validator = context.available_functions[lookup_func_name]
+                try:
+                    result = validator(field_def, context)
+
+                    # STEP 3.5: If validator returned a callable (like validate_fake does),
+                    # call it with the resolved args from the StructuredValue
+                    if callable(result) and lookup_func_name == "fake":
+                        # For fake, args[0] is provider name, args[1:] are faker arguments
+                        faker_args = resolved_args[1:] if len(resolved_args) > 1 else []
+                        faker_kwargs = resolved_kwargs
+                        mock_result = result(*faker_args, **faker_kwargs)
+                    else:
+                        mock_result = result
+                except Exception as e:
+                    # Catch any validator errors to avoid breaking the validation process
+                    context.add_error(
+                        f"Internal validation error for '{func_name}': {str(e)}",
+                        getattr(field_def, "filename", None),
+                        getattr(field_def, "line_num", None),
+                    )
+            else:
+                # Unknown function - add error with suggestion
+                suggestion = get_fuzzy_match(
+                    func_name, list(context.available_functions.keys())
+                )
+                msg = f"Unknown function '{func_name}'"
+                if suggestion:
+                    msg += f". Did you mean '{suggestion}'?"
                 context.add_error(
-                    f"Internal validation error for '{func_name}': {str(e)}",
+                    msg,
                     getattr(field_def, "filename", None),
                     getattr(field_def, "line_num", None),
                 )
-        else:
-            # Unknown function - add error with suggestion
-            suggestion = get_fuzzy_match(
-                func_name, list(context.available_functions.keys())
-            )
-            msg = f"Unknown function '{func_name}'"
-            if suggestion:
-                msg += f". Did you mean '{suggestion}'?"
-            context.add_error(
-                msg,
-                getattr(field_def, "filename", None),
-                getattr(field_def, "line_num", None),
-            )
+        finally:
+            # STEP 4: Restore original args/kwargs
+            field_def.args = original_args
+            field_def.kwargs = original_kwargs
+            field_def.function_name = original_function_name
 
-        # Recursively validate nested StructuredValues in arguments
-        for arg in field_def.args:
-            if isinstance(arg, StructuredValue):
-                validate_field_definition(arg, context)
-
-        # Recursively validate nested StructuredValues in keyword arguments
-        for key, value in field_def.kwargs.items():
-            if isinstance(value, StructuredValue):
-                validate_field_definition(value, context)
+        # Cache the result to prevent duplicate validation
+        context._structured_value_cache[sv_id] = mock_result
+        return mock_result
 
     # Check if it's a SimpleValue (literal or Jinja template)
     elif isinstance(field_def, SimpleValue):
         if isinstance(field_def.definition, str) and "${{" in field_def.definition:
             # It's a Jinja template - validate it
-            validate_jinja_template_by_execution(
+            result = validate_jinja_template_by_execution(
                 field_def.definition, field_def.filename, field_def.line_num, context
             )
+            return result
+        else:
+            # Return the literal value
+            return field_def.definition if hasattr(field_def, "definition") else None
+
+    return None

@@ -18,6 +18,7 @@ from snowfakery.plugins import (
     memorable,
 )
 from snowfakery.utils.files import FileLike, open_file_like
+from snowfakery.utils.validation_utils import resolve_value
 from snowfakery.utils.yaml_utils import SnowfakeryDumper
 
 
@@ -259,6 +260,192 @@ class Dataset(DatasetPluginBase):
     def __init__(self, *args, **kwargs):
         self.dataset_impl = FileDataset()
         super().__init__(*args, **kwargs)
+
+    class Validators:
+        """Validators for Dataset plugin functions."""
+
+        @staticmethod
+        def _validate_dataset_params(sv, context, func_name):
+            """Common validation for iterate() and shuffle()."""
+            kwargs = getattr(sv, "kwargs", {})
+
+            # ERROR: Required parameter 'dataset'
+            if "dataset" not in kwargs:
+                context.add_error(
+                    f"Dataset.{func_name}: Missing required parameter 'dataset'",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+                return
+
+            # Validate dataset parameter
+            dataset_val = resolve_value(kwargs.get("dataset"), context)
+
+            if dataset_val is not None:
+                # ERROR: Must be string
+                if not isinstance(dataset_val, str):
+                    context.add_error(
+                        f"Dataset.{func_name}: 'dataset' must be a string, got {type(dataset_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+                else:
+                    # Check if it's a CSV file or SQL URL
+                    is_sql = "://" in dataset_val
+
+                    if not is_sql:
+                        # CSV file - validate existence and extension
+                        if not dataset_val.endswith(".csv"):
+                            context.add_error(
+                                f"Dataset.{func_name}: Dataset file must have .csv extension, got '{Path(dataset_val).suffix}'",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+                        else:
+                            # Check file exists (relative to recipe file)
+                            if (
+                                context.current_template
+                                and context.current_template.filename
+                            ):
+                                template_path = Path(
+                                    context.current_template.filename
+                                ).parent
+                                file_path = template_path / dataset_val
+
+                                if not file_path.exists():
+                                    context.add_error(
+                                        f"Dataset.{func_name}: Dataset file '{dataset_val}' does not exist (resolved to: {file_path})",
+                                        getattr(sv, "filename", None),
+                                        getattr(sv, "line_num", None),
+                                    )
+                                elif not file_path.is_file():
+                                    context.add_error(
+                                        f"Dataset.{func_name}: Path '{dataset_val}' exists but is not a file (resolved to: {file_path})",
+                                        getattr(sv, "filename", None),
+                                        getattr(sv, "line_num", None),
+                                    )
+
+            # Validate table parameter (optional)
+            if "table" in kwargs:
+                table_val = resolve_value(kwargs["table"], context)
+
+                if table_val is not None and not isinstance(table_val, str):
+                    context.add_error(
+                        f"Dataset.{func_name}: 'table' must be a string, got {type(table_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+
+            # Validate repeat parameter (optional)
+            if "repeat" in kwargs:
+                repeat_val = resolve_value(kwargs["repeat"], context)
+
+                if repeat_val is not None and not isinstance(repeat_val, bool):
+                    context.add_error(
+                        f"Dataset.{func_name}: 'repeat' must be a boolean, got {type(repeat_val).__name__}",
+                        getattr(sv, "filename", None),
+                        getattr(sv, "line_num", None),
+                    )
+
+            # WARNING: Unknown parameters
+            valid_params = {"dataset", "table", "repeat"}
+            unknown = set(kwargs.keys()) - valid_params
+            if unknown:
+                context.add_warning(
+                    f"Dataset.{func_name}: Unknown parameter(s): {', '.join(sorted(unknown))}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+
+        @staticmethod
+        def validate_iterate(sv, context):
+            """Validate Dataset.iterate(dataset, table, repeat)
+
+            Returns:
+                DatasetPluginResult: First row from actual dataset, or None if unavailable
+            """
+            Dataset.Validators._validate_dataset_params(sv, context, "iterate")
+
+            # Try to read the first row from the actual CSV dataset
+            kwargs = getattr(sv, "kwargs", {})
+            if "dataset" in kwargs:
+                dataset_val = resolve_value(kwargs["dataset"], context)
+                if (
+                    dataset_val
+                    and isinstance(dataset_val, str)
+                    and dataset_val.endswith(".csv")
+                ):
+                    try:
+                        # Resolve relative path based on recipe file location
+                        if (
+                            context.current_template
+                            and context.current_template.filename
+                        ):
+                            template_path = Path(
+                                context.current_template.filename
+                            ).parent
+                            file_path = template_path / dataset_val
+                        else:
+                            file_path = Path(dataset_val)
+
+                        if file_path.exists() and file_path.is_file():
+                            with open(
+                                file_path, "r", newline="", encoding="utf-8-sig"
+                            ) as f:
+                                reader = DictReader(f)
+                                first_row = next(reader, None)
+                                if first_row:
+                                    return DatasetPluginResult(first_row)
+                    except Exception:
+                        pass  # Fall through to None fallback
+
+            # Fallback: return None if we can't read the dataset
+            return None
+
+        @staticmethod
+        def validate_shuffle(sv, context):
+            """Validate Dataset.shuffle(dataset, table, repeat)
+
+            Returns:
+                DatasetPluginResult: First row from actual dataset, or None if unavailable
+            """
+            Dataset.Validators._validate_dataset_params(sv, context, "shuffle")
+
+            # Try to read the first row from the actual CSV dataset (same as iterate)
+            kwargs = getattr(sv, "kwargs", {})
+            if "dataset" in kwargs:
+                dataset_val = resolve_value(kwargs["dataset"], context)
+                if (
+                    dataset_val
+                    and isinstance(dataset_val, str)
+                    and dataset_val.endswith(".csv")
+                ):
+                    try:
+                        # Resolve relative path based on recipe file location
+                        if (
+                            context.current_template
+                            and context.current_template.filename
+                        ):
+                            template_path = Path(
+                                context.current_template.filename
+                            ).parent
+                            file_path = template_path / dataset_val
+                        else:
+                            file_path = Path(dataset_val)
+
+                        if file_path.exists() and file_path.is_file():
+                            with open(
+                                file_path, "r", newline="", encoding="utf-8-sig"
+                            ) as f:
+                                reader = DictReader(f)
+                                first_row = next(reader, None)
+                                if first_row:
+                                    return DatasetPluginResult(first_row)
+                    except Exception:
+                        pass  # Fall through to None fallback
+
+            # Fallback: return None if we can't read the dataset
+            return None
 
 
 @contextmanager

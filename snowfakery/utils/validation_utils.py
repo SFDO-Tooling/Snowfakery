@@ -1,7 +1,7 @@
 """Utility functions for recipe validation."""
 
 import difflib
-from typing import List, Optional, Any, Callable
+from typing import List, Optional, Any
 from contextlib import contextmanager
 
 # Constants for mock value detection
@@ -108,34 +108,15 @@ def is_mock_value(value: Any) -> bool:
     )
 
 
-def validate_and_check_errors(context: Any, validator_fn: Callable, *args) -> bool:
-    """Execute validator and check if errors were added.
-
-    This helper tracks the error count before and after validation to determine
-    if the validator added any errors. This is useful for conditional logic that
-    depends on validation results.
-
-    Args:
-        context: ValidationContext instance
-        validator_fn: Validator function to call
-        *args: Arguments to pass to validator function
-
-    Returns:
-        True if validator added errors, False otherwise
-    """
-    errors_before = len(context.errors)
-    validator_fn(*args)
-    errors_after = len(context.errors)
-    return errors_after > errors_before
-
-
 def resolve_value(value, context):
     """Try to resolve a value to a literal by executing Jinja if needed.
 
     This attempts resolution of values:
-    - If it's already a literal (int, float, str, bool, None): return as-is
+    - If it's already a literal (int, float, str, bool, None): return as-is (unless it's a mock placeholder)
     - If it's a SimpleValue with a literal: extract and return it
     - If it's a SimpleValue with Jinja: execute Jinja and return resolved value
+    - If it's a StructuredValue: validate and return mock result from validator
+    - Mock placeholder strings (e.g., "<mock_*>") are filtered out and return None
     - Otherwise: return None (cannot resolve)
 
     Args:
@@ -143,13 +124,14 @@ def resolve_value(value, context):
         context: ValidationContext with interpreter for Jinja execution
 
     Returns:
-        The resolved literal value, or None if cannot be resolved
+        The resolved literal value, or None if cannot be resolved or is a mock placeholder
     """
     # Import here to avoid circular import
     from snowfakery.data_generator_runtime_object_model import (
         SimpleValue,
         StructuredValue,
     )
+    from snowfakery.recipe_validator import validate_field_definition
 
     # Already a literal
     if isinstance(value, (int, float, str, bool, type(None))):
@@ -192,101 +174,16 @@ def resolve_value(value, context):
                     # No Jinja, just a literal string
                     return raw_value
 
-    # StructuredValue - execute it by validating and calling the function
+    # StructuredValue - validate and return mock result
     if isinstance(value, StructuredValue):
-        from snowfakery.recipe_validator import validate_field_definition
+        # Validate the StructuredValue and get the mock result from the validator
+        mock_result = validate_field_definition(value, context)
 
-        # Validate the StructuredValue (this also executes it via validation wrapper)
-        # If validation added errors, don't attempt execution
-        if validate_and_check_errors(
-            context, validate_field_definition, value, context
-        ):
+        # Check if result is a mock placeholder string
+        if is_mock_value(mock_result):
+            # Don't pass mock placeholders as literals
             return None
 
-        # Now try to actually execute the function and return the result
-        func_name = value.function_name
-
-        # Resolve arguments (recursively resolve nested StructuredValues)
-        resolved_args = []
-        for arg in value.args:
-            resolved_arg = resolve_value(arg, context)
-            if resolved_arg is None and not isinstance(
-                arg, (int, float, str, bool, type(None))
-            ):
-                # Check if it's a SimpleValue wrapping None - that's OK
-                if (
-                    isinstance(arg, SimpleValue)
-                    and hasattr(arg, "definition")
-                    and arg.definition is None
-                ):
-                    # SimpleValue(None) is valid, resolved correctly to None
-                    resolved_args.append(None)
-                    continue
-                # Could not resolve a complex argument, can't execute function
-                return None
-            resolved_args.append(resolved_arg if resolved_arg is not None else arg)
-
-        # Resolve keyword arguments
-        resolved_kwargs = {}
-        for key, kwarg in value.kwargs.items():
-            resolved_kwarg = resolve_value(kwarg, context)
-            if resolved_kwarg is None and not isinstance(
-                kwarg, (int, float, str, bool, type(None))
-            ):
-                # Check if it's a SimpleValue wrapping None - that's OK
-                if (
-                    isinstance(kwarg, SimpleValue)
-                    and hasattr(kwarg, "definition")
-                    and kwarg.definition is None
-                ):
-                    # SimpleValue(None) is valid, resolved correctly to None
-                    resolved_kwargs[key] = None
-                    continue
-                # Could not resolve a complex argument, can't execute function
-                return None
-            resolved_kwargs[key] = (
-                resolved_kwarg if resolved_kwarg is not None else kwarg
-            )
-
-        # Try to execute the actual function
-        try:
-            # Check for Faker provider (special case: fake: provider_name)
-            if func_name == "fake" and context.faker_instance and resolved_args:
-                # First argument should be the provider name
-                provider_name = resolved_args[0]
-                if isinstance(provider_name, str) and hasattr(
-                    context.faker_instance, provider_name
-                ):
-                    faker_method = getattr(context.faker_instance, provider_name)
-                    if callable(faker_method):
-                        # Call with remaining args and kwargs
-                        faker_args = resolved_args[1:] if len(resolved_args) > 1 else []
-                        return faker_method(*faker_args, **resolved_kwargs)
-
-            # Check standard functions
-            if context.interpreter and func_name in context.interpreter.standard_funcs:
-                actual_func = context.interpreter.standard_funcs[func_name]
-                if callable(actual_func):
-                    return actual_func(*resolved_args, **resolved_kwargs)
-
-            # Check plugin functions (handle plugin namespace: "PluginName.method_name")
-            if context.interpreter and "." in func_name:
-                plugin_name, method_name = func_name.split(".", 1)
-                if plugin_name in context.interpreter.plugin_instances:
-                    plugin_instance = context.interpreter.plugin_instances[plugin_name]
-
-                    # Set up mock context for plugin function execution
-                    with with_mock_context(context):
-                        funcs = plugin_instance.custom_functions()
-                        if hasattr(funcs, method_name):
-                            actual_func = getattr(funcs, method_name)
-                            if callable(actual_func):
-                                result = actual_func(*resolved_args, **resolved_kwargs)
-                                return result
-        except Exception:
-            # Could not execute function, return None
-            pass
-
-        return None
+        return mock_result
 
     return None
