@@ -8,6 +8,7 @@ import re
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from dateutil.relativedelta import relativedelta
 from faker import Faker
 import jinja2
 from jinja2 import nativetypes
@@ -31,6 +32,7 @@ from snowfakery.template_funcs import StandardFuncs
 from snowfakery.fakedata.faker_validators import FakerValidators
 from snowfakery.fakedata.fake_data_generator import FakeNames
 from snowfakery.utils.template_utils import StringGenerator
+from snowfakery.object_rows import ObjectReference
 
 
 class SandboxedNativeEnvironment(SandboxedEnvironment, nativetypes.NativeEnvironment):
@@ -303,6 +305,12 @@ class ValidationContext:
                 func_name, validator
             )
 
+        # 4.5. Constants from StandardFuncs (NULL, relativedelta, etc.)
+        namespace["NULL"] = None
+        namespace["null"] = None
+        namespace["Null"] = None
+        namespace["relativedelta"] = relativedelta
+
         # 5. Plugins (with validation wrappers)
         for plugin_name, plugin_instance in self.interpreter.plugin_instances.items():
             namespace[plugin_name] = self._create_mock_plugin(
@@ -385,6 +393,14 @@ class ValidationContext:
                                 resolved = None
 
                         if resolved is not None:
+                            if isinstance(resolved, ObjectReference):
+                                ref_obj_name = resolved._tablename
+                                ref_obj = self.resolve_object(
+                                    ref_obj_name, allow_forward_ref=False
+                                )
+                                if ref_obj:
+                                    resolved = self._create_mock_object(ref_obj_name)
+
                             self._variable_cache[var_name] = resolved
                             return resolved
 
@@ -709,12 +725,11 @@ def validate_recipe(parse_result, interpreter, options) -> ValidationResult:
     context.interpreter = interpreter
 
     # Extract method names from faker by creating a Faker instance with the providers
-    # This replicates what FakeData does at runtime (see fake_data_generator.py:173-177)
-    faker_instance = Faker()
+    base_faker = Faker()
 
     # Add custom providers to the faker instance
     for provider in interpreter.faker_providers:
-        faker_instance.add_provider(provider)
+        base_faker.add_provider(provider)
 
     # Create a mock faker_context for FakeNames methods that need local_vars()
     class MockFakerContext:
@@ -724,23 +739,47 @@ def validate_recipe(parse_result, interpreter, options) -> ValidationResult:
             """Return empty dict (no previously generated fields during validation)."""
             return {}
 
-    fake_names = FakeNames(faker_instance, faker_context=MockFakerContext())
-    faker_instance.add_provider(fake_names)
+    fake_names = FakeNames(base_faker, faker_context=MockFakerContext())
+
+    # Create wrapper that combines base_faker and fake_names without circular reference
+    class CombinedFaker:
+        """Combines Faker and FakeNames, with FakeNames methods taking precedence."""
+
+        def __init__(self, faker_inst, fake_names_inst):
+            self._faker = faker_inst
+            self._fake_names = fake_names_inst
+
+        def __getattr__(self, name):
+            # Check FakeNames first (takes precedence, like runtime)
+            if hasattr(self._fake_names, name):
+                return getattr(self._fake_names, name)
+            # Fall back to faker
+            return getattr(self._faker, name)
+
+    faker_instance = CombinedFaker(base_faker, fake_names)
 
     # Store faker instance in context for execution
     context.faker_instance = faker_instance
 
     # Extract all callable methods from the faker instance
     faker_method_names = set()
-    for name in dir(faker_instance):
+    for name in dir(base_faker):
         if name.startswith("_"):
             continue
         try:
-            attr = getattr(faker_instance, name, None)
+            attr = getattr(base_faker, name, None)
             if callable(attr):
                 faker_method_names.add(name)
         except (TypeError, AttributeError):
-            # Skip attributes that raise errors (e.g., seed)
+            continue
+    for name in dir(fake_names):
+        if name.startswith("_"):
+            continue
+        try:
+            attr = getattr(fake_names, name, None)
+            if callable(attr):
+                faker_method_names.add(name)
+        except (TypeError, AttributeError):
             continue
     context.faker_providers = faker_method_names
 
@@ -1001,18 +1040,38 @@ def validate_field_definition(field_def, context: ValidationContext):
                         getattr(field_def, "line_num", None),
                     )
             else:
-                # Unknown function - add error with suggestion
-                suggestion = get_fuzzy_match(
-                    func_name, list(context.available_functions.keys())
-                )
-                msg = f"Unknown function '{func_name}'"
-                if suggestion:
-                    msg += f". Did you mean '{suggestion}'?"
-                context.add_error(
-                    msg,
-                    getattr(field_def, "filename", None),
-                    getattr(field_def, "line_num", None),
-                )
+                # Check if it's a plugin function without a validator
+                if "." in func_name:
+                    plugin_name, method_name = func_name.split(".", 1)
+                    if plugin_name in context.interpreter.plugin_instances:
+                        # Plugin exists but function has no validator - return generic mock
+                        mock_result = f"<result_of_{func_name}>"
+                    else:
+                        # Plugin doesn't exist - report error
+                        suggestion = get_fuzzy_match(
+                            func_name, list(context.available_functions.keys())
+                        )
+                        msg = f"Unknown function '{func_name}'"
+                        if suggestion:
+                            msg += f". Did you mean '{suggestion}'?"
+                        context.add_error(
+                            msg,
+                            getattr(field_def, "filename", None),
+                            getattr(field_def, "line_num", None),
+                        )
+                else:
+                    # Unknown function - add error with suggestion
+                    suggestion = get_fuzzy_match(
+                        func_name, list(context.available_functions.keys())
+                    )
+                    msg = f"Unknown function '{func_name}'"
+                    if suggestion:
+                        msg += f". Did you mean '{suggestion}'?"
+                    context.add_error(
+                        msg,
+                        getattr(field_def, "filename", None),
+                        getattr(field_def, "line_num", None),
+                    )
         finally:
             # STEP 4: Restore original args/kwargs
             field_def.args = original_args

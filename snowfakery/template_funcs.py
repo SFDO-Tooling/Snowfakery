@@ -545,7 +545,79 @@ class StandardFuncs(SnowfakeryPlugin):
             if has_x:
                 ref_name = resolve_value(args[0] if args else kwargs["x"], context)
                 if ref_name and isinstance(ref_name, str):
-                    # Allow forward references for reference function
+                    if "." in ref_name:
+                        parts = ref_name.split(".")
+                        base_name = parts[0]
+
+                        base_value = None
+                        if base_name in context.current_object_fields:
+                            field_def = context.current_object_fields[base_name]
+                            if hasattr(field_def, "definition"):
+                                base_value = resolve_value(
+                                    field_def.definition, context
+                                )
+
+                                if isinstance(base_value, ObjectReference):
+                                    ref_obj_name = base_value._tablename
+                                    ref_obj = context.resolve_object(
+                                        ref_obj_name, allow_forward_ref=False
+                                    )
+                                    if ref_obj:
+                                        base_value = context._create_mock_object(
+                                            ref_obj_name
+                                        )
+                                    else:
+                                        context.add_error(
+                                            f"reference: Cannot resolve reference to '{ref_obj_name}' in path '{ref_name}'",
+                                            getattr(sv, "filename", None),
+                                            getattr(sv, "line_num", None),
+                                        )
+                                        return None
+
+                        if base_value is None:
+                            base_obj = context.resolve_object(
+                                base_name, allow_forward_ref=False
+                            )
+                            if not base_obj:
+                                suggestion = get_fuzzy_match(
+                                    base_name,
+                                    list(context.available_objects.keys())
+                                    + list(context.available_nicknames.keys())
+                                    + list(context.current_object_fields.keys()),
+                                )
+                                msg = f"reference: Unknown object/field '{base_name}' in path '{ref_name}'"
+                                if suggestion:
+                                    msg += f". Did you mean '{suggestion}'?"
+                                context.add_error(
+                                    msg,
+                                    getattr(sv, "filename", None),
+                                    getattr(sv, "line_num", None),
+                                )
+                                return None
+
+                            base_value = context._create_mock_object(base_name)
+
+                        current = base_value
+                        try:
+                            for part in parts[1:]:
+                                current = getattr(current, part)
+                        except AttributeError as e:
+                            context.add_error(
+                                f"reference: Invalid path '{ref_name}': {str(e)}",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+                            return None
+
+                        if isinstance(current, ObjectReference):
+                            return current
+
+                        if hasattr(current, "_template") and current._template:
+                            tablename = current._template.tablename
+                            return ObjectReference(tablename, 1)
+
+                        return ObjectReference(str(base_name), 1)
+
                     obj = context.resolve_object(ref_name, allow_forward_ref=True)
                     if not obj:
                         suggestion = get_fuzzy_match(
@@ -1190,12 +1262,14 @@ class StandardFuncs(SnowfakeryPlugin):
                 )
                 return
 
-            # Validate 'to' object exists (allow forward references)
             to_val = resolve_value(to, context)
             if to_val and isinstance(to_val, str):
-                if to_val not in context.all_objects:
+                obj = context.resolve_object(to_val, allow_forward_ref=False)
+                if not obj:
                     suggestion = get_fuzzy_match(
-                        to_val, list(context.all_objects.keys())
+                        to_val,
+                        list(context.available_objects.keys())
+                        + list(context.available_nicknames.keys()),
                     )
                     msg = f"random_reference: Unknown object type '{to_val}'"
                     if suggestion:
@@ -1228,14 +1302,18 @@ class StandardFuncs(SnowfakeryPlugin):
                     getattr(sv, "line_num", None),
                 )
 
-            # Validate 'parent' object exists (allow forward references)
             parent = kwargs.get("parent")
             if parent:
                 parent_val = resolve_value(parent, context)
                 if parent_val and isinstance(parent_val, str):
-                    if parent_val not in context.all_objects:
+                    parent_obj = context.resolve_object(
+                        parent_val, allow_forward_ref=False
+                    )
+                    if not parent_obj:
                         suggestion = get_fuzzy_match(
-                            parent_val, list(context.all_objects.keys())
+                            parent_val,
+                            list(context.available_objects.keys())
+                            + list(context.available_nicknames.keys()),
                         )
                         msg = f"random_reference: Unknown parent object type '{parent_val}'"
                         if suggestion:
@@ -1353,14 +1431,22 @@ class StandardFuncs(SnowfakeryPlugin):
                 )
                 return
 
-            # Check that all but last have 'when' clause
-            # This is simplified - full validation would require checking nested structures
-            if len(args) > 1:
-                context.add_warning(
-                    "if: Ensure all choices except the last have 'when' clause",
-                    getattr(sv, "filename", None),
-                    getattr(sv, "line_num", None),
-                )
+            # Validate that all but last have 'when' clause
+            # Args are tuples from choice() like (when_value, pick_value)
+            if args and len(args) > 1:
+                # Check all choices except the last
+                for i, choice_arg in enumerate(args[:-1]):
+                    # Try to evaluate the choice to get the tuple
+                    choice_tuple = resolve_value(choice_arg, context)
+                    # If it's a tuple, check if first element (when) is None
+                    if isinstance(choice_tuple, tuple) and len(choice_tuple) >= 2:
+                        when_value = choice_tuple[0]
+                        if when_value is None:
+                            context.add_warning(
+                                f"if: Choice #{i+1} is missing a 'when' clause (only the last choice can omit 'when')",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
 
             # Return intelligent mock: last choice (fallthrough behavior)
             if args:
