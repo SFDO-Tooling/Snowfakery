@@ -1133,7 +1133,14 @@ class StandardFuncs(SnowfakeryPlugin):
             for param in ["start_date", "end_date"]:
                 dt_val = resolve_value(kwargs[param], context)
                 if isinstance(dt_val, str):
-                    if not DateProvider.regex.fullmatch(dt_val):
+                    # Faker relative formats not supported by datetime_between
+                    if DateProvider.regex.fullmatch(dt_val):
+                        context.add_error(
+                            f"datetime_between: Faker relative date format '{dt_val}' in '{param}' is not supported. Use 'now', 'today', or a specific datetime string instead.",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+                    else:
                         try:
                             parsed = parse_datetimespec(dt_val)
                             if param == "start_date":

@@ -1343,3 +1343,155 @@ class TestComprehensiveValidation:
         """
         result = generate(StringIO(yaml), validate_only=True)
         assert not result.has_errors()
+
+
+class TestDatetimeBetweenFakerFormats:
+    """Test datetime_between validation with Faker relative date formats"""
+
+    def test_datetime_between_with_faker_relative_format_error(self):
+        """Test that datetime_between correctly rejects Faker relative formats like +30d"""
+        yaml = """
+        - object: Event
+          fields:
+            StartDateTime:
+              datetime_between:
+                start_date: now
+                end_date: +30d
+        """
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(StringIO(yaml), validate_only=True)
+
+        error_messages = [e.message for e in exc_info.value.validation_result.errors]
+        assert any(
+            "Faker relative date format" in msg and "+30d" in msg
+            for msg in error_messages
+        )
+
+    def test_datetime_between_with_valid_datetime_strings(self):
+        """Test that datetime_between works with valid datetime strings"""
+        yaml = """
+        - object: Event
+          fields:
+            StartDateTime:
+              datetime_between:
+                start_date: now
+                end_date: 2025-12-31T23:59:59
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_datetime_between_with_today_keyword(self):
+        """Test that datetime_between works with 'today' keyword"""
+        yaml = """
+        - object: Event
+          fields:
+            StartDateTime:
+              datetime_between:
+                start_date: today
+                end_date: 2025-12-31T23:59:59
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+
+class TestFriendsObjectRegistration:
+    """Test that nested friends objects are properly registered for validation"""
+
+    def test_nested_friends_references(self):
+        """Test that nested friends can reference their parent objects"""
+        yaml = """
+        - object: Account
+          count: 2
+          fields:
+            Name:
+              fake: Company
+          friends:
+          - object: Contact
+            count: 3
+            fields:
+              FirstName:
+                fake: FirstName
+              AccountId:
+                reference: Account
+            friends:
+            - object: Case
+              count: 2
+              fields:
+                Subject: Test Case
+                AccountId:
+                  reference: Account
+                ContactId:
+                  reference: Contact
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_deeply_nested_friends(self):
+        """Test validation with deeply nested friends structure"""
+        yaml = """
+        - object: Level1
+          fields:
+            name: L1
+          friends:
+          - object: Level2
+            fields:
+              parent:
+                reference: Level1
+            friends:
+            - object: Level3
+              fields:
+                grandparent:
+                  reference: Level1
+                parent:
+                  reference: Level2
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_friends_with_nicknames(self):
+        """Test that friends with nicknames are properly registered"""
+        yaml = """
+        - object: Company
+          nickname: MainCompany
+          fields:
+            Name: ACME Corp
+          friends:
+          - object: Employee
+            nickname: CEO
+            fields:
+              Name: John Doe
+              CompanyId:
+                reference: MainCompany
+            friends:
+            - object: Task
+              fields:
+                AssignedTo:
+                  reference: CEO
+                Company:
+                  reference: MainCompany
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+
+class TestSelfReferenceValidation:
+    """Test that self-references in random_reference are caught"""
+
+    def test_random_reference_self_reference_error(self):
+        """Test that an object cannot random_reference itself"""
+        yaml = """
+        - object: Contact
+          count: 10
+          fields:
+            LastName:
+              fake: LastName
+            ReportsToId:
+              random_reference: Contact
+        """
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(StringIO(yaml), validate_only=True)
+
+        error_messages = [e.message for e in exc_info.value.validation_result.errors]
+        assert any(
+            "Unknown object type" in msg and "Contact" in msg for msg in error_messages
+        )

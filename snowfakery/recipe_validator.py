@@ -792,18 +792,42 @@ def validate_recipe(parse_result, interpreter, options) -> ValidationResult:
         undefined=jinja2.StrictUndefined,
     )
 
-    # First pass: Pre-register ALL objects in all_objects/all_nicknames
-    # This allows forward references for reference/random_reference functions
-    for statement in parse_result.statements:
+    def register_all_objects(statement, visited=None):
+        """Recursively register all objects including friends"""
+        if visited is None:
+            visited = set()
+
         if isinstance(statement, ObjectTemplate):
+            # Prevent infinite loops by tracking visited objects
+            stmt_id = id(statement)
+            if stmt_id in visited:
+                return
+            visited.add(stmt_id)
+
             context.all_objects[statement.tablename] = statement
             if statement.nickname:
                 context.all_nicknames[statement.nickname] = statement
+            # Recursively register friends
+            for friend in statement.friends:
+                register_all_objects(friend, visited)
+
+    # First pass: Pre-register ALL objects in all_objects/all_nicknames
+    # This allows forward references for reference functions
+    for statement in parse_result.statements:
+        register_all_objects(statement)
 
     # Second pass: Sequential validation with progressive registration
-    # Variables and objects are registered as we encounter them (mimics runtime behavior)
     for statement in parse_result.statements:
-        # Register in sequential registries BEFORE validating
+        # Set current template for Jinja context
+        context.current_template = statement
+
+        # Validate statement
+        validate_statement(statement, context)
+
+        # Clear current template
+        context.current_template = None
+
+        # Register in sequential registries AFTER validating
         if isinstance(statement, ObjectTemplate):
             # Register for Jinja access (${{ObjectName.field}})
             context.available_objects[statement.tablename] = statement
@@ -813,15 +837,6 @@ def validate_recipe(parse_result, interpreter, options) -> ValidationResult:
         elif isinstance(statement, VariableDefinition):
             # Register variable (order matters for variables)
             context.available_variables[statement.varname] = statement
-
-        # Set current template for Jinja context
-        context.current_template = statement
-
-        # Validate statement (can only see items defined before this point in sequential registries)
-        validate_statement(statement, context)
-
-        # Clear current template
-        context.current_template = None
 
     return ValidationResult(context.errors, context.warnings)
 
@@ -864,7 +879,14 @@ def validate_statement(statement, context: ValidationContext):
         # Recursively validate friends (nested ObjectTemplates)
         for friend in statement.friends:
             if isinstance(friend, ObjectTemplate):
+                # Validate the friend
                 validate_statement(friend, context)
+
+                # Register friend in sequential registries AFTER validating
+                # This ensures a friend can't random_reference itself on first instance
+                context.available_objects[friend.tablename] = friend
+                if friend.nickname:
+                    context.available_nicknames[friend.nickname] = friend
 
     elif isinstance(statement, VariableDefinition):
         validate_field_definition(statement.expression, context)
