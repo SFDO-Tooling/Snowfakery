@@ -441,19 +441,33 @@ class StandardFuncs(SnowfakeryPlugin):
             Returns:
                 int: min + 1 as intelligent mock, or 1 as fallback
             """
-
-            # ERROR: Required parameters
-            if not StandardFuncs.Validators.check_required_params(
-                sv, context, ["min", "max"], "random_number"
-            ):
-                return 1  # Fallback mock
-
+            args = getattr(sv, "args", [])
             kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
 
+            # Extract from positional args first, then kwargs
+            # Positional: random_number(min, max, step)
+            min_raw = args[0] if len(args) > 0 else kwargs.get("min")
+            max_raw = args[1] if len(args) > 1 else kwargs.get("max")
+            step_raw = args[2] if len(args) > 2 else kwargs.get("step", 1)
+
+            # ERROR: Required parameters (check before resolving)
+            if min_raw is None or max_raw is None:
+                missing = []
+                if min_raw is None:
+                    missing.append("min")
+                if max_raw is None:
+                    missing.append("max")
+                context.add_error(
+                    f"random_number: Missing required parameter(s): {', '.join(missing)}",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+                return 1  # Fallback mock
+
             # Resolve values
-            min_val = resolve_value(kwargs.get("min"), context)
-            max_val = resolve_value(kwargs.get("max"), context)
-            step_val = resolve_value(kwargs.get("step", 1), context)
+            min_val = resolve_value(min_raw, context)
+            max_val = resolve_value(max_raw, context)
+            step_val = resolve_value(step_raw, context)
 
             # ERROR: Type checking
             if min_val is not None and not isinstance(min_val, (int, float)):
@@ -1271,6 +1285,28 @@ class StandardFuncs(SnowfakeryPlugin):
 
             to_val = resolve_value(to, context)
             if to_val and isinstance(to_val, str):
+                # Check for self-reference FIRST (before checking availability)
+                if context.current_template:
+                    current_name = context.current_template.tablename
+                    current_nickname = getattr(
+                        context.current_template, "nickname", None
+                    )
+
+                    # Check if referencing self by name or nickname
+                    is_self_ref = (to_val == current_name) or (
+                        current_nickname and to_val == current_nickname
+                    )
+
+                    if is_self_ref:
+                        context.add_error(
+                            f"random_reference: Cannot reference object '{to_val}' from within its own fields. "
+                            f"On the first instance, there are no prior rows to reference yet.",
+                            getattr(sv, "filename", None),
+                            getattr(sv, "line_num", None),
+                        )
+                        return  # Early return, don't check other validations
+
+                # Now check if object exists (not a self-reference)
                 obj = context.resolve_object(to_val, allow_forward_ref=False)
                 if not obj:
                     suggestion = get_fuzzy_match(
@@ -1313,6 +1349,28 @@ class StandardFuncs(SnowfakeryPlugin):
             if parent:
                 parent_val = resolve_value(parent, context)
                 if parent_val and isinstance(parent_val, str):
+                    # Check for self-reference FIRST (before checking availability)
+                    if context.current_template:
+                        current_name = context.current_template.tablename
+                        current_nickname = getattr(
+                            context.current_template, "nickname", None
+                        )
+
+                        # Check if referencing self by name or nickname
+                        is_self_ref = (parent_val == current_name) or (
+                            current_nickname and parent_val == current_nickname
+                        )
+
+                        if is_self_ref:
+                            context.add_error(
+                                f"random_reference: Cannot reference object '{parent_val}' as parent from within its own fields. "
+                                f"On the first instance, there are no prior rows to reference yet.",
+                                getattr(sv, "filename", None),
+                                getattr(sv, "line_num", None),
+                            )
+                            return  # Early return
+
+                    # Now check if parent object exists (not a self-reference)
                     parent_obj = context.resolve_object(
                         parent_val, allow_forward_ref=False
                     )

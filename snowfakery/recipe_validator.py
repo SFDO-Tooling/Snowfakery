@@ -287,6 +287,12 @@ class ValidationContext:
         namespace["now"] = datetime.now(timezone.utc)
         namespace["template"] = self.current_template  # Current statement
 
+        # Add 'this' - mock object representing current object being created
+        if self.current_template and isinstance(self.current_template, ObjectTemplate):
+            namespace["this"] = self._create_this_mock()
+        else:
+            namespace["this"] = None
+
         # 2. User variables (with mock values)
         for var_name in self.available_variables.keys():
             # Skip variables currently being evaluated to prevent recursion
@@ -310,6 +316,22 @@ class ValidationContext:
         namespace["null"] = None
         namespace["Null"] = None
         namespace["relativedelta"] = relativedelta
+
+        # 4.6. Python builtins (available in Jinja at runtime)
+        namespace["int"] = int
+        namespace["str"] = str
+        namespace["float"] = float
+        namespace["bool"] = bool
+        namespace["len"] = len
+        namespace["list"] = list
+        namespace["dict"] = dict
+        namespace["set"] = set
+        namespace["tuple"] = tuple
+        namespace["min"] = min
+        namespace["max"] = max
+        namespace["sum"] = sum
+        namespace["abs"] = abs
+        namespace["round"] = round
 
         # 5. Plugins (with validation wrappers)
         for plugin_name, plugin_instance in self.interpreter.plugin_instances.items():
@@ -421,21 +443,29 @@ class ValidationContext:
         Returns:
             MockObjectRow instance with field validation
         """
-        # Get the actual ObjectTemplate
-        obj_template = self.available_objects.get(name) or self.available_nicknames.get(
-            name
-        )
+        is_this = name == "this"
+        if is_this:
+            obj_template = self.current_template
+        else:
+            obj_template = self.available_objects.get(
+                name
+            ) or self.available_nicknames.get(name)
+
+        context = self
 
         class MockObjectRow:
-            def __init__(self, template, context):
+            """Mock object that validates field access during validation."""
+
+            def __init__(self, template, obj_name):
                 self.id = 1
+                self._child_index = 0
                 self._template = template
-                self._name = name
-                self._context = context
+                self._name = obj_name
+                self._is_this = obj_name == "this"
 
                 # Extract actual field names and definitions from template
                 if template and hasattr(template, "fields"):
-                    self._field_names = {
+                    self._all_field_names = {
                         f.name for f in template.fields if isinstance(f, FieldFactory)
                     }
                     # Build field definition map
@@ -445,35 +475,47 @@ class ValidationContext:
                         if isinstance(f, FieldFactory)
                     }
                 else:
-                    self._field_names = set()
+                    self._all_field_names = set()
                     self._field_definitions = {}
 
             def __getattr__(self, attr):
-                # Validate field exists
                 if attr.startswith("_"):
                     raise AttributeError(f"'{attr}' not found")
 
-                # If we have field information, validate the attribute exists
-                if self._template and hasattr(self._template, "fields"):
-                    if attr not in self._field_names:
-                        raise AttributeError(
-                            f"Object '{self._name}' has no field '{attr}'. "
-                            f"Available fields: {', '.join(sorted(self._field_names)) if self._field_names else 'none'}"
-                        )
+                # For 'this': only fields defined so far are accessible
+                # For object references: all fields of that object are accessible
+                if self._is_this:
+                    accessible_fields = set(context.current_object_fields.keys())
+                else:
+                    accessible_fields = self._all_field_names
+
+                # Validate the attribute exists in accessible fields
+                if attr not in accessible_fields:
+                    display_name = (
+                        "'this' object" if self._is_this else f"Object '{self._name}'"
+                    )
+                    raise AttributeError(
+                        f"{display_name} has no field '{attr}'. "
+                        f"Available fields: {', '.join(sorted(accessible_fields)) if accessible_fields else 'none'}"
+                    )
 
                 # Try to resolve the field value
                 if attr in self._field_definitions:
                     from snowfakery.utils.validation_utils import resolve_value
 
                     field_def = self._field_definitions[attr]
-                    resolved = resolve_value(field_def, self._context)
+                    resolved = resolve_value(field_def, context)
                     if resolved is not None:
                         return resolved
 
                 # Fall back to mock value if we can't resolve
                 return f"<mock_{self._name}.{attr}>"
 
-        return MockObjectRow(obj_template, self)
+        return MockObjectRow(obj_template, name)
+
+    def _create_this_mock(self):
+        """Create mock 'this' object for the current object being created."""
+        return self._create_mock_object("this")
 
     def _create_validation_function(self, func_name, validator):
         """Create wrapper that validates when called from Jinja.
@@ -827,14 +869,8 @@ def validate_recipe(parse_result, interpreter, options) -> ValidationResult:
         # Clear current template
         context.current_template = None
 
-        # Register in sequential registries AFTER validating
-        if isinstance(statement, ObjectTemplate):
-            # Register for Jinja access (${{ObjectName.field}})
-            context.available_objects[statement.tablename] = statement
-            if statement.nickname:
-                context.available_nicknames[statement.nickname] = statement
-
-        elif isinstance(statement, VariableDefinition):
+        # Register variables (ObjectTemplates are registered inside validate_statement)
+        if isinstance(statement, VariableDefinition):
             # Register variable (order matters for variables)
             context.available_variables[statement.varname] = statement
 
@@ -875,6 +911,11 @@ def validate_statement(statement, context: ValidationContext):
 
                 # Register field so subsequent fields can reference it
                 context.current_object_fields[field.name] = field
+
+        # Register parent object AFTER validating fields but BEFORE validating friends
+        context.available_objects[statement.tablename] = statement
+        if statement.nickname:
+            context.available_nicknames[statement.nickname] = statement
 
         # Recursively validate friends (nested ObjectTemplates)
         for friend in statement.friends:

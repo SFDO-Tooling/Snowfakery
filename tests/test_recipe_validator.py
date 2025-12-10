@@ -1493,5 +1493,130 @@ class TestSelfReferenceValidation:
 
         error_messages = [e.message for e in exc_info.value.validation_result.errors]
         assert any(
-            "Unknown object type" in msg and "Contact" in msg for msg in error_messages
+            "Cannot reference object" in msg
+            and "Contact" in msg
+            and "from within its own fields" in msg
+            for msg in error_messages
         )
+
+
+class TestMockThisKeyword:
+    """Test suite for 'this' keyword validation and MockThis error messages"""
+
+    def test_this_keyword_success_simple_field_access(self):
+        """Test that 'this.id' works correctly"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Account
+          fields:
+            Name: Test Account ${{this.id}}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_this_keyword_success_referencing_previous_field(self):
+        """Test that 'this' can reference fields defined earlier in the same object"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Character
+          fields:
+            Constitution:
+              random_number:
+                min: 5
+                max: 15
+            Hit_Points: ${{10 + this.Constitution}}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_this_keyword_success_multiple_field_references(self):
+        """Test that 'this' can reference multiple fields"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Product
+          fields:
+            Price:
+              random_number:
+                min: 10
+                max: 100
+            Quantity:
+              random_number:
+                min: 1
+                max: 10
+            Total: ${{this.Price * this.Quantity}}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_this_keyword_error_nonexistent_field(self):
+        """Test that referencing a non-existent field via 'this' produces user-friendly error"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: TestObj
+          fields:
+            Name: Test
+            BadRef: ${{this.nonexistent_field}}
+        """
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(StringIO(yaml), validate_only=True)
+
+        # Check that error message is user-friendly (no MockThis class name)
+        error_messages = [e.message for e in exc_info.value.validation_result.errors]
+        assert any("nonexistent_field" in msg for msg in error_messages)
+        full_error_str = str(exc_info.value)
+        assert "Object has no attribute 'nonexistent_field'" in full_error_str
+
+    def test_this_keyword_forward_reference_error(self):
+        """Test that 'this' cannot reference fields defined later (forward reference error)
+
+        This matches runtime behavior where fields are only available after they've been
+        evaluated, so referencing a field defined later in the same object fails.
+        """
+        yaml = """
+        - snowfakery_version: 3
+        - object: TestObj
+          fields:
+            EarlyField: ${{this.LaterField}}
+            LaterField: Some Value
+        """
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(StringIO(yaml), validate_only=True)
+
+        # Check that error message mentions forward reference / defined later
+        error_messages = [e.message for e in exc_info.value.validation_result.errors]
+        assert any("LaterField" in msg for msg in error_messages)
+
+    def test_mock_object_row_error_message_is_user_friendly(self):
+        """Test that MockObjectRow errors are also user-friendly"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Account
+          fields:
+            Name: Test Account
+
+        - object: Contact
+          fields:
+            BadRef: ${{Account.nonexistent_field}}
+        """
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(StringIO(yaml), validate_only=True)
+
+        # Check that error message is user-friendly (no MockObjectRow class name)
+        full_error_str = str(exc_info.value)
+        assert (
+            "MockObjectRow" not in full_error_str
+            or "Object has no attribute" in full_error_str
+        )
+
+    def test_this_with_child_index(self):
+        """Test that this._child_index is accessible (built-in attribute)"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Item
+          count: 3
+          fields:
+            Index: ${{child_index}}
+            Name: Item ${{this.id}}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()

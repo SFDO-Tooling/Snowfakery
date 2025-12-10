@@ -117,6 +117,52 @@ class TestValidateRandomNumber:
         assert len(context.warnings) >= 1
         assert any("unknown" in warn.message.lower() for warn in context.warnings)
 
+    def test_positional_args_valid(self):
+        """Test random_number(1, 10) with positional args"""
+        context = ValidationContext()
+        # Pass a list to StructuredValue for positional args
+        sv = StructuredValue("random_number", [1, 10], "test.yml", 10)
+
+        result = StandardFuncs.Validators.validate_random_number(sv, context)
+
+        assert len(context.errors) == 0
+        assert len(context.warnings) == 0
+        assert result == 2  # min + 1
+
+    def test_positional_args_with_step(self):
+        """Test random_number(1, 10, 2) with positional args including step"""
+        context = ValidationContext()
+        sv = StructuredValue("random_number", [1, 10, 2], "test.yml", 10)
+
+        result = StandardFuncs.Validators.validate_random_number(sv, context)
+
+        assert len(context.errors) == 0
+        assert len(context.warnings) == 0
+        assert result == 2  # min + 1
+
+    def test_positional_min_greater_than_max(self):
+        """Test random_number(100, 50) fails validation"""
+        context = ValidationContext()
+        sv = StructuredValue("random_number", [100, 50], "test.yml", 10)
+
+        StandardFuncs.Validators.validate_random_number(sv, context)
+
+        assert len(context.errors) >= 1
+        assert any(
+            "min" in err.message.lower() and "max" in err.message.lower()
+            for err in context.errors
+        )
+
+    def test_single_positional_arg_missing_max(self):
+        """Test random_number(1) fails - missing max"""
+        context = ValidationContext()
+        sv = StructuredValue("random_number", [1], "test.yml", 10)
+
+        StandardFuncs.Validators.validate_random_number(sv, context)
+
+        assert len(context.errors) == 1
+        assert "max" in context.errors[0].message.lower()
+
 
 class TestValidateReference:
     """Test validate_reference validator"""
