@@ -1500,6 +1500,249 @@ class TestSelfReferenceValidation:
         )
 
 
+class TestNestedObjectRegistration:
+    """Test suite for objects nested inside if/choice blocks being registered for random_reference"""
+
+    def test_object_in_choice_block_registered_for_random_reference(self):
+        """Test that objects created inside choice blocks can be referenced by random_reference"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Parent
+          count: 5
+          fields:
+            __child:
+              random_choice:
+                - choice:
+                    pick:
+                      - object: ChildA
+                        nickname: MyChildA
+                - choice:
+                    pick:
+                      - object: ChildB
+                        nickname: MyChildB
+
+        - object: Consumer
+          fields:
+            ref_to_child:
+              random_reference: MyChildA
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_object_in_if_when_block_registered(self):
+        """Test that objects inside if/when blocks are registered for random_reference"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Account
+          count: 10
+          fields:
+            __conditional_contact:
+              if:
+                - choice:
+                    when: ${{child_index % 2 == 0}}
+                    pick:
+                      - object: Contact
+                        nickname: EvenContact
+                        fields:
+                          Name: Even
+                - choice:
+                    pick:
+                      - object: Contact
+                        nickname: OddContact
+                        fields:
+                          Name: Odd
+
+        - object: Report
+          fields:
+            contact_ref:
+              random_reference: EvenContact
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_nested_object_with_friends_in_choice(self):
+        """Test that nested objects with friends inside choice blocks are all registered"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Root
+          count: 5
+          fields:
+            __level1:
+              if:
+                - choice:
+                    when: ${{child_index > 0}}
+                    pick:
+                      - object: Parent
+                        nickname: NestedParent
+                        friends:
+                          - object: Child
+                            nickname: NestedChild
+                - choice:
+                    pick: null
+
+        - object: Finder
+          fields:
+            parent_ref:
+              random_reference: NestedParent
+            child_ref:
+              random_reference: NestedChild
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_object_in_random_choice_default(self):
+        """Test that objects as random_choice options are registered"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Wrapper
+          count: 3
+          fields:
+            __item:
+              random_choice:
+                - object: ItemA
+                  nickname: DefaultItem
+                - Some string value
+
+        - object: Accessor
+          fields:
+            item_ref:
+              random_reference: DefaultItem
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_sequential_choices_with_different_objects(self):
+        """Test that multiple objects in sequential choice fields are all registered"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Container
+          count: 5
+          fields:
+            __typeA:
+              if:
+                - choice:
+                    when: ${{child_index == 0}}
+                    pick:
+                      - object: TypeA
+                        nickname: FirstA
+                - choice:
+                    pick: null
+            __typeB:
+              if:
+                - choice:
+                    when: ${{child_index == 1}}
+                    pick:
+                      - object: TypeB
+                        nickname: FirstB
+                - choice:
+                    pick: null
+
+        - object: Reader
+          fields:
+            ref_a:
+              random_reference: FirstA
+            ref_b:
+              random_reference: FirstB
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_object_in_choice_with_reference_field(self):
+        """Test that objects in choice blocks can have reference fields to other objects"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Account
+          nickname: MainAccount
+          fields:
+            Name: Main
+
+        - object: Wrapper
+          count: 3
+          fields:
+            __conditional:
+              if:
+                - choice:
+                    when: ${{child_index == 0}}
+                    pick:
+                      - object: Contact
+                        nickname: ConditionalContact
+                        fields:
+                          FirstName: Conditional
+                          AccountId:
+                            reference: MainAccount
+                - choice:
+                    pick: null
+
+        - object: Case
+          fields:
+            ContactId:
+              random_reference: ConditionalContact
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_object_in_choice_not_available_before_definition(self):
+        """Test that objects in choice blocks aren't available before the parent field is processed"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Early
+          fields:
+            bad_ref:
+              random_reference: LateNickname
+
+        - object: Container
+          fields:
+            __conditional:
+              if:
+                - choice:
+                    when: ${{child_index == 0}}
+                    pick:
+                      - object: Late
+                        nickname: LateNickname
+                - choice:
+                    pick: null
+        """
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(StringIO(yaml), validate_only=True)
+
+        # Should fail because LateNickname isn't registered yet when Early is validated
+        assert "LateNickname" in str(exc_info.value)
+
+    def test_deeply_nested_choice_objects(self):
+        """Test that objects nested multiple levels deep in choice structures are registered"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Outer
+          count: 3
+          fields:
+            __nested:
+              random_choice:
+                - choice:
+                    pick:
+                      - object: Level1
+                        nickname: L1Object
+                        fields:
+                          __inner:
+                            if:
+                              - choice:
+                                  when: ${{True}}
+                                  pick:
+                                    - object: Level2
+                                      nickname: L2Object
+                              - choice:
+                                  pick: null
+
+        - object: Finder
+          fields:
+            l1_ref:
+              random_reference: L1Object
+            l2_ref:
+              random_reference: L2Object
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+
 class TestMockThisKeyword:
     """Test suite for 'this' keyword validation and MockThis error messages"""
 

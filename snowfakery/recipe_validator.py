@@ -834,29 +834,16 @@ def validate_recipe(parse_result, interpreter, options) -> ValidationResult:
         undefined=jinja2.StrictUndefined,
     )
 
-    def register_all_objects(statement, visited=None):
-        """Recursively register all objects including friends"""
-        if visited is None:
-            visited = set()
-
-        if isinstance(statement, ObjectTemplate):
-            # Prevent infinite loops by tracking visited objects
-            stmt_id = id(statement)
-            if stmt_id in visited:
-                return
-            visited.add(stmt_id)
-
-            context.all_objects[statement.tablename] = statement
-            if statement.nickname:
-                context.all_nicknames[statement.nickname] = statement
-            # Recursively register friends
-            for friend in statement.friends:
-                register_all_objects(friend, visited)
+    def register_to_all(obj_template):
+        """Register an ObjectTemplate to all_objects/all_nicknames."""
+        context.all_objects[obj_template.tablename] = obj_template
+        if obj_template.nickname:
+            context.all_nicknames[obj_template.nickname] = obj_template
 
     # First pass: Pre-register ALL objects in all_objects/all_nicknames
     # This allows forward references for reference functions
     for statement in parse_result.statements:
-        register_all_objects(statement)
+        _walk_nested_objects(statement, register_to_all)
 
     # Second pass: Sequential validation with progressive registration
     for statement in parse_result.statements:
@@ -875,6 +862,58 @@ def validate_recipe(parse_result, interpreter, options) -> ValidationResult:
             context.available_variables[statement.varname] = statement
 
     return ValidationResult(context.errors, context.warnings)
+
+
+def _walk_nested_objects(obj, on_object_found, visited=None):
+    """Walk through nested structures and call callback for each ObjectTemplate found.
+
+    Args:
+        obj: Object to walk (ObjectTemplate, StructuredValue, list, dict, etc.)
+        on_object_found: Callback function(obj_template) called for each ObjectTemplate
+        visited: Set of visited object IDs to prevent infinite loops
+    """
+    if visited is None:
+        visited = set()
+
+    if isinstance(obj, ObjectTemplate):
+        obj_id = id(obj)
+        if obj_id in visited:
+            return
+        visited.add(obj_id)
+
+        # Call callback for this object
+        on_object_found(obj)
+
+        # Recursively walk friends and fields
+        for friend in obj.friends:
+            _walk_nested_objects(friend, on_object_found, visited)
+        for field in obj.fields:
+            if isinstance(field, FieldFactory):
+                _walk_nested_objects(field.definition, on_object_found, visited)
+
+    elif isinstance(obj, StructuredValue):
+        args = getattr(obj, "args", [])
+        if isinstance(args, (list, tuple)):
+            for arg in args:
+                _walk_nested_objects(arg, on_object_found, visited)
+        elif args is not None:
+            _walk_nested_objects(args, on_object_found, visited)
+
+        kwargs = getattr(obj, "kwargs", {})
+        if isinstance(kwargs, dict):
+            for value in kwargs.values():
+                _walk_nested_objects(value, on_object_found, visited)
+
+    elif isinstance(obj, FieldFactory):
+        _walk_nested_objects(obj.definition, on_object_found, visited)
+
+    elif isinstance(obj, (list, tuple)):
+        for item in obj:
+            _walk_nested_objects(item, on_object_found, visited)
+
+    elif isinstance(obj, dict):
+        for value in obj.values():
+            _walk_nested_objects(value, on_object_found, visited)
 
 
 def validate_statement(statement, context: ValidationContext):
@@ -903,11 +942,20 @@ def validate_statement(statement, context: ValidationContext):
                     statement.for_each_expr.varname
                 ] = statement.for_each_expr
 
+        # Helper to register nested objects to available registries
+        def register_to_available(obj_template):
+            context.available_objects[obj_template.tablename] = obj_template
+            if obj_template.nickname:
+                context.available_nicknames[obj_template.nickname] = obj_template
+
         # Validate fields sequentially (order matters within object)
         for field in statement.fields:
             if isinstance(field, FieldFactory):
                 # Validate field (can reference previously defined fields in this object)
                 validate_field_definition(field.definition, context)
+
+                # Register any nested objects found in the field definition
+                _walk_nested_objects(field.definition, register_to_available)
 
                 # Register field so subsequent fields can reference it
                 context.current_object_fields[field.name] = field
