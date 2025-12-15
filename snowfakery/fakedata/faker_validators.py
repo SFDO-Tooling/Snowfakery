@@ -1,7 +1,7 @@
 """Validators for Faker provider calls using introspection."""
 
 import inspect
-from typing import get_origin, get_args, Union, Optional
+from typing import get_origin, get_args, Union, Optional, Literal
 from snowfakery.utils.validation_utils import resolve_value, get_fuzzy_match
 
 
@@ -153,12 +153,17 @@ class FakerValidators:
             return
 
         # 6. Type checking (if parameters have type annotations)
+        explicitly_provided = set(bound.arguments.keys())
         bound.apply_defaults()
         for param_name, param_value in bound.arguments.items():
             param_obj = sig.parameters[param_name]
 
             # Skip if no annotation
             if param_obj.annotation == inspect.Parameter.empty:
+                continue
+
+            # Skip type checking for default values - only check explicitly provided args
+            if param_name not in explicitly_provided:
                 continue
 
             # Only validate if we have a resolved literal value
@@ -196,6 +201,7 @@ class FakerValidators:
         - Simple types (bool, int, str, float)
         - Optional[T] (Union[T, None])
         - Union[T1, T2, ...]
+        - Literal[value1, value2, ...]
 
         Args:
             value: The value to check
@@ -204,7 +210,7 @@ class FakerValidators:
         Returns:
             True if type matches, False otherwise
         """
-        # Handle None for Optional types
+        # Handle None - only accept if type explicitly includes NoneType
         if value is None:
             origin = get_origin(expected_type)
             if origin is Union:
@@ -212,20 +218,22 @@ class FakerValidators:
                 return type(None) in args
             return False
 
-        # Handle Union types (e.g., Union[str, int], Optional[str])
+        # Handle Literal types (e.g., Literal[False], Literal["a", "b"])
         origin = get_origin(expected_type)
+        if origin is Literal:
+            literal_values = get_args(expected_type)
+            return value in literal_values
+
+        # Handle Union types (e.g., Union[str, int], Optional[str])
         if origin is Union:
             args = get_args(expected_type)
             # Check if value matches any of the union types
             for arg in args:
                 if arg is type(None):
                     continue  # Skip NoneType
-                try:
-                    if isinstance(arg, type) and isinstance(value, arg):
-                        return True
-                except TypeError:
-                    # Complex type annotation, skip
-                    pass
+                # Recursively check each union member (handles nested Literal)
+                if self._check_type(value, arg):
+                    return True
             return False
 
         # Simple type check
@@ -246,6 +254,8 @@ class FakerValidators:
         - bool → "bool"
         - Optional[str] → "str or None"
         - Union[int, str] → "int or str"
+        - Literal[False] → "False"
+        - Literal["a", "b"] → "'a' or 'b'"
 
         Args:
             type_annotation: The type annotation to format
@@ -255,6 +265,16 @@ class FakerValidators:
         """
         origin = get_origin(type_annotation)
 
+        # Handle Literal types
+        if origin is Literal:
+            literal_values = get_args(type_annotation)
+            if len(literal_values) == 1:
+                val = literal_values[0]
+                return repr(val) if isinstance(val, str) else str(val)
+            return " or ".join(
+                repr(v) if isinstance(v, str) else str(v) for v in literal_values
+            )
+
         if origin is Union:
             args = get_args(type_annotation)
             # Filter out NoneType for cleaner messages
@@ -263,18 +283,17 @@ class FakerValidators:
             if len(non_none) == 1:
                 # Optional[T] case - show as "T or None"
                 if type(None) in args:
-                    return f"{non_none[0].__name__} or None"
-                return non_none[0].__name__
+                    formatted = self._format_type(non_none[0])
+                    return f"{formatted} or None"
+                return self._format_type(non_none[0])
 
             # Union case - show all types
             type_names = []
             for arg in args:
                 if arg is type(None):
                     type_names.append("None")
-                elif hasattr(arg, "__name__"):
-                    type_names.append(arg.__name__)
                 else:
-                    type_names.append(str(arg))
+                    type_names.append(self._format_type(arg))
             return " or ".join(type_names)
 
         # Simple type

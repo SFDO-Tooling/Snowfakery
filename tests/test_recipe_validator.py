@@ -1620,3 +1620,79 @@ class TestMockThisKeyword:
         """
         result = generate(StringIO(yaml), validate_only=True)
         assert not result.has_errors()
+
+    def test_this_keyword_in_nested_friends(self):
+        """Test that 'this' keyword works correctly in deeply nested friend objects.
+
+        This test ensures that current_template is properly set when validating
+        nested friends, so that MockObjectRow uses the correct template for 'this'.
+
+        Before the fix, nested friends would fail with errors like:
+        "'>' not supported between instances of 'str' and 'datetime.date'"
+        because this.field would return a mock string instead of the resolved value.
+        """
+        yaml = """
+        - snowfakery_version: 3
+        - object: Account
+          fields:
+            Name:
+              fake: company
+          friends:
+          - object: Contact
+            fields:
+              FirstName:
+                fake: first_name
+            friends:
+            - object: Opportunity
+              fields:
+                Amount:
+                  random_number:
+                    min: 100
+                    max: 1000
+                DiscountedAmount: ${{this.Amount * 0.9}}
+              friends:
+              - object: Payment
+                fields:
+                  PaymentDate:
+                    date_between:
+                      start_date: -30d
+                      end_date: +180d
+                  IsPaid: ${{False if this.PaymentDate > today else True}}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_this_keyword_in_nested_friends_with_date_comparison(self):
+        """Test that date comparisons using 'this' work in nested friends.
+
+        This specifically tests the scenario from gen_npsp_standard_objects.yml
+        where a date field is compared using this.field > today in a nested object.
+        """
+        yaml = """
+        - snowfakery_version: 3
+        - object: Account
+          fields:
+            Name: Test Account
+          friends:
+          - object: Opportunity
+            fields:
+              CloseDate:
+                date_between:
+                  start_date: -30d
+                  end_date: +180d
+              IsClosed: ${{True if this.CloseDate < today else False}}
+            friends:
+            - object: OpportunityLineItem
+              fields:
+                Quantity:
+                  random_number:
+                    min: 1
+                    max: 10
+                UnitPrice:
+                  random_number:
+                    min: 50
+                    max: 500
+                TotalPrice: ${{this.Quantity * this.UnitPrice}}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()

@@ -920,8 +920,15 @@ def validate_statement(statement, context: ValidationContext):
         # Recursively validate friends (nested ObjectTemplates)
         for friend in statement.friends:
             if isinstance(friend, ObjectTemplate):
+                # Save and set current_template for nested validation
+                saved_template = context.current_template
+                context.current_template = friend
+
                 # Validate the friend
                 validate_statement(friend, context)
+
+                # Restore current_template
+                context.current_template = saved_template
 
                 # Register friend in sequential registries AFTER validating
                 # This ensures a friend can't random_reference itself on first instance
