@@ -1068,3 +1068,555 @@ class TestEdgeCasesAndComplexScenarios:
             _ = mock_obj.NonExistentField
         assert "NonExistentField" in str(exc_info.value)
         assert "Available fields" in str(exc_info.value)
+
+
+class TestIfClauseValidation:
+    """Test suite for if clause validation"""
+
+    def test_if_clause_with_final_default_choice_no_warning(self):
+        """Test that valid if clause structure doesn't produce false warnings"""
+        yaml = """
+        - object: Account
+          fields:
+            Status:
+              if:
+                - choice:
+                    when: ${{count == 1}}
+                    pick: Active
+                - choice:
+                    when: ${{count == 2}}
+                    pick: Inactive
+                - choice:
+                    pick: Pending
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+        assert not result.has_warnings()
+
+    def test_if_clause_with_conditional_and_default(self):
+        """Test that valid if clause with only last choice missing when doesn't warn"""
+        yaml = """
+        - object: Account
+          fields:
+            Status:
+              if:
+                - choice:
+                    when: ${{count == 1}}
+                    pick: Active
+                - choice:
+                    pick: Inactive
+        """
+        result = generate(StringIO(yaml), validate_only=True, strict_mode=False)
+        assert not result.has_warnings()
+
+
+class TestPluginValidation:
+    """Test suite for plugin validation"""
+
+    def test_plugin_without_validators_class(self):
+        """Test that plugins without Validators class work correctly"""
+        yaml = """
+        - plugin: snowfakery.standard_plugins.UniqueId.UniqueId
+        - object: Account
+          fields:
+            Code:
+              UniqueId.alpha_code:
+                length: 6
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_unknown_plugin_produces_error(self):
+        """Test that truly unknown plugins still produce errors"""
+        yaml = """
+        - object: Account
+          fields:
+            Value:
+              NonexistentPlugin.method: param
+        """
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(StringIO(yaml), validate_only=True)
+        assert "Unknown function" in str(exc_info.value)
+
+
+class TestDottedReferencePaths:
+    """Test suite for dotted reference path validation"""
+
+    def test_dotted_reference_path_through_fields(self):
+        """Test that dotted reference paths like spouse.pet work"""
+        yaml = """
+        - object: cat
+          nickname: Fluffy
+          fields:
+            color: black
+
+        - object: fiance
+          nickname: sam
+          fields:
+            pet:
+              reference: Fluffy
+
+        - object: betrothed
+          fields:
+            spouse:
+              reference: sam
+            pet:
+              reference: spouse.pet
+            color: ${{pet.color}}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_dotted_reference_invalid_field_name(self):
+        """Test that invalid dotted reference paths produce errors"""
+        yaml = """
+        - object: Account
+          fields:
+            name: Test
+
+        - object: Contact
+          fields:
+            related:
+              reference: Account.nonexistent_field
+        """
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(StringIO(yaml), validate_only=True)
+        assert "Invalid path" in str(exc_info.value) or "no attribute" in str(
+            exc_info.value
+        )
+
+    def test_dotted_reference_undefined_base_object(self):
+        """Test that dotted reference with undefined base produces error"""
+        yaml = """
+        - object: Contact
+          fields:
+            related:
+              reference: nonexistent_object.field
+        """
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(StringIO(yaml), validate_only=True)
+        assert "Unknown" in str(exc_info.value)
+
+
+class TestFakerWithTimezones:
+    """Test suite for Faker datetime functions with timezone parameters"""
+
+    def test_datetime_with_relativedelta_timezone(self):
+        """Test that datetime with relativedelta timezone works"""
+        yaml = """
+        - object: Contact
+          fields:
+            BirthDate:
+              fake.datetime:
+                start_date: -10y
+                end_date: now
+                timezone:
+                  relativedelta:
+                    hours: 8
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_date_time_with_negative_timezone_offset(self):
+        """Test that date_time with negative timezone offset works"""
+        yaml = """
+        - object: Contact
+          fields:
+            CreatedDate:
+              fake.date_time:
+                start_date: -5y
+                end_date: now
+                timezone:
+                  relativedelta:
+                    hours: -5
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+
+class TestNullAndRelativeDeltaConstants:
+    """Test suite for NULL and relativedelta constant availability"""
+
+    def test_null_constants_in_jinja(self):
+        """Test that NULL/null/Null constants work in Jinja"""
+        yaml = """
+        - object: Account
+          fields:
+            Value1: ${{NULL}}
+            Value2: ${{null}}
+            Value3: ${{Null}}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_relativedelta_constant_in_jinja(self):
+        """Test that relativedelta is available in Jinja"""
+        yaml = """
+        - object: Account
+          fields:
+            FutureDate: ${{today + relativedelta(days=30)}}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+
+class TestFakerParameterResolution:
+    """Test suite for Faker method parameter resolution"""
+
+    def test_faker_with_structured_value_parameters(self):
+        """Test that Faker methods with StructuredValue parameters work"""
+        yaml = """
+        - object: Account
+          fields:
+            Description:
+              fake.sentence:
+                nb_words: 10
+                variable_nb_words: true
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_standard_function_with_invalid_range(self):
+        """Test that standard functions with invalid parameters produce errors"""
+        yaml = """
+        - object: Account
+          fields:
+            Value:
+              random_number:
+                min: 100
+                max: 50
+        """
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(StringIO(yaml), validate_only=True)
+        assert (
+            "min" in str(exc_info.value).lower()
+            and "max" in str(exc_info.value).lower()
+        )
+
+
+class TestComprehensiveValidation:
+    """Test suite for comprehensive validation scenarios"""
+
+    def test_complex_recipe_with_multiple_features(self):
+        """Test recipe that uses multiple validation features together"""
+        yaml = """
+        - plugin: snowfakery.standard_plugins.UniqueId.UniqueId
+
+        - object: Category
+          nickname: MainCategory
+          fields:
+            name: Electronics
+            color: blue
+
+        - object: Product
+          nickname: MainProduct
+          count: 3
+          fields:
+            Code:
+              UniqueId.unique_id:
+            Category:
+              reference: MainCategory
+            Status:
+              if:
+                - choice:
+                    when: ${{count == 1}}
+                    pick: Active
+                - choice:
+                    pick: Inactive
+            NullField: ${{NULL}}
+            CreatedAt:
+              fake.datetime:
+                start_date: -1y
+                end_date: now
+                timezone:
+                  relativedelta:
+                    hours: 5
+            Description:
+              fake.sentence:
+                nb_words: 8
+
+        - object: Review
+          fields:
+            Product:
+              reference: MainProduct
+            UpdatedAt: ${{today + relativedelta(days=7)}}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+
+class TestDatetimeBetweenFakerFormats:
+    """Test datetime_between validation with Faker relative date formats"""
+
+    def test_datetime_between_with_faker_relative_format_error(self):
+        """Test that datetime_between correctly rejects Faker relative formats like +30d"""
+        yaml = """
+        - object: Event
+          fields:
+            StartDateTime:
+              datetime_between:
+                start_date: now
+                end_date: +30d
+        """
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(StringIO(yaml), validate_only=True)
+
+        error_messages = [e.message for e in exc_info.value.validation_result.errors]
+        assert any(
+            "Faker relative date format" in msg and "+30d" in msg
+            for msg in error_messages
+        )
+
+    def test_datetime_between_with_valid_datetime_strings(self):
+        """Test that datetime_between works with valid datetime strings"""
+        yaml = """
+        - object: Event
+          fields:
+            StartDateTime:
+              datetime_between:
+                start_date: now
+                end_date: 2025-12-31T23:59:59
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_datetime_between_with_today_keyword(self):
+        """Test that datetime_between works with 'today' keyword"""
+        yaml = """
+        - object: Event
+          fields:
+            StartDateTime:
+              datetime_between:
+                start_date: today
+                end_date: 2025-12-31T23:59:59
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+
+class TestFriendsObjectRegistration:
+    """Test that nested friends objects are properly registered for validation"""
+
+    def test_nested_friends_references(self):
+        """Test that nested friends can reference their parent objects"""
+        yaml = """
+        - object: Account
+          count: 2
+          fields:
+            Name:
+              fake: Company
+          friends:
+          - object: Contact
+            count: 3
+            fields:
+              FirstName:
+                fake: FirstName
+              AccountId:
+                reference: Account
+            friends:
+            - object: Case
+              count: 2
+              fields:
+                Subject: Test Case
+                AccountId:
+                  reference: Account
+                ContactId:
+                  reference: Contact
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_deeply_nested_friends(self):
+        """Test validation with deeply nested friends structure"""
+        yaml = """
+        - object: Level1
+          fields:
+            name: L1
+          friends:
+          - object: Level2
+            fields:
+              parent:
+                reference: Level1
+            friends:
+            - object: Level3
+              fields:
+                grandparent:
+                  reference: Level1
+                parent:
+                  reference: Level2
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_friends_with_nicknames(self):
+        """Test that friends with nicknames are properly registered"""
+        yaml = """
+        - object: Company
+          nickname: MainCompany
+          fields:
+            Name: ACME Corp
+          friends:
+          - object: Employee
+            nickname: CEO
+            fields:
+              Name: John Doe
+              CompanyId:
+                reference: MainCompany
+            friends:
+            - object: Task
+              fields:
+                AssignedTo:
+                  reference: CEO
+                Company:
+                  reference: MainCompany
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+
+class TestSelfReferenceValidation:
+    """Test that self-references in random_reference are caught"""
+
+    def test_random_reference_self_reference_error(self):
+        """Test that an object cannot random_reference itself"""
+        yaml = """
+        - object: Contact
+          count: 10
+          fields:
+            LastName:
+              fake: LastName
+            ReportsToId:
+              random_reference: Contact
+        """
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(StringIO(yaml), validate_only=True)
+
+        error_messages = [e.message for e in exc_info.value.validation_result.errors]
+        assert any(
+            "Cannot reference object" in msg
+            and "Contact" in msg
+            and "from within its own fields" in msg
+            for msg in error_messages
+        )
+
+
+class TestMockThisKeyword:
+    """Test suite for 'this' keyword validation and MockThis error messages"""
+
+    def test_this_keyword_success_simple_field_access(self):
+        """Test that 'this.id' works correctly"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Account
+          fields:
+            Name: Test Account ${{this.id}}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_this_keyword_success_referencing_previous_field(self):
+        """Test that 'this' can reference fields defined earlier in the same object"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Character
+          fields:
+            Constitution:
+              random_number:
+                min: 5
+                max: 15
+            Hit_Points: ${{10 + this.Constitution}}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_this_keyword_success_multiple_field_references(self):
+        """Test that 'this' can reference multiple fields"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Product
+          fields:
+            Price:
+              random_number:
+                min: 10
+                max: 100
+            Quantity:
+              random_number:
+                min: 1
+                max: 10
+            Total: ${{this.Price * this.Quantity}}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_this_keyword_error_nonexistent_field(self):
+        """Test that referencing a non-existent field via 'this' produces user-friendly error"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: TestObj
+          fields:
+            Name: Test
+            BadRef: ${{this.nonexistent_field}}
+        """
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(StringIO(yaml), validate_only=True)
+
+        # Check that error message is user-friendly (no MockThis class name)
+        error_messages = [e.message for e in exc_info.value.validation_result.errors]
+        assert any("nonexistent_field" in msg for msg in error_messages)
+        full_error_str = str(exc_info.value)
+        assert "Object has no attribute 'nonexistent_field'" in full_error_str
+
+    def test_this_keyword_forward_reference_error(self):
+        """Test that 'this' cannot reference fields defined later (forward reference error)
+
+        This matches runtime behavior where fields are only available after they've been
+        evaluated, so referencing a field defined later in the same object fails.
+        """
+        yaml = """
+        - snowfakery_version: 3
+        - object: TestObj
+          fields:
+            EarlyField: ${{this.LaterField}}
+            LaterField: Some Value
+        """
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(StringIO(yaml), validate_only=True)
+
+        # Check that error message mentions forward reference / defined later
+        error_messages = [e.message for e in exc_info.value.validation_result.errors]
+        assert any("LaterField" in msg for msg in error_messages)
+
+    def test_mock_object_row_error_message_is_user_friendly(self):
+        """Test that MockObjectRow errors are also user-friendly"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Account
+          fields:
+            Name: Test Account
+
+        - object: Contact
+          fields:
+            BadRef: ${{Account.nonexistent_field}}
+        """
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(StringIO(yaml), validate_only=True)
+
+        # Check that error message is user-friendly (no MockObjectRow class name)
+        full_error_str = str(exc_info.value)
+        assert (
+            "MockObjectRow" not in full_error_str
+            or "Object has no attribute" in full_error_str
+        )
+
+    def test_this_with_child_index(self):
+        """Test that this._child_index is accessible (built-in attribute)"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Item
+          count: 3
+          fields:
+            Index: ${{child_index}}
+            Name: Item ${{this.id}}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()

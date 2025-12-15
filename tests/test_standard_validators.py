@@ -117,6 +117,52 @@ class TestValidateRandomNumber:
         assert len(context.warnings) >= 1
         assert any("unknown" in warn.message.lower() for warn in context.warnings)
 
+    def test_positional_args_valid(self):
+        """Test random_number(1, 10) with positional args"""
+        context = ValidationContext()
+        # Pass a list to StructuredValue for positional args
+        sv = StructuredValue("random_number", [1, 10], "test.yml", 10)
+
+        result = StandardFuncs.Validators.validate_random_number(sv, context)
+
+        assert len(context.errors) == 0
+        assert len(context.warnings) == 0
+        assert result == 2  # min + 1
+
+    def test_positional_args_with_step(self):
+        """Test random_number(1, 10, 2) with positional args including step"""
+        context = ValidationContext()
+        sv = StructuredValue("random_number", [1, 10, 2], "test.yml", 10)
+
+        result = StandardFuncs.Validators.validate_random_number(sv, context)
+
+        assert len(context.errors) == 0
+        assert len(context.warnings) == 0
+        assert result == 2  # min + 1
+
+    def test_positional_min_greater_than_max(self):
+        """Test random_number(100, 50) fails validation"""
+        context = ValidationContext()
+        sv = StructuredValue("random_number", [100, 50], "test.yml", 10)
+
+        StandardFuncs.Validators.validate_random_number(sv, context)
+
+        assert len(context.errors) >= 1
+        assert any(
+            "min" in err.message.lower() and "max" in err.message.lower()
+            for err in context.errors
+        )
+
+    def test_single_positional_arg_missing_max(self):
+        """Test random_number(1) fails - missing max"""
+        context = ValidationContext()
+        sv = StructuredValue("random_number", [1], "test.yml", 10)
+
+        StandardFuncs.Validators.validate_random_number(sv, context)
+
+        assert len(context.errors) == 1
+        assert "max" in context.errors[0].message.lower()
+
 
 class TestValidateReference:
     """Test validate_reference validator"""
@@ -401,7 +447,7 @@ class TestValidateRandomReference:
 
     def test_valid_random_reference(self):
         context = ValidationContext()
-        context.all_objects["Account"] = "something"
+        context.available_objects["Account"] = "something"
         sv = StructuredValue("random_reference", ["Account"], "test.yml", 10)
 
         StandardFuncs.Validators.validate_random_reference(sv, context)
@@ -428,7 +474,7 @@ class TestValidateRandomReference:
 
     def test_invalid_scope(self):
         context = ValidationContext()
-        context.all_objects["Account"] = "something"
+        context.available_objects["Account"] = "something"
         sv = StructuredValue(
             "random_reference", {"scope": "invalid-scope"}, "test.yml", 10
         )
@@ -442,7 +488,7 @@ class TestValidateRandomReference:
     def test_unknown_object_with_suggestion(self):
         """Test unknown object with fuzzy match suggestion"""
         context = ValidationContext()
-        context.all_objects["Account"] = "something"
+        context.available_objects["Account"] = "something"
         # Use similar name to trigger fuzzy match
         sv = StructuredValue("random_reference", ["Acount"], "test.yml", 10)
 
@@ -455,7 +501,7 @@ class TestValidateRandomReference:
     def test_non_boolean_unique(self):
         """Test that non-boolean unique parameter is an error"""
         context = ValidationContext()
-        context.all_objects["Account"] = "something"
+        context.available_objects["Account"] = "something"
         sv = StructuredValue(
             "random_reference",
             {"to": "Account", "unique": "not-a-boolean"},
@@ -471,7 +517,7 @@ class TestValidateRandomReference:
     def test_unknown_parent_object(self):
         """Test unknown parent object validation"""
         context = ValidationContext()
-        context.all_objects["Account"] = "something"
+        context.available_objects["Account"] = "something"
         sv = StructuredValue(
             "random_reference",
             {"to": "Account", "parent": "UnknownParent", "unique": True},
@@ -487,8 +533,8 @@ class TestValidateRandomReference:
     def test_unknown_parent_with_suggestion(self):
         """Test unknown parent object with fuzzy match suggestion"""
         context = ValidationContext()
-        context.all_objects["Account"] = "something"
-        context.all_objects["Contact"] = "something"
+        context.available_objects["Account"] = "something"
+        context.available_objects["Contact"] = "something"
         # Use similar name to trigger fuzzy match
         sv = StructuredValue(
             "random_reference",
@@ -506,8 +552,8 @@ class TestValidateRandomReference:
     def test_parent_without_unique_warning(self):
         """Test warning when parent is used without unique=true"""
         context = ValidationContext()
-        context.all_objects["Account"] = "something"
-        context.all_objects["Contact"] = "something"
+        context.available_objects["Account"] = "something"
+        context.available_objects["Contact"] = "something"
         sv = StructuredValue(
             "random_reference",
             {"to": "Account", "parent": "Contact", "unique": False},

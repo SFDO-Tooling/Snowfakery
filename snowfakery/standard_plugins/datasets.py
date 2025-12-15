@@ -206,8 +206,18 @@ class DatasetBase:
 
 
 class FileDataset(DatasetBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._iterators = []  # Track iterators for cleanup
+
     def close(self):
-        pass
+        # Close all iterators to release file handles
+        for iterator in self._iterators:
+            try:
+                iterator.close()
+            except Exception:
+                pass
+        self._iterators.clear()
 
     def _load_dataset(self, iteration_mode, rootpath, kwargs):
         dataset = kwargs.get("dataset")
@@ -216,7 +226,9 @@ class FileDataset(DatasetBase):
 
         with chdir(rootpath):
             if "://" in dataset:
-                return sql_dataset(dataset, tablename, iteration_mode, repeat)
+                iterator = sql_dataset(dataset, tablename, iteration_mode, repeat)
+                self._iterators.append(iterator)
+                return iterator
             else:
                 filename = Path(dataset)
 
@@ -229,9 +241,15 @@ class FileDataset(DatasetBase):
                     )
 
                 if iteration_mode == "linear":
-                    return CSVDatasetLinearIterator(filename, repeat)
+                    iterator = CSVDatasetLinearIterator(filename, repeat)
                 elif iteration_mode == "shuffle":
-                    return CSVDatasetRandomPermutationIterator(filename, repeat)
+                    iterator = CSVDatasetRandomPermutationIterator(filename, repeat)
+                else:
+                    iterator = None
+
+                if iterator:
+                    self._iterators.append(iterator)
+                return iterator
 
 
 class DatasetPluginBase(SnowfakeryPlugin):

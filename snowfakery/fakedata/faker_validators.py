@@ -342,19 +342,31 @@ class FakerValidators:
         # Return a method that validates parameters and executes when called
         def validated_faker_method(*call_args, **call_kwargs):
             """Execute Faker method with parameter validation."""
+            # Resolve parameters before validation and execution
+            resolved_args = []
+            for arg in call_args:
+                resolved = resolve_value(arg, context)
+                # Use resolved value if available, otherwise use original
+                resolved_args.append(resolved if resolved is not None else arg)
+
+            resolved_kwargs = {}
+            for key, value in call_kwargs.items():
+                resolved = resolve_value(value, context)
+                resolved_kwargs[key] = resolved if resolved is not None else value
+
             # Validate parameters when method is called
-            if call_args or call_kwargs:
+            if resolved_args or resolved_kwargs:
                 error_count_before = len(context.errors)
                 validator.validate_provider_call(
-                    resolved_name, call_args, call_kwargs, context
+                    resolved_name, resolved_args, resolved_kwargs, context
                 )
                 if len(context.errors) > error_count_before:
                     return f"<fake_{provider_name}>"
 
-            # Execute Faker method
+            # Execute Faker method with RESOLVED parameters
             try:
                 method = getattr(context.faker_instance, resolved_name)
-                return method(*call_args, **call_kwargs)
+                return method(*resolved_args, **resolved_kwargs)
             except Exception as e:
                 context.add_error(
                     f"fake.{resolved_name}: Execution error: {str(e)}",

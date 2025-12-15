@@ -8,6 +8,7 @@ import re
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from dateutil.relativedelta import relativedelta
 from faker import Faker
 import jinja2
 from jinja2 import nativetypes
@@ -31,6 +32,7 @@ from snowfakery.template_funcs import StandardFuncs
 from snowfakery.fakedata.faker_validators import FakerValidators
 from snowfakery.fakedata.fake_data_generator import FakeNames
 from snowfakery.utils.template_utils import StringGenerator
+from snowfakery.object_rows import ObjectReference
 
 
 class SandboxedNativeEnvironment(SandboxedEnvironment, nativetypes.NativeEnvironment):
@@ -285,6 +287,12 @@ class ValidationContext:
         namespace["now"] = datetime.now(timezone.utc)
         namespace["template"] = self.current_template  # Current statement
 
+        # Add 'this' - mock object representing current object being created
+        if self.current_template and isinstance(self.current_template, ObjectTemplate):
+            namespace["this"] = self._create_this_mock()
+        else:
+            namespace["this"] = None
+
         # 2. User variables (with mock values)
         for var_name in self.available_variables.keys():
             # Skip variables currently being evaluated to prevent recursion
@@ -302,6 +310,28 @@ class ValidationContext:
             namespace[func_name] = self._create_validation_function(
                 func_name, validator
             )
+
+        # 4.5. Constants from StandardFuncs (NULL, relativedelta, etc.)
+        namespace["NULL"] = None
+        namespace["null"] = None
+        namespace["Null"] = None
+        namespace["relativedelta"] = relativedelta
+
+        # 4.6. Python builtins (available in Jinja at runtime)
+        namespace["int"] = int
+        namespace["str"] = str
+        namespace["float"] = float
+        namespace["bool"] = bool
+        namespace["len"] = len
+        namespace["list"] = list
+        namespace["dict"] = dict
+        namespace["set"] = set
+        namespace["tuple"] = tuple
+        namespace["min"] = min
+        namespace["max"] = max
+        namespace["sum"] = sum
+        namespace["abs"] = abs
+        namespace["round"] = round
 
         # 5. Plugins (with validation wrappers)
         for plugin_name, plugin_instance in self.interpreter.plugin_instances.items():
@@ -385,6 +415,14 @@ class ValidationContext:
                                 resolved = None
 
                         if resolved is not None:
+                            if isinstance(resolved, ObjectReference):
+                                ref_obj_name = resolved._tablename
+                                ref_obj = self.resolve_object(
+                                    ref_obj_name, allow_forward_ref=False
+                                )
+                                if ref_obj:
+                                    resolved = self._create_mock_object(ref_obj_name)
+
                             self._variable_cache[var_name] = resolved
                             return resolved
 
@@ -405,21 +443,29 @@ class ValidationContext:
         Returns:
             MockObjectRow instance with field validation
         """
-        # Get the actual ObjectTemplate
-        obj_template = self.available_objects.get(name) or self.available_nicknames.get(
-            name
-        )
+        is_this = name == "this"
+        if is_this:
+            obj_template = self.current_template
+        else:
+            obj_template = self.available_objects.get(
+                name
+            ) or self.available_nicknames.get(name)
+
+        context = self
 
         class MockObjectRow:
-            def __init__(self, template, context):
+            """Mock object that validates field access during validation."""
+
+            def __init__(self, template, obj_name):
                 self.id = 1
+                self._child_index = 0
                 self._template = template
-                self._name = name
-                self._context = context
+                self._name = obj_name
+                self._is_this = obj_name == "this"
 
                 # Extract actual field names and definitions from template
                 if template and hasattr(template, "fields"):
-                    self._field_names = {
+                    self._all_field_names = {
                         f.name for f in template.fields if isinstance(f, FieldFactory)
                     }
                     # Build field definition map
@@ -429,35 +475,47 @@ class ValidationContext:
                         if isinstance(f, FieldFactory)
                     }
                 else:
-                    self._field_names = set()
+                    self._all_field_names = set()
                     self._field_definitions = {}
 
             def __getattr__(self, attr):
-                # Validate field exists
                 if attr.startswith("_"):
                     raise AttributeError(f"'{attr}' not found")
 
-                # If we have field information, validate the attribute exists
-                if self._template and hasattr(self._template, "fields"):
-                    if attr not in self._field_names:
-                        raise AttributeError(
-                            f"Object '{self._name}' has no field '{attr}'. "
-                            f"Available fields: {', '.join(sorted(self._field_names)) if self._field_names else 'none'}"
-                        )
+                # For 'this': only fields defined so far are accessible
+                # For object references: all fields of that object are accessible
+                if self._is_this:
+                    accessible_fields = set(context.current_object_fields.keys())
+                else:
+                    accessible_fields = self._all_field_names
+
+                # Validate the attribute exists in accessible fields
+                if attr not in accessible_fields:
+                    display_name = (
+                        "'this' object" if self._is_this else f"Object '{self._name}'"
+                    )
+                    raise AttributeError(
+                        f"{display_name} has no field '{attr}'. "
+                        f"Available fields: {', '.join(sorted(accessible_fields)) if accessible_fields else 'none'}"
+                    )
 
                 # Try to resolve the field value
                 if attr in self._field_definitions:
                     from snowfakery.utils.validation_utils import resolve_value
 
                     field_def = self._field_definitions[attr]
-                    resolved = resolve_value(field_def, self._context)
+                    resolved = resolve_value(field_def, context)
                     if resolved is not None:
                         return resolved
 
                 # Fall back to mock value if we can't resolve
                 return f"<mock_{self._name}.{attr}>"
 
-        return MockObjectRow(obj_template, self)
+        return MockObjectRow(obj_template, name)
+
+    def _create_this_mock(self):
+        """Create mock 'this' object for the current object being created."""
+        return self._create_mock_object("this")
 
     def _create_validation_function(self, func_name, validator):
         """Create wrapper that validates when called from Jinja.
@@ -709,12 +767,11 @@ def validate_recipe(parse_result, interpreter, options) -> ValidationResult:
     context.interpreter = interpreter
 
     # Extract method names from faker by creating a Faker instance with the providers
-    # This replicates what FakeData does at runtime (see fake_data_generator.py:173-177)
-    faker_instance = Faker()
+    base_faker = Faker()
 
     # Add custom providers to the faker instance
     for provider in interpreter.faker_providers:
-        faker_instance.add_provider(provider)
+        base_faker.add_provider(provider)
 
     # Create a mock faker_context for FakeNames methods that need local_vars()
     class MockFakerContext:
@@ -724,23 +781,47 @@ def validate_recipe(parse_result, interpreter, options) -> ValidationResult:
             """Return empty dict (no previously generated fields during validation)."""
             return {}
 
-    fake_names = FakeNames(faker_instance, faker_context=MockFakerContext())
-    faker_instance.add_provider(fake_names)
+    fake_names = FakeNames(base_faker, faker_context=MockFakerContext())
+
+    # Create wrapper that combines base_faker and fake_names without circular reference
+    class CombinedFaker:
+        """Combines Faker and FakeNames, with FakeNames methods taking precedence."""
+
+        def __init__(self, faker_inst, fake_names_inst):
+            self._faker = faker_inst
+            self._fake_names = fake_names_inst
+
+        def __getattr__(self, name):
+            # Check FakeNames first (takes precedence, like runtime)
+            if hasattr(self._fake_names, name):
+                return getattr(self._fake_names, name)
+            # Fall back to faker
+            return getattr(self._faker, name)
+
+    faker_instance = CombinedFaker(base_faker, fake_names)
 
     # Store faker instance in context for execution
     context.faker_instance = faker_instance
 
     # Extract all callable methods from the faker instance
     faker_method_names = set()
-    for name in dir(faker_instance):
+    for name in dir(base_faker):
         if name.startswith("_"):
             continue
         try:
-            attr = getattr(faker_instance, name, None)
+            attr = getattr(base_faker, name, None)
             if callable(attr):
                 faker_method_names.add(name)
         except (TypeError, AttributeError):
-            # Skip attributes that raise errors (e.g., seed)
+            continue
+    for name in dir(fake_names):
+        if name.startswith("_"):
+            continue
+        try:
+            attr = getattr(fake_names, name, None)
+            if callable(attr):
+                faker_method_names.add(name)
+        except (TypeError, AttributeError):
             continue
     context.faker_providers = faker_method_names
 
@@ -753,36 +834,45 @@ def validate_recipe(parse_result, interpreter, options) -> ValidationResult:
         undefined=jinja2.StrictUndefined,
     )
 
-    # First pass: Pre-register ALL objects in all_objects/all_nicknames
-    # This allows forward references for reference/random_reference functions
-    for statement in parse_result.statements:
+    def register_all_objects(statement, visited=None):
+        """Recursively register all objects including friends"""
+        if visited is None:
+            visited = set()
+
         if isinstance(statement, ObjectTemplate):
+            # Prevent infinite loops by tracking visited objects
+            stmt_id = id(statement)
+            if stmt_id in visited:
+                return
+            visited.add(stmt_id)
+
             context.all_objects[statement.tablename] = statement
             if statement.nickname:
                 context.all_nicknames[statement.nickname] = statement
+            # Recursively register friends
+            for friend in statement.friends:
+                register_all_objects(friend, visited)
+
+    # First pass: Pre-register ALL objects in all_objects/all_nicknames
+    # This allows forward references for reference functions
+    for statement in parse_result.statements:
+        register_all_objects(statement)
 
     # Second pass: Sequential validation with progressive registration
-    # Variables and objects are registered as we encounter them (mimics runtime behavior)
     for statement in parse_result.statements:
-        # Register in sequential registries BEFORE validating
-        if isinstance(statement, ObjectTemplate):
-            # Register for Jinja access (${{ObjectName.field}})
-            context.available_objects[statement.tablename] = statement
-            if statement.nickname:
-                context.available_nicknames[statement.nickname] = statement
-
-        elif isinstance(statement, VariableDefinition):
-            # Register variable (order matters for variables)
-            context.available_variables[statement.varname] = statement
-
         # Set current template for Jinja context
         context.current_template = statement
 
-        # Validate statement (can only see items defined before this point in sequential registries)
+        # Validate statement
         validate_statement(statement, context)
 
         # Clear current template
         context.current_template = None
+
+        # Register variables (ObjectTemplates are registered inside validate_statement)
+        if isinstance(statement, VariableDefinition):
+            # Register variable (order matters for variables)
+            context.available_variables[statement.varname] = statement
 
     return ValidationResult(context.errors, context.warnings)
 
@@ -822,10 +912,22 @@ def validate_statement(statement, context: ValidationContext):
                 # Register field so subsequent fields can reference it
                 context.current_object_fields[field.name] = field
 
+        # Register parent object AFTER validating fields but BEFORE validating friends
+        context.available_objects[statement.tablename] = statement
+        if statement.nickname:
+            context.available_nicknames[statement.nickname] = statement
+
         # Recursively validate friends (nested ObjectTemplates)
         for friend in statement.friends:
             if isinstance(friend, ObjectTemplate):
+                # Validate the friend
                 validate_statement(friend, context)
+
+                # Register friend in sequential registries AFTER validating
+                # This ensures a friend can't random_reference itself on first instance
+                context.available_objects[friend.tablename] = friend
+                if friend.nickname:
+                    context.available_nicknames[friend.nickname] = friend
 
     elif isinstance(statement, VariableDefinition):
         validate_field_definition(statement.expression, context)
@@ -1001,18 +1103,38 @@ def validate_field_definition(field_def, context: ValidationContext):
                         getattr(field_def, "line_num", None),
                     )
             else:
-                # Unknown function - add error with suggestion
-                suggestion = get_fuzzy_match(
-                    func_name, list(context.available_functions.keys())
-                )
-                msg = f"Unknown function '{func_name}'"
-                if suggestion:
-                    msg += f". Did you mean '{suggestion}'?"
-                context.add_error(
-                    msg,
-                    getattr(field_def, "filename", None),
-                    getattr(field_def, "line_num", None),
-                )
+                # Check if it's a plugin function without a validator
+                if "." in func_name:
+                    plugin_name, method_name = func_name.split(".", 1)
+                    if plugin_name in context.interpreter.plugin_instances:
+                        # Plugin exists but function has no validator - return generic mock
+                        mock_result = f"<result_of_{func_name}>"
+                    else:
+                        # Plugin doesn't exist - report error
+                        suggestion = get_fuzzy_match(
+                            func_name, list(context.available_functions.keys())
+                        )
+                        msg = f"Unknown function '{func_name}'"
+                        if suggestion:
+                            msg += f". Did you mean '{suggestion}'?"
+                        context.add_error(
+                            msg,
+                            getattr(field_def, "filename", None),
+                            getattr(field_def, "line_num", None),
+                        )
+                else:
+                    # Unknown function - add error with suggestion
+                    suggestion = get_fuzzy_match(
+                        func_name, list(context.available_functions.keys())
+                    )
+                    msg = f"Unknown function '{func_name}'"
+                    if suggestion:
+                        msg += f". Did you mean '{suggestion}'?"
+                    context.add_error(
+                        msg,
+                        getattr(field_def, "filename", None),
+                        getattr(field_def, "line_num", None),
+                    )
         finally:
             # STEP 4: Restore original args/kwargs
             field_def.args = original_args
