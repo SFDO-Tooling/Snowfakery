@@ -988,6 +988,47 @@ To include a file by a relative path:
 - include_file: child.yml
 ```
 
+## Recipe Validation
+
+Snowfakery can validate recipes before generating data, catching errors like typos, invalid parameters, and undefined variables all at once instead of discovering them one at a time during execution.
+
+### Validation Modes
+
+| Mode | Flag | Behavior |
+|------|------|----------|
+| **Default** | (none) | No validation; generate data immediately |
+| **Strict** | `--strict-mode` | Validate first, then generate if no errors |
+| **Validate Only** | `--validate-only` | Validate and exit; no data generation |
+
+### Example
+
+```s
+$ snowfakery recipe.yml --strict-mode
+
+Validating recipe...
+
+✓ Validation passed
+
+Generating data...
+Account(id=1, Name=Acme Corp)
+```
+
+When errors are found, validation reports them all with precise file locations:
+
+```s
+$ snowfakery recipe.yml --strict-mode
+
+Validating recipe...
+
+Validation Errors:
+  1. random_number: 'min' (100) must be <= 'max' (50)
+     at recipe.yml:12
+  2. Unknown Faker provider 'frist_name'. Did you mean 'first_name'?
+     at recipe.yml:15
+```
+
+To add validators to custom plugins, see [Adding Validators to Plugins](extending.md#adding-validators-to-plugins).
+
 ## Formulas
 
 To insert data from one field into into another, use a formula.
@@ -1370,6 +1411,12 @@ Options:
 
   --load-declarations FILE        Declarations to mix into the generated
                                   mapping file
+
+  --strict-mode                   Validate the recipe before generating data.
+                                  Stops if validation errors are found.
+
+  --validate-only                 Validate the recipe without generating any
+                                  data.
 
   --version                       Show the version and exit.
   --help                          Show this message and exit.
@@ -1805,10 +1852,25 @@ generate_data(
     yaml_file="examples/company.yml",
     option=[("A", "B")],
     target_number=(20, "Employee"),
+    strict_mode=True,        # validate before generating
     debug_internals=True,
     output_format="json",
     output_file=outfile,
 )
+```
+
+To validate without generating data, use `validate_only=True`:
+
+```python
+from snowfakery import generate_data
+
+result = generate_data(
+    yaml_file="examples/company.yml",
+    validate_only=True,
+)
+
+if result.has_errors():
+    print(result.get_summary())
 ```
 
 To learn more about using Snowfakery in Python, see [Embedding Snowfakery into Python Applications](./embedding.md)
