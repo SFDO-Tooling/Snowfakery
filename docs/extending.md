@@ -568,3 +568,155 @@ Note the relative paths between these two files.
 
 `examples/use_custom_provider.yml` refers to `examples/plugins/tla_provider.py` as `tla_provider.Provider` because the `plugins` folder is in the search path
 described in [How Snowfakery Finds Plugins](#how-snowfakery-finds-plugins).
+
+## Adding Validators to Plugins
+
+When creating custom plugins, you can add parse-time validators that catch errors before runtime. This allows Snowfakery's `--strict-mode` and `--validate-only` flags to validate your plugin functions.
+
+Validators live in a nested `Validators` class alongside the `Functions` class. The validator method name follows the pattern `validate_<function_name>`.
+
+### Example: Validator for DoublingPlugin
+
+Here's the DoublingPlugin from earlier, now with a validator:
+
+```python
+from snowfakery import SnowfakeryPlugin
+
+class DoublingPlugin(SnowfakeryPlugin):
+    class Functions:
+        def double(self, value):
+            """Double a value at runtime."""
+            return value * 2
+    
+    class Validators:
+        @staticmethod
+        def validate_double(sv, context):
+            """Validate double() at parse-time.
+            
+            Args:
+                sv: StructuredValue containing args and kwargs from the recipe
+                context: ValidationContext for error reporting and value resolution
+            
+            Returns:
+                A mock value for continued validation of dependent expressions
+            """
+            args = getattr(sv, "args", [])
+            
+            # Check required argument
+            if not args:
+                context.add_error(
+                    "double: Missing required argument",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+                return 0  # Return mock value so validation can continue
+            
+            # Return an intelligent mock (doubled value if literal)
+            value = args[0]
+            if isinstance(value, (int, float)):
+                return value * 2
+            return 0  # Fallback mock for non-literal values
+```
+
+Now when users make mistakes, they get clear error messages. For example, if a user forgets the required argument:
+
+```yaml
+Value:
+  DoublingPlugin.double:
+```
+
+```s
+$ snowfakery recipe.yml --validate-only
+
+Validation Errors:
+  1. double: Missing required argument
+     at recipe.yml:5
+```
+
+### Validator Method Signature
+
+Every validator follows this pattern:
+
+```python
+@staticmethod
+def validate_<function_name>(sv, context):
+    """
+    Args:
+        sv: StructuredValue with:
+            - sv.args: List of positional arguments
+            - sv.kwargs: Dict of keyword arguments  
+            - sv.filename: Source file path
+            - sv.line_num: Line number in source file
+        
+        context: ValidationContext with:
+            - context.add_error(message, filename, line_num): Report an error
+            - context.add_warning(message, filename, line_num): Report a warning
+            - context.available_variables: Dict of defined variables
+            - context.available_objects: Dict of defined objects
+    
+    Returns:
+        A mock value representing what the function would return.
+        This allows validation to continue for expressions that use this result.
+    """
+    pass
+```
+
+### Resolving Values
+
+Arguments may be literals, Jinja expressions, or other StructuredValues. Use `resolve_value()` to get the actual value when possible:
+
+```python
+from snowfakery.utils.validation_utils import resolve_value
+
+class MyPlugin(SnowfakeryPlugin):
+    class Validators:
+        @staticmethod
+        def validate_my_function(sv, context):
+            args = getattr(sv, "args", [])
+            kwargs = sv.kwargs if hasattr(sv, "kwargs") else {}
+            
+            # Resolve the first argument
+            min_val = resolve_value(args[0] if args else kwargs.get("min"), context)
+            
+            # min_val is now a literal (int, str, etc.) or None if unresolvable
+            if min_val is not None and not isinstance(min_val, int):
+                context.add_error(
+                    "my_function: 'min' must be an integer",
+                    getattr(sv, "filename", None),
+                    getattr(sv, "line_num", None),
+                )
+```
+
+### Best Practices
+
+1. **Always return a mock value** - Even after reporting errors, return a reasonable mock so validation continues for dependent expressions.
+
+2. **Use `add_error()` for definite problems** - Missing required parameters, invalid types, logical impossibilities.
+
+3. **Use `add_warning()` for potential issues** - Unknown optional parameters, values that might work at runtime.
+
+4. **Include helpful context in messages** - Show the actual values, suggest corrections.
+
+Include helpful context in error messages:
+
+```python
+context.add_error(
+    f"my_function: 'min' ({min_val}) must be <= 'max' ({max_val})",
+    sv.filename,
+    sv.line_num,
+)
+```
+
+Add fuzzy match suggestions for typos:
+
+```python
+from snowfakery.utils.validation_utils import get_fuzzy_match
+
+suggestion = get_fuzzy_match(name, valid_names)
+msg = f"Unknown option '{name}'"
+if suggestion:
+    msg += f". Did you mean '{suggestion}'?"
+context.add_error(msg, sv.filename, sv.line_num)
+```
+
+For more examples, see the validators in `snowfakery/template_funcs.py` and the plugin files in `snowfakery/standard_plugins/`.
