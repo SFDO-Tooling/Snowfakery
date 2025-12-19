@@ -10,3 +10,7 @@ class SnowfakeryVersion(SnowfakeryPlugin):
     allowed_options = [
         PluginOption(plugin_options_version, int),
     ]
+
+    def custom_functions(self, *args, **kwargs):
+        """This plugin doesn't provide custom functions, only options."""
+        return type("EmptyFunctions", (), {})()

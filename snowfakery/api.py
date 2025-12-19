@@ -151,7 +151,9 @@ def generate_data(
     update_passthrough_fields: T.Sequence[
         str
     ] = (),  # pass through these fields from input to output
-) -> None:
+    strict_mode: bool = False,  # same as --strict-mode
+    validate_only: bool = False,  # same as --validate-only
+):
     stopping_criteria = stopping_criteria_from_target_number(target_number)
     dburls = dburls or ([dburl] if dburl else [])
     output_files = output_files or []
@@ -193,6 +195,8 @@ def generate_data(
             plugin_options=plugin_options,
             update_input_file=open_update_input_file,
             update_passthrough_fields=update_passthrough_fields,
+            strict_mode=strict_mode,
+            validate_only=validate_only,
         )
 
         if open_cci_mapping_file:
@@ -204,6 +208,8 @@ def generate_data(
             )
     if should_create_cci_record_type_tables:
         create_cci_record_type_tables(dburls[0])
+
+    return summary
 
 
 @contextmanager

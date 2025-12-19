@@ -527,3 +527,207 @@ class TestCLIOptionChecking:
             generate_cli.main(["--version"])
         captured = capsys.readouterr()
         assert "Error checking snowfakery version" in captured.out
+
+
+class TestCLIValidation:
+    """Test CLI validation flags"""
+
+    def test_cli_strict_mode_with_valid_recipe(self):
+        """Test --strict-mode flag with valid recipe"""
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
+
+        with TemporaryDirectory() as t:
+            recipe_path = Path(t) / "recipe.yml"
+            recipe_path.write_text(
+                """
+- snowfakery_version: 3
+- object: Account
+  count: 2
+  fields:
+    Name: Test Account
+    Score:
+      random_number:
+        min: 1
+        max: 10
+"""
+            )
+            output_path = Path(t) / "output.json"
+
+            # Should execute without errors (exits with code 0)
+            with pytest.raises(SystemExit) as exc_info:
+                generate_cli.main(
+                    [
+                        str(recipe_path),
+                        "--output-format",
+                        "json",
+                        "--output-file",
+                        str(output_path),
+                        "--strict-mode",
+                    ]
+                )
+
+            assert exc_info.value.code == 0
+            assert output_path.exists()
+
+    def test_cli_strict_mode_catches_errors(self, capsys):
+        """Test --strict-mode catches validation errors"""
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
+
+        with TemporaryDirectory() as t:
+            recipe_path = Path(t) / "bad_recipe.yml"
+            recipe_path.write_text(
+                """
+- snowfakery_version: 3
+- object: Account
+  fields:
+    Score:
+      random_number:
+        min: 100
+        max: 50
+"""
+            )
+
+            with pytest.raises(SystemExit):
+                generate_cli.main([str(recipe_path), "--strict-mode"])
+
+            captured = capsys.readouterr()
+            # Should show validation error
+            assert "error" in captured.err.lower() or "min" in captured.err.lower()
+
+    def test_cli_validate_only_flag(self, capsys):
+        """Test --validate-only flag"""
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
+
+        with TemporaryDirectory() as t:
+            recipe_path = Path(t) / "recipe.yml"
+            recipe_path.write_text(
+                """
+- snowfakery_version: 3
+- object: Account
+  fields:
+    Name: Test Account
+"""
+            )
+
+            # Should validate without generating data (exits with code 0)
+            with pytest.raises(SystemExit) as exc_info:
+                generate_cli.main([str(recipe_path), "--validate-only"])
+
+            assert exc_info.value.code == 0
+            captured = capsys.readouterr()
+            # Should show validation passed message
+            assert (
+                "validation" in captured.out.lower() or "passed" in captured.out.lower()
+            )
+
+    def test_cli_validate_only_with_errors(self, capsys):
+        """Test --validate-only detects errors"""
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
+
+        with TemporaryDirectory() as t:
+            recipe_path = Path(t) / "bad_recipe.yml"
+            recipe_path.write_text(
+                """
+- snowfakery_version: 3
+- object: Account
+  fields:
+    Value:
+      unknown_function_xyz:
+        param: value
+"""
+            )
+
+            with pytest.raises(SystemExit):
+                generate_cli.main([str(recipe_path), "--validate-only"])
+
+            captured = capsys.readouterr()
+            # Should show unknown function error
+            assert "unknown" in captured.err.lower() or "error" in captured.err.lower()
+
+    def test_cli_default_no_validation(self):
+        """Test default CLI behavior (no validation)"""
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
+
+        with TemporaryDirectory() as t:
+            recipe_path = Path(t) / "recipe.yml"
+            recipe_path.write_text(
+                """
+- snowfakery_version: 3
+- object: Account
+  count: 1
+  fields:
+    Name: Test
+"""
+            )
+            output_path = Path(t) / "output.json"
+
+            # Should execute normally without validation (exits with code 0)
+            with pytest.raises(SystemExit) as exc_info:
+                generate_cli.main(
+                    [
+                        str(recipe_path),
+                        "--output-format",
+                        "json",
+                        "--output-file",
+                        str(output_path),
+                    ]
+                )
+
+            assert exc_info.value.code == 0
+            assert output_path.exists()
+
+    def test_cli_strict_mode_and_validate_only_together(self):
+        """Test that --strict-mode and --validate-only can work together"""
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
+
+        with TemporaryDirectory() as t:
+            recipe_path = Path(t) / "recipe.yml"
+            recipe_path.write_text(
+                """
+- snowfakery_version: 3
+- object: Account
+  fields:
+    Name: Test
+"""
+            )
+
+            # Both flags should work together (exits with code 0)
+            with pytest.raises(SystemExit) as exc_info:
+                generate_cli.main(
+                    [str(recipe_path), "--strict-mode", "--validate-only"]
+                )
+
+            assert exc_info.value.code == 0
+
+    def test_cli_validation_error_format(self, capsys):
+        """Test that validation errors are formatted properly in CLI"""
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
+
+        with TemporaryDirectory() as t:
+            recipe_path = Path(t) / "bad_recipe.yml"
+            recipe_path.write_text(
+                """
+- snowfakery_version: 3
+- object: Account
+  fields:
+    Score:
+      random_number:
+        min: 100
+        max: 50
+"""
+            )
+
+            with pytest.raises(SystemExit):
+                generate_cli.main([str(recipe_path), "--strict-mode"])
+
+            captured = capsys.readouterr()
+            # Error output should contain error message
+            error_output = captured.err.lower()
+            assert "error" in error_output or "validation" in error_output

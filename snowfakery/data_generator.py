@@ -4,6 +4,7 @@ import typing as T
 import functools
 
 import yaml
+import click
 from faker.providers import BaseProvider as FakerProvider
 from click.utils import LazyFile
 
@@ -16,11 +17,13 @@ from .data_generator_runtime import (
     Globals,
     Interpreter,
 )
-from .data_gen_exceptions import DataGenError
+from .data_gen_exceptions import DataGenError, DataGenValidationError
 from .plugins import SnowfakeryPlugin, PluginOption
 
 from .utils.yaml_utils import SnowfakeryDumper, hydrate
 from snowfakery.standard_plugins.UniqueId import UniqueId
+
+from .recipe_validator import ValidationResult, validate_recipe
 
 # This tool is essentially a three stage interpreter.
 #
@@ -131,7 +134,9 @@ def generate(
     plugin_options: dict = None,
     update_input_file: OpenFileLike = None,
     update_passthrough_fields: T.Sequence[str] = (),
-) -> ExecutionSummary:
+    strict_mode: bool = False,
+    validate_only: bool = False,
+) -> Union[ExecutionSummary, ValidationResult]:
     """The main entry point to the package for Python applications."""
     from .api import SnowfakeryApplication
 
@@ -163,22 +168,16 @@ def generate(
     if extra_options:
         warnings.warn(f"Warning: unknown options: {extra_options}")
 
-    output_stream.create_or_validate_tables(parse_result.tables)
+    # Initialize parent_application early for validation messages
+    parent_application = parent_application or SnowfakeryApplication(stopping_criteria)
 
     continuation_data = (
         load_continuation_yaml(continuation_file) if continuation_file else None
     )
-
-    faker_providers, snowfakery_plugins = process_plugins(parse_result.plugins)
-
     globls = initialize_globals(continuation_data, parse_result.templates)
-
-    # for unit tests that call this function directly
-    # they should be updated to use generate_data instead
-    parent_application = parent_application or SnowfakeryApplication(stopping_criteria)
+    validation_result = None  # Initialize to satisfy linter
 
     try:
-        # now do the output
         with Interpreter(
             output_stream=output_stream,
             options=options,
@@ -189,6 +188,46 @@ def generate(
             globals=globls,
             continuing=bool(continuation_data),
         ) as interpreter:
+
+            # Validation phase (if requested)
+            if strict_mode or validate_only:
+                # Show validation start message
+                parent_application.echo("Validating recipe...")
+
+                validation_result = validate_recipe(parse_result, interpreter, options)
+
+                # Stop execution if errors found
+                if validation_result.has_errors():
+                    raise DataGenValidationError(validation_result)
+
+                # Display warnings with color (only if no errors)
+                if validation_result.has_warnings():
+                    parent_application.echo("\nWarnings:")
+                    for i, warning in enumerate(validation_result.warnings, 1):
+                        warning_msg = click.style(f"  {i}. {warning}", fg="yellow")
+                        parent_application.echo(warning_msg)
+
+                    # Success message with warnings
+                    success_msg = click.style(
+                        "✓ Validation passed with warnings", fg="green"
+                    )
+                    parent_application.echo(f"\n{success_msg}")
+                else:
+                    # Success message without warnings
+                    success_msg = click.style("✓ Validation passed", fg="green")
+                    parent_application.echo(f"\n{success_msg}")
+
+            # Early exit for validate-only mode (return ValidationResult directly)
+            if validate_only:
+                assert (
+                    validation_result is not None
+                )  # Should be set in validation block above
+                return validation_result
+
+            # Create/validate tables before execution (for both strict_mode and normal mode)
+            output_stream.create_or_validate_tables(parse_result.tables)
+
+            # Execute generation
             runtime_context = interpreter.execute()
 
     except DataGenError as e:
