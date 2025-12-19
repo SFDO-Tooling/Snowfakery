@@ -4,6 +4,10 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 4.2.0
+
+Add comprehensive validations for Snowfakery with flags `--validate-only` and `--strict-mode` (#1109)
+
 ## Snowfakery 4.1.0
 
 Upgrade the `pydantic` dependency from v1 to v2 (#1101)
