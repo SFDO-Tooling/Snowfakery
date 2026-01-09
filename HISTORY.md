@@ -4,6 +4,10 @@ In the beginning, programmers created the databases. Now the databases were form
 
 And so [Salesforce.org](http://salesforce.org/) said “Let there be data,” and there was Snowfakery. And it was good.
 
+## Snowfakery 4.2.1
+
+Fix validation to correctly handle `__` prefixed temporary variables in recipes (#1111)
+
 ## Snowfakery 4.2.0
 
 Add comprehensive validations for Snowfakery with flags `--validate-only` and `--strict-mode` (#1109)
