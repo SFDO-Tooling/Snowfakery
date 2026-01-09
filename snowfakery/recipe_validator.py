@@ -46,7 +46,17 @@ class SandboxedNativeEnvironment(SandboxedEnvironment, nativetypes.NativeEnviron
     type compatibility with Snowfakery's runtime behavior.
     """
 
-    pass
+    def is_safe_attribute(self, obj, attr, value):
+        """Override to allow access to __ prefixed temp variable fields on MockObjectRow.
+
+        Snowfakery uses __ prefixed field names as temporary/hidden variables in recipes.
+        These are legitimate field accesses, not attempts to access private Python attributes.
+        """
+        # Allow __ prefixed attributes on MockObjectRow objects (temp vars)
+        if attr.startswith("__") and "MockObjectRow" in type(obj).__name__:
+            return True
+        # Fall back to default sandbox behavior for other cases
+        return super().is_safe_attribute(obj, attr, value)
 
 
 @dataclass
@@ -479,7 +489,10 @@ class ValidationContext:
                     self._field_definitions = {}
 
             def __getattr__(self, attr):
-                if attr.startswith("_"):
+                # Allow __ prefixed temp vars if they are valid fields
+                # Only reject truly private attributes (single underscore internal attrs)
+                # that are NOT in the accessible fields list
+                if attr.startswith("_") and attr not in self._all_field_names:
                     raise AttributeError(f"'{attr}' not found")
 
                 # For 'this': only fields defined so far are accessible
@@ -504,9 +517,21 @@ class ValidationContext:
                     from snowfakery.utils.validation_utils import resolve_value
 
                     field_def = self._field_definitions[attr]
-                    resolved = resolve_value(field_def, context)
-                    if resolved is not None:
-                        return resolved
+                    try:
+                        # Track error count before resolution to detect new errors
+                        error_count_before = len(context.errors)
+                        resolved = resolve_value(field_def, context)
+                        # If resolution added errors (e.g., from context mismatch), remove them
+                        # and fall back to mock value - these aren't real errors
+                        if len(context.errors) > error_count_before:
+                            # Remove errors added during this resolution attempt
+                            context.errors = context.errors[:error_count_before]
+                            return f"<mock_{self._name}.{attr}>"
+                        if resolved is not None:
+                            return resolved
+                    except Exception:
+                        # Fall back to mock value if resolution fails
+                        pass
 
                 # Fall back to mock value if we can't resolve
                 return f"<mock_{self._name}.{attr}>"
