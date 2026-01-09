@@ -1743,6 +1743,181 @@ class TestNestedObjectRegistration:
         assert not result.has_errors()
 
 
+class TestDoubleUnderscoreTempVariables:
+    """Test suite for __ prefixed temp variable handling in validation.
+
+    Snowfakery supports temporary/hidden variables prefixed with __ (double underscore).
+    These should be validated correctly and accessible both within the same object
+    and via cross-object references.
+    """
+
+    def test_dunder_variable_within_same_object(self):
+        """Test that __ prefixed variables work within the same object"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: User
+          fields:
+            __gender_folder:
+              random_choice: [men, women]
+            FirstName: ${{ fake.FirstNameMale() if __gender_folder == 'men' else fake.FirstNameFemale() }}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_dunder_variable_cross_object_reference(self):
+        """Test that __ prefixed variables can be accessed via object reference"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: User
+          nickname: tech_user
+          fields:
+            __gender_folder:
+              random_choice: [men, women]
+            FirstName:
+              fake: FirstName
+
+        - object: ServiceResource
+          fields:
+            Name: ${{tech_user.FirstName}}
+            ProfilePicture: "https://example.com/${{tech_user.__gender_folder}}/photo.jpg"
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_multiple_dunder_variables(self):
+        """Test that multiple __ prefixed variables work together"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Item
+          fields:
+            __idx: ${{child_index}}
+            __multiplier: 10
+            ComputedValue: ${{ __idx * __multiplier }}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_dunder_variable_in_nested_friends(self):
+        """Test that __ prefixed variables work in nested friend objects"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Account
+          count: 2
+          nickname: parent_account
+          fields:
+            __region:
+              random_choice: [North, South, East, West]
+            Name: ${{__region}} Region Account
+          friends:
+          - object: Contact
+            nickname: account_contact
+            fields:
+              __department:
+                random_choice: [Sales, Engineering, Marketing]
+              FirstName:
+                fake: FirstName
+              Department: ${{__department}}
+            friends:
+            - object: Task
+              fields:
+                Subject: Task for ${{account_contact.FirstName}} in ${{account_contact.__department}}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_dunder_variable_with_integer_operations(self):
+        """Test that __ prefixed variables work with integer operations"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: WorkOrder
+          nickname: work_order
+          fields:
+            __wo_idx: ${{child_index}}
+            Subject: Work Order ${{__wo_idx}}
+          friends:
+          - object: ServiceAppointment
+            fields:
+              __start_hour: ${{ 9 + (int(work_order.__wo_idx) % 8) }}
+              ScheduledTime: "${{ '%02d' % __start_hour }}:00"
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_dunder_variable_conditional_logic(self):
+        """Test that __ prefixed variables work in conditional logic"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Record
+          fields:
+            __type_selector:
+              random_number:
+                min: 1
+                max: 3
+            Type: ${{ 'Premium' if __type_selector == 1 else ('Standard' if __type_selector == 2 else 'Basic') }}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_dunder_variable_not_accessible_before_definition(self):
+        """Test that __ prefixed variables are not accessible before they are defined"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Record
+          fields:
+            EarlyField: ${{__later_var}}
+            __later_var: some_value
+        """
+        with pytest.raises(DataGenValidationError) as exc_info:
+            generate(StringIO(yaml), validate_only=True)
+
+        # Should report undefined variable
+        assert "__later_var" in str(exc_info.value)
+
+    def test_dunder_variable_in_random_choice_context(self):
+        """Test __ prefixed variables with random_choice as commonly used"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Territory
+          fields:
+            __hub_name:
+              random_choice: ["Los Angeles", "San Francisco", "Seattle", "Denver"]
+            Name: ${{__hub_name}} Hub
+            City: ${{__hub_name}}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+    def test_dunder_variable_complex_nested_scenario(self):
+        """Test complex scenario with multiple levels of nesting and __ prefixed variables"""
+        yaml = """
+        - snowfakery_version: 3
+        - object: Company
+          nickname: company
+          count: 2
+          fields:
+            __company_type:
+              random_choice: [Tech, Finance, Healthcare]
+            Name: ${{__company_type}} Corp
+          friends:
+          - object: Department
+            nickname: dept
+            count: 3
+            fields:
+              __dept_code: ${{ 'D' + str(child_index + 1) }}
+              Code: ${{__dept_code}}
+              CompanyType: ${{company.__company_type}}
+            friends:
+            - object: Employee
+              count: 2
+              fields:
+                __emp_id: ${{ dept.__dept_code + '-' + str(child_index + 1) }}
+                EmployeeId: ${{__emp_id}}
+                DeptCode: ${{dept.Code}}
+        """
+        result = generate(StringIO(yaml), validate_only=True)
+        assert not result.has_errors()
+
+
 class TestMockThisKeyword:
     """Test suite for 'this' keyword validation and MockThis error messages"""
 
