@@ -338,7 +338,7 @@ class Interpreter:
         self.instance_states = {}
         self.filter_row_values = self.filter_row_values_normal
         snowfakery_version = self.options.get(
-            "snowfakery.standard_plugins.SnowfakeryVersion.snowfakery_version", 2
+            "snowfakery.standard_plugins.SnowfakeryVersion.snowfakery_version", 3
         )
         assert snowfakery_version in (2, 3)
         self.native_types = snowfakery_version == 3
