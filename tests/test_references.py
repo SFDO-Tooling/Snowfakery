@@ -870,6 +870,7 @@ class TestRandomReferencesNew:
     def test_random_reference__weird_type_properties(self, generated_rows):
         # unusual types are not serialized and won't be returned
         yaml = """
+              - snowfakery_version: 2
               - plugin: tests.test_custom_plugins_and_providers.EvalPlugin
               - object: Parent
                 nickname: parent_with_counter
@@ -966,6 +967,7 @@ class TestRandomReferencesNew:
         # There is a risk that some weird types will not be serialized
         # correctly.
         yaml = """
+      - snowfakery_version: 2
       - object: A
         count: 3
         nickname: AA

@@ -7,6 +7,7 @@ from snowfakery import data_gen_exceptions as exc
 class TestDates:
     def test_old_dates_as_strings(self, generated_rows):
         yaml = """
+        - snowfakery_version: 2
         - object: OBJ
           fields:
             basedate: ${{datetime(year=2000, month=1, day=1)}}

@@ -204,6 +204,7 @@ class TestTemplateFuncs:
 
     def test_parse_date_from_datetime_string(self, generated_rows):
         yaml = """
+        - snowfakery_version: 2
         - object : A
           fields:
             a: ${{date("2012-01-01T00:01")}}
@@ -213,6 +214,7 @@ class TestTemplateFuncs:
 
     def test_parse_date_from_date_string(self, generated_rows):
         yaml = """
+        - snowfakery_version: 2
         - object : A
           fields:
             a: ${{date("2012-01-01")}}
@@ -222,6 +224,7 @@ class TestTemplateFuncs:
 
     def test_date_from_datetime(self, generated_rows):
         yaml = """
+        - snowfakery_version: 2
         - object : A
           fields:
             a: ${{date(datetime(year=2012, month=1, day=1))}}
@@ -231,6 +234,7 @@ class TestTemplateFuncs:
 
     def test_now_variable(self, generated_rows):
         yaml = """
+        - snowfakery_version: 2
         - object : A
           fields:
             a: ${{now}}
@@ -244,6 +248,7 @@ class TestTemplateFuncs:
     def test_now_calls_datetime_now(self, datetime):
         now = datetime.now = mock.Mock()
         yaml = """
+        - snowfakery_version: 2
         - object : A
           fields:
             a: ${{now}}

@@ -76,7 +76,7 @@ class TestFaker:
         """
         generate(StringIO(yaml), {}, None)
         date = row_values(generated_rows, 0, "date")
-        assert type(date) == str, generated_rows.mock_calls
+        assert isinstance(date, str), generated_rows.mock_calls
         assert len(date.split("-")) == 3, date
 
     def test_fake_two_params_nested(self, generated_rows):
@@ -530,6 +530,7 @@ class TestFaker:
     @mock.patch("faker.providers.internet.en_US.Provider.ascii_safe_email")
     def test_disable_matching(self, email, first_name, generated_rows):
         yaml = """
+            - snowfakery_version: 2
             - object: X
               fields:
                 FirstName:

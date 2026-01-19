@@ -44,6 +44,7 @@ class OutputCommonTests(ABC):
 
     def test_dates(self):
         yaml = """
+        - snowfakery_version: 2
         - object: foo
           fields:
             y2k: ${{date(year=2000, month=1, day=1)}}

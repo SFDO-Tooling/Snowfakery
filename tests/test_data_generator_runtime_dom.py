@@ -31,13 +31,19 @@ class FakeParseResult(ParseResult):
         self.random_references = []
 
 
-def standard_runtime():
+def standard_runtime(snowfakery_version=None):
+    options = {}
+    if snowfakery_version is not None:
+        options[
+            "snowfakery.standard_plugins.SnowfakeryVersion.snowfakery_version"
+        ] = snowfakery_version
     output_stream = DebugOutputStream()
     interpreter = Interpreter(
         output_stream=output_stream,
         parent_application=SnowfakeryApplication(),
         parse_result=FakeParseResult(),
         globals=Globals(),
+        options=options,
     )
     runtime_context = RuntimeContext(interpreter=interpreter)
     interpreter.current_context = runtime_context
@@ -150,15 +156,23 @@ class TestDataGeneratorRuntimeDom:
         repr(definition)
         f = FieldFactory("field", definition, "abc.yml", 10)
         repr(f)
-        x = f.generate_value(standard_runtime())
+        x = f.generate_value(standard_runtime(snowfakery_version=2))
         assert x == 15
 
-    def test_mixed_jinja_syntax(self):
+    def test_mixed_jinja_syntax__version_2(self):
         definition = SimpleValue("${{2+3}} <<5*3>>", "abc.yml", 10)
         repr(definition)
         f = FieldFactory("field", definition, "abc.yml", 10)
         repr(f)
-        x = f.generate_value(standard_runtime())
+        x = f.generate_value(standard_runtime(snowfakery_version=2))
+        assert x == "5 <<5*3>>"
+
+    def test_mixed_jinja_syntax__version_3(self):
+        definition = SimpleValue("${{2+3}} <<5*3>>", "abc.yml", 10)
+        repr(definition)
+        f = FieldFactory("field", definition, "abc.yml", 10)
+        repr(f)
+        x = f.generate_value(standard_runtime(snowfakery_version=3))
         assert x == "5 <<5*3>>"
 
     def test_check_type(self):
