@@ -1050,7 +1050,6 @@ wheels = [
 
 [[package]]
 name = "snowfakery"
-version="4.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -1059,6 +1058,7 @@ dependencies = [
     { name = "faker-nonprofit" },
     { name = "gvgen" },
     { name = "jinja2" },
+    { name = "packaging" },
     { name = "pydantic" },
     { name = "python-baseconv" },
     { name = "python-dateutil" },
@@ -1095,6 +1095,7 @@ requires-dist = [
     { name = "faker-nonprofit" },
     { name = "gvgen" },
     { name = "jinja2" },
+    { name = "packaging" },
     { name = "pydantic", specifier = ">=2,<3" },
     { name = "python-baseconv" },
     { name = "python-dateutil" },

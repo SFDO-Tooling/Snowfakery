@@ -33,6 +33,7 @@ dependencies = [
     "faker-nonprofit",
     "faker-edu",
     "jinja2",
+    "packaging",
     "pyyaml",
     "click",
     "python-dateutil",
