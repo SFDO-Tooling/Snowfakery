@@ -34,7 +34,7 @@ dependencies = [
     "faker-nonprofit",
     "faker-edu",
     "jinja2",
-    "packaging",
+    "packaging>=23.2",
     "pyyaml",
     "click",
     "python-dateutil",
