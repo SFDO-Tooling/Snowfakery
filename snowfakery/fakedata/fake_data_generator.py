@@ -1,6 +1,6 @@
 import random
 import typing as T
-import datetime
+import datetime as _datetime
 from difflib import get_close_matches
 from itertools import product
 
@@ -22,8 +22,8 @@ email_templates = [
     )
 ]
 
-this_year = datetime.datetime.today().year
-DateLike = T.Union[datetime.date, datetime.datetime, datetime.timedelta, str, int]
+this_year = _datetime.datetime.today().year
+DateLike = T.Union[_datetime.date, _datetime.datetime, _datetime.timedelta, str, int]
 TimeZoneAsRelDelta = T.Union[dateutil.relativedelta.relativedelta, T.Literal[False]]
 UTCAsRelDelta = dateutil.relativedelta.relativedelta(hours=0)
 
@@ -101,7 +101,7 @@ class FakeNames(T.NamedTuple):
         start_date: DateLike = "-30y",
         end_date: DateLike = "now",
         timezone: TimeZoneAsRelDelta = UTCAsRelDelta,
-    ) -> datetime.datetime:
+    ) -> _datetime.datetime:
         timezone = _normalize_timezone(timezone)
         return self.f.date_time_between(start_date, end_date, timezone)
 
@@ -111,7 +111,7 @@ class FakeNames(T.NamedTuple):
         self,
         end_date: DateLike = "+30d",
         timezone: TimeZoneAsRelDelta = UTCAsRelDelta,
-    ) -> datetime.datetime:
+    ) -> _datetime.datetime:
         timezone = _normalize_timezone(timezone)
         return self.f.future_datetime(end_date, timezone)
 
@@ -142,14 +142,14 @@ def _normalize_timezone(timezone=None):
     if timezone in (None, False):
         return None
     elif timezone is UTCAsRelDelta:
-        return datetime.timezone.utc
+        return _datetime.timezone.utc
     else:
         if not isinstance(timezone, dateutil.relativedelta.relativedelta):
             raise exc.DataGenError(  # pragma: no cover
                 f"`timezone` should be a `relativedelta`, not `{type(timezone).__name__}`: {timezone}"
             )
-        return datetime.timezone(
-            datetime.timedelta(hours=timezone.hours, minutes=timezone.minutes)
+        return _datetime.timezone(
+            _datetime.timedelta(hours=timezone.hours, minutes=timezone.minutes)
         )
 
 
@@ -230,7 +230,7 @@ REMOVE_WEIRD_CHARS = {x: translate(x) for x in range(0, 128)}
 
 
 def replace_unicode_strings_with_None(val):
-    if type(val) == str:
+    if isinstance(val, str):
         if not val.isascii():
             return None
         return val.translate(REMOVE_WEIRD_CHARS)
