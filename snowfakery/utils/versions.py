@@ -1,5 +1,5 @@
 import re
-import pkg_resources
+from packaging.version import Version, parse as parse_version
 import requests
 import typing as T
 
@@ -19,7 +19,7 @@ def is_final_release(version: str) -> bool:
     return bool(FINAL_VERSION_RE.match(version))
 
 
-def get_latest_final_version():
+def get_latest_final_version() -> Version:
     """return the latest version of snowfakery in pypi, be defensive"""
     # use the pypi json api https://wiki.python.org/moin/PyPIJSON
     res = safe_json_from_response(
@@ -29,7 +29,7 @@ def get_latest_final_version():
     for versionstring in res["releases"].keys():
         if not is_final_release(versionstring):
             continue
-        versions.append(pkg_resources.parse_version(versionstring))
+        versions.append(parse_version(versionstring))
     versions.sort(reverse=True)
     return versions[0]
 
@@ -63,9 +63,9 @@ def check_latest_version(version: str) -> IsLatestVersion:
         return IsLatestVersion(True, "You have the latest version of Snowfakery")
 
 
-def get_installed_version(version):
+def get_installed_version(version: str) -> Version:
     """returns the version name (e.g. 2.0.0b58) that is installed"""
-    return pkg_resources.parse_version(version)
+    return parse_version(version)
 
 
 # from cumulusci/utils/http/requests_utils.py
