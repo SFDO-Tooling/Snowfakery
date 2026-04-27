@@ -19,9 +19,9 @@ jobs:
         with:
           python-version: "${{ matrix.python-version }}"
       - name: Install a specific version of uv
-        uses: SFDO-Tooling/setup-uv@main
+        uses: SFDO-Tooling/setup-uv@v8.0.0-sfdo.1
         with:
-          version: "0.5.0"
+          version: "0.8.4"
           enable-cache: true
       - name: "Install dependencies"
         run: |
@@ -51,9 +51,9 @@ jobs:
           python-version: "3.11"
 
       - name: Set up uv
-        uses: SFDO-Tooling/setup-uv@main
+        uses: SFDO-Tooling/setup-uv@v8.0.0-sfdo.1
         with:
-            version: "0.5.0"
+            version: "0.8.4"
             enable-cache: true
 
       - name: Install dependencies
@@ -61,7 +61,7 @@ jobs:
           python -VV
           python -m pip install --upgrade pip
           uv sync -p 3.11
-          uv add git+https://github.com/SFDO-Tooling/CumulusCI.git@main
+          uv add "git+https://github.com/SFDO-Tooling/CumulusCI.git@${{ github.ref_name == 'dev' && 'dev' || 'main' }}"
 
       - name: Run Tests
         run: |
@@ -88,9 +88,9 @@ jobs:
           python-version: "3.11"
 
       - name: Set up uv
-        uses: SFDO-Tooling/setup-uv@main
+        uses: SFDO-Tooling/setup-uv@v8.0.0-sfdo.1
         with:
-            version: "0.5.0"
+            version: "0.8.4"
             enable-cache: true
 
       - name: Install dependencies
@@ -127,4 +127,3 @@ jobs:
       - name: "Test installation"
         run: |
           python -m snowfakery --version
-
