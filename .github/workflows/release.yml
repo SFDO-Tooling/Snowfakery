@@ -2,44 +2,60 @@
 name: Release snowfakery
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - snowfakery/__about__.py
-  workflow_dispatch:
+    push:
+        branches:
+            - main
+            - dev
+    workflow_dispatch:
 
 concurrency: publishing
 
 jobs:
-  publish-to-pypi:
-    name: Publish new release to PyPI
-    runs-on: SFDO-Tooling-Ubuntu
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.11
-          cache: pip
-      - name: Set up uv
-        uses: SFDO-Tooling/setup-uv@main
-        with:
-            version: "0.5.0"
-            enable-cache: true
-      - name: Build source tarball and binary wheel
-        run: uv tool run hatch build -c
-      - name: Upload to PyPI
-        run: uv tool run hatch publish
-        env:
-          HATCH_INDEX_USER: "__token__"
-          HATCH_INDEX_AUTH: ${{ secrets.PYPI_TOKEN }}
-      - name: Create release
-        env:
-            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-            VERSION="$(uv tool run hatch version)"
-            gh release create "v$VERSION" \
-              dist/*.whl \
-              dist/*.tar.gz \
-              --title $VERSION
+    publish-to-pypi:
+        name: Publish new release to PyPI
+        runs-on: SFDO-Tooling-Ubuntu
+        # actor guard + [skip ci] prevent push→publish→push loops on dev
+        if: >-
+            github.event_name == 'workflow_dispatch'
+            || (github.ref_name == 'main' && contains(github.event.head_commit.modified, 'snowfakery/__about__.py'))
+            || (github.ref_name == 'dev' && github.actor != 'github-actions[bot]')
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+            - name: Set up Python 3.13
+              uses: actions/setup-python@v5
+              with:
+                  python-version: 3.13
+                  cache: pip
+            - name: Install build tools
+              run: python -m pip install hatch tomli tomli-w
+            - name: Bump dev version
+              if: github.ref_name == 'dev'
+              run: hatch version dev
+            - name: Commit and push dev version bump
+              if: github.ref_name == 'dev'
+              # [skip ci] in the commit message prevents this push from re-triggering the workflow
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git add snowfakery/__about__.py
+                  git commit -m "Bump dev version [skip ci]"
+                  git push
+            - name: Build source tarball and binary wheel
+              run: hatch build -c
+            - name: Upload to PyPI
+              run: hatch publish
+              env:
+                  HATCH_INDEX_USER: "__token__"
+                  HATCH_INDEX_AUTH: ${{ secrets.PYPI_TOKEN }}
+            - name: Create release
+              if: github.ref_name == 'main'
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  VERSION="$(hatch version)"
+                  gh release create "v$VERSION" \
+                    dist/*.whl \
+                    dist/*.tar.gz \
+                    --title "$VERSION"
